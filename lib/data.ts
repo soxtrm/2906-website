@@ -139,22 +139,13 @@ export const regions: RegionInfo[] = [
 
 export const agents: Agent[] = [
   {
-    id: 'kevin',
-    name: 'Kevin Eich',
-    role: 'Founder & Lead Agent',
-    image: 'https://ui-avatars.com/api/?name=Kevin+Eich&background=1B2A4A&color=B8953F&size=200&bold=true&format=png',
+    id: '2906',
+    name: '2906 Real Estate',
+    role: 'Agents Collective · Malta',
+    image: '',
     phone: '+356 9999 0001',
     whatsapp: '+35699990001',
-    email: 'kevin@2906realestate.mt',
-  },
-  {
-    id: 'olga',
-    name: 'Olga',
-    role: 'Partner & Senior Agent',
-    image: 'https://ui-avatars.com/api/?name=Olga&background=1B2A4A&color=B8953F&size=200&bold=true&format=png',
-    phone: '+356 9999 0002',
-    whatsapp: '+35699990002',
-    email: 'olga@2906realestate.mt',
+    email: 'info@2906realestate.mt',
   },
 ]
 

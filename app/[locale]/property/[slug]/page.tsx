@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { ArrowLeft, Bed, Bath, Ruler, MapPin, Check, MessageCircle, Mail, Waves, Car, DoorOpen } from 'lucide-react'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
-import { agents } from '@/lib/data'
 import { cn } from '@/lib/utils'
 import { PropertyGallery } from './gallery'
 
@@ -56,8 +55,6 @@ export default async function PropertyPage({
   const property = await getProperty(slug)
 
   if (!property) notFound()
-
-  const agent = agents[0]
 
   const isCommercial =
     property.category === 'commercial' ||
@@ -232,23 +229,19 @@ export default async function PropertyPage({
             {/* Sidebar */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg p-5 md:p-6 lg:sticky lg:top-24">
-                <h2 className="font-serif text-lg md:text-xl text-navy mb-5">Contact Agent</h2>
+                <h2 className="font-serif text-lg md:text-xl text-navy mb-5">Contact 2906</h2>
                 <div className="flex items-center gap-4 mb-5 p-4 bg-off-white rounded-lg">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-navy/10 to-gold/10 flex items-center justify-center shrink-0">
-                    {agent.image ? (
-                      <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="font-serif text-lg text-navy/40">{agent.name.charAt(0)}</span>
-                    )}
+                    <span className="font-serif text-sm text-navy/40">2906</span>
                   </div>
                   <div>
-                    <p className="font-semibold text-navy text-sm">{agent.name}</p>
-                    <p className="text-xs text-navy/60">{agent.role}</p>
+                    <p className="font-semibold text-navy text-sm">2906 Real Estate</p>
+                    <p className="text-xs text-navy/60">Agents Collective · Malta</p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <a
-                    href={`https://wa.me/${agent.whatsapp.replace(/[^0-9]/g, '')}?text=Hi, I'm interested in ${property.title}`}
+                    href={`https://wa.me/35699990001?text=Hi, I'm interested in ${property.title}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded bg-[#25D366] text-white font-medium hover:bg-[#20BD5A] transition-colors text-sm"
@@ -257,7 +250,7 @@ export default async function PropertyPage({
                     WhatsApp
                   </a>
                   <a
-                    href={`mailto:${agent.email}?subject=Inquiry about ${property.title}`}
+                    href={`mailto:info@2906realestate.mt?subject=Inquiry about ${property.title}`}
                     className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded bg-navy text-white font-medium hover:opacity-90 transition-opacity text-sm"
                   >
                     <Mail className="w-4 h-4" />

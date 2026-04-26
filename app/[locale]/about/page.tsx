@@ -73,10 +73,10 @@ export default function AboutPage() {
               </h2>
               <div className="space-y-5 text-navy/70 text-base leading-relaxed">
                 <p>
-                  2906 Real Estate was built on a single conviction: property transactions in Malta deserve the same precision and care that the island itself inspires. Founded by Kevin and Olga — two professionals who fell in love with Malta&apos;s character before falling into its market — the agency brings an outsider&apos;s appreciation and an insider&apos;s knowledge to every mandate.
+                  2906 Real Estate is an agents collective built on a single conviction: property transactions in Malta deserve the same precision and care that the island itself inspires. We are a close-knit group of experienced professionals who bring both an outsider&apos;s appreciation and an insider&apos;s knowledge to every mandate.
                 </p>
                 <p>
-                  We cover the full spectrum of Malta&apos;s residential and commercial property landscape, from a studio in Gzira to a seafront penthouse in Sliema, a boutique office in St Julian&apos;s to a restored palazzo in Valletta. Our Aesthetics collection caters to clients who expect more than four walls — properties curated for design, light, and lifestyle above €2,500/month.
+                  We cover the full spectrum of Malta&apos;s residential and commercial property landscape — from a studio in Gzira to a seafront penthouse in Sliema, a boutique office in St Julian&apos;s to a restored palazzo in Valletta. Our Aesthetics collection caters to clients who expect more than four walls: properties curated for design, light, and lifestyle above €2,500/month.
                 </p>
                 <p>
                   The name 2906 marks the moment this journey began. It is a daily reminder that every key we hand over is a milestone in someone&apos;s story — and we take that seriously.
