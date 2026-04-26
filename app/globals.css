@@ -1,0 +1,116 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Brand Colors */
+  --navy: #1B2A4A;
+  --navy-light: #2a3d66;
+  --gold: #B8953F;
+  --gold-light: #d4b15a;
+  --white: #FFFFFF;
+  --off-white: #F8F8F6;
+  
+  /* Tab Accent Colors */
+  --accent-letting: #C41E7A;
+  --accent-aesthetics: #B8953F;
+  --accent-commercial: #4CAF50;
+  --accent-sales: #F5C518;
+  --accent-logotype: #87CEEB;
+  
+  /* Status Colors */
+  --status-available: #22C55E;
+  --status-viewings: #F59E0B;
+  --status-rented: #EF4444;
+  
+  /* Design Tokens */
+  --background: var(--white);
+  --foreground: var(--navy);
+  --card: var(--white);
+  --card-foreground: var(--navy);
+  --popover: var(--white);
+  --popover-foreground: var(--navy);
+  --primary: var(--navy);
+  --primary-foreground: var(--white);
+  --secondary: var(--off-white);
+  --secondary-foreground: var(--navy);
+  --muted: var(--off-white);
+  --muted-foreground: #64748B;
+  --accent: var(--gold);
+  --accent-foreground: var(--navy);
+  --destructive: #EF4444;
+  --destructive-foreground: var(--white);
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: var(--gold);
+  --radius: 0.25rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-serif: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-off-white: var(--off-white);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--off-white);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--navy);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--navy-light);
+}

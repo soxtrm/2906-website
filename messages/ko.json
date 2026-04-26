@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "home": "홈",
+    "letting": "임대",
+    "aesthetics": "Aesthetics",
+    "commercial": "상업용",
+    "sales": "매매",
+    "about": "회사 소개",
+    "contact": "문의"
+  },
+  "hero": {
+    "tagline": "몰타 최고의 부동산 에이전시",
+    "headline": "탁월한 부동산.",
+    "headline2": "신뢰할 수 있는 서비스.",
+    "subheadline": "몰타의 가장 인기 있는 지역의 부동산을 발견하세요",
+    "scroll": "스크롤"
+  },
+  "search": {
+    "placeholder": "마을 또는 지역 검색...",
+    "propertyType": "부동산 유형",
+    "bedrooms": "침실",
+    "minPrice": "최소 €",
+    "maxPrice": "최대 €",
+    "button": "검색",
+    "noLocations": "지역을 찾을 수 없습니다",
+    "clearSelection": "선택 초기화"
+  },
+  "status": {
+    "available": "입주 가능",
+    "viewings": "내방 상담",
+    "rented": "임대 완료"
+  },
+  "sections": {
+    "whyChoose": "왜 2906인가",
+    "ourPromise": "우리의 약속",
+    "learnMore": "더 알아보기",
+    "featuredProperties": "추천 부동산",
+    "curatedSelection": "엄선된 선택",
+    "viewAll": "전체 보기",
+    "exploreRegions": "몰타 지역 탐색",
+    "discover": "탐색",
+    "clickRegion": "지역을 클릭하여 독특한 특성과 부동산을 알아보세요",
+    "whyMalta": "왜 몰타인가",
+    "yourMedBase": "지중해의 새로운 보금자리",
+    "maltaDesc": "몰타는 풍부한 역사, 아름다운 해안선, 현대적인 편의 시설을 결합한 탁월한 생활 수준을 제공합니다.",
+    "selectRegion": "지역 선택",
+    "clickMap": "지도를 클릭하여 각 지역 탐색"
+  },
+  "features": {
+    "localExpertise": "현지 전문 지식",
+    "localDesc": "몰타의 이웃과 시장 동향에 대한 깊은 이해.",
+    "personalService": "개인 맞춤 서비스",
+    "personalDesc": "고객의 고유한 요구에 맞춘 부동산 검색.",
+    "exclusiveAccess": "독점 접근",
+    "exclusiveDesc": "다른 곳에서는 찾기 어려운 프리미엄 매물."
+  },
+  "benefits": {
+    "sunshine": "연 300일 이상 맑은 날씨",
+    "sunshineDesc": "온화한 겨울과 따뜻한 여름이 있는 지중해성 기후.",
+    "gateway": "유럽의 관문",
+    "gatewayDesc": "유럽 주요 도시로의 직항편, 비즈니스와 여행에 최적.",
+    "safe": "안전하고 안정적",
+    "safeDesc": "영어가 공용어인 EU 회원국으로 낮은 범죄율.",
+    "tax": "세금 혜택",
+    "taxDesc": "거주자를 위한 매력적인 세금 제도와 유리한 부동산 투자."
+  },
+  "property": {
+    "perMonth": "/월",
+    "bedrooms": "침실",
+    "bathrooms": "욕실",
+    "area": "면적",
+    "viewProperty": "부동산 보기",
+    "priceRange": "가격 범위",
+    "advantages": "장점",
+    "consider": "고려 사항",
+    "typicalProperties": "대표 부동산"
+  },
+  "footer": {
+    "tagline": "탁월한 부동산을 위한 몰타 최고의 부동산 에이전시.",
+    "navigation": "내비게이션",
+    "services": "서비스",
+    "contact": "문의",
+    "privacy": "개인정보",
+    "terms": "이용약관",
+    "address": "슬리에마, 몰타"
+  },
+  "aestheticsBanner": {
+    "title": "프리미엄 럭셔리를 찾고 계신가요?",
+    "desc": "Aesthetics 컬렉션을 탐색하세요 — 월 €2,500부터 시작하는 고급 독점 부동산",
+    "cta": "Aesthetics 보기"
+  },
+  "loading": "부동산 로딩 중…",
+  "noProperties": "부동산을 찾을 수 없습니다",
+  "noPropertiesDesc": "현재 검색 조건에 맞는 부동산이 없습니다.",
+  "showing": "{count}개 {noun} 표시",
+  "property_singular": "부동산",
+  "property_plural": "부동산"
+}

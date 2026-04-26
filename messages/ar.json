@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "letting": "الإيجار",
+    "aesthetics": "Aesthetics",
+    "commercial": "تجاري",
+    "sales": "للبيع",
+    "about": "من نحن",
+    "contact": "اتصل بنا"
+  },
+  "hero": {
+    "tagline": "أبرز وكالة عقارات في مالطا",
+    "headline": "عقارات استثنائية.",
+    "headline2": "خدمة موثوقة.",
+    "subheadline": "اكتشف عقارات في أكثر مواقع مالطا طلباً",
+    "scroll": "تمرير"
+  },
+  "search": {
+    "placeholder": "ابحث عن قرية أو منطقة...",
+    "propertyType": "نوع العقار",
+    "bedrooms": "غرف النوم",
+    "minPrice": "الحد الأدنى €",
+    "maxPrice": "الحد الأقصى €",
+    "button": "بحث",
+    "noLocations": "لا توجد مواقع",
+    "clearSelection": "مسح الاختيار"
+  },
+  "status": {
+    "available": "متاح",
+    "viewings": "معاينة",
+    "rented": "مؤجر"
+  },
+  "sections": {
+    "whyChoose": "لماذا تختار 2906",
+    "ourPromise": "وعدنا",
+    "learnMore": "اعرف المزيد",
+    "featuredProperties": "العقارات المميزة",
+    "curatedSelection": "اختيار منتقى",
+    "viewAll": "عرض الكل",
+    "exploreRegions": "استكشف مناطق مالطا",
+    "discover": "اكتشف",
+    "clickRegion": "انقر على أي منطقة لاكتشاف طابعها الفريد",
+    "whyMalta": "لماذا مالطا",
+    "yourMedBase": "قاعدتك المتوسطية",
+    "maltaDesc": "تقدم مالطا جودة حياة استثنائية تجمع بين التاريخ الغني والسواحل الرائعة والمرافق الحديثة.",
+    "selectRegion": "اختر منطقة",
+    "clickMap": "انقر على الخريطة لاستكشاف كل منطقة"
+  },
+  "features": {
+    "localExpertise": "خبرة محلية",
+    "localDesc": "معرفة عميقة بأحياء مالطا واتجاهات السوق.",
+    "personalService": "خدمة شخصية",
+    "personalDesc": "بحث عقاري مخصص بناءً على متطلباتك الفريدة.",
+    "exclusiveAccess": "وصول حصري",
+    "exclusiveDesc": "قوائم متميزة غير متوفرة في أماكن أخرى."
+  },
+  "benefits": {
+    "sunshine": "أكثر من 300 يوم مشمس",
+    "sunshineDesc": "مناخ متوسطي بشتاء معتدل وصيف دافئ طوال العام.",
+    "gateway": "بوابة إلى أوروبا",
+    "gatewayDesc": "رحلات مباشرة إلى كبرى المدن الأوروبية، مثالية للأعمال والسياحة.",
+    "safe": "آمن ومستقر",
+    "safeDesc": "دولة عضو في الاتحاد الأوروبي مع الإنجليزية كلغة رسمية ومعدلات جريمة منخفضة.",
+    "tax": "مزايا ضريبية",
+    "taxDesc": "أنظمة ضريبية جذابة للمقيمين واستثمارات عقارية مواتية."
+  },
+  "property": {
+    "perMonth": "/شهر",
+    "bedrooms": "غرف النوم",
+    "bathrooms": "الحمامات",
+    "area": "المساحة",
+    "viewProperty": "عرض العقار",
+    "priceRange": "نطاق السعر",
+    "advantages": "المزايا",
+    "consider": "اعتبارات",
+    "typicalProperties": "العقارات النموذجية"
+  },
+  "footer": {
+    "tagline": "أبرز وكالة عقارات في مالطا للعقارات الاستثنائية.",
+    "navigation": "التنقل",
+    "services": "الخدمات",
+    "contact": "اتصل بنا",
+    "privacy": "الخصوصية",
+    "terms": "الشروط",
+    "address": "سليما، مالطا"
+  },
+  "aestheticsBanner": {
+    "title": "تبحث عن الفخامة الراقية؟",
+    "desc": "استكشف مجموعة Aesthetics — عقارات حصرية تبدأ من €2,500 شهرياً",
+    "cta": "عرض Aesthetics"
+  },
+  "loading": "جارٍ تحميل العقارات…",
+  "noProperties": "لا توجد عقارات",
+  "noPropertiesDesc": "ليس لدينا حالياً أي عقارات تطابق معاييرك.",
+  "showing": "عرض {count} {noun}",
+  "property_singular": "عقار",
+  "property_plural": "عقارات"
+}

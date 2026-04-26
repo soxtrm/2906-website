@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "letting": "Alquiler",
+    "aesthetics": "Aesthetics",
+    "commercial": "Comercial",
+    "sales": "Venta",
+    "about": "Sobre nosotros",
+    "contact": "Contacto"
+  },
+  "hero": {
+    "tagline": "La principal agencia inmobiliaria de Malta",
+    "headline": "Propiedades excepcionales.",
+    "headline2": "Servicio de confianza.",
+    "subheadline": "Descubre propiedades en las ubicaciones más solicitadas de Malta",
+    "scroll": "Desplazar"
+  },
+  "search": {
+    "placeholder": "Buscar pueblo o zona...",
+    "propertyType": "Tipo de propiedad",
+    "bedrooms": "Dormitorios",
+    "minPrice": "Mín €",
+    "maxPrice": "Máx €",
+    "button": "Buscar",
+    "noLocations": "No se encontraron ubicaciones",
+    "clearSelection": "Borrar selección"
+  },
+  "status": {
+    "available": "Disponible",
+    "viewings": "Visitas",
+    "rented": "Alquilado"
+  },
+  "sections": {
+    "whyChoose": "Por qué elegir 2906",
+    "ourPromise": "Nuestra promesa",
+    "learnMore": "Saber más",
+    "featuredProperties": "Propiedades destacadas",
+    "curatedSelection": "Selección curada",
+    "viewAll": "Ver todo",
+    "exploreRegions": "Explorar las regiones de Malta",
+    "discover": "Descubrir",
+    "clickRegion": "Haz clic en cualquier región para descubrir su carácter único",
+    "whyMalta": "Por qué Malta",
+    "yourMedBase": "Tu base mediterránea",
+    "maltaDesc": "Malta ofrece una calidad de vida excepcional que combina historia rica, costas impresionantes y comodidades modernas.",
+    "selectRegion": "Seleccionar región",
+    "clickMap": "Haz clic en el mapa para explorar cada zona"
+  },
+  "features": {
+    "localExpertise": "Experiencia local",
+    "localDesc": "Profundo conocimiento de los barrios de Malta y las tendencias del mercado.",
+    "personalService": "Servicio personalizado",
+    "personalDesc": "Búsqueda de propiedades a medida según tus requisitos únicos.",
+    "exclusiveAccess": "Acceso exclusivo",
+    "exclusiveDesc": "Anuncios premium frecuentemente no disponibles en otros lugares."
+  },
+  "benefits": {
+    "sunshine": "Más de 300 días de sol",
+    "sunshineDesc": "Clima mediterráneo con inviernos suaves y veranos cálidos durante todo el año.",
+    "gateway": "Puerta de entrada a Europa",
+    "gatewayDesc": "Vuelos directos a las principales ciudades europeas, perfectos para negocios y viajes.",
+    "safe": "Seguro y estable",
+    "safeDesc": "Estado miembro de la UE con el inglés como idioma oficial y bajas tasas de criminalidad.",
+    "tax": "Ventajas fiscales",
+    "taxDesc": "Regímenes fiscales atractivos para residentes e inversiones inmobiliarias favorables."
+  },
+  "property": {
+    "perMonth": "/mes",
+    "bedrooms": "Dormitorios",
+    "bathrooms": "Baños",
+    "area": "Superficie",
+    "viewProperty": "Ver propiedad",
+    "priceRange": "Rango de precio",
+    "advantages": "Ventajas",
+    "consider": "A considerar",
+    "typicalProperties": "Propiedades típicas"
+  },
+  "footer": {
+    "tagline": "La principal agencia inmobiliaria de Malta para propiedades excepcionales.",
+    "navigation": "Navegación",
+    "services": "Servicios",
+    "contact": "Contacto",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "address": "Sliema, Malta"
+  },
+  "aestheticsBanner": {
+    "title": "¿Buscas lujo premium?",
+    "desc": "Explora nuestra colección Aesthetics — propiedades exclusivas desde €2.500/mes",
+    "cta": "Ver Aesthetics"
+  },
+  "loading": "Cargando propiedades…",
+  "noProperties": "No se encontraron propiedades",
+  "noPropertiesDesc": "Actualmente no tenemos propiedades que coincidan con tus criterios.",
+  "showing": "{count} {noun} mostradas",
+  "property_singular": "propiedad",
+  "property_plural": "propiedades"
+}

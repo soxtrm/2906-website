@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "home": "首页",
+    "letting": "租赁",
+    "aesthetics": "精选",
+    "commercial": "商业",
+    "sales": "出售",
+    "about": "关于我们",
+    "contact": "联系我们"
+  },
+  "hero": {
+    "tagline": "马耳他顶级房地产",
+    "headline": "卓越房产。",
+    "headline2": "值得信赖的服务。",
+    "subheadline": "探索马耳他最受欢迎地区的优质房产",
+    "scroll": "滚动"
+  },
+  "search": {
+    "placeholder": "搜索村庄或地区...",
+    "propertyType": "房产类型",
+    "bedrooms": "卧室",
+    "minPrice": "最低 €",
+    "maxPrice": "最高 €",
+    "button": "搜索",
+    "noLocations": "未找到地点",
+    "clearSelection": "清除选择"
+  },
+  "status": {
+    "available": "可入住",
+    "viewings": "看房中",
+    "rented": "已出租"
+  },
+  "sections": {
+    "whyChoose": "为什么选择 2906",
+    "ourPromise": "我们的承诺",
+    "learnMore": "了解更多",
+    "featuredProperties": "精选房产",
+    "curatedSelection": "精心挑选",
+    "viewAll": "查看全部",
+    "exploreRegions": "探索马耳他各地区",
+    "discover": "探索",
+    "clickRegion": "点击任意地区探索其独特魅力和房产",
+    "whyMalta": "为什么选择马耳他",
+    "yourMedBase": "您的地中海家园",
+    "maltaDesc": "马耳他提供卓越的生活品质，融合了丰富的历史、壮美的海岸线和现代设施。",
+    "selectRegion": "选择地区",
+    "clickMap": "点击地图探索各个地区"
+  },
+  "features": {
+    "localExpertise": "本地专业知识",
+    "localDesc": "深入了解马耳他各社区和市场趋势。",
+    "personalService": "个性化服务",
+    "personalDesc": "根据您的独特需求量身定制房产搜索。",
+    "exclusiveAccess": "独家渠道",
+    "exclusiveDesc": "其他地方通常无法获得的优质房源。"
+  },
+  "benefits": {
+    "sunshine": "300天以上阳光",
+    "sunshineDesc": "地中海气候，冬季温和，夏季温暖，全年如春。",
+    "gateway": "欧洲门户",
+    "gatewayDesc": "直飞欧洲主要城市，商务旅行两相宜。",
+    "safe": "安全稳定",
+    "safeDesc": "欧盟成员国，英语为官方语言，犯罪率低。",
+    "tax": "税务优惠",
+    "taxDesc": "对居民的吸引税制和有利的房产投资政策。"
+  },
+  "property": {
+    "perMonth": "/月",
+    "bedrooms": "卧室",
+    "bathrooms": "浴室",
+    "area": "面积",
+    "viewProperty": "查看房产",
+    "priceRange": "价格区间",
+    "advantages": "优势",
+    "consider": "注意事项",
+    "typicalProperties": "典型房产"
+  },
+  "footer": {
+    "tagline": "马耳他顶级房地产机构，专注卓越房产。",
+    "navigation": "导航",
+    "services": "服务",
+    "contact": "联系方式",
+    "privacy": "隐私政策",
+    "terms": "条款",
+    "address": "斯利马，马耳他"
+  },
+  "aestheticsBanner": {
+    "title": "寻找顶级豪华房产？",
+    "desc": "探索我们的 Aesthetics 系列 — 每月 €2,500 起的高端独家房产",
+    "cta": "查看 Aesthetics"
+  },
+  "loading": "正在加载房产…",
+  "noProperties": "未找到房产",
+  "noPropertiesDesc": "目前没有符合您条件的房产。",
+  "showing": "显示 {count} 套{noun}",
+  "property_singular": "房产",
+  "property_plural": "房产"
+}
