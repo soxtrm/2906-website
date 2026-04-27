@@ -4,8 +4,20 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Slider } from '@/components/ui/slider'
-import { Check, ChevronDown, MessageCircle, Users, BedDouble, Bath, MapPin, Sparkles } from 'lucide-react'
+import { Check, ChevronDown, MessageCircle, BedDouble, Bath, MapPin, Sparkles, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+function sliderToBudget(p: number): number {
+  if (p <= 50) return 500 + (p / 50) * 1500
+  return 2000 + ((p - 50) / 50) * 8000
+}
+function budgetToSlider(b: number): number {
+  if (b <= 2000) return ((b - 500) / 1500) * 50
+  return 50 + ((b - 2000) / 8000) * 50
+}
+function roundTo50(n: number): number {
+  return Math.round(n / 50) * 50
+}
 
 // ── Country codes ─────────────────────────────────────────────────────────────
 const COUNTRY_CODES = [
@@ -104,6 +116,11 @@ const LOCATION_GROUPS = [
   },
 ]
 
+// ── Property types ────────────────────────────────────────────────────────────
+const PROPERTY_TYPES = [
+  'Apartment', 'Penthouse', 'Maisonette', 'Townhouse', 'Villa', 'Farmhouse', 'House of Character',
+]
+
 // ── Features ──────────────────────────────────────────────────────────────────
 const FEATURES = [
   { key: 'pool',      icon: '🏊', label: 'Pool' },
@@ -140,8 +157,9 @@ interface FormData {
   profession: string
   budget_min: number
   budget_max: number
-  bedrooms: string
-  bathrooms: string
+  bedrooms: string[]
+  bathrooms: string[]
+  property_types: string[]
   move_in: string
   move_in_custom: string
   locations: string[]
@@ -155,7 +173,8 @@ const defaultForm: FormData = {
   name: '', countryCode: '+356', phone: '', email: '',
   nationality: '', group_size: 1, hasPets: false, pets: '',
   profession: '', budget_min: 1000, budget_max: 2500,
-  bedrooms: '', bathrooms: '', move_in: '', move_in_custom: '',
+  bedrooms: [], bathrooms: [], property_types: [],
+  move_in: '', move_in_custom: '',
   locations: [], open_to_suggestions: false,
   features: [], wishes: '', comments: '',
 }
@@ -249,8 +268,9 @@ export function ContactForm() {
         profession: form.profession || null,
         budget_min: form.budget_min,
         budget_max: form.budget_max,
-        bedrooms: form.bedrooms || null,
-        bathrooms: form.bathrooms || null,
+        bedrooms: form.bedrooms.length > 0 ? form.bedrooms.join(',') : null,
+        bathrooms: form.bathrooms.length > 0 ? form.bathrooms.join(',') : null,
+        property_types: form.property_types.length > 0 ? form.property_types.join(',') : null,
         move_in: form.move_in_custom || form.move_in || null,
         locations: form.open_to_suggestions ? [...form.locations, 'Open to suggestions'] : form.locations,
         features: FEATURES.filter(f => form.features.includes(f.key)).map(f => f.label),
@@ -361,7 +381,7 @@ export function ContactForm() {
         >
           {step === 1 && <Step1 form={form} set={set} errors={errors} t={t} />}
           {step === 2 && <Step2 form={form} set={set} t={t} />}
-          {step === 3 && <Step3 form={form} set={set} toggleLocation={toggleLocation} toggleFeature={toggleFeature} t={t} />}
+          {step === 3 && <Step3 form={form} set={set} toggleLocation={toggleLocation} toggleFeature={toggleFeature} t={t} togglePropertyType={(pt: string) => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])} />}
         </motion.div>
       </AnimatePresence>
 
@@ -547,11 +567,16 @@ function Step2({ form, set, t }: {
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
   t: (k: string) => string
 }) {
-  const isPremium = form.budget_max >= 2500
+  const isPremium = form.budget_min >= 2500
+
+  const toggleBedroom = (b: string) =>
+    set('bedrooms', form.bedrooms.includes(b) ? form.bedrooms.filter(x => x !== b) : [...form.bedrooms, b])
+  const toggleBathroom = (b: string) =>
+    set('bathrooms', form.bathrooms.includes(b) ? form.bathrooms.filter(x => x !== b) : [...form.bathrooms, b])
 
   return (
     <div className="space-y-7">
-      {/* Budget slider */}
+      {/* Budget slider — non-linear: 0%=€500, 50%=€2,000, 100%=€10,000 */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <Label>{t('budget_range')}</Label>
@@ -567,33 +592,33 @@ function Step2({ form, set, t }: {
           </div>
         </div>
         <Slider
-          value={[form.budget_min, form.budget_max]}
-          onValueChange={([min, max]) => {
-            set('budget_min', min)
-            set('budget_max', max)
+          value={[budgetToSlider(form.budget_min), budgetToSlider(form.budget_max)]}
+          onValueChange={([p1, p2]) => {
+            set('budget_min', roundTo50(sliderToBudget(p1)))
+            set('budget_max', roundTo50(sliderToBudget(p2)))
           }}
-          min={500}
-          max={10000}
-          step={100}
+          min={0}
+          max={100}
+          step={1}
           className="mt-2"
         />
         <div className="flex justify-between text-xs text-navy/40 mt-1.5">
           <span>€500</span>
-          <span>€2,500</span>
-          <span>€5,000</span>
+          <span>€2,000</span>
+          <span>€6,000</span>
           <span>€10,000+</span>
         </div>
       </div>
 
-      {/* Bedrooms */}
+      {/* Bedrooms — multi-select */}
       <div>
         <Label>{t('bedrooms')}</Label>
         <div className="flex gap-2 flex-wrap">
           {['Studio', '1', '2', '3', '4+'].map(b => (
             <OptionCard
               key={b}
-              active={form.bedrooms === b}
-              onClick={() => set('bedrooms', form.bedrooms === b ? '' : b)}
+              active={form.bedrooms.includes(b)}
+              onClick={() => toggleBedroom(b)}
               className="flex flex-col items-center gap-1 px-4 py-3"
             >
               <BedDouble className="w-4 h-4" />
@@ -603,15 +628,15 @@ function Step2({ form, set, t }: {
         </div>
       </div>
 
-      {/* Bathrooms */}
+      {/* Bathrooms — multi-select */}
       <div>
         <Label>{t('bathrooms')}</Label>
         <div className="flex gap-2">
           {['1', '2', '3+'].map(b => (
             <OptionCard
               key={b}
-              active={form.bathrooms === b}
-              onClick={() => set('bathrooms', form.bathrooms === b ? '' : b)}
+              active={form.bathrooms.includes(b)}
+              onClick={() => toggleBathroom(b)}
               className="flex flex-col items-center gap-1 px-5 py-3"
             >
               <Bath className="w-4 h-4" />
@@ -648,15 +673,39 @@ function Step2({ form, set, t }: {
 }
 
 // ── Step 3: Where & What ──────────────────────────────────────────────────────
-function Step3({ form, set, toggleLocation, toggleFeature, t }: {
+function Step3({ form, set, toggleLocation, toggleFeature, togglePropertyType, t }: {
   form: FormData
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
   toggleLocation: (loc: string) => void
   toggleFeature: (key: string) => void
+  togglePropertyType: (pt: string) => void
   t: (k: string) => string
 }) {
   return (
     <div className="space-y-7">
+      {/* Property type — multi-select */}
+      <div>
+        <Label>Property Type</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {PROPERTY_TYPES.map(pt => (
+            <button
+              key={pt}
+              type="button"
+              onClick={() => togglePropertyType(pt)}
+              className={cn(
+                'text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5',
+                form.property_types.includes(pt)
+                  ? 'border-gold bg-gold/10 text-navy font-medium'
+                  : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
+              )}
+            >
+              <Home className="w-3 h-3" />
+              {pt}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Locations */}
       <div>
         <div className="flex items-center justify-between mb-3">

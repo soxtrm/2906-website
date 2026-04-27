@@ -5,8 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { Slider } from '@/components/ui/slider'
-import { Check, ChevronDown, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+function sliderToBudget(p: number): number {
+  if (p <= 50) return 500 + (p / 50) * 1500
+  return 2000 + ((p - 50) / 50) * 8000
+}
+function budgetToSlider(b: number): number {
+  if (b <= 2000) return ((b - 500) / 1500) * 50
+  return 50 + ((b - 2000) / 8000) * 50
+}
+function roundTo50(n: number): number {
+  return Math.round(n / 50) * 50
+}
+
+const PROPERTY_TYPES = [
+  'Apartment', 'Penthouse', 'Maisonette', 'Townhouse', 'Villa', 'Farmhouse', 'House of Character',
+]
 
 const LOCATION_GROUPS = [
   { label: 'Central', items: ["Sliema", "St Julian's", "Gzira", "Msida", "Pieta", "Ta' Xbiex", "Swieqi", "Pembroke", "Madliena", "San Gwann", "Birkirkara"] },
@@ -40,10 +56,12 @@ const COUNTRY_CODES = [
 ]
 
 const defaultForm = {
-  name: '', countryCode: '+356', phone: '', email: '',
+  name: '', email: '',
   nationality: '', group_size: 1, hasPets: false, pets: '',
   profession: '', budget_min: 1000, budget_max: 2500,
-  bedrooms: '', bathrooms: '', move_in: '',
+  bedrooms: [] as string[], bathrooms: [] as string[],
+  property_types: [] as string[],
+  move_in: '',
   locations: [] as string[], features: [] as string[],
   wishes: '', comments: '', internal_notes: '',
   lead_agent: 'Kev', lead_agent_other: '',
@@ -96,7 +114,6 @@ export default function AddClientPage() {
   const validate = () => {
     const e: Record<string, string> = {}
     if (!form.name.trim()) e.name = 'Required'
-    if (!form.phone.trim()) e.phone = 'Required'
     if (!form.lead_agent) e.lead_agent = 'Required'
     if (form.lead_agent === 'Other' && !form.lead_agent_other.trim()) e.lead_agent_other = 'Required'
     return e
@@ -111,7 +128,6 @@ export default function AddClientPage() {
       const agentName = form.lead_agent === 'Other' ? form.lead_agent_other : form.lead_agent
       const payload = {
         name: form.name.trim(),
-        phone: form.countryCode.replace('+', '') + form.phone.replace(/\D/g, ''),
         email: form.email || null,
         nationality: form.nationality || null,
         group_size: form.group_size > 1 ? form.group_size : null,
@@ -119,8 +135,9 @@ export default function AddClientPage() {
         profession: form.profession || null,
         budget_min: form.budget_min,
         budget_max: form.budget_max,
-        bedrooms: form.bedrooms || null,
-        bathrooms: form.bathrooms || null,
+        bedrooms: form.bedrooms.length > 0 ? form.bedrooms.join(',') : null,
+        bathrooms: form.bathrooms.length > 0 ? form.bathrooms.join(',') : null,
+        property_types: form.property_types.length > 0 ? form.property_types.join(',') : null,
         move_in: form.move_in || null,
         locations: form.locations,
         features: FEATURES.filter(f => form.features.includes(f.key)).map(f => f.label),
@@ -208,24 +225,6 @@ export default function AddClientPage() {
                   {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
                 </Field>
 
-                {/* Phone */}
-                <Field label="Phone" required>
-                  <div className={cn('flex border rounded overflow-hidden focus-within:ring-2 focus-within:ring-gold/40 focus-within:border-gold',
-                    errors.phone ? 'border-red-400' : 'border-navy/15')}>
-                    <div className="relative shrink-0">
-                      <select value={form.countryCode} onChange={e => set('countryCode', e.target.value)}
-                        className="appearance-none h-full pl-3 pr-6 bg-navy/5 text-navy text-sm border-r border-navy/10 focus:outline-none cursor-pointer">
-                        {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-                      </select>
-                      <ChevronDown className="w-3 h-3 text-navy/40 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                    <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
-                      placeholder="9999 0001"
-                      className="flex-1 px-3 py-2.5 text-navy placeholder:text-navy/30 focus:outline-none bg-transparent" />
-                  </div>
-                  {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
-                </Field>
-
                 {/* Email */}
                 <Field label="Email">
                   <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
@@ -286,49 +285,49 @@ export default function AddClientPage() {
                   </div>
                 </Field>
 
-                {/* Budget slider - spans full width */}
+                {/* Budget slider - non-linear, spans full width */}
                 <div className="md:col-span-2">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-medium text-navy/50 uppercase tracking-wider">Monthly Budget</p>
                     <span className="font-serif text-navy font-semibold text-sm">
                       €{form.budget_min.toLocaleString()} – {form.budget_max >= 10000 ? '€10,000+' : `€${form.budget_max.toLocaleString()}`}
-                      {form.budget_max >= 2500 && (
+                      {form.budget_min >= 2500 && (
                         <span className="ml-2 text-xs px-1.5 py-0.5 bg-gold/15 text-gold border border-gold/30 rounded-full">Premium</span>
                       )}
                     </span>
                   </div>
                   <Slider
-                    value={[form.budget_min, form.budget_max]}
-                    onValueChange={([min, max]) => { set('budget_min', min); set('budget_max', max) }}
-                    min={500} max={10000} step={100}
+                    value={[budgetToSlider(form.budget_min), budgetToSlider(form.budget_max)]}
+                    onValueChange={([p1, p2]) => { set('budget_min', roundTo50(sliderToBudget(p1))); set('budget_max', roundTo50(sliderToBudget(p2))) }}
+                    min={0} max={100} step={1}
                   />
                   <div className="flex justify-between text-xs text-navy/30 mt-1">
-                    <span>€500</span><span>€2,500</span><span>€5,000</span><span>€10,000+</span>
+                    <span>€500</span><span>€2,000</span><span>€6,000</span><span>€10,000+</span>
                   </div>
                 </div>
 
-                {/* Bedrooms */}
+                {/* Bedrooms — multi-select */}
                 <Field label="Bedrooms">
                   <div className="flex gap-1.5 flex-wrap">
                     {['Studio', '1', '2', '3', '4+'].map(b => (
                       <button key={b} type="button"
-                        onClick={() => set('bedrooms', form.bedrooms === b ? '' : b)}
+                        onClick={() => set('bedrooms', form.bedrooms.includes(b) ? form.bedrooms.filter(x => x !== b) : [...form.bedrooms, b])}
                         className={cn('px-3 py-2 rounded border text-sm transition-all',
-                          form.bedrooms === b ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25')}>
+                          form.bedrooms.includes(b) ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25')}>
                         {b}
                       </button>
                     ))}
                   </div>
                 </Field>
 
-                {/* Bathrooms */}
+                {/* Bathrooms — multi-select */}
                 <Field label="Bathrooms">
                   <div className="flex gap-1.5">
                     {['1', '2', '3+'].map(b => (
                       <button key={b} type="button"
-                        onClick={() => set('bathrooms', form.bathrooms === b ? '' : b)}
+                        onClick={() => set('bathrooms', form.bathrooms.includes(b) ? form.bathrooms.filter(x => x !== b) : [...form.bathrooms, b])}
                         className={cn('px-4 py-2 rounded border text-sm transition-all',
-                          form.bathrooms === b ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25')}>
+                          form.bathrooms.includes(b) ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25')}>
                         {b}
                       </button>
                     ))}
@@ -351,6 +350,24 @@ export default function AddClientPage() {
                     onChange={e => set('move_in', e.target.value)}
                     className="w-full px-4 py-2.5 border border-navy/15 rounded text-navy focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold" />
                 </Field>
+
+                {/* Property type — multi-select, spans full width */}
+                <div className="md:col-span-2">
+                  <p className="text-xs font-medium text-navy/50 uppercase tracking-wider mb-2">
+                    Property Type
+                    {form.property_types.length > 0 && <span className="ml-2 text-gold normal-case">{form.property_types.length} selected</span>}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PROPERTY_TYPES.map(pt => (
+                      <button key={pt} type="button"
+                        onClick={() => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])}
+                        className={cn('text-xs px-2.5 py-1.5 rounded-full border transition-all',
+                          form.property_types.includes(pt) ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25 hover:text-navy')}>
+                        {pt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Viewings from */}
                 <Field label="Viewings Available From">
