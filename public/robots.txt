@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Disallow: /add-client
+Disallow: /*/add-client
+
+Sitemap: https://2906.estate/sitemap.xml
