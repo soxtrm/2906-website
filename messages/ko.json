@@ -82,7 +82,7 @@
     "contact": "문의",
     "privacy": "개인정보",
     "terms": "이용약관",
-    "address": "슬리에마, 몰타"
+    "address": "몰타 & 고조"
   },
   "aestheticsBanner": {
     "title": "프리미엄 럭셔리를 찾고 계신가요?",
@@ -133,5 +133,18 @@
     "step": "{total}단계 중 {current}단계",
     "required": "필수",
     "select": "선택"
+  },
+  "about": {
+    "title": "2906 소개",
+    "story_p1": "2906 Estate는 Olga Baldinska가 2025년에 설립한 에이전트 컬렉티브로, 몰타 부동산 시장에서 8년 이상의 경험을 보유하고 있습니다. 그녀는 슬리마의 해변부터 고조의 조용한 마을까지, 몰타 제도 전역에서 활동하는 노련한 독립 에이전트 네트워크를 구성했습니다.",
+    "story_p2": "깊은 현지 전문성과 개인적이고 사려 깊은 접근 방식을 결합하여, 고객이 단순히 집이 아닌 바로 그 집을 찾을 수 있도록 돕고 있습니다.",
+    "stat_properties_val": "20,000+",
+    "stat_properties_label": "관리 매물",
+    "stat_clients_val": "2,000+",
+    "stat_clients_label": "만족한 고객",
+    "stat_years_val": "8+",
+    "stat_years_label": "년 경험",
+    "stat_satisfaction_val": "100%",
+    "stat_satisfaction_label": "고객 만족도"
   }
 }

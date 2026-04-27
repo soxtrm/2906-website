@@ -241,7 +241,7 @@ export default async function PropertyPage({
                 </div>
                 <div className="space-y-3">
                   <a
-                    href={`https://wa.me/35699990001?text=Hi, I'm interested in ${property.title}`}
+                    href={`https://wa.me/35679010070?text=Hi, I'm interested in ${property.title}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded bg-[#25D366] text-white font-medium hover:bg-[#20BD5A] transition-colors text-sm"
@@ -250,7 +250,7 @@ export default async function PropertyPage({
                     WhatsApp
                   </a>
                   <a
-                    href={`mailto:info@2906realestate.mt?subject=Inquiry about ${property.title}`}
+                    href={`mailto:contact@2906.estate?subject=Inquiry about ${property.title}`}
                     className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded bg-navy text-white font-medium hover:opacity-90 transition-opacity text-sm"
                   >
                     <Mail className="w-4 h-4" />

@@ -15,11 +15,11 @@ export default function ContactPage() {
             Tell us what you're looking for
           </h1>
           <p className="text-white/70 text-base md:text-lg leading-relaxed mb-3">
-            We can't list all 20,000+ Malta properties online. Tell us what you're looking for and we'll match you with off-market options.
+            We can&apos;t list all 20,000+ Malta properties online. Tell us what you&apos;re looking for and we&apos;ll match you with all our options.
           </p>
           <p className="text-gold/80 text-sm flex items-center justify-center gap-2">
             <span className="w-1.5 h-1.5 bg-gold rounded-full inline-block animate-pulse" />
-            Reply within 24 hours via WhatsApp
+            Reply as soon as possible via WhatsApp or Email
           </p>
         </div>
       </section>

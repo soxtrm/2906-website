@@ -1,23 +1,25 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
-import { Award, Clock, Users, Building2 } from 'lucide-react'
-
-const stats = [
-  { icon: Building2, value: '500+', label: 'Properties Managed' },
-  { icon: Users, value: '1,000+', label: 'Happy Clients' },
-  { icon: Clock, value: '5+', label: 'Years Experience' },
-  { icon: Award, value: '100%', label: 'Client Satisfaction' },
-]
 
 export default function AboutPage() {
+  const t = useTranslations('about')
+
+  const stats = [
+    { val: t('stat_properties_val'), label: t('stat_properties_label') },
+    { val: t('stat_clients_val'),    label: t('stat_clients_label') },
+    { val: t('stat_years_val'),      label: t('stat_years_label') },
+    { val: t('stat_satisfaction_val'), label: t('stat_satisfaction_label') },
+  ]
+
   return (
     <main className="min-h-screen">
       <Header />
 
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="pt-28 pb-16 bg-navy">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div
@@ -25,107 +27,49 @@ export default function AboutPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-white mb-6">
-              About <span className="text-gold">2906</span> Real Estate
+            <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">Agents Collective · Malta & Gozo</p>
+            <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-white mb-8">
+              {t('title')}
             </h1>
-            <p className="text-white/80 text-lg leading-relaxed">
-              Founded in 2020, 2906 Real Estate Malta has quickly established itself as a trusted name in Malta&apos;s property market. We combine local expertise with personalized service to help you find your perfect property.
-            </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-off-white">
+      {/* Stats */}
+      <section className="py-14 bg-white">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
+          <div className="grid grid-cols-2 lg:grid-cols-4 max-w-4xl mx-auto">
+            {stats.map((stat, i) => (
               <motion.div
                 key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="text-center"
+                transition={{ delay: i * 0.08 }}
+                className={`text-center px-6 py-8 ${i < stats.length - 1 ? 'lg:border-r border-navy/8' : ''} ${i % 2 === 0 ? 'border-r border-navy/8 lg:border-r-0' : ''}`}
               >
-                <div className="w-14 h-14 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <stat.icon className="w-6 h-6 text-gold" />
-                </div>
-                <p className="font-serif text-3xl text-navy mb-1">{stat.value}</p>
-                <p className="text-navy/60 text-sm">{stat.label}</p>
+                <p className="font-serif text-4xl md:text-5xl text-gold mb-2 tracking-tight">{stat.val}</p>
+                <p className="text-navy/50 text-[10px] uppercase tracking-[0.15em] leading-relaxed">{stat.label}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Story Section */}
-      <section className="py-16 bg-white">
+      {/* Story */}
+      <section className="py-16 bg-off-white">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-3xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="font-serif text-2xl md:text-3xl text-navy mb-6 text-center">
-                Our Story
-              </h2>
-              <div className="space-y-5 text-navy/70 text-base leading-relaxed">
-                <p>
-                  2906 Real Estate is an agents collective built on a single conviction: property transactions in Malta deserve the same precision and care that the island itself inspires. We are a close-knit group of experienced professionals who bring both an outsider&apos;s appreciation and an insider&apos;s knowledge to every mandate.
-                </p>
-                <p>
-                  We cover the full spectrum of Malta&apos;s residential and commercial property landscape — from a studio in Gzira to a seafront penthouse in Sliema, a boutique office in St Julian&apos;s to a restored palazzo in Valletta. Our Aesthetics collection caters to clients who expect more than four walls: properties curated for design, light, and lifestyle above €2,500/month.
-                </p>
-                <p>
-                  The name 2906 marks the moment this journey began. It is a daily reminder that every key we hand over is a milestone in someone&apos;s story — and we take that seriously.
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Values Section */}
-      <section className="py-16 bg-navy text-white">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.h2
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="font-serif text-2xl md:text-3xl text-center mb-12"
+            className="max-w-2xl mx-auto"
           >
-            Our Values
-          </motion.h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {[
-              {
-                title: 'Integrity',
-                description: 'We believe in transparent, honest dealings. What we say is what you get.',
-              },
-              {
-                title: 'Excellence',
-                description: 'We maintain the highest standards in everything we do, from property selection to client service.',
-              },
-              {
-                title: 'Personal Touch',
-                description: 'Every client is unique. We take time to understand your needs and exceed your expectations.',
-              },
-            ].map((value, index) => (
-              <motion.div
-                key={value.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="text-center"
-              >
-                <h3 className="font-serif text-xl text-gold mb-3">{value.title}</h3>
-                <p className="text-white/70">{value.description}</p>
-              </motion.div>
-            ))}
-          </div>
+            <div className="space-y-6 text-navy/70 text-base leading-[1.85]">
+              <p>{t('story_p1')}</p>
+              <p className="font-medium text-navy/90">{t('story_p2')}</p>
+            </div>
+          </motion.div>
         </div>
       </section>
 

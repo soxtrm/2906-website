@@ -10,8 +10,10 @@ export default function AestheticsPage() {
   return (
     <ListingsPage
       category="aesthetics"
-      title="Aesthetics"
-      description="Luxury rentals from €2,500/month — exceptional design, premium finishes, uncompromising quality"
+      title="Luxury Lets from €2,500/month"
+      subheadline="Apartments, Houses, Palazzos, Penthouses, Villas & more"
+      tagline="Exceptional design — Premium finishes — Uncompromising quality."
+      description=""
       accentColor="bg-gold"
       minPrice={2500}
     />

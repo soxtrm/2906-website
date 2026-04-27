@@ -82,7 +82,7 @@
     "contact": "Contact",
     "privacy": "Privacy",
     "terms": "Terms",
-    "address": "Sliema, Malta"
+    "address": "Malta & Gozo"
   },
   "aestheticsBanner": {
     "title": "Looking for Premium Luxury?",
@@ -133,5 +133,18 @@
     "step": "Step {current} of {total}",
     "required": "Required",
     "select": "Select"
+  },
+  "about": {
+    "title": "About 2906",
+    "story_p1": "2906 Estate is an Agents Collective founded in 2025 by Olga Baldinska, drawing on over 8 years of experience in Malta's real estate market. She brought together a network of seasoned independent agents working across the Maltese archipelago — from Sliema's seafront to Gozo's quiet villages.",
+    "story_p2": "We combine deep local expertise with a personal, considered approach — helping clients find not just a property, but the right one.",
+    "stat_properties_val": "20,000+",
+    "stat_properties_label": "Properties Managed",
+    "stat_clients_val": "2,000+",
+    "stat_clients_label": "Happy Clients",
+    "stat_years_val": "8+",
+    "stat_years_label": "Years of Experience",
+    "stat_satisfaction_val": "100%",
+    "stat_satisfaction_label": "Client Satisfaction"
   }
 }

@@ -100,8 +100,8 @@ export default function TermsPage() {
               <h2 className="font-serif text-xl text-navy mb-3">9. Contact</h2>
               <p>
                 For any queries regarding these terms, contact us at:{' '}
-                <a href="mailto:info@2906realestate.mt" className="text-gold hover:underline">
-                  info@2906realestate.mt
+                <a href="mailto:contact@2906.estate" className="text-gold hover:underline">
+                  contact@2906.estate
                 </a>
               </p>
             </div>

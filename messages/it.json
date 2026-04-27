@@ -82,7 +82,7 @@
     "contact": "Contatti",
     "privacy": "Privacy",
     "terms": "Termini",
-    "address": "Sliema, Malta"
+    "address": "Malta & Gozo"
   },
   "aestheticsBanner": {
     "title": "Cerchi lusso premium?",
@@ -133,5 +133,18 @@
     "step": "Passo {current} di {total}",
     "required": "Obbligatorio",
     "select": "Seleziona"
+  },
+  "about": {
+    "title": "Chi siamo — 2906",
+    "story_p1": "2906 Estate è un collettivo di agenti fondato nel 2025 da Olga Baldinska, con oltre 8 anni di esperienza nel mercato immobiliare maltese. Ha riunito una rete di agenti indipendenti esperti che operano in tutto l'arcipelago maltese — dalla passeggiata sul mare di Sliema ai tranquilli villaggi di Gozo.",
+    "story_p2": "Uniamo una profonda competenza locale a un approccio personale e ponderato — aiutando i clienti a trovare non solo una proprietà, ma quella giusta.",
+    "stat_properties_val": "20.000+",
+    "stat_properties_label": "Proprietà gestite",
+    "stat_clients_val": "2.000+",
+    "stat_clients_label": "Clienti soddisfatti",
+    "stat_years_val": "8+",
+    "stat_years_label": "Anni di esperienza",
+    "stat_satisfaction_val": "100%",
+    "stat_satisfaction_label": "Soddisfazione clienti"
   }
 }

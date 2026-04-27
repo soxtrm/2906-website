@@ -82,7 +82,7 @@
     "contact": "联系方式",
     "privacy": "隐私政策",
     "terms": "条款",
-    "address": "斯利马，马耳他"
+    "address": "马耳他与戈佐"
   },
   "aestheticsBanner": {
     "title": "寻找顶级豪华房产？",
@@ -133,5 +133,18 @@
     "step": "第 {current} 步，共 {total} 步",
     "required": "必填",
     "select": "选择"
+  },
+  "about": {
+    "title": "关于 2906",
+    "story_p1": "2906 Estate 是一个由 Olga Baldinska 于 2025 年创立的经纪人集体，拥有超过 8 年马耳他房地产市场经验。她汇聚了一批经验丰富的独立经纪人，遍布马耳他群岛——从斯利马的海滨到戈佐岛的宁静村庄。",
+    "story_p2": "我们将深厚的本地专业知识与个性化、体贴入微的服务相结合——帮助客户找到的不仅是一处房产，更是那处对的房产。",
+    "stat_properties_val": "20,000+",
+    "stat_properties_label": "管理房产",
+    "stat_clients_val": "2,000+",
+    "stat_clients_label": "满意客户",
+    "stat_years_val": "8+",
+    "stat_years_label": "年行业经验",
+    "stat_satisfaction_val": "100%",
+    "stat_satisfaction_label": "客户满意度"
   }
 }

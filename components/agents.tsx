@@ -35,7 +35,7 @@ export function Agents() {
 
           <div className="px-5 pb-5 flex gap-2">
             <a
-              href="https://wa.me/35699990001"
+              href="https://wa.me/35679010070"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded bg-[#25D366] text-white text-sm font-medium hover:bg-[#20BD5A] transition-colors"
@@ -44,14 +44,14 @@ export function Agents() {
               WhatsApp
             </a>
             <a
-              href="mailto:info@2906realestate.mt"
+              href="mailto:contact@2906.estate"
               className="flex items-center justify-center p-2.5 rounded bg-navy/5 text-navy hover:bg-navy hover:text-white transition-colors"
               aria-label="Email 2906"
             >
               <Mail className="w-4 h-4" />
             </a>
             <a
-              href="tel:+35699990001"
+              href="tel:+35679010070"
               className="flex items-center justify-center p-2.5 rounded bg-navy/5 text-navy hover:bg-navy hover:text-white transition-colors"
               aria-label="Call 2906"
             >
