@@ -28,7 +28,6 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
   const searchParams = useSearchParams()
   const [allProperties, setAllProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'all' | 'standard' | 'aesthetics'>('all')
 
   useEffect(() => {
     setLoading(true)
@@ -81,33 +80,37 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
         </div>
       </section>
 
-      {/* Category Tabs — letting page only */}
+      {/* Aesthetics Banner */}
       {showAestheticsBanner && (
-        <div className="bg-white border-b border-gray-100">
+        <section className="bg-gradient-to-r from-accent-aesthetics/10 via-gold/5 to-accent-aesthetics/10 border-y border-[#C9A961]/50 shadow-[0_1px_12px_rgba(201,169,97,0.12)]">
           <div className="container mx-auto px-4 lg:px-8">
-            <div className="flex items-center gap-1 py-2 overflow-x-auto">
-              {(['all', 'standard', 'aesthetics'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3.5 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-all',
-                    tab === 'aesthetics'
-                      ? activeTab === 'aesthetics'
-                        ? 'border border-[#C9A961] bg-[#C9A961]/10 text-[#9a7935] shadow-[0_0_8px_rgba(201,169,97,0.25)]'
-                        : 'border border-[#C9A961]/60 text-[#9a7935]/80 hover:border-[#C9A961] hover:bg-[#C9A961]/5 hover:shadow-[0_0_6px_rgba(201,169,97,0.2)]'
-                      : activeTab === tab
-                        ? 'bg-navy text-white'
-                        : 'bg-off-white text-navy/60 hover:bg-navy/8 hover:text-navy'
-                  )}
-                >
-                  {tab === 'aesthetics' && <Sparkles className="w-3 h-3" />}
-                  {tab === 'all' ? 'All' : tab === 'standard' ? 'Standard' : 'Aesthetics'}
-                </button>
-              ))}
-            </div>
+            <Link href="/aesthetics">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="py-4 flex items-center justify-between gap-4 group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#C9A961]/15 flex items-center justify-center shrink-0 ring-1 ring-[#C9A961]/40">
+                    <Sparkles className="w-5 h-5 text-[#C9A961]" />
+                  </div>
+                  <div>
+                    <p className="font-serif text-navy text-sm md:text-base">
+                      Looking for <span className="text-[#9a7935] font-semibold">Premium Luxury</span>?
+                    </p>
+                    <p className="text-navy/60 text-xs md:text-sm">
+                      Explore our Aesthetics collection — exclusive properties starting from €2,500/month
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-[#9a7935] text-sm font-medium shrink-0">
+                  <span className="hidden sm:inline">View Aesthetics</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.div>
+            </Link>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Filters */}
@@ -121,41 +124,32 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
               <Loader2 className="w-5 h-5 animate-spin" />
               <span className="text-sm">Loading properties…</span>
             </div>
-          ) : (() => {
-            const displayed = showAestheticsBanner
-              ? activeTab === 'standard'
-                ? allProperties.filter(p => p.category === 'letting')
-                : activeTab === 'aesthetics'
-                  ? allProperties.filter(p => p.category === 'aesthetics')
-                  : allProperties
-              : allProperties
-            return displayed.length > 0 ? (
-              <>
-                <p className="text-navy/60 text-sm mb-6">
-                  {displayed.length} {displayed.length === 1 ? 'property' : 'properties'}
-                </p>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-8">
-                  {displayed.map((property, index) => (
-                    <PropertyCard key={property.id} property={property} index={index} />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
-              >
-                <div className="w-16 h-16 rounded-full bg-navy/5 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🏠</span>
-                </div>
-                <h3 className="font-serif text-xl text-navy mb-2">No Properties Found</h3>
-                <p className="text-navy/60 text-sm">
-                  We don&apos;t have any properties matching your criteria at the moment.
-                </p>
-              </motion.div>
-            )
-          })()}
+          ) : allProperties.length > 0 ? (
+            <>
+              <p className="text-navy/60 text-sm mb-6">
+                {allProperties.length} {allProperties.length === 1 ? 'property' : 'properties'}
+              </p>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-8">
+                {allProperties.map((property, index) => (
+                  <PropertyCard key={property.id} property={property} index={index} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-16"
+            >
+              <div className="w-16 h-16 rounded-full bg-navy/5 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🏠</span>
+              </div>
+              <h3 className="font-serif text-xl text-navy mb-2">No Properties Found</h3>
+              <p className="text-navy/60 text-sm">
+                We don&apos;t have any properties matching your criteria at the moment.
+              </p>
+            </motion.div>
+          )}
         </div>
       </section>
 
