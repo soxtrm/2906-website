@@ -19,6 +19,7 @@ export const languages = [
   { code: 'fr', label: 'FR' },
   { code: 'es', label: 'ES' },
   { code: 'ko', label: 'KO' },
+  { code: 'uk', label: '🇺🇦' },
 ]
 
 // All Malta villages/locations

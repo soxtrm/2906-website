@@ -123,18 +123,23 @@ const PROPERTY_TYPES = [
 
 // ── Features ──────────────────────────────────────────────────────────────────
 const FEATURES = [
-  { key: 'pool',      icon: '🏊', label: 'Pool' },
-  { key: 'sea_view',  icon: '🌊', label: 'Sea View' },
-  { key: 'parking',   icon: '🅿️', label: 'Parking' },
-  { key: 'garden',    icon: '🌳', label: 'Garden' },
-  { key: 'lift',      icon: '⬆️', label: 'Lift' },
-  { key: 'pets',      icon: '🐾', label: 'Pet Friendly' },
-  { key: 'terrace',   icon: '☀️', label: 'Terrace' },
-  { key: 'ac',        icon: '❄️', label: 'A/C' },
-  { key: 'furnished', icon: '🛋️', label: 'Furnished' },
-  { key: 'gym',       icon: '🏋️', label: 'Gym' },
+  { key: 'ac',        icon: '❄️',  label: 'A/C' },
+  { key: 'bathtub',   icon: '🛁',  label: 'Bathtub' },
   { key: 'concierge', icon: '🛡️', label: 'Concierge' },
-  { key: 'fireplace', icon: '🔥', label: 'Fireplace' },
+  { key: 'fireplace', icon: '🔥',  label: 'Fireplace' },
+  { key: 'furnished', icon: '🛋️', label: 'Furnished' },
+  { key: 'garage',    icon: '🚗',  label: 'Garage/Parking' },
+  { key: 'garden',    icon: '🌳',  label: 'Garden' },
+  { key: 'gym',       icon: '🏋️', label: 'Gym' },
+  { key: 'jacuzzi',   icon: '♨️',  label: 'Jacuzzi' },
+  { key: 'lift',      icon: '⬆️',  label: 'Lift' },
+  { key: 'parking',   icon: '🅿️', label: 'Parking' },
+  { key: 'pets',      icon: '🐾',  label: 'Pet Friendly' },
+  { key: 'pool',      icon: '🏊',  label: 'Pool' },
+  { key: 'rooftop',   icon: '🏙️', label: 'Rooftop' },
+  { key: 'sea_view',  icon: '🌊',  label: 'Sea View' },
+  { key: 'seafront',  icon: '🌅',  label: 'Seafront' },
+  { key: 'terrace',   icon: '☀️',  label: 'Terrace' },
 ]
 
 // ── Slide animation ───────────────────────────────────────────────────────────

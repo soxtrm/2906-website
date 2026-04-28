@@ -9,7 +9,7 @@ import { Logo } from './logo'
 import { navItems, languages } from '@/lib/data'
 import { cn } from '@/lib/utils'
 
-const LOCALES = ['en', 'de', 'ar', 'zh', 'it', 'fr', 'es', 'ko']
+const LOCALES = ['en', 'de', 'ar', 'zh', 'it', 'fr', 'es', 'ko', 'uk']
 
 export function Header({ heroPage = false }: { heroPage?: boolean }) {
   // Init as NOT scrolled on hero pages (transparent) and scrolled on inner pages (white)

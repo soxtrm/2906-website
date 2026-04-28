@@ -33,18 +33,23 @@ const LOCATION_GROUPS = [
 ]
 
 const FEATURES = [
-  { key: 'pool', icon: '🏊', label: 'Pool' },
-  { key: 'sea_view', icon: '🌊', label: 'Sea View' },
-  { key: 'parking', icon: '🅿️', label: 'Parking' },
-  { key: 'garden', icon: '🌳', label: 'Garden' },
-  { key: 'lift', icon: '⬆️', label: 'Lift' },
-  { key: 'pets', icon: '🐾', label: 'Pet Friendly' },
-  { key: 'terrace', icon: '☀️', label: 'Terrace' },
-  { key: 'ac', icon: '❄️', label: 'A/C' },
-  { key: 'furnished', icon: '🛋️', label: 'Furnished' },
-  { key: 'gym', icon: '🏋️', label: 'Gym' },
-  { key: 'concierge', icon: '🛡️', label: 'Concierge' },
-  { key: 'fireplace', icon: '🔥', label: 'Fireplace' },
+  { key: 'ac',       icon: '❄️',  label: 'A/C' },
+  { key: 'bathtub',  icon: '🛁',  label: 'Bathtub' },
+  { key: 'concierge',icon: '🛡️', label: 'Concierge' },
+  { key: 'fireplace',icon: '🔥',  label: 'Fireplace' },
+  { key: 'furnished',icon: '🛋️', label: 'Furnished' },
+  { key: 'garage',   icon: '🚗',  label: 'Garage/Parking' },
+  { key: 'garden',   icon: '🌳',  label: 'Garden' },
+  { key: 'gym',      icon: '🏋️', label: 'Gym' },
+  { key: 'jacuzzi',  icon: '♨️',  label: 'Jacuzzi' },
+  { key: 'lift',     icon: '⬆️',  label: 'Lift' },
+  { key: 'parking',  icon: '🅿️', label: 'Parking' },
+  { key: 'pets',     icon: '🐾',  label: 'Pet Friendly' },
+  { key: 'pool',     icon: '🏊',  label: 'Pool' },
+  { key: 'rooftop',  icon: '🏙️', label: 'Rooftop' },
+  { key: 'sea_view', icon: '🌊',  label: 'Sea View' },
+  { key: 'seafront', icon: '🌅',  label: 'Seafront' },
+  { key: 'terrace',  icon: '☀️',  label: 'Terrace' },
 ]
 
 const COUNTRY_CODES = [
@@ -64,7 +69,7 @@ const defaultForm = {
   move_in: '',
   preferred_regions: [] as string[], locations: [] as string[], features: [] as string[],
   wishes: '', comments: '', internal_notes: '',
-  lead_agent: 'Kevin Christian', lead_agent_other: '',
+  lead_agent: 'Kevin', lead_agent_other: '',
   viewings_from: '',
 }
 
@@ -248,7 +253,7 @@ export default function AddClientPage() {
                     className={cn('w-full px-4 py-2.5 border rounded text-navy focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold bg-white',
                       errors.lead_agent ? 'border-red-400' : 'border-navy/15')}
                   >
-                    {['Kevin Christian', 'Anselme', 'Isabel', 'Tatyana', 'Kseniia', 'Julia', 'Other'].map(a => (
+                    {['Kevin', 'Olga', 'Kevin Christian', 'Anselme', 'Isabel', 'Tatyana', 'Kseniia', 'Julia', 'Other'].map(a => (
                       <option key={a} value={a}>{a}</option>
                     ))}
                   </select>

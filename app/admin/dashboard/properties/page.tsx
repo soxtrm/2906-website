@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminApi, AdminProperty } from '@/lib/admin-api'
 
 const EMPTY: Partial<AdminProperty> = {
@@ -39,7 +39,7 @@ export default function PropertiesPage() {
 
   const limit = 20
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const q = `?page=${page + 1}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`
@@ -51,9 +51,9 @@ export default function PropertiesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, search])
 
-  useEffect(() => { load() }, [page, search]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [load])
 
   function openNew() { setEditing({ ...EMPTY }); setIsNew(true); setError('') }
   function openEdit(p: AdminProperty) { setEditing({ ...p }); setIsNew(false); setError('') }
