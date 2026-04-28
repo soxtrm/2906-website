@@ -64,7 +64,7 @@ const defaultForm = {
   move_in: '',
   locations: [] as string[], features: [] as string[],
   wishes: '', comments: '', internal_notes: '',
-  lead_agent: 'Kev', lead_agent_other: '',
+  lead_agent: 'Kevin Christian', lead_agent_other: '',
   viewings_from: '',
 }
 
@@ -241,20 +241,21 @@ export default function AddClientPage() {
 
                 {/* Lead Agent */}
                 <Field label="Lead Agent" required>
-                  <div className="flex gap-2 mb-2">
-                    {['Kev', 'Olga', 'Other'].map(a => (
-                      <button key={a} type="button" onClick={() => set('lead_agent', a)}
-                        className={cn('flex-1 py-2.5 rounded border text-sm font-medium transition-all',
-                          form.lead_agent === a ? 'border-gold bg-gold/10 text-navy' : 'border-navy/15 text-navy/50 hover:border-navy/30')}>
-                        {a}
-                      </button>
+                  <select
+                    value={form.lead_agent}
+                    onChange={e => set('lead_agent', e.target.value)}
+                    className={cn('w-full px-4 py-2.5 border rounded text-navy focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold bg-white',
+                      errors.lead_agent ? 'border-red-400' : 'border-navy/15')}
+                  >
+                    {['Kevin Christian', 'Anselme', 'Isabel', 'Tatyana', 'Kseniia', 'Julia', 'Other'].map(a => (
+                      <option key={a} value={a}>{a}</option>
                     ))}
-                  </div>
+                  </select>
                   {form.lead_agent === 'Other' && (
                     <input type="text" value={form.lead_agent_other}
                       onChange={e => set('lead_agent_other', e.target.value)}
                       placeholder="Agent name"
-                      className={cn('w-full px-4 py-2.5 border rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40',
+                      className={cn('w-full mt-2 px-4 py-2.5 border rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40',
                         errors.lead_agent_other ? 'border-red-400' : 'border-navy/15')} />
                   )}
                   {errors.lead_agent && <p className="text-red-400 text-xs mt-1">{errors.lead_agent}</p>}
