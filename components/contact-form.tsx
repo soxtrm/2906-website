@@ -602,11 +602,12 @@ function Step2({ form, set, t }: {
           step={1}
           className="mt-2"
         />
-        <div className="flex justify-between text-xs text-navy/40 mt-1.5">
-          <span>€500</span>
-          <span>€2,000</span>
-          <span>€6,000</span>
-          <span>€10,000+</span>
+        <div className="relative mt-1.5 h-4 text-xs text-navy/40">
+          <span className="absolute left-0">€0</span>
+          <span className="absolute left-1/4 -translate-x-1/2">1K</span>
+          <span className="absolute left-1/2 -translate-x-1/2">2K</span>
+          <span className="absolute left-3/4 -translate-x-1/2">5K</span>
+          <span className="absolute right-0">10K+</span>
         </div>
       </div>
 
