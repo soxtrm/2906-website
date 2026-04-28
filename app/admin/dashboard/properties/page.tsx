@@ -42,7 +42,7 @@ export default function PropertiesPage() {
   async function load() {
     setLoading(true)
     try {
-      const q = `?limit=${limit}&offset=${page * limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`
+      const q = `?page=${page + 1}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`
       const data = await adminApi.getProperties(q)
       setProperties(data.properties)
       setTotal(data.total)
