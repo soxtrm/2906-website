@@ -320,7 +320,7 @@ export function ContactForm() {
         </h2>
         <p className="text-navy/60 text-lg mb-8">{t('success_desc')}</p>
         <a
-          href={`https://wa.me/35699990001`}
+          href="https://wa.me/35679010070?text=Hi%20Olga%2C%20I%20just%20submitted%20a%20request%20on%202906.estate"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-6 py-3 bg-[#25D366] text-white rounded font-medium hover:bg-[#20BD5A] transition-colors"
@@ -328,6 +328,7 @@ export function ContactForm() {
           <MessageCircle className="w-5 h-5" />
           {t('wa_chat')}
         </a>
+        <p className="text-navy/40 text-sm mt-3">Or call/WhatsApp +356 7901 0070</p>
       </motion.div>
     )
   }
