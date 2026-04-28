@@ -62,7 +62,7 @@ const defaultForm = {
   bedrooms: [] as string[], bathrooms: [] as string[],
   property_types: [] as string[],
   move_in: '',
-  locations: [] as string[], features: [] as string[],
+  preferred_regions: [] as string[], locations: [] as string[], features: [] as string[],
   wishes: '', comments: '', internal_notes: '',
   lead_agent: 'Kevin Christian', lead_agent_other: '',
   viewings_from: '',
@@ -139,6 +139,7 @@ export default function AddClientPage() {
         bathrooms: form.bathrooms.length > 0 ? form.bathrooms.join(',') : null,
         property_types: form.property_types.length > 0 ? form.property_types.join(',') : null,
         move_in: form.move_in || null,
+        preferred_regions: form.preferred_regions.length > 0 ? form.preferred_regions : null,
         locations: form.locations,
         features: FEATURES.filter(f => form.features.includes(f.key)).map(f => f.label),
         wishes: form.wishes || null,
@@ -377,10 +378,25 @@ export default function AddClientPage() {
                     className="w-full px-4 py-2.5 border border-navy/15 rounded text-navy focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold" />
                 </Field>
 
+                {/* Regions - full width */}
+                <div className="md:col-span-2">
+                  <p className="text-xs font-medium text-navy/50 uppercase tracking-wider mb-2">
+                    Regions (optional)
+                    {form.preferred_regions.length > 0 && <span className="ml-2 text-gold normal-case">{form.preferred_regions.length} selected</span>}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Central', 'Central + Surroundings', 'North', 'Central-West', 'South-East', 'South', 'Gozo'].map(r => (
+                      <Chip key={r} active={form.preferred_regions.includes(r)} onClick={() => set('preferred_regions', form.preferred_regions.includes(r) ? form.preferred_regions.filter(x => x !== r) : [...form.preferred_regions, r])}>
+                        {r}
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Locations - full width */}
                 <div className="md:col-span-2">
                   <p className="text-xs font-medium text-navy/50 uppercase tracking-wider mb-2">
-                    Preferred Locations
+                    Specific villages/towns
                     {form.locations.length > 0 && <span className="ml-2 text-gold normal-case">{form.locations.length} selected</span>}
                   </p>
                   <div className="space-y-2">

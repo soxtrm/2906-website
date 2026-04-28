@@ -162,6 +162,7 @@ interface FormData {
   property_types: string[]
   move_in: string
   move_in_custom: string
+  preferred_regions: string[]
   locations: string[]
   open_to_suggestions: boolean
   features: string[]
@@ -175,7 +176,7 @@ const defaultForm: FormData = {
   profession: '', budget_min: 1000, budget_max: 2500,
   bedrooms: [], bathrooms: [], property_types: [],
   move_in: '', move_in_custom: '',
-  locations: [], open_to_suggestions: false,
+  preferred_regions: [], locations: [], open_to_suggestions: false,
   features: [], wishes: '', comments: '',
 }
 
@@ -218,6 +219,13 @@ export function ContactForm() {
     setForm(prev => ({ ...prev, [key]: val }))
     setErrors(prev => { const e = { ...prev }; delete e[key]; return e })
   }, [])
+
+  const toggleRegion = (r: string) => {
+    set('preferred_regions', form.preferred_regions.includes(r)
+      ? form.preferred_regions.filter(x => x !== r)
+      : [...form.preferred_regions, r]
+    )
+  }
 
   const toggleLocation = (loc: string) => {
     set('locations', form.locations.includes(loc)
@@ -272,6 +280,7 @@ export function ContactForm() {
         bathrooms: form.bathrooms.length > 0 ? form.bathrooms.join(',') : null,
         property_types: form.property_types.length > 0 ? form.property_types.join(',') : null,
         move_in: form.move_in_custom || form.move_in || null,
+        preferred_regions: form.preferred_regions.length > 0 ? form.preferred_regions : null,
         locations: form.open_to_suggestions ? [...form.locations, 'Open to suggestions'] : form.locations,
         features: FEATURES.filter(f => form.features.includes(f.key)).map(f => f.label),
         wishes: form.wishes || null,
@@ -382,7 +391,7 @@ export function ContactForm() {
         >
           {step === 1 && <Step1 form={form} set={set} errors={errors} t={t} />}
           {step === 2 && <Step2 form={form} set={set} t={t} />}
-          {step === 3 && <Step3 form={form} set={set} toggleLocation={toggleLocation} toggleFeature={toggleFeature} t={t} togglePropertyType={(pt: string) => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])} />}
+          {step === 3 && <Step3 form={form} set={set} toggleRegion={toggleRegion} toggleLocation={toggleLocation} toggleFeature={toggleFeature} t={t} togglePropertyType={(pt: string) => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])} />}
         </motion.div>
       </AnimatePresence>
 
@@ -675,9 +684,12 @@ function Step2({ form, set, t }: {
 }
 
 // ── Step 3: Where & What ──────────────────────────────────────────────────────
-function Step3({ form, set, toggleLocation, toggleFeature, togglePropertyType, t }: {
+const REGIONS = ['Central', 'Central + Surroundings', 'North', 'Central-West', 'South-East', 'South', 'Gozo']
+
+function Step3({ form, set, toggleRegion, toggleLocation, toggleFeature, togglePropertyType, t }: {
   form: FormData
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
+  toggleRegion: (r: string) => void
   toggleLocation: (loc: string) => void
   toggleFeature: (key: string) => void
   togglePropertyType: (pt: string) => void
@@ -703,6 +715,33 @@ function Step3({ form, set, toggleLocation, toggleFeature, togglePropertyType, t
             >
               <Home className="w-3 h-3" />
               {pt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Regions */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <Label>{t('regions')}</Label>
+          {form.preferred_regions.length > 0 && (
+            <span className="text-xs text-gold">{form.preferred_regions.length} selected</span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {REGIONS.map(r => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => toggleRegion(r)}
+              className={cn(
+                'text-xs px-2.5 py-1 rounded-full border transition-all',
+                form.preferred_regions.includes(r)
+                  ? 'border-gold bg-gold/10 text-navy font-medium'
+                  : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
+              )}
+            >
+              {r}
             </button>
           ))}
         </div>
