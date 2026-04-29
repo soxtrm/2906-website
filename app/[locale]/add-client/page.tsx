@@ -253,7 +253,7 @@ export default function AddClientPage() {
                     className={cn('w-full px-4 py-2.5 border rounded text-navy focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold bg-white',
                       errors.lead_agent ? 'border-red-400' : 'border-navy/15')}
                   >
-                    {['Kevin', 'Olga', 'Kevin Christian', 'Anselme', 'Isabel', 'Tatyana', 'Kseniia', 'Julia', 'Other'].map(a => (
+                    {['Kevin', 'Olga', 'Inna', 'Oleg', 'Kevin Christian', 'Anselme', 'Isabel', 'Tatyana', 'Kseniia', 'Julia', 'Other'].map(a => (
                       <option key={a} value={a}>{a}</option>
                     ))}
                   </select>
