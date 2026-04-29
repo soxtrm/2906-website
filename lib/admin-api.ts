@@ -33,6 +33,8 @@ export const adminApi = {
 
   stats: () => req<Record<string, number>>('GET', 'crm/stats'),
 
+  dailyStats: () => req<DailyStats>('GET', 'stats/daily'),
+
   // Properties
   getProperties: (params = '') => req<{ properties: AdminProperty[]; total: number }>('GET', `properties${params}`),
   createProperty: (data: Partial<AdminProperty>) => req<AdminProperty>('POST', 'properties', data),
@@ -167,4 +169,36 @@ export interface AdminUser {
   last_login: string
   created_at: string
   created_by_email: string
+}
+
+export interface DailyStatsPeriod {
+  form_submissions: number
+  new_clients: number
+  new_properties: number
+  outreach_sent: number
+  replies_received: number
+  scraper_leads: number
+}
+
+export interface DailyStats {
+  today: DailyStatsPeriod
+  yesterday: DailyStatsPeriod
+  this_week: DailyStatsPeriod
+  pipeline: {
+    pending_matches: number
+    hot_leads: number
+    needs_response: number
+    scheduled_viewings: number
+  }
+  performance: {
+    open_rate_emails: number
+    reply_rate_whatsapp: number
+    conversion_rate: number
+  }
+  chart: Array<{
+    day: string
+    clients: number
+    properties: number
+    outreach: number
+  }>
 }
