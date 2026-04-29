@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ChevronDown } from 'lucide-react'
 import { Logo } from './logo'
@@ -16,11 +16,24 @@ export function Header({ heroPage = false }: { heroPage?: boolean }) {
   const [isScrolled, setIsScrolled] = useState(!heroPage)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isLangOpen, setIsLangOpen] = useState(false)
-  const [currentLang, setCurrentLang] = useState('EN')
   const pathname = usePathname()
+  const router = useRouter()
 
   // heroPage prop takes precedence; pathname check covers client-side navigation
   const segments = pathname.split('/').filter(Boolean)
+
+  // Derive current locale from URL path
+  const currentLocale = (segments.length > 0 && LOCALES.includes(segments[0])) ? segments[0] : 'en'
+  const currentLangLabel = languages.find(l => l.code === currentLocale)?.label ?? 'EN'
+
+  function switchLanguage(code: string) {
+    const hasLocalePrefix = LOCALES.includes(segments[0]) && segments[0] !== 'en'
+    const pathWithoutLocale = hasLocalePrefix ? '/' + segments.slice(1).join('/') : pathname
+    const clean = pathWithoutLocale || '/'
+    const newPath = code === 'en' ? clean : `/${code}${clean === '/' ? '' : clean}`
+    router.push(newPath)
+    setIsLangOpen(false)
+  }
   const isHeroPage =
     heroPage ||
     segments.length === 0 ||
@@ -103,7 +116,7 @@ export function Header({ heroPage = false }: { heroPage?: boolean }) {
                   transparent ? 'text-white/70 hover:text-white' : 'text-navy/60 hover:text-navy'
                 )}
               >
-                {currentLang}
+                {currentLangLabel}
                 <ChevronDown className={cn('w-3 h-3 transition-transform', isLangOpen && 'rotate-180')} />
               </button>
               
@@ -118,14 +131,11 @@ export function Header({ heroPage = false }: { heroPage?: boolean }) {
                     {languages.map((lang) => (
                       <button
                         key={lang.code}
-                        onClick={() => {
-                          setCurrentLang(lang.label)
-                          setIsLangOpen(false)
-                        }}
+                        onClick={() => switchLanguage(lang.code)}
                         className={cn(
                           'w-full px-3 py-1.5 text-left text-xs transition-colors',
-                          currentLang === lang.label 
-                            ? 'text-gold font-medium' 
+                          currentLocale === lang.code
+                            ? 'text-gold font-medium'
                             : 'text-navy/60 hover:text-navy hover:bg-off-white'
                         )}
                       >
@@ -191,11 +201,11 @@ export function Header({ heroPage = false }: { heroPage?: boolean }) {
                   {languages.map((lang) => (
                     <button
                       key={lang.code}
-                      onClick={() => setCurrentLang(lang.label)}
+                      onClick={() => { switchLanguage(lang.code); setIsMobileMenuOpen(false) }}
                       className={cn(
                         'px-3 py-1.5 rounded text-xs font-medium transition-colors',
-                        currentLang === lang.label 
-                          ? 'bg-gold text-navy' 
+                        currentLocale === lang.code
+                          ? 'bg-gold text-navy'
                           : 'bg-white/10 text-white/70 hover:bg-white/20'
                       )}
                     >
