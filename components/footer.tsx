@@ -31,7 +31,7 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Links — merged Navigation + Services */}
+          {/* Links — Navigation */}
           <div className="text-center md:text-left">
             <h4 className="font-medium text-xs uppercase tracking-wider text-white/30 mb-3">{t('footer.navigation')}</h4>
             <ul className="space-y-2">
@@ -45,6 +45,21 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li className="pt-1 border-t border-white/10 mt-2">
+                <Link href="/add-property" className="text-white/60 hover:text-gold transition-colors text-xs">
+                  Add Your Property
+                </Link>
+              </li>
+              <li>
+                <Link href="/add-client" className="text-white/60 hover:text-gold transition-colors text-xs">
+                  Add Your Search
+                </Link>
+              </li>
+              <li>
+                <Link href="/referral" className="text-white/60 hover:text-gold transition-colors text-xs">
+                  Referral Program
+                </Link>
+              </li>
             </ul>
           </div>
 

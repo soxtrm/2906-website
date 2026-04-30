@@ -340,7 +340,6 @@ export default function AddPropertyPage() {
 
   return (
     <>
-      <meta name="robots" content="noindex,nofollow" />
       <main className="min-h-screen bg-off-white">
         <Header />
 

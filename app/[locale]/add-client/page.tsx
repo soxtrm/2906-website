@@ -20,9 +20,12 @@ function roundTo50(n: number): number {
   return Math.round(n / 50) * 50
 }
 
-const PROPERTY_TYPES = [
-  'Apartment', 'Penthouse', 'Maisonette', 'Townhouse', 'Villa', 'Farmhouse', 'House of Character',
+const PROPERTY_TYPE_GROUPS = [
+  { label: 'Residential', types: ['Apartment', 'Penthouse', 'Duplex Penthouse', 'Studio', 'Maisonette', 'Townhouse', 'Terraced House', 'Detached Villa', 'Semi-detached Villa', 'Farmhouse'] },
+  { label: 'Special',     types: ['Boathouse', 'Garage'] },
+  { label: 'Commercial',  types: ['Office', 'Retail', 'Commercial Garage', 'Restaurant/Canteen', 'Gym'] },
 ]
+const PROPERTY_TYPES = PROPERTY_TYPE_GROUPS.flatMap(g => g.types)
 
 const LOCATION_GROUPS = [
   { label: 'Central', items: ["Sliema", "St Julian's", "Gzira", "Msida", "Pieta", "Ta' Xbiex", "Swieqi", "Pembroke", "Madliena", "San Gwann", "Birkirkara"] },
@@ -181,7 +184,6 @@ export default function AddClientPage() {
 
   return (
     <>
-      <meta name="robots" content="noindex,nofollow" />
       <main className="min-h-screen bg-off-white">
         <Header />
 
@@ -358,20 +360,27 @@ export default function AddClientPage() {
                     className="w-full px-4 py-2.5 border border-navy/15 rounded text-navy focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold" />
                 </Field>
 
-                {/* Property type — multi-select, spans full width */}
+                {/* Property type — multi-select grouped, spans full width */}
                 <div className="md:col-span-2">
                   <p className="text-xs font-medium text-navy/50 uppercase tracking-wider mb-2">
                     Property Type
                     {form.property_types.length > 0 && <span className="ml-2 text-gold normal-case">{form.property_types.length} selected</span>}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PROPERTY_TYPES.map(pt => (
-                      <button key={pt} type="button"
-                        onClick={() => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])}
-                        className={cn('text-xs px-2.5 py-1.5 rounded-full border transition-all',
-                          form.property_types.includes(pt) ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25 hover:text-navy')}>
-                        {pt}
-                      </button>
+                  <div className="space-y-2">
+                    {PROPERTY_TYPE_GROUPS.map(g => (
+                      <div key={g.label}>
+                        <p className="text-xs text-navy/30 mb-1">{g.label}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {g.types.map(pt => (
+                            <button key={pt} type="button"
+                              onClick={() => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])}
+                              className={cn('text-xs px-2.5 py-1.5 rounded-full border transition-all',
+                                form.property_types.includes(pt) ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25 hover:text-navy')}>
+                              {pt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
