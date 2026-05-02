@@ -134,7 +134,32 @@
     "back": "← Назад",
     "step": "Крок {current} з {total}",
     "required": "Обов'язкове поле",
-    "select": "Обрати"
+    "select": "Обрати",
+    "occupationLocation": "Місце роботи",
+    "occupationHint": "Місто/район роботи — корисно для розрахунку часу поїздки",
+    "groupType": {
+      "label": "Тип групи",
+      "single": "Один",
+      "couple": "Пара",
+      "sharing": "Спільна оренда",
+      "family": "Сім'я",
+      "other": "Інше"
+    },
+    "movein_in10Days": "Через 10 днів",
+    "movein_other": "Інше",
+    "viewings_now": "Зараз",
+    "viewings_specific": "З певної дати",
+    "viewings_virtual": "Віртуальний перегляд",
+    "furnitureStyle": "Стиль меблів",
+    "furnitureUltraModern": "Ультра сучасний",
+    "furnitureModern": "Сучасний",
+    "furnitureStandard": "Стандартний",
+    "furnitureCharacter": "Характерний",
+    "furnitureCozy": "Затишний",
+    "titleLabel": "Назва об'єкту (необов'язково)",
+    "childrenCount": "Кількість дітей",
+    "description": "Опис",
+    "availableForViewings": "Доступно для перегляду"
   },
   "about": {
     "title": "Про 2906",
@@ -161,5 +186,16 @@
     "topPriority": "вищий пріоритет",
     "preferred": "бажане",
     "clearAll": "Скинути все"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "Контакт",
+      "search": "Про ваш пошук",
+      "property": "Додати об'єкт",
+      "referral": "Реферал"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "Заробляйте 10% комісії за кожен успішний реферал."
   }
 }

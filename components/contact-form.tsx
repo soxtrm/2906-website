@@ -116,6 +116,20 @@ const LOCATION_GROUPS = [
   },
 ]
 
+const REGION_TO_GROUPS: Record<string, string[]> = {
+  'Any': ['central', 'north', 'south', 'west', 'gozo'],
+  'Any in Malta': ['central', 'north', 'south', 'west'],
+  'Central': ['central'],
+  'Central + Surroundings': ['central'],
+  'North': ['north'],
+  'Central-West': ['west'],
+  'South-East': ['south'],
+  'South': ['south'],
+  'Gozo': ['gozo'],
+}
+
+const REGIONS = ['Any', 'Any in Malta', 'Central', 'Central + Surroundings', 'North', 'Central-West', 'South-East', 'South', 'Gozo']
+
 // ── Property types ────────────────────────────────────────────────────────────
 const PROPERTY_TYPES = [
   'Apartment', 'Penthouse', 'Maisonette', 'Townhouse', 'Villa', 'Farmhouse', 'House of Character',
@@ -171,6 +185,7 @@ interface FormData {
   locations: string[]
   open_to_suggestions: boolean
   features: string[]
+  living_situation: '' | 'couple' | 'family' | 'sharing'
   wishes: string
   comments: string
 }
@@ -182,7 +197,7 @@ const defaultForm: FormData = {
   bedrooms: [], bathrooms: [], property_types: [],
   move_in: '', move_in_custom: '',
   preferred_regions: [], locations: [], open_to_suggestions: false,
-  features: [], wishes: '', comments: '',
+  features: [], living_situation: '' as '' | 'couple' | 'family' | 'sharing', wishes: '', comments: '',
 }
 
 // ── Small reusable components ─────────────────────────────────────────────────
@@ -226,10 +241,13 @@ export function ContactForm() {
   }, [])
 
   const toggleRegion = (r: string) => {
-    set('preferred_regions', form.preferred_regions.includes(r)
-      ? form.preferred_regions.filter(x => x !== r)
-      : [...form.preferred_regions, r]
-    )
+    const anyOpts = ['Any', 'Any in Malta']
+    if (anyOpts.includes(r)) {
+      set('preferred_regions', form.preferred_regions.includes(r) ? [] : [r])
+    } else {
+      const current = form.preferred_regions.filter(x => !anyOpts.includes(x))
+      set('preferred_regions', current.includes(r) ? current.filter(x => x !== r) : [...current, r])
+    }
   }
 
   const toggleLocation = (loc: string) => {
@@ -245,6 +263,17 @@ export function ContactForm() {
       : [...form.features, key]
     )
   }
+
+  const setHasPets = useCallback((val: boolean) => {
+    setForm(prev => ({
+      ...prev,
+      hasPets: val,
+      features: val
+        ? prev.features.includes('pets') ? prev.features : [...prev.features, 'pets']
+        : prev.features.filter(f => f !== 'pets'),
+    }))
+    setErrors(prev => { const e = { ...prev }; delete e.hasPets; return e })
+  }, [])
 
   const validate1 = () => {
     const e: typeof errors = {}
@@ -288,6 +317,7 @@ export function ContactForm() {
         preferred_regions: form.preferred_regions.length > 0 ? form.preferred_regions : null,
         locations: form.open_to_suggestions ? [...form.locations, 'Open to suggestions'] : form.locations,
         features: FEATURES.filter(f => form.features.includes(f.key)).map(f => f.label),
+        living_situation: form.living_situation || null,
         wishes: form.wishes || null,
         comments: form.comments || null,
         source: 'website',
@@ -394,7 +424,7 @@ export function ContactForm() {
           exit="exit"
           transition={{ duration: 0.25, ease: 'easeInOut' }}
         >
-          {step === 1 && <Step1 form={form} set={set} errors={errors} t={t} />}
+          {step === 1 && <Step1 form={form} set={set} setHasPets={setHasPets} errors={errors} t={t} />}
           {step === 2 && <Step2 form={form} set={set} t={t} />}
           {step === 3 && <Step3 form={form} set={set} toggleRegion={toggleRegion} toggleLocation={toggleLocation} toggleFeature={toggleFeature} t={t} togglePropertyType={(pt: string) => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])} />}
         </motion.div>
@@ -437,9 +467,10 @@ export function ContactForm() {
 }
 
 // ── Step 1: About You ─────────────────────────────────────────────────────────
-function Step1({ form, set, errors, t }: {
+function Step1({ form, set, setHasPets, errors, t }: {
   form: FormData
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
+  setHasPets: (val: boolean) => void
   errors: Partial<Record<keyof FormData, string>>
   t: (k: string) => string
 }) {
@@ -543,10 +574,10 @@ function Step1({ form, set, errors, t }: {
       <div>
         <Label>{t('pets')}</Label>
         <div className="flex gap-2 mb-2">
-          <OptionCard active={!form.hasPets} onClick={() => set('hasPets', false)} className="flex-1">
+          <OptionCard active={!form.hasPets} onClick={() => setHasPets(false)} className="flex-1">
             🚫 {t('no')}
           </OptionCard>
-          <OptionCard active={form.hasPets} onClick={() => set('hasPets', true)} className="flex-1">
+          <OptionCard active={form.hasPets} onClick={() => setHasPets(true)} className="flex-1">
             🐾 {t('yes')}
           </OptionCard>
         </div>
@@ -559,6 +590,23 @@ function Step1({ form, set, errors, t }: {
             className="w-full px-4 py-3 border border-navy/15 rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
           />
         )}
+      </div>
+
+      {/* Living situation */}
+      <div>
+        <Label>Living Situation</Label>
+        <div className="flex gap-2">
+          {(['couple', 'family', 'sharing'] as const).map(opt => (
+            <OptionCard
+              key={opt}
+              active={form.living_situation === opt}
+              onClick={() => set('living_situation', form.living_situation === opt ? '' : opt)}
+              className="flex-1"
+            >
+              {opt === 'couple' ? '👫 Couple' : opt === 'family' ? '👨‍👩‍👦 Family' : '🏠 Sharing'}
+            </OptionCard>
+          ))}
+        </div>
       </div>
 
       {/* Profession */}
@@ -689,8 +737,6 @@ function Step2({ form, set, t }: {
 }
 
 // ── Step 3: Where & What ──────────────────────────────────────────────────────
-const REGIONS = ['Central', 'Central + Surroundings', 'North', 'Central-West', 'South-East', 'South', 'Gozo']
-
 function Step3({ form, set, toggleRegion, toggleLocation, toggleFeature, togglePropertyType, t }: {
   form: FormData
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
@@ -760,32 +806,36 @@ function Step3({ form, set, toggleRegion, toggleLocation, toggleFeature, toggleP
             <span className="text-xs text-gold">{form.locations.length} selected</span>
           )}
         </div>
-        <div className="space-y-3">
-          {LOCATION_GROUPS.map(group => (
-            <div key={group.key}>
-              <p className="text-xs text-navy/40 mb-1.5 flex items-center gap-1">
-                <MapPin className="w-3 h-3" />{group.label}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {group.items.map(loc => (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() => toggleLocation(loc)}
-                    className={cn(
-                      'text-xs px-2.5 py-1 rounded-full border transition-all',
-                      form.locations.includes(loc)
-                        ? 'border-gold bg-gold/10 text-navy font-medium'
-                        : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
-                    )}
-                  >
-                    {loc}
-                  </button>
-                ))}
+        {form.preferred_regions.length === 0 ? (
+          <p className="text-xs text-navy/40 italic">Select a region above to see available towns</p>
+        ) : (
+          <div className="space-y-3">
+            {LOCATION_GROUPS.filter(g => form.preferred_regions.some(r => REGION_TO_GROUPS[r]?.includes(g.key))).map(group => (
+              <div key={group.key}>
+                <p className="text-xs text-navy/40 mb-1.5 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />{group.label}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.items.map(loc => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => toggleLocation(loc)}
+                      className={cn(
+                        'text-xs px-2.5 py-1 rounded-full border transition-all',
+                        form.locations.includes(loc)
+                          ? 'border-gold bg-gold/10 text-navy font-medium'
+                          : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
+                      )}
+                    >
+                      {loc}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
         <div className="mt-3">
           <button
             type="button"

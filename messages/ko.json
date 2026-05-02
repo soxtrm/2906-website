@@ -134,7 +134,32 @@
     "back": "← 이전",
     "step": "{total}단계 중 {current}단계",
     "required": "필수",
-    "select": "선택"
+    "select": "선택",
+    "occupationLocation": "근무 지역",
+    "occupationHint": "근무 도시/지역 — 출퇴근 시간 계산에 유용합니다",
+    "groupType": {
+      "label": "그룹 유형",
+      "single": "개인",
+      "couple": "커플",
+      "sharing": "쉐어",
+      "family": "가족",
+      "other": "기타"
+    },
+    "movein_in10Days": "10일 후",
+    "movein_other": "기타",
+    "viewings_now": "지금",
+    "viewings_specific": "특정 날짜부터",
+    "viewings_virtual": "가상 투어",
+    "furnitureStyle": "가구 스타일",
+    "furnitureUltraModern": "울트라 모던",
+    "furnitureModern": "모던",
+    "furnitureStandard": "스탠다드",
+    "furnitureCharacter": "캐릭터",
+    "furnitureCozy": "코지",
+    "titleLabel": "매물 제목 (선택)",
+    "childrenCount": "자녀 수",
+    "description": "설명",
+    "availableForViewings": "방문 가능 여부"
   },
   "about": {
     "title": "2906 소개",
@@ -161,5 +186,16 @@
     "topPriority": "최우선",
     "preferred": "선호",
     "clearAll": "모두 지우기"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "문의하기",
+      "search": "검색 정보",
+      "property": "매물 등록",
+      "referral": "추천"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "성공적인 추천 1건당 10% 수수료를 받으세요."
   }
 }

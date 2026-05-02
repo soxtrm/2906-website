@@ -134,7 +134,32 @@
     "back": "← Zurück",
     "step": "Schritt {current} von {total}",
     "required": "Pflichtfeld",
-    "select": "Wählen"
+    "select": "Wählen",
+    "occupationLocation": "Arbeitsort",
+    "occupationHint": "Stadt/Gebiet Ihres Arbeitsplatzes — nützlich für Pendelzeiten",
+    "groupType": {
+      "label": "Gruppentyp",
+      "single": "Einzelperson",
+      "couple": "Paar",
+      "sharing": "WG",
+      "family": "Familie",
+      "other": "Sonstiges"
+    },
+    "movein_in10Days": "In 10 Tagen",
+    "movein_other": "Sonstiges",
+    "viewings_now": "Jetzt",
+    "viewings_specific": "Ab bestimmtem Datum",
+    "viewings_virtual": "Virtuelle Besichtigung",
+    "furnitureStyle": "Einrichtungsstil",
+    "furnitureUltraModern": "Ultra Modern",
+    "furnitureModern": "Modern",
+    "furnitureStandard": "Standard",
+    "furnitureCharacter": "Charakter",
+    "furnitureCozy": "Gemütlich",
+    "titleLabel": "Titel (optional)",
+    "childrenCount": "Anzahl der Kinder",
+    "description": "Beschreibung",
+    "availableForViewings": "Für Besichtigungen verfügbar"
   },
   "about": {
     "title": "Über 2906",
@@ -161,5 +186,16 @@
     "topPriority": "höchste Priorität",
     "preferred": "bevorzugt",
     "clearAll": "Alle löschen"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "Kontakt",
+      "search": "Zu Ihrer Suche",
+      "property": "Objekt anbieten",
+      "referral": "Empfehlung"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "Verdienen Sie 10% Provision für jede erfolgreiche Empfehlung."
   }
 }

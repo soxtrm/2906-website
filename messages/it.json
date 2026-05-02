@@ -134,7 +134,32 @@
     "back": "← Indietro",
     "step": "Passo {current} di {total}",
     "required": "Obbligatorio",
-    "select": "Seleziona"
+    "select": "Seleziona",
+    "occupationLocation": "Luogo di lavoro",
+    "occupationHint": "Città/zona di lavoro — utile per i tempi di pendolarismo",
+    "groupType": {
+      "label": "Tipo di gruppo",
+      "single": "Single",
+      "couple": "Coppia",
+      "sharing": "Coinquilini",
+      "family": "Famiglia",
+      "other": "Altro"
+    },
+    "movein_in10Days": "Tra 10 giorni",
+    "movein_other": "Altro",
+    "viewings_now": "Adesso",
+    "viewings_specific": "Da una data specifica",
+    "viewings_virtual": "Visite virtuali",
+    "furnitureStyle": "Stile arredamento",
+    "furnitureUltraModern": "Ultra Moderno",
+    "furnitureModern": "Moderno",
+    "furnitureStandard": "Standard",
+    "furnitureCharacter": "Carattere",
+    "furnitureCozy": "Accogliente",
+    "titleLabel": "Titolo (opzionale)",
+    "childrenCount": "Numero di figli",
+    "description": "Descrizione",
+    "availableForViewings": "Disponibile per visite"
   },
   "about": {
     "title": "Chi siamo — 2906",
@@ -161,5 +186,16 @@
     "topPriority": "massima priorità",
     "preferred": "preferito",
     "clearAll": "Cancella tutto"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "Contattaci",
+      "search": "La tua ricerca",
+      "property": "Aggiungi un immobile",
+      "referral": "Referral"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "Guadagna il 10% di commissione per ogni referral andato a buon fine."
   }
 }

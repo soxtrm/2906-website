@@ -134,7 +134,32 @@
     "back": "← 返回",
     "step": "第 {current} 步，共 {total} 步",
     "required": "必填",
-    "select": "选择"
+    "select": "选择",
+    "occupationLocation": "工作地点",
+    "occupationHint": "工作城市/区域 — 有助于评估通勤时间",
+    "groupType": {
+      "label": "群体类型",
+      "single": "单人",
+      "couple": "情侣",
+      "sharing": "合租",
+      "family": "家庭",
+      "other": "其他"
+    },
+    "movein_in10Days": "10天后",
+    "movein_other": "其他",
+    "viewings_now": "立即",
+    "viewings_specific": "从特定日期起",
+    "viewings_virtual": "线上看房",
+    "furnitureStyle": "家具风格",
+    "furnitureUltraModern": "超现代",
+    "furnitureModern": "现代",
+    "furnitureStandard": "标准",
+    "furnitureCharacter": "特色",
+    "furnitureCozy": "温馨",
+    "titleLabel": "房产标题（可选）",
+    "childrenCount": "子女数量",
+    "description": "描述",
+    "availableForViewings": "可看房时间"
   },
   "about": {
     "title": "关于 2906",
@@ -161,5 +186,16 @@
     "topPriority": "最高优先级",
     "preferred": "首选",
     "clearAll": "清除全部"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "联系我们",
+      "search": "您的需求",
+      "property": "发布房产",
+      "referral": "推荐计划"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "每成功推荐一位客户即可获得10%佣金。"
   }
 }

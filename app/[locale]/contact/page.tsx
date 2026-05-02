@@ -1,70 +1,92 @@
-import Link from 'next/link'
+'use client'
+
+import { useState } from 'react'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
+import { SimpleContactForm } from '@/components/simple-contact-form'
 import { ContactForm } from '@/components/contact-form'
+import { PublicPropertyForm } from '@/components/public-property-form'
+import { ReferralForm } from '@/components/referral-form'
+
+type Tab = 'contact' | 'search' | 'property' | 'referral'
+
+const TABS = [
+  { key: 'contact' as Tab,  label: 'Contact Us',          desc: 'General inquiry',     icon: '✉️' },
+  { key: 'search' as Tab,   label: 'About your Search',   desc: 'Find your home',      icon: '🔍' },
+  { key: 'property' as Tab, label: 'Add your Property',   desc: 'List with us',        icon: '🏠' },
+  { key: 'referral' as Tab, label: 'Referral',            desc: 'Earn 10% commission', icon: '🎯' },
+]
 
 export default function ContactPage() {
+  const [tab, setTab] = useState<Tab>('contact')
+
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-off-white">
       <Header />
 
       {/* Hero */}
-      <section className="pt-28 pb-12 bg-navy">
-        <div className="container mx-auto px-4 lg:px-8 text-center max-w-3xl">
-          <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">Off-Market Access</p>
-          <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-white mb-5 leading-tight">
-            Tell us what you&apos;re looking for
-          </h1>
-          <p className="text-white/70 text-base md:text-lg leading-relaxed mb-3">
-            We can&apos;t list all 20,000+ Malta properties online. Tell us what you&apos;re looking for and we&apos;ll match you with all our options.
-          </p>
-          <p className="text-gold/80 text-sm flex items-center justify-center gap-2">
-            <span className="w-1.5 h-1.5 bg-gold rounded-full inline-block animate-pulse" />
-            Reply as soon as possible via WhatsApp or Email
-          </p>
+      <section className="pt-28 pb-10 bg-navy">
+        <div className="container mx-auto px-4 lg:px-8 text-center max-w-2xl">
+          <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">2906 Estate</p>
+          <h1 className="font-serif text-3xl md:text-4xl text-white mb-3">How can we help?</h1>
+          <p className="text-white/60 text-sm">Malta&apos;s premier property agency — tell us what you need.</p>
         </div>
       </section>
 
-      {/* Quick Action Cards */}
-      <section className="bg-off-white py-10 border-b border-navy/8">
-        <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              href="/add-client"
-              className="group bg-white rounded-xl border border-navy/8 p-6 flex flex-col items-center text-center hover:border-gold/40 hover:shadow-md transition-all"
-            >
-              <span className="text-3xl mb-3">🔍</span>
-              <h3 className="font-serif text-navy text-lg mb-1 group-hover:text-gold transition-colors">Add Your Search</h3>
-              <p className="text-navy/50 text-sm">Tell us what you&apos;re looking for</p>
-            </Link>
+      <section className="py-10">
+        <div className="container mx-auto px-4 lg:px-8 max-w-3xl">
 
-            <Link
-              href="/add-property"
-              className="group bg-white rounded-xl border border-navy/8 p-6 flex flex-col items-center text-center hover:border-gold/40 hover:shadow-md transition-all"
-            >
-              <span className="text-3xl mb-3">🏠</span>
-              <h3 className="font-serif text-navy text-lg mb-1 group-hover:text-gold transition-colors">Add Your Property</h3>
-              <p className="text-navy/50 text-sm">List your property with us</p>
-            </Link>
-
-            <Link
-              href="/referral"
-              className="group bg-white rounded-xl border border-navy/8 p-6 flex flex-col items-center text-center hover:border-gold/40 hover:shadow-md transition-all"
-            >
-              <span className="text-3xl mb-3">🎯</span>
-              <h3 className="font-serif text-navy text-lg mb-1 group-hover:text-gold transition-colors">Referral Program</h3>
-              <p className="text-navy/50 text-sm">Earn 10% commission per referral</p>
-            </Link>
+          {/* Tab buttons */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            {TABS.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  tab === t.key
+                    ? 'border-gold bg-gold/5 shadow-sm'
+                    : 'border-navy/10 bg-white hover:border-navy/20'
+                }`}
+              >
+                <span className="text-xl block mb-1">{t.icon}</span>
+                <p className="font-medium text-sm text-navy">{t.label}</p>
+                <p className="text-xs text-navy/40 mt-0.5">{t.desc}</p>
+              </button>
+            ))}
           </div>
-        </div>
-      </section>
 
-      {/* Form */}
-      <section className="py-12 bg-off-white">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="bg-white rounded-xl shadow-sm border border-navy/5 p-6 md:p-10 max-w-2xl mx-auto">
-            <ContactForm />
+          {/* Form panel */}
+          <div className="bg-white rounded-xl border border-navy/5 shadow-sm p-6 md:p-8">
+            {tab === 'contact' && (
+              <div>
+                <h2 className="font-serif text-xl text-navy mb-1">Contact Us</h2>
+                <p className="text-navy/50 text-sm mb-6">Send us a message and we&apos;ll get back to you.</p>
+                <SimpleContactForm />
+              </div>
+            )}
+            {tab === 'search' && (
+              <div>
+                <h2 className="font-serif text-xl text-navy mb-1">About your Search</h2>
+                <p className="text-navy/50 text-sm mb-6">Tell us what you&apos;re looking for and we&apos;ll match you with 20,000+ Malta properties.</p>
+                <ContactForm />
+              </div>
+            )}
+            {tab === 'property' && (
+              <div>
+                <h2 className="font-serif text-xl text-navy mb-1">List Your Property</h2>
+                <p className="text-navy/50 text-sm mb-6">Submit your property and we&apos;ll match it with qualified tenants and buyers.</p>
+                <PublicPropertyForm />
+              </div>
+            )}
+            {tab === 'referral' && (
+              <div>
+                <h2 className="font-serif text-xl text-navy mb-1">Referral Program</h2>
+                <p className="text-navy/50 text-sm mb-6">Refer someone looking for property in Malta and earn 10% commission.</p>
+                <ReferralForm />
+              </div>
+            )}
           </div>
+
         </div>
       </section>
 

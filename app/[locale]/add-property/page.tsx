@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Header } from '@/components/header'
+import { SingleVillageSelector } from '@/components/single-village-selector'
 import { Check, X, Upload, ChevronRight, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
@@ -13,8 +14,9 @@ const PROPERTY_TYPE_GROUPS = [
   {
     label: 'Residential',
     types: [
-      'Apartment', 'Penthouse', 'Duplex Penthouse', 'Studio', 'Maisonette',
-      'Townhouse', 'Terraced House', 'Detached Villa', 'Semi-detached Villa', 'Farmhouse',
+      'Apartment', 'Penthouse', 'Duplex Penthouse', 'Maisonette',
+      'Townhouse', 'Terraced House', 'House of Character',
+      'Detached Villa', 'Semi-detached Villa', 'Farmhouse',
     ],
   },
   {
@@ -161,6 +163,9 @@ const defaultForm = {
   photos:                  [] as { url: string; thumbnail: string }[],
   notes:                   '',
   preferred_viewing_times: '',
+  village_code:            null as string | null,
+  village_display:         '',
+  title:                   '',
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -215,7 +220,7 @@ export default function AddPropertyPage() {
     }
     if (s === 1) {
       if (!form.property_type)        e.property_type = 'Required'
-      if (!form.location.trim())      e.location = 'Required'
+      if (!form.village_code && !form.location.trim()) e.location = 'Required'
       if (form.viewings_from && form.available_from && form.viewings_from > form.available_from) {
         e.viewings_from = 'Must be on or before Available From'
       }
@@ -286,8 +291,10 @@ export default function AddPropertyPage() {
         submitter_email:         form.submitter_email.trim() || null,
         preferred_contact:       form.preferred_contact,
         property_type:           form.property_type || null,
-        regions:                 form.region ? [form.region] : [],
-        location:                form.location.trim() || null,
+        regions:                 [],
+        location:                form.village_display || form.location.trim() || null,
+        village_code:            form.village_code || null,
+        title:                   form.title.trim() || (form.description.trim() ? form.description.trim().slice(0, 60) : null),
         viewings_from:           form.viewings_from || null,
         listing_type:            form.listing_type,
         bedrooms:                form.bedrooms !== '' ? parseInt(form.bedrooms) : null,
@@ -522,55 +529,16 @@ export default function AddPropertyPage() {
                         </div>
                       </Field>
 
-                      <Field label="Region">
-                        <div className="flex flex-wrap gap-2">
-                          {REGIONS.map(r => {
-                            const locked = !!form.region && form.region !== r
-                            return (
-                              <Chip
-                                key={r}
-                                active={form.region === r}
-                                disabled={locked}
-                                onClick={() => set('region', form.region === r ? '' : r)}
-                              >
-                                {r}
-                              </Chip>
-                            )
-                          })}
-                        </div>
-                        {form.region && (
-                          <button type="button" onClick={() => set('region', '')}
-                            className="text-xs text-navy/40 hover:text-navy mt-1.5 underline underline-offset-2">
-                            Clear region
-                          </button>
-                        )}
-                      </Field>
-
-                      <Field label="Town / Area" required error={errors.location}>
-                        <div className="space-y-3">
-                          <input type="text" value={form.location}
-                            onChange={e => set('location', e.target.value)}
-                            placeholder="e.g. Sliema" className={inputCls(errors.location)} />
-                          <div className="space-y-2">
-                            {LOCATION_GROUPS.map(g => (
-                              <div key={g.label}>
-                                <p className="text-xs text-navy/30 mb-1">{g.label}</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {g.items.map(loc => (
-                                    <button key={loc} type="button"
-                                      onClick={() => set('location', loc)}
-                                      className={cn('text-xs px-2 py-0.5 rounded border transition-all',
-                                        form.location === loc
-                                          ? 'border-gold bg-gold/10 text-navy font-medium'
-                                          : 'border-navy/10 text-navy/40 hover:border-navy/25')}>
-                                      {loc}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      <Field label="Village / Town" required error={errors.location}>
+                        <SingleVillageSelector
+                          value={form.village_code}
+                          onChange={(code, display) => {
+                            setForm(prev => ({ ...prev, village_code: code, village_display: display || '', location: display || '' }))
+                            setErrors(prev => { const e = { ...prev }; delete e.location; return e })
+                          }}
+                          placeholder="Search village or town…"
+                        />
+                        {errors.location && <p className="text-xs text-red-400 mt-1">{errors.location}</p>}
                       </Field>
 
                       <Field label="Viewings From" error={errors.viewings_from}>
@@ -778,6 +746,13 @@ export default function AddPropertyPage() {
                   {/* ── Step 5: Review ── */}
                   {step === 5 && (
                     <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
+                      <Field label="Property Title (optional)">
+                        <input type="text" value={form.title}
+                          onChange={e => set('title', e.target.value)}
+                          placeholder={form.description ? form.description.slice(0, 60) : '2BR Apartment in Sliema — Modern Furnished'}
+                          className={inputCls()} />
+                        <p className="text-xs text-navy/35 mt-1">Leave blank to auto-generate from description</p>
+                      </Field>
                       <h3 className="text-sm font-medium text-navy">Review your submission</h3>
 
                       <div>

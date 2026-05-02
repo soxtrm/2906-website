@@ -134,7 +134,32 @@
     "back": "← Back",
     "step": "Step {current} of {total}",
     "required": "Required",
-    "select": "Select"
+    "select": "Select",
+    "occupationLocation": "Occupation Location",
+    "occupationHint": "City/area where you work — useful for commute",
+    "groupType": {
+      "label": "Group Type",
+      "single": "Single",
+      "couple": "Couple",
+      "sharing": "Sharing",
+      "family": "Family",
+      "other": "Other"
+    },
+    "movein_in10Days": "In 10 Days",
+    "movein_other": "Other",
+    "viewings_now": "Now",
+    "viewings_specific": "From specific date",
+    "viewings_virtual": "Virtual Viewings",
+    "furnitureStyle": "Furniture Style",
+    "furnitureUltraModern": "Ultra Modern",
+    "furnitureModern": "Modern",
+    "furnitureStandard": "Standard",
+    "furnitureCharacter": "Character",
+    "furnitureCozy": "Cozy",
+    "titleLabel": "Property Title (optional)",
+    "childrenCount": "Number of Children",
+    "description": "Description",
+    "availableForViewings": "Available for Viewings"
   },
   "about": {
     "title": "About 2906",
@@ -161,5 +186,16 @@
     "topPriority": "top priority",
     "preferred": "preferred",
     "clearAll": "Clear all"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "Contact Us",
+      "search": "About your Search",
+      "property": "Add your Property",
+      "referral": "Referral"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "Earn 10% commission for every successful referral. Simply refer someone looking for property in Malta."
   }
 }

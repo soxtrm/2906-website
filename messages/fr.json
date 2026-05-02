@@ -134,7 +134,32 @@
     "back": "← Retour",
     "step": "Étape {current} sur {total}",
     "required": "Requis",
-    "select": "Sélectionner"
+    "select": "Sélectionner",
+    "occupationLocation": "Lieu de travail",
+    "occupationHint": "Ville/zone de travail — utile pour les trajets",
+    "groupType": {
+      "label": "Type de groupe",
+      "single": "Seul(e)",
+      "couple": "Couple",
+      "sharing": "Colocation",
+      "family": "Famille",
+      "other": "Autre"
+    },
+    "movein_in10Days": "Dans 10 jours",
+    "movein_other": "Autre",
+    "viewings_now": "Maintenant",
+    "viewings_specific": "À partir d'une date",
+    "viewings_virtual": "Visites virtuelles",
+    "furnitureStyle": "Style de mobilier",
+    "furnitureUltraModern": "Ultra Moderne",
+    "furnitureModern": "Moderne",
+    "furnitureStandard": "Standard",
+    "furnitureCharacter": "Caractère",
+    "furnitureCozy": "Cosy",
+    "titleLabel": "Titre (optionnel)",
+    "childrenCount": "Nombre d'enfants",
+    "description": "Description",
+    "availableForViewings": "Disponible pour visites"
   },
   "about": {
     "title": "À propos de 2906",
@@ -161,5 +186,16 @@
     "topPriority": "priorité maximale",
     "preferred": "préféré",
     "clearAll": "Tout effacer"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "Nous contacter",
+      "search": "Votre recherche",
+      "property": "Ajouter un bien",
+      "referral": "Parrainage"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "Gagnez 10% de commission pour chaque parrainage réussi."
   }
 }

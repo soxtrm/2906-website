@@ -134,7 +134,32 @@
     "back": "← Atrás",
     "step": "Paso {current} de {total}",
     "required": "Requerido",
-    "select": "Seleccionar"
+    "select": "Seleccionar",
+    "occupationLocation": "Lugar de trabajo",
+    "occupationHint": "Ciudad/zona de trabajo — útil para los desplazamientos",
+    "groupType": {
+      "label": "Tipo de grupo",
+      "single": "Individual",
+      "couple": "Pareja",
+      "sharing": "Compartido",
+      "family": "Familia",
+      "other": "Otro"
+    },
+    "movein_in10Days": "En 10 días",
+    "movein_other": "Otro",
+    "viewings_now": "Ahora",
+    "viewings_specific": "Desde una fecha específica",
+    "viewings_virtual": "Visitas virtuales",
+    "furnitureStyle": "Estilo de muebles",
+    "furnitureUltraModern": "Ultra Moderno",
+    "furnitureModern": "Moderno",
+    "furnitureStandard": "Estándar",
+    "furnitureCharacter": "Carácter",
+    "furnitureCozy": "Acogedor",
+    "titleLabel": "Título (opcional)",
+    "childrenCount": "Número de hijos",
+    "description": "Descripción",
+    "availableForViewings": "Disponible para visitas"
   },
   "about": {
     "title": "Acerca de 2906",
@@ -161,5 +186,16 @@
     "topPriority": "máxima prioridad",
     "preferred": "preferido",
     "clearAll": "Borrar todo"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "Contáctanos",
+      "search": "Tu búsqueda",
+      "property": "Añadir propiedad",
+      "referral": "Referido"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "Gana el 10% de comisión por cada referido exitoso."
   }
 }

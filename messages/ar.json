@@ -134,7 +134,32 @@
     "back": "← رجوع",
     "step": "خطوة {current} من {total}",
     "required": "مطلوب",
-    "select": "اختر"
+    "select": "اختر",
+    "occupationLocation": "موقع العمل",
+    "occupationHint": "مدينة/منطقة العمل — مفيد لحساب وقت التنقل",
+    "groupType": {
+      "label": "نوع المجموعة",
+      "single": "فرد",
+      "couple": "زوجان",
+      "sharing": "مشترك",
+      "family": "عائلة",
+      "other": "أخرى"
+    },
+    "movein_in10Days": "خلال 10 أيام",
+    "movein_other": "أخرى",
+    "viewings_now": "الآن",
+    "viewings_specific": "من تاريخ محدد",
+    "viewings_virtual": "جولة افتراضية",
+    "furnitureStyle": "أسلوب الأثاث",
+    "furnitureUltraModern": "عصري للغاية",
+    "furnitureModern": "عصري",
+    "furnitureStandard": "قياسي",
+    "furnitureCharacter": "مميز",
+    "furnitureCozy": "مريح",
+    "titleLabel": "عنوان العقار (اختياري)",
+    "childrenCount": "عدد الأطفال",
+    "description": "الوصف",
+    "availableForViewings": "متاح للمشاهدة"
   },
   "about": {
     "title": "عن 2906",
@@ -161,5 +186,16 @@
     "topPriority": "أولوية قصوى",
     "preferred": "مفضل",
     "clearAll": "مسح الكل"
+  },
+  "contact": {
+    "tabs": {
+      "contact": "اتصل بنا",
+      "search": "عن بحثك",
+      "property": "أضف عقارك",
+      "referral": "إحالة"
+    }
+  },
+  "referral": {
+    "commissionExplanation": "اكسب 10% عمولة مقابل كل إحالة ناجحة."
   }
 }
