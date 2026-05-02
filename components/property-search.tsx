@@ -2,17 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, X, ChevronDown, Home, Bed } from 'lucide-react'
+import { MapPin, X, ChevronDown, Home, Bed, Bath } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { maltaLocations, propertyTypes, bedroomOptions } from '@/lib/data'
+import { maltaLocations, propertyTypes, bedroomOptions, bathroomOptions } from '@/lib/data'
 import { cn } from '@/lib/utils'
 
 interface SearchFilters {
   location: string
   propertyTypes: string[]
   bedrooms: string[]
-  priceMin: string
-  priceMax: string
+  bathrooms: string[]
+  budget: string
 }
 
 export function PropertySearch() {
@@ -21,14 +21,13 @@ export function PropertySearch() {
     location: '',
     propertyTypes: [],
     bedrooms: [],
-    priceMin: '',
-    priceMax: '',
+    bathrooms: [],
+    budget: '',
   })
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [locationSearch, setLocationSearch] = useState('')
   const searchRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -48,8 +47,8 @@ export function PropertySearch() {
     if (filters.location) params.set('location', filters.location)
     if (filters.propertyTypes.length) params.set('types', filters.propertyTypes.join(','))
     if (filters.bedrooms.length) params.set('beds', filters.bedrooms.join(','))
-    if (filters.priceMin) params.set('minPrice', filters.priceMin)
-    if (filters.priceMax) params.set('maxPrice', filters.priceMax)
+    if (filters.bathrooms.length) params.set('baths', filters.bathrooms.join(','))
+    if (filters.budget) params.set('maxPrice', filters.budget)
     router.push(`/letting?${params.toString()}`)
   }
 
@@ -59,6 +58,15 @@ export function PropertySearch() {
       bedrooms: prev.bedrooms.includes(bed)
         ? prev.bedrooms.filter(b => b !== bed)
         : [...prev.bedrooms, bed]
+    }))
+  }
+
+  const toggleBathroom = (bath: string) => {
+    setFilters(prev => ({
+      ...prev,
+      bathrooms: prev.bathrooms.includes(bath)
+        ? prev.bathrooms.filter(b => b !== bath)
+        : [...prev.bathrooms, bath]
     }))
   }
 
@@ -75,7 +83,7 @@ export function PropertySearch() {
     <div ref={searchRef} className="w-full">
       <div className="bg-white/10 backdrop-blur-md rounded-lg border border-white/20 p-3">
         <div className="flex flex-col lg:flex-row gap-2">
-          
+
           {/* Location Search with Autocomplete */}
           <div className="relative flex-1">
             <div className="relative">
@@ -107,7 +115,7 @@ export function PropertySearch() {
                 </button>
               )}
             </div>
-            
+
             <AnimatePresence>
               {activeDropdown === 'location' && (
                 <motion.div
@@ -142,7 +150,7 @@ export function PropertySearch() {
           {/* Divider */}
           <div className="hidden lg:block w-px bg-white/20" />
 
-          {/* Property Type - Optional Multi-select */}
+          {/* Property Type */}
           <div className="relative">
             <button
               onClick={() => setActiveDropdown(activeDropdown === 'propertyType' ? null : 'propertyType')}
@@ -153,14 +161,14 @@ export function PropertySearch() {
             >
               <Home className="w-4 h-4" />
               <span className="whitespace-nowrap">
-                {filters.propertyTypes.length > 0 
+                {filters.propertyTypes.length > 0
                   ? `${filters.propertyTypes.length} type${filters.propertyTypes.length > 1 ? 's' : ''}`
                   : 'Property Type'
                 }
               </span>
               <ChevronDown className={cn('w-3 h-3 transition-transform ml-auto lg:ml-1', activeDropdown === 'propertyType' && 'rotate-180')} />
             </button>
-            
+
             <AnimatePresence>
               {activeDropdown === 'propertyType' && (
                 <motion.div
@@ -201,7 +209,7 @@ export function PropertySearch() {
           {/* Divider */}
           <div className="hidden lg:block w-px bg-white/20" />
 
-          {/* Bedrooms - Multi-select */}
+          {/* Bedrooms */}
           <div className="relative">
             <button
               onClick={() => setActiveDropdown(activeDropdown === 'bedrooms' ? null : 'bedrooms')}
@@ -212,14 +220,14 @@ export function PropertySearch() {
             >
               <Bed className="w-4 h-4" />
               <span className="whitespace-nowrap">
-                {filters.bedrooms.length > 0 
+                {filters.bedrooms.length > 0
                   ? filters.bedrooms.join(', ')
                   : 'Bedrooms'
                 }
               </span>
               <ChevronDown className={cn('w-3 h-3 transition-transform ml-auto lg:ml-1', activeDropdown === 'bedrooms' && 'rotate-180')} />
             </button>
-            
+
             <AnimatePresence>
               {activeDropdown === 'bedrooms' && (
                 <motion.div
@@ -252,22 +260,65 @@ export function PropertySearch() {
           {/* Divider */}
           <div className="hidden lg:block w-px bg-white/20" />
 
-          {/* Price Range */}
-          <div className="flex items-center gap-2 px-2">
+          {/* Bathrooms */}
+          <div className="relative">
+            <button
+              onClick={() => setActiveDropdown(activeDropdown === 'bathrooms' ? null : 'bathrooms')}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2.5 text-sm w-full lg:w-auto',
+                'text-white/70 hover:text-white transition-colors'
+              )}
+            >
+              <Bath className="w-4 h-4" />
+              <span className="whitespace-nowrap">
+                {filters.bathrooms.length > 0
+                  ? filters.bathrooms.join(', ')
+                  : 'Bathrooms'
+                }
+              </span>
+              <ChevronDown className={cn('w-3 h-3 transition-transform ml-auto lg:ml-1', activeDropdown === 'bathrooms' && 'rotate-180')} />
+            </button>
+
+            <AnimatePresence>
+              {activeDropdown === 'bathrooms' && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl z-30 p-2"
+                >
+                  <div className="flex gap-1.5">
+                    {bathroomOptions.map((bath) => (
+                      <button
+                        key={bath}
+                        onClick={() => toggleBathroom(bath)}
+                        className={cn(
+                          'px-3 py-2 rounded text-xs font-medium transition-colors min-w-[40px]',
+                          filters.bathrooms.includes(bath)
+                            ? 'bg-navy text-white'
+                            : 'bg-off-white text-navy/70 hover:bg-navy/10'
+                        )}
+                      >
+                        {bath}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden lg:block w-px bg-white/20" />
+
+          {/* Budget € */}
+          <div className="flex items-center px-2">
             <input
               type="text"
-              placeholder="Min €"
-              value={filters.priceMin}
-              onChange={(e) => setFilters(prev => ({ ...prev, priceMin: e.target.value.replace(/\D/g, '') }))}
-              className="w-20 px-2 py-2 bg-transparent text-white text-sm placeholder:text-white/50 focus:outline-none"
-            />
-            <span className="text-white/30">-</span>
-            <input
-              type="text"
-              placeholder="Max €"
-              value={filters.priceMax}
-              onChange={(e) => setFilters(prev => ({ ...prev, priceMax: e.target.value.replace(/\D/g, '') }))}
-              className="w-20 px-2 py-2 bg-transparent text-white text-sm placeholder:text-white/50 focus:outline-none"
+              placeholder="Budget €"
+              value={filters.budget}
+              onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value.replace(/\D/g, '') }))}
+              className="w-24 px-2 py-2 bg-transparent text-white text-sm placeholder:text-white/50 focus:outline-none"
             />
           </div>
 

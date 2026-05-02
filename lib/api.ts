@@ -7,6 +7,8 @@ export interface PropertyFilters {
   minPrice?: number
   maxPrice?: number
   bedrooms?: string  // single number, "2,3" for multiple, "Studio", "5+"
+  bathrooms?: string
+  area?: string
   region?: string
   location?: string
   status?: string

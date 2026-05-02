@@ -19,8 +19,9 @@
     "placeholder": "Пошук міста або району...",
     "propertyType": "Тип нерухомості",
     "bedrooms": "Спальні",
-    "minPrice": "Мін €",
-    "maxPrice": "Макс €",
+    "bathrooms": "Ванних кімнат",
+    "budget": "Бюджет €",
+    "sqm": "м²",
     "button": "Пошук",
     "noLocations": "Локації не знайдено",
     "clearSelection": "Скинути вибір"

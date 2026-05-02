@@ -19,8 +19,9 @@
     "placeholder": "마을 또는 지역 검색...",
     "propertyType": "부동산 유형",
     "bedrooms": "침실",
-    "minPrice": "최소 €",
-    "maxPrice": "최대 €",
+    "bathrooms": "욕실",
+    "budget": "예산 €",
+    "sqm": "면적 m²",
     "button": "검색",
     "noLocations": "지역을 찾을 수 없습니다",
     "clearSelection": "선택 초기화"

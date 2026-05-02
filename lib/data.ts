@@ -65,6 +65,17 @@ export const propertyTypes = [
 
 export const bedroomOptions = ['Studio', '1', '2', '3', '4', '5+']
 
+export const bathroomOptions = ['1', '2', '3', '4+']
+
+export const commercialPropertyTypes = [
+  "Office",
+  "Retail",
+  "Restaurant/Canteen",
+  "Gym",
+  "Commercial Garage",
+  "Warehouse",
+]
+
 export const regions: RegionInfo[] = [
   {
     id: 'Central East',

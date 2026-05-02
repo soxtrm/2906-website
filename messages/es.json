@@ -19,8 +19,9 @@
     "placeholder": "Buscar pueblo o zona...",
     "propertyType": "Tipo de propiedad",
     "bedrooms": "Dormitorios",
-    "minPrice": "Mín €",
-    "maxPrice": "Máx €",
+    "bathrooms": "Baños",
+    "budget": "Presupuesto €",
+    "sqm": "m²",
     "button": "Buscar",
     "noLocations": "No se encontraron ubicaciones",
     "clearSelection": "Borrar selección"

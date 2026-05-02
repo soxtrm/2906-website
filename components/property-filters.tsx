@@ -4,31 +4,36 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown, X, SlidersHorizontal, MapPin, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { maltaLocations, propertyTypes, bedroomOptions } from '@/lib/data'
+import { maltaLocations, propertyTypes, bedroomOptions, bathroomOptions, commercialPropertyTypes } from '@/lib/data'
 import { cn } from '@/lib/utils'
 
 interface Filters {
   location: string
   propertyTypes: string[]
   bedrooms: string[]
-  priceMin: string
-  priceMax: string
+  bathrooms: string[]
+  budget: string
+  sqm: string
 }
 
 interface PropertyFiltersProps {
   accentColor: string
+  category?: string | null
 }
 
-export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
+export function PropertyFilters({ accentColor, category }: PropertyFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const isCommercial = category === 'commercial'
+
   const [isOpen, setIsOpen] = useState(false)
   const [filters, setFilters] = useState<Filters>({
     location: searchParams.get('location') || '',
     propertyTypes: searchParams.get('types')?.split(',').filter(Boolean) || [],
     bedrooms: searchParams.get('beds')?.split(',').filter(Boolean) || [],
-    priceMin: searchParams.get('minPrice') || '',
-    priceMax: searchParams.get('maxPrice') || '',
+    bathrooms: searchParams.get('baths')?.split(',').filter(Boolean) || [],
+    budget: searchParams.get('maxPrice') || '',
+    sqm: searchParams.get('sqm') || '',
   })
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
@@ -39,13 +44,16 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
     loc.toLowerCase().includes(locationSearch.toLowerCase())
   )
 
+  const availablePropertyTypes = isCommercial ? commercialPropertyTypes : propertyTypes
+
   const applyFilters = () => {
     const params = new URLSearchParams()
     if (filters.location) params.set('location', filters.location)
     if (filters.propertyTypes.length) params.set('types', filters.propertyTypes.join(','))
-    if (filters.bedrooms.length) params.set('beds', filters.bedrooms.join(','))
-    if (filters.priceMin) params.set('minPrice', filters.priceMin)
-    if (filters.priceMax) params.set('maxPrice', filters.priceMax)
+    if (!isCommercial && filters.bedrooms.length) params.set('beds', filters.bedrooms.join(','))
+    if (filters.bathrooms.length) params.set('baths', filters.bathrooms.join(','))
+    if (filters.budget) params.set('maxPrice', filters.budget)
+    if (isCommercial && filters.sqm) params.set('sqm', filters.sqm)
     router.push(`?${params.toString()}`)
   }
 
@@ -54,8 +62,9 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
       location: '',
       propertyTypes: [],
       bedrooms: [],
-      priceMin: '',
-      priceMax: '',
+      bathrooms: [],
+      budget: '',
+      sqm: '',
     })
     setLocationSearch('')
     router.push(window.location.pathname)
@@ -70,6 +79,15 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
     }))
   }
 
+  const toggleBathroom = (bath: string) => {
+    setFilters(prev => ({
+      ...prev,
+      bathrooms: prev.bathrooms.includes(bath)
+        ? prev.bathrooms.filter(b => b !== bath)
+        : [...prev.bathrooms, bath]
+    }))
+  }
+
   const togglePropertyType = (type: string) => {
     setFilters(prev => ({
       ...prev,
@@ -79,12 +97,13 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
     }))
   }
 
-  const activeFiltersCount = 
-    (filters.location ? 1 : 0) + 
-    filters.propertyTypes.length + 
-    filters.bedrooms.length + 
-    (filters.priceMin ? 1 : 0) + 
-    (filters.priceMax ? 1 : 0)
+  const activeFiltersCount =
+    (filters.location ? 1 : 0) +
+    filters.propertyTypes.length +
+    filters.bedrooms.length +
+    filters.bathrooms.length +
+    (filters.budget ? 1 : 0) +
+    (filters.sqm ? 1 : 0)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -118,7 +137,7 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
 
         {/* Filters */}
         <div className={cn('flex flex-col lg:flex-row gap-3', isOpen ? 'flex' : 'hidden lg:flex')}>
-          
+
           {/* Location Search */}
           <div className="relative flex-1 max-w-[220px]">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-navy/30" />
@@ -145,7 +164,7 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
                 <X className="w-3 h-3 text-navy/30 hover:text-navy" />
               </button>
             )}
-            
+
             <AnimatePresence>
               {activeDropdown === 'location' && (
                 <motion.div
@@ -184,14 +203,14 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
               className="flex items-center gap-2 px-3 py-2 bg-off-white rounded text-sm text-navy/70 hover:text-navy"
             >
               <span>
-                {filters.propertyTypes.length > 0 
+                {filters.propertyTypes.length > 0
                   ? `${filters.propertyTypes.length} type${filters.propertyTypes.length > 1 ? 's' : ''}`
                   : 'Property Type'
                 }
               </span>
               <ChevronDown className={cn('w-3 h-3 transition-transform', activeDropdown === 'propertyType' && 'rotate-180')} />
             </button>
-            
+
             <AnimatePresence>
               {activeDropdown === 'propertyType' && (
                 <motion.div
@@ -201,7 +220,7 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
                   className="absolute top-full left-0 mt-1 bg-white rounded shadow-lg z-30 p-2 min-w-[240px] max-h-64 overflow-auto border border-gray-100"
                 >
                   <div className="flex flex-wrap gap-1">
-                    {propertyTypes.map((type) => (
+                    {availablePropertyTypes.map((type) => (
                       <button
                         key={type}
                         onClick={() => togglePropertyType(type)}
@@ -229,23 +248,69 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
             </AnimatePresence>
           </div>
 
-          {/* Bedrooms */}
+          {/* Bedrooms — hidden for commercial */}
+          {!isCommercial && (
+            <div className="relative">
+              <button
+                onClick={() => setActiveDropdown(activeDropdown === 'bedrooms' ? null : 'bedrooms')}
+                className="flex items-center gap-2 px-3 py-2 bg-off-white rounded text-sm text-navy/70 hover:text-navy"
+              >
+                <span>
+                  {filters.bedrooms.length > 0
+                    ? filters.bedrooms.join(', ') + ' bed'
+                    : 'Bedrooms'
+                  }
+                </span>
+                <ChevronDown className={cn('w-3 h-3 transition-transform', activeDropdown === 'bedrooms' && 'rotate-180')} />
+              </button>
+
+              <AnimatePresence>
+                {activeDropdown === 'bedrooms' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="absolute top-full left-0 mt-1 bg-white rounded shadow-lg z-30 p-2 border border-gray-100"
+                  >
+                    <div className="flex gap-1">
+                      {bedroomOptions.map((bed) => (
+                        <button
+                          key={bed}
+                          onClick={() => toggleBedroom(bed)}
+                          className={cn(
+                            'px-2.5 py-1.5 rounded text-xs font-medium transition-colors min-w-[36px]',
+                            filters.bedrooms.includes(bed)
+                              ? 'bg-navy text-white'
+                              : 'bg-off-white text-navy/60 hover:bg-navy/10'
+                          )}
+                        >
+                          {bed}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Bathrooms */}
           <div className="relative">
             <button
-              onClick={() => setActiveDropdown(activeDropdown === 'bedrooms' ? null : 'bedrooms')}
+              onClick={() => setActiveDropdown(activeDropdown === 'bathrooms' ? null : 'bathrooms')}
               className="flex items-center gap-2 px-3 py-2 bg-off-white rounded text-sm text-navy/70 hover:text-navy"
             >
               <span>
-                {filters.bedrooms.length > 0 
-                  ? filters.bedrooms.join(', ') + ' bed'
-                  : 'Bedrooms'
+                {filters.bathrooms.length > 0
+                  ? filters.bathrooms.join(', ') + ' bath'
+                  : 'Bathrooms'
                 }
               </span>
-              <ChevronDown className={cn('w-3 h-3 transition-transform', activeDropdown === 'bedrooms' && 'rotate-180')} />
+              <ChevronDown className={cn('w-3 h-3 transition-transform', activeDropdown === 'bathrooms' && 'rotate-180')} />
             </button>
-            
+
             <AnimatePresence>
-              {activeDropdown === 'bedrooms' && (
+              {activeDropdown === 'bathrooms' && (
                 <motion.div
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -253,18 +318,18 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
                   className="absolute top-full left-0 mt-1 bg-white rounded shadow-lg z-30 p-2 border border-gray-100"
                 >
                   <div className="flex gap-1">
-                    {bedroomOptions.map((bed) => (
+                    {bathroomOptions.map((bath) => (
                       <button
-                        key={bed}
-                        onClick={() => toggleBedroom(bed)}
+                        key={bath}
+                        onClick={() => toggleBathroom(bath)}
                         className={cn(
                           'px-2.5 py-1.5 rounded text-xs font-medium transition-colors min-w-[36px]',
-                          filters.bedrooms.includes(bed)
+                          filters.bathrooms.includes(bath)
                             ? 'bg-navy text-white'
                             : 'bg-off-white text-navy/60 hover:bg-navy/10'
                         )}
                       >
-                        {bed}
+                        {bath}
                       </button>
                     ))}
                   </div>
@@ -273,22 +338,27 @@ export function PropertyFilters({ accentColor }: PropertyFiltersProps) {
             </AnimatePresence>
           </div>
 
-          {/* Price Range */}
-          <div className="flex items-center gap-1">
+          {/* SQM — commercial only */}
+          {isCommercial && (
+            <div className="flex items-center">
+              <input
+                type="text"
+                placeholder="Min m²"
+                value={filters.sqm}
+                onChange={(e) => setFilters(prev => ({ ...prev, sqm: e.target.value.replace(/\D/g, '') }))}
+                className="w-24 px-2 py-2 bg-off-white rounded text-xs text-navy placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"
+              />
+            </div>
+          )}
+
+          {/* Budget € */}
+          <div className="flex items-center">
             <input
               type="text"
-              placeholder="Min €"
-              value={filters.priceMin}
-              onChange={(e) => setFilters(prev => ({ ...prev, priceMin: e.target.value.replace(/\D/g, '') }))}
-              className="w-20 px-2 py-2 bg-off-white rounded text-xs text-navy placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"
-            />
-            <span className="text-navy/20">-</span>
-            <input
-              type="text"
-              placeholder="Max €"
-              value={filters.priceMax}
-              onChange={(e) => setFilters(prev => ({ ...prev, priceMax: e.target.value.replace(/\D/g, '') }))}
-              className="w-20 px-2 py-2 bg-off-white rounded text-xs text-navy placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"
+              placeholder="Budget €"
+              value={filters.budget}
+              onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value.replace(/\D/g, '') }))}
+              className="w-24 px-2 py-2 bg-off-white rounded text-xs text-navy placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"
             />
           </div>
 

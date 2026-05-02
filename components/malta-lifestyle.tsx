@@ -142,9 +142,13 @@ export function MaltaLifestyle() {
                 transition={{ delay: i * 0.12, duration: 0.5 }}
                 className="flex gap-3 group"
               >
-                <div className="shrink-0 w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors duration-300">
+                <motion.div
+                  className="shrink-0 w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors duration-300"
+                  whileHover={{ scale: 1.12, rotate: 6 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                >
                   <benefit.icon className="w-4 h-4 text-gold" />
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="text-sm font-semibold text-white mb-1">{benefit.title}</h3>
                   <p className="text-xs text-white/55 leading-relaxed">{benefit.description}</p>

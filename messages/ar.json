@@ -19,8 +19,9 @@
     "placeholder": "ابحث عن قرية أو منطقة...",
     "propertyType": "نوع العقار",
     "bedrooms": "غرف النوم",
-    "minPrice": "الحد الأدنى €",
-    "maxPrice": "الحد الأقصى €",
+    "bathrooms": "الحمامات",
+    "budget": "الميزانية €",
+    "sqm": "م²",
     "button": "بحث",
     "noLocations": "لا توجد مواقع",
     "clearSelection": "مسح الاختيار"

@@ -19,8 +19,9 @@
     "placeholder": "Rechercher un village ou une zone...",
     "propertyType": "Type de bien",
     "bedrooms": "Chambres",
-    "minPrice": "Min €",
-    "maxPrice": "Max €",
+    "bathrooms": "Salles de bain",
+    "budget": "Budget €",
+    "sqm": "m²",
     "button": "Rechercher",
     "noLocations": "Aucun lieu trouvé",
     "clearSelection": "Effacer la sélection"

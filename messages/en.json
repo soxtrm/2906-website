@@ -19,8 +19,9 @@
     "placeholder": "Search village or area...",
     "propertyType": "Property Type",
     "bedrooms": "Bedrooms",
-    "minPrice": "Min €",
-    "maxPrice": "Max €",
+    "bathrooms": "Bathrooms",
+    "budget": "Budget €",
+    "sqm": "m²",
     "button": "Search",
     "noLocations": "No locations found",
     "clearSelection": "Clear selection"

@@ -35,7 +35,9 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
     const urlMinPrice = searchParams.get('minPrice')
     const urlMaxPrice = searchParams.get('maxPrice')
     const urlLocation = searchParams.get('location')
-    const urlBeds     = searchParams.get('beds')  // e.g. "2" or "2,3" or "Studio"
+    const urlBeds     = searchParams.get('beds')
+    const urlBaths    = searchParams.get('baths')
+    const urlSqm      = searchParams.get('sqm')
 
     fetchProperties({
       ...(category !== null && { category }),
@@ -43,6 +45,8 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
       maxPrice:  urlMaxPrice ? Number(urlMaxPrice) : undefined,
       location:  urlLocation || undefined,
       bedrooms:  urlBeds     || undefined,
+      bathrooms: urlBaths    || undefined,
+      area:      urlSqm      || undefined,
     })
       .then(data => {
         let result = data
@@ -114,7 +118,7 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
       )}
 
       {/* Filters */}
-      <PropertyFilters accentColor={accentColor} />
+      <PropertyFilters accentColor={accentColor} category={category} />
 
       {/* Property Grid */}
       <section className="py-10 md:py-12">

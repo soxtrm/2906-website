@@ -19,8 +19,9 @@
     "placeholder": "搜索村庄或地区...",
     "propertyType": "房产类型",
     "bedrooms": "卧室",
-    "minPrice": "最低 €",
-    "maxPrice": "最高 €",
+    "bathrooms": "浴室",
+    "budget": "预算 €",
+    "sqm": "面积 m²",
     "button": "搜索",
     "noLocations": "未找到地点",
     "clearSelection": "清除选择"

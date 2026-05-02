@@ -19,8 +19,9 @@
     "placeholder": "Cerca villaggio o zona...",
     "propertyType": "Tipo di proprietà",
     "bedrooms": "Camere da letto",
-    "minPrice": "Min €",
-    "maxPrice": "Max €",
+    "bathrooms": "Bagni",
+    "budget": "Budget €",
+    "sqm": "m²",
     "button": "Cerca",
     "noLocations": "Nessuna località trovata",
     "clearSelection": "Cancella selezione"

@@ -19,8 +19,9 @@
     "placeholder": "Ort oder Gebiet suchen...",
     "propertyType": "Immobilientyp",
     "bedrooms": "Schlafzimmer",
-    "minPrice": "Min €",
-    "maxPrice": "Max €",
+    "bathrooms": "Badezimmer",
+    "budget": "Budget €",
+    "sqm": "m²",
     "button": "Suchen",
     "noLocations": "Keine Orte gefunden",
     "clearSelection": "Auswahl löschen"

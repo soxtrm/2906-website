@@ -1,26 +1,29 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { MapPin, Heart, Gem, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { AnimatedLocalExpertise } from './icons/animated-local-expertise'
+import { AnimatedPersonalService } from './icons/animated-personal-service'
+import { AnimatedExclusiveAccess } from './icons/animated-exclusive-access'
 
 export function WhyChooseUs() {
   const t = useTranslations()
 
   const features = [
     {
-      icon: MapPin,
+      Icon: AnimatedLocalExpertise,
       title: t('features.localExpertise'),
       description: t('features.localDesc'),
     },
     {
-      icon: Heart,
+      Icon: AnimatedPersonalService,
       title: t('features.personalService'),
       description: t('features.personalDesc'),
     },
     {
-      icon: Gem,
+      Icon: AnimatedExclusiveAccess,
       title: t('features.exclusiveAccess'),
       description: t('features.exclusiveDesc'),
     },
@@ -62,7 +65,7 @@ export function WhyChooseUs() {
                 className="flex gap-3"
               >
                 <div className="shrink-0 w-9 h-9 bg-gold/10 rounded flex items-center justify-center">
-                  <feature.icon className="w-4 h-4 text-gold" />
+                  <feature.Icon />
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-navy mb-0.5">{feature.title}</h3>

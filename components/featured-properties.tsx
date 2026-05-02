@@ -46,10 +46,12 @@ export function FeaturedProperties() {
           </Link>
         </motion.div>
 
-        {/* Property Grid */}
+        {/* Property Grid — desktop: 6 (3×2), tablet: 4, mobile: 4 */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {properties.map((property, index) => (
-            <PropertyCard key={property.id} property={property} index={index} />
+          {properties.slice(0, 6).map((property, index) => (
+            <div key={property.id} className={index >= 4 ? 'hidden lg:block' : ''}>
+              <PropertyCard property={property} index={index} />
+            </div>
           ))}
         </div>
 
