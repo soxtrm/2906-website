@@ -148,5 +148,18 @@
     "stat_years_label": "Années d'expérience",
     "stat_satisfaction_val": "100%",
     "stat_satisfaction_label": "Satisfaction client"
+  },
+  "locations": {
+    "any": "N'importe où",
+    "anyInMalta": "N'importe où à Malte",
+    "anyIn": "N'importe où en {area}",
+    "keyAreas": "Zones",
+    "narrowerSearch": "Ou affinez votre recherche :",
+    "priorityHint": "Un tap = préféré (bleu). Double tap = priorité maximale (or).",
+    "loading": "Chargement des lieux…",
+    "loadingVillages": "Chargement des villages…",
+    "topPriority": "priorité maximale",
+    "preferred": "préféré",
+    "clearAll": "Tout effacer"
   }
 }

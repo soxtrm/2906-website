@@ -148,5 +148,18 @@
     "stat_years_label": "سنوات من الخبرة",
     "stat_satisfaction_val": "100%",
     "stat_satisfaction_label": "رضا العملاء"
+  },
+  "locations": {
+    "any": "أي موقع",
+    "anyInMalta": "أي مكان في مالطا",
+    "anyIn": "أي مكان في {area}",
+    "keyAreas": "المناطق",
+    "narrowerSearch": "أو ضيّق نطاق البحث:",
+    "priorityHint": "نقرة واحدة = مفضل (أزرق). نقرتان = أولوية قصوى (ذهبي).",
+    "loading": "جاري تحميل المواقع…",
+    "loadingVillages": "جاري تحميل القرى…",
+    "topPriority": "أولوية قصوى",
+    "preferred": "مفضل",
+    "clearAll": "مسح الكل"
   }
 }

@@ -148,5 +148,18 @@
     "stat_years_label": "Jahre Erfahrung",
     "stat_satisfaction_val": "100%",
     "stat_satisfaction_label": "Kundenzufriedenheit"
+  },
+  "locations": {
+    "any": "Beliebig",
+    "anyInMalta": "Überall in Malta",
+    "anyIn": "Beliebig in {area}",
+    "keyAreas": "Gebiete",
+    "narrowerSearch": "Oder eingrenzen:",
+    "priorityHint": "Einfach tippen = bevorzugt (blau). Doppelt tippen = höchste Priorität (gold).",
+    "loading": "Orte werden geladen…",
+    "loadingVillages": "Ortschaften werden geladen…",
+    "topPriority": "höchste Priorität",
+    "preferred": "bevorzugt",
+    "clearAll": "Alle löschen"
   }
 }

@@ -148,5 +148,18 @@
     "stat_years_label": "Років досвіду",
     "stat_satisfaction_val": "100%",
     "stat_satisfaction_label": "Задоволеність клієнтів"
+  },
+  "locations": {
+    "any": "Будь-де",
+    "anyInMalta": "Будь-де на Мальті",
+    "anyIn": "Будь-де в {area}",
+    "keyAreas": "Райони",
+    "narrowerSearch": "Або звузьте пошук:",
+    "priorityHint": "Один дотик = бажане (синій). Подвійний дотик = вищий пріоритет (золотий).",
+    "loading": "Завантаження локацій…",
+    "loadingVillages": "Завантаження сіл…",
+    "topPriority": "вищий пріоритет",
+    "preferred": "бажане",
+    "clearAll": "Скинути все"
   }
 }

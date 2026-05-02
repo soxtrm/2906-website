@@ -148,5 +148,18 @@
     "stat_years_label": "Years of Experience",
     "stat_satisfaction_val": "100%",
     "stat_satisfaction_label": "Client Satisfaction"
+  },
+  "locations": {
+    "any": "Any",
+    "anyInMalta": "Any in Malta",
+    "anyIn": "Any in {area}",
+    "keyAreas": "Areas",
+    "narrowerSearch": "Or narrow your search:",
+    "priorityHint": "Single tap = preferred (blue). Double tap = top priority (gold).",
+    "loading": "Loading locations…",
+    "loadingVillages": "Loading villages…",
+    "topPriority": "top priority",
+    "preferred": "preferred",
+    "clearAll": "Clear all"
   }
 }

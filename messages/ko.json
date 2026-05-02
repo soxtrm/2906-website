@@ -148,5 +148,18 @@
     "stat_years_label": "년 경험",
     "stat_satisfaction_val": "100%",
     "stat_satisfaction_label": "고객 만족도"
+  },
+  "locations": {
+    "any": "어디든",
+    "anyInMalta": "몰타 전체",
+    "anyIn": "{area} 전체",
+    "keyAreas": "지역",
+    "narrowerSearch": "또는 검색 범위 좁히기:",
+    "priorityHint": "한 번 탭 = 선호 (파란색). 두 번 탭 = 최우선 (황금색).",
+    "loading": "지역 로딩 중…",
+    "loadingVillages": "마을 로딩 중…",
+    "topPriority": "최우선",
+    "preferred": "선호",
+    "clearAll": "모두 지우기"
   }
 }

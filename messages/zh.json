@@ -148,5 +148,18 @@
     "stat_years_label": "年行业经验",
     "stat_satisfaction_val": "100%",
     "stat_satisfaction_label": "客户满意度"
+  },
+  "locations": {
+    "any": "任意",
+    "anyInMalta": "马耳他任意地区",
+    "anyIn": "{area}任意地区",
+    "keyAreas": "区域",
+    "narrowerSearch": "或缩小搜索范围：",
+    "priorityHint": "单击 = 首选（蓝色）。双击 = 最高优先级（金色）。",
+    "loading": "加载地点中…",
+    "loadingVillages": "加载村庄中…",
+    "topPriority": "最高优先级",
+    "preferred": "首选",
+    "clearAll": "清除全部"
   }
 }
