@@ -66,6 +66,14 @@ export const adminApi = {
 
   getWarm: (params = '') => req<{ contacts: WarmContact[]; total: number }>('GET', `crm/warm${params}`),
 
+  // Submitted properties (from public /add-property form)
+  getSubmitted: (params = '') => req<{ submissions: SubmittedProperty[]; total: number }>('GET', `properties/submitted${params}`),
+  updateSubmitted: (id: string, status: string) => req<{ ok: boolean }>('PATCH', `properties/submitted/${id}`, { status }),
+
+  // Property matches pipeline
+  getMatches: (params = '') => req<{ matches: PropertyMatch[]; total: number }>('GET', `matches${params}`),
+  updateMatch: (id: string, status: string) => req<{ ok: boolean }>('PATCH', `matches/${id}/update`, { status }),
+
   // Users (admin only)
   getUsers: () => req<AdminUser[]>('GET', 'users'),
   createUser: (email: string, password: string, role: string) =>
@@ -169,6 +177,39 @@ export interface AdminUser {
   last_login: string
   created_at: string
   created_by_email: string
+}
+
+export interface SubmittedProperty {
+  id: string
+  name: string
+  email: string
+  phone: string
+  property_type: string
+  location: string
+  price: string
+  bedrooms: number | null
+  bathrooms: number | null
+  size: number | null
+  title: string
+  description: string
+  status: 'pending' | 'reviewed' | 'approved' | 'rejected'
+  images: string[]
+  created_at: string
+}
+
+export interface PropertyMatch {
+  id: string
+  client_id: string
+  property_id: string
+  match_score: number
+  status: 'pending_notification' | 'notified' | 'viewing_scheduled' | 'closed' | 'rejected'
+  created_at: string
+  client_name: string
+  client_phone: string
+  assigned_agent: string
+  property_location: string
+  property_price: number
+  property_display_id: string
 }
 
 export interface DailyStatsPeriod {

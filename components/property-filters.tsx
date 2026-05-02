@@ -351,11 +351,11 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
             </div>
           )}
 
-          {/* Budget € */}
+          {/* Budget */}
           <div className="flex items-center">
             <input
               type="text"
-              placeholder="Budget €"
+              placeholder={isCommercial ? 'Budget €' : 'Preferred Budget'}
               value={filters.budget}
               onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value.replace(/\D/g, '') }))}
               className="w-24 px-2 py-2 bg-off-white rounded text-xs text-navy placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"

@@ -74,6 +74,7 @@ export const commercialPropertyTypes = [
   "Gym",
   "Commercial Garage",
   "Warehouse",
+  "Other",
 ]
 
 export const regions: RegionInfo[] = [

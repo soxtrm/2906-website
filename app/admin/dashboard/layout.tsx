@@ -9,6 +9,7 @@ const NAV = [
   { href: '/admin/dashboard/crm/owners', label: 'Owners', icon: '👤' },
   { href: '/admin/dashboard/crm/clients', label: 'Clients', icon: '🤝' },
   { href: '/admin/dashboard/crm/warm', label: 'Warm Contacts', icon: '🔥' },
+  { href: '/admin/dashboard/matches', label: 'Matches', icon: '🔗' },
 ]
 
 const ADMIN_NAV = [
