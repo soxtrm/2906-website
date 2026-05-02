@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://178.104.162.193:3001'
+// Always use the Next.js proxy — avoids mixed-content blocks on HTTPS deployments
+const API_BASE = '/api'
 
 export interface Area {
   id: number
