@@ -343,7 +343,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
             <div className="flex items-center">
               <input
                 type="text"
-                placeholder="Min m²"
+                placeholder="Floor area (m²)"
                 value={filters.sqm}
                 onChange={(e) => setFilters(prev => ({ ...prev, sqm: e.target.value.replace(/\D/g, '') }))}
                 className="w-24 px-2 py-2 bg-off-white rounded text-xs text-navy placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"

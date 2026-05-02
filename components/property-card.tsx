@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { motion, useInView } from 'framer-motion'
+import { motion, AnimatePresence, useInView } from 'framer-motion'
 import { Bed, Bath, Square, MapPin } from 'lucide-react'
 import type { Property } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -62,7 +62,19 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
   }
 
   const placeholderImage = `https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80`
-  const currentPhoto = imageError ? placeholderImage : (photos[photoIndex] || photos[0] || placeholderImage)
+  const currentPhoto = (idx: number) => imageError ? placeholderImage : (photos[idx] || photos[0] || placeholderImage)
+
+  useEffect(() => {
+    if (photosCount <= 1) return
+    const preload = (idx: number) => { const img = new window.Image(); img.src = currentPhoto(idx) }
+    preload((photoIndex + 1) % photosCount)
+  }, [photoIndex, photosCount])
+
+  const slideVariants = {
+    enter: { x: '100%' },
+    center: { x: 0 },
+    exit: { x: '-100%' },
+  }
 
   return (
     <motion.div
@@ -78,16 +90,27 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
         <article className="bg-white rounded overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all duration-300">
           {/* Image */}
           <div className={cn('relative overflow-hidden', compact ? 'aspect-[16/10]' : 'aspect-[4/3]')}>
-            <img
-              src={currentPhoto}
-              alt={property.title}
-              onError={() => setImageError(true)}
-              className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
-              key={photoIndex}
-            />
+            <AnimatePresence initial={false} mode="sync">
+              <motion.div
+                key={photoIndex}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+                className="absolute inset-0"
+              >
+                <img
+                  src={currentPhoto(photoIndex)}
+                  alt={property.title}
+                  onError={() => setImageError(true)}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              </motion.div>
+            </AnimatePresence>
 
             {/* Status badge */}
-            <div className="absolute top-3 left-3">
+            <div className="absolute top-3 left-3 z-10">
               <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-semibold shadow-sm">
                 <span className={cn('w-1.5 h-1.5 rounded-full', statusConfig[property.status].dot)} />
                 <span className={statusConfig[property.status].text}>
@@ -97,7 +120,7 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
             </div>
 
             {/* Price */}
-            <div className="absolute bottom-3 left-3">
+            <div className="absolute bottom-3 left-3 z-10">
               <span className="text-sm font-semibold text-white bg-navy/80 backdrop-blur-sm px-2.5 py-1 rounded">
                 {formatPrice(property.price, property.priceType)}
               </span>
@@ -105,7 +128,7 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
 
             {/* Photo dots */}
             {photosCount > 1 && (
-              <div className="absolute bottom-3 right-3 flex gap-1">
+              <div className="absolute bottom-3 right-3 z-10 flex gap-1">
                 {photos.map((_, i) => (
                   <div
                     key={i}
