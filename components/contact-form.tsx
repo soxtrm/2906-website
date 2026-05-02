@@ -4,8 +4,9 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Slider } from '@/components/ui/slider'
-import { Check, ChevronDown, MessageCircle, BedDouble, Bath, MapPin, Sparkles, Home } from 'lucide-react'
+import { Check, ChevronDown, MessageCircle, BedDouble, Bath, Sparkles, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LocationSelector, type LocationSelectorValue } from '@/components/location-selector'
 
 function sliderToBudget(p: number): number {
   if (p <= 50) return 500 + (p / 50) * 1500
@@ -87,49 +88,6 @@ const NATIONALITIES = [
   { code: 'br', label: 'Brazilian', flag: '🇧🇷' },
 ]
 
-// ── Locations by region ───────────────────────────────────────────────────────
-const LOCATION_GROUPS = [
-  {
-    key: 'central',
-    label: 'Central Malta',
-    items: ["Sliema", "St Julian's", "Gzira", "Msida", "Pieta", "Ta' Xbiex", "Swieqi", "Pembroke", "Madliena", "San Gwann", "Birkirkara"],
-  },
-  {
-    key: 'north',
-    label: 'North',
-    items: ["Mellieha", "Bugibba", "Qawra", "St Paul's Bay", "Mosta", "Naxxar", "Gharghur", "Attard", "Balzan", "Lija", "Iklin"],
-  },
-  {
-    key: 'south',
-    label: 'South',
-    items: ["Marsaskala", "Birzebbuga", "Zebbug", "Zejtun", "Valletta", "Floriana"],
-  },
-  {
-    key: 'west',
-    label: 'West',
-    items: ["Rabat", "Mdina", "Mtarfa", "Dingli", "Siggiewi"],
-  },
-  {
-    key: 'gozo',
-    label: 'Gozo',
-    items: ["Victoria", "Marsalforn", "Xlendi", "Nadur"],
-  },
-]
-
-const REGION_TO_GROUPS: Record<string, string[]> = {
-  'Any': ['central', 'north', 'south', 'west', 'gozo'],
-  'Any in Malta': ['central', 'north', 'south', 'west'],
-  'Central': ['central'],
-  'Central + Surroundings': ['central'],
-  'North': ['north'],
-  'Central-West': ['west'],
-  'South-East': ['south'],
-  'South': ['south'],
-  'Gozo': ['gozo'],
-}
-
-const REGIONS = ['Any', 'Any in Malta', 'Central', 'Central + Surroundings', 'North', 'Central-West', 'South-East', 'South', 'Gozo']
-
 // ── Property types ────────────────────────────────────────────────────────────
 const PROPERTY_TYPES = [
   'Apartment', 'Penthouse', 'Maisonette', 'Townhouse', 'Villa', 'Farmhouse', 'House of Character',
@@ -181,8 +139,7 @@ interface FormData {
   property_types: string[]
   move_in: string
   move_in_custom: string
-  preferred_regions: string[]
-  locations: string[]
+  locationValue: LocationSelectorValue
   open_to_suggestions: boolean
   features: string[]
   living_situation: '' | 'couple' | 'family' | 'sharing'
@@ -196,7 +153,8 @@ const defaultForm: FormData = {
   profession: '', budget_min: 1000, budget_max: 2500,
   bedrooms: [], bathrooms: [], property_types: [],
   move_in: '', move_in_custom: '',
-  preferred_regions: [], locations: [], open_to_suggestions: false,
+  locationValue: { selectedAreas: [], preferredVillages: [], topPriorityVillages: [] },
+  open_to_suggestions: false,
   features: [], living_situation: '' as '' | 'couple' | 'family' | 'sharing', wishes: '', comments: '',
 }
 
@@ -239,23 +197,6 @@ export function ContactForm() {
     setForm(prev => ({ ...prev, [key]: val }))
     setErrors(prev => { const e = { ...prev }; delete e[key]; return e })
   }, [])
-
-  const toggleRegion = (r: string) => {
-    const anyOpts = ['Any', 'Any in Malta']
-    if (anyOpts.includes(r)) {
-      set('preferred_regions', form.preferred_regions.includes(r) ? [] : [r])
-    } else {
-      const current = form.preferred_regions.filter(x => !anyOpts.includes(x))
-      set('preferred_regions', current.includes(r) ? current.filter(x => x !== r) : [...current, r])
-    }
-  }
-
-  const toggleLocation = (loc: string) => {
-    set('locations', form.locations.includes(loc)
-      ? form.locations.filter(l => l !== loc)
-      : [...form.locations, loc]
-    )
-  }
 
   const toggleFeature = (key: string) => {
     set('features', form.features.includes(key)
@@ -314,8 +255,11 @@ export function ContactForm() {
         bathrooms: form.bathrooms.length > 0 ? form.bathrooms.join(',') : null,
         property_types: form.property_types.length > 0 ? form.property_types.join(',') : null,
         move_in: form.move_in_custom || form.move_in || null,
-        preferred_regions: form.preferred_regions.length > 0 ? form.preferred_regions : null,
-        locations: form.open_to_suggestions ? [...form.locations, 'Open to suggestions'] : form.locations,
+        preferred_regions: form.locationValue.selectedAreas.length > 0 ? form.locationValue.selectedAreas : null,
+        locations: [
+          ...Array.from(new Set([...form.locationValue.preferredVillages, ...form.locationValue.topPriorityVillages])),
+          ...(form.open_to_suggestions ? ['Open to suggestions'] : []),
+        ],
         features: FEATURES.filter(f => form.features.includes(f.key)).map(f => f.label),
         living_situation: form.living_situation || null,
         wishes: form.wishes || null,
@@ -771,71 +715,14 @@ function Step3({ form, set, toggleRegion, toggleLocation, toggleFeature, toggleP
         </div>
       </div>
 
-      {/* Regions */}
+      {/* Location Selector */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <Label>{t('regions')}</Label>
-          {form.preferred_regions.length > 0 && (
-            <span className="text-xs text-gold">{form.preferred_regions.length} selected</span>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {REGIONS.map(r => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => toggleRegion(r)}
-              className={cn(
-                'text-xs px-2.5 py-1 rounded-full border transition-all',
-                form.preferred_regions.includes(r)
-                  ? 'border-gold bg-gold/10 text-navy font-medium'
-                  : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
-              )}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Locations */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <Label>{t('locations')}</Label>
-          {form.locations.length > 0 && (
-            <span className="text-xs text-gold">{form.locations.length} selected</span>
-          )}
-        </div>
-        {form.preferred_regions.length === 0 ? (
-          <p className="text-xs text-navy/40 italic">Select a region above to see available towns</p>
-        ) : (
-          <div className="space-y-3">
-            {LOCATION_GROUPS.filter(g => form.preferred_regions.some(r => REGION_TO_GROUPS[r]?.includes(g.key))).map(group => (
-              <div key={group.key}>
-                <p className="text-xs text-navy/40 mb-1.5 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />{group.label}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {group.items.map(loc => (
-                    <button
-                      key={loc}
-                      type="button"
-                      onClick={() => toggleLocation(loc)}
-                      className={cn(
-                        'text-xs px-2.5 py-1 rounded-full border transition-all',
-                        form.locations.includes(loc)
-                          ? 'border-gold bg-gold/10 text-navy font-medium'
-                          : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
-                      )}
-                    >
-                      {loc}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <Label>{t('locations')}</Label>
+        <LocationSelector
+          value={form.locationValue}
+          onChange={v => set('locationValue', v)}
+          showPriority={false}
+        />
         <div className="mt-3">
           <button
             type="button"
