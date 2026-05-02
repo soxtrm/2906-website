@@ -1,5 +1,5 @@
 // Always use the Next.js proxy — avoids mixed-content blocks on HTTPS deployments
-const API_BASE = '/api'
+const API_BASE = ''
 
 export interface Area {
   id: number
