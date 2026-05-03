@@ -12,7 +12,7 @@ type Tab = 'contact' | 'search' | 'property' | 'referral'
 
 const TABS = [
   { key: 'contact' as Tab,  label: 'Contact Us',          desc: 'General inquiry',     icon: '✉️' },
-  { key: 'search' as Tab,   label: 'About your Search',   desc: 'Find your home',      icon: '🔍' },
+  { key: 'search' as Tab,   label: 'Let us find your Home', desc: 'Tell us what you need', icon: '🔍' },
   { key: 'property' as Tab, label: 'Add your Property',   desc: 'List with us',        icon: '🏠' },
   { key: 'referral' as Tab, label: 'Referral',            desc: 'Earn 10% commission', icon: '🎯' },
 ]
@@ -66,7 +66,7 @@ export default function ContactPage() {
             )}
             {tab === 'search' && (
               <div>
-                <h2 className="font-serif text-xl text-navy mb-1">About your Search</h2>
+                <h2 className="font-serif text-xl text-navy mb-1">Let us find your Home</h2>
                 <p className="text-navy/50 text-sm mb-6">Tell us what you&apos;re looking for and we&apos;ll match you with 20,000+ Malta properties.</p>
                 <ContactForm />
               </div>

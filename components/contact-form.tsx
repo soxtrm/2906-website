@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Slider } from '@/components/ui/slider'
 import { Check, ChevronDown, MessageCircle, BedDouble, Bath, Sparkles, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LocationSelector, type LocationSelectorValue } from '@/components/location-selector'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import ReactCountryFlag from 'react-country-flag'
+import countriesData from 'world-countries'
 
 function sliderToBudget(p: number): number {
   if (p <= 50) return 500 + (p / 50) * 1500
@@ -20,72 +23,38 @@ function roundTo50(n: number): number {
   return Math.round(n / 50) * 50
 }
 
-// ── Country codes ─────────────────────────────────────────────────────────────
+// ── Country codes (phone dial) ────────────────────────────────────────────────
 const COUNTRY_CODES = [
-  { code: '+356', label: 'Malta', flag: '🇲🇹' },
-  { code: '+49', label: 'Germany', flag: '🇩🇪' },
-  { code: '+44', label: 'UK', flag: '🇬🇧' },
-  { code: '+1', label: 'USA/CA', flag: '🇺🇸' },
-  { code: '+33', label: 'France', flag: '🇫🇷' },
-  { code: '+39', label: 'Italy', flag: '🇮🇹' },
-  { code: '+34', label: 'Spain', flag: '🇪🇸' },
-  { code: '+31', label: 'Netherlands', flag: '🇳🇱' },
-  { code: '+41', label: 'Switzerland', flag: '🇨🇭' },
-  { code: '+43', label: 'Austria', flag: '🇦🇹' },
-  { code: '+32', label: 'Belgium', flag: '🇧🇪' },
-  { code: '+46', label: 'Sweden', flag: '🇸🇪' },
-  { code: '+47', label: 'Norway', flag: '🇳🇴' },
-  { code: '+45', label: 'Denmark', flag: '🇩🇰' },
-  { code: '+358', label: 'Finland', flag: '🇫🇮' },
-  { code: '+48', label: 'Poland', flag: '🇵🇱' },
-  { code: '+351', label: 'Portugal', flag: '🇵🇹' },
-  { code: '+30', label: 'Greece', flag: '🇬🇷' },
-  { code: '+7', label: 'Russia', flag: '🇷🇺' },
-  { code: '+380', label: 'Ukraine', flag: '🇺🇦' },
-  { code: '+90', label: 'Turkey', flag: '🇹🇷' },
-  { code: '+971', label: 'UAE', flag: '🇦🇪' },
+  { code: '+356', label: 'Malta',        flag: '🇲🇹' },
+  { code: '+49',  label: 'Germany',      flag: '🇩🇪' },
+  { code: '+44',  label: 'UK',           flag: '🇬🇧' },
+  { code: '+1',   label: 'USA/CA',       flag: '🇺🇸' },
+  { code: '+33',  label: 'France',       flag: '🇫🇷' },
+  { code: '+39',  label: 'Italy',        flag: '🇮🇹' },
+  { code: '+34',  label: 'Spain',        flag: '🇪🇸' },
+  { code: '+31',  label: 'Netherlands',  flag: '🇳🇱' },
+  { code: '+41',  label: 'Switzerland',  flag: '🇨🇭' },
+  { code: '+43',  label: 'Austria',      flag: '🇦🇹' },
+  { code: '+32',  label: 'Belgium',      flag: '🇧🇪' },
+  { code: '+46',  label: 'Sweden',       flag: '🇸🇪' },
+  { code: '+47',  label: 'Norway',       flag: '🇳🇴' },
+  { code: '+45',  label: 'Denmark',      flag: '🇩🇰' },
+  { code: '+358', label: 'Finland',      flag: '🇫🇮' },
+  { code: '+48',  label: 'Poland',       flag: '🇵🇱' },
+  { code: '+351', label: 'Portugal',     flag: '🇵🇹' },
+  { code: '+30',  label: 'Greece',       flag: '🇬🇷' },
+  { code: '+7',   label: 'Russia',       flag: '🇷🇺' },
+  { code: '+380', label: 'Ukraine',      flag: '🇺🇦' },
+  { code: '+90',  label: 'Turkey',       flag: '🇹🇷' },
+  { code: '+971', label: 'UAE',          flag: '🇦🇪' },
   { code: '+966', label: 'Saudi Arabia', flag: '🇸🇦' },
-  { code: '+972', label: 'Israel', flag: '🇮🇱' },
-  { code: '+91', label: 'India', flag: '🇮🇳' },
-  { code: '+86', label: 'China', flag: '🇨🇳' },
-  { code: '+82', label: 'South Korea', flag: '🇰🇷' },
-  { code: '+81', label: 'Japan', flag: '🇯🇵' },
-  { code: '+61', label: 'Australia', flag: '🇦🇺' },
-  { code: '+55', label: 'Brazil', flag: '🇧🇷' },
-]
-
-// ── Nationalities ─────────────────────────────────────────────────────────────
-const NATIONALITIES = [
-  { code: 'mt', label: 'Maltese', flag: '🇲🇹' },
-  { code: 'de', label: 'German', flag: '🇩🇪' },
-  { code: 'gb', label: 'British', flag: '🇬🇧' },
-  { code: 'us', label: 'American', flag: '🇺🇸' },
-  { code: 'fr', label: 'French', flag: '🇫🇷' },
-  { code: 'it', label: 'Italian', flag: '🇮🇹' },
-  { code: 'es', label: 'Spanish', flag: '🇪🇸' },
-  { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
-  { code: 'ch', label: 'Swiss', flag: '🇨🇭' },
-  { code: 'at', label: 'Austrian', flag: '🇦🇹' },
-  { code: 'be', label: 'Belgian', flag: '🇧🇪' },
-  { code: 'se', label: 'Swedish', flag: '🇸🇪' },
-  { code: 'no', label: 'Norwegian', flag: '🇳🇴' },
-  { code: 'dk', label: 'Danish', flag: '🇩🇰' },
-  { code: 'fi', label: 'Finnish', flag: '🇫🇮' },
-  { code: 'pl', label: 'Polish', flag: '🇵🇱' },
-  { code: 'pt', label: 'Portuguese', flag: '🇵🇹' },
-  { code: 'gr', label: 'Greek', flag: '🇬🇷' },
-  { code: 'ru', label: 'Russian', flag: '🇷🇺' },
-  { code: 'ua', label: 'Ukrainian', flag: '🇺🇦' },
-  { code: 'tr', label: 'Turkish', flag: '🇹🇷' },
-  { code: 'ae', label: 'Emirati', flag: '🇦🇪' },
-  { code: 'sa', label: 'Saudi', flag: '🇸🇦' },
-  { code: 'il', label: 'Israeli', flag: '🇮🇱' },
-  { code: 'in', label: 'Indian', flag: '🇮🇳' },
-  { code: 'cn', label: 'Chinese', flag: '🇨🇳' },
-  { code: 'kr', label: 'Korean', flag: '🇰🇷' },
-  { code: 'jp', label: 'Japanese', flag: '🇯🇵' },
-  { code: 'au', label: 'Australian', flag: '🇦🇺' },
-  { code: 'br', label: 'Brazilian', flag: '🇧🇷' },
+  { code: '+972', label: 'Israel',       flag: '🇮🇱' },
+  { code: '+91',  label: 'India',        flag: '🇮🇳' },
+  { code: '+86',  label: 'China',        flag: '🇨🇳' },
+  { code: '+82',  label: 'South Korea',  flag: '🇰🇷' },
+  { code: '+81',  label: 'Japan',        flag: '🇯🇵' },
+  { code: '+61',  label: 'Australia',    flag: '🇦🇺' },
+  { code: '+55',  label: 'Brazil',       flag: '🇧🇷' },
 ]
 
 // ── Property types ────────────────────────────────────────────────────────────
@@ -114,6 +83,14 @@ const FEATURES = [
   { key: 'terrace',   icon: '☀️',  label: 'Terrace' },
 ]
 
+// ── Professions ───────────────────────────────────────────────────────────────
+const PROFESSIONS = [
+  'Remote Worker', 'IT / Tech', 'Finance', 'Healthcare',
+  'Education', 'Legal', 'Business', 'Student', 'Retired', 'Other',
+]
+
+const SORTED_COUNTRIES = [...countriesData].sort((a, b) => a.name.common.localeCompare(b.name.common))
+
 // ── Slide animation ───────────────────────────────────────────────────────────
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
@@ -121,7 +98,15 @@ const slideVariants = {
   exit:   (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
 }
 
-// ── Form state ────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface SharingPerson {
+  name: string
+  nationality: string
+  professions: string[]
+  professions_other: string
+  age: string
+}
+
 interface FormData {
   name: string
   countryCode: string
@@ -129,13 +114,18 @@ interface FormData {
   email: string
   nationality: string
   group_size: number
+  group_size_other: string
   hasPets: boolean
   pets: string
-  profession: string
+  professions: string[]
+  professions_other: string
+  sharing_persons: SharingPerson[]
   budget_min: number
   budget_max: number
   bedrooms: string[]
   bathrooms: string[]
+  bedrooms_other_value: string
+  bathrooms_other_value: string
   property_types: string[]
   move_in: string
   move_in_custom: string
@@ -149,16 +139,21 @@ interface FormData {
 
 const defaultForm: FormData = {
   name: '', countryCode: '+356', phone: '', email: '',
-  nationality: '', group_size: 1, hasPets: false, pets: '',
-  profession: '', budget_min: 1000, budget_max: 2500,
-  bedrooms: [], bathrooms: [], property_types: [],
+  nationality: '', group_size: 1, group_size_other: '',
+  hasPets: false, pets: '',
+  professions: [], professions_other: '',
+  sharing_persons: [],
+  budget_min: 1000, budget_max: 2500,
+  bedrooms: [], bathrooms: [],
+  bedrooms_other_value: '', bathrooms_other_value: '',
+  property_types: [],
   move_in: '', move_in_custom: '',
   locationValue: { selectedAreas: [], preferredVillages: [], topPriorityVillages: [] },
   open_to_suggestions: false,
-  features: [], living_situation: '' as '' | 'couple' | 'family' | 'sharing', wishes: '', comments: '',
+  features: [], living_situation: '', wishes: '', comments: '',
 }
 
-// ── Small reusable components ─────────────────────────────────────────────────
+// ── Reusable UI ───────────────────────────────────────────────────────────────
 function OptionCard({ active, onClick, children, className }: {
   active: boolean; onClick: () => void; children: React.ReactNode; className?: string
 }) {
@@ -183,19 +178,136 @@ function Label({ children }: { children: React.ReactNode }) {
   return <p className="text-xs font-medium text-navy/50 uppercase tracking-widest mb-2">{children}</p>
 }
 
+// ── CountryPicker ─────────────────────────────────────────────────────────────
+function CountryPicker({ value, onChange, error, placeholder, small }: {
+  value: string; onChange: (v: string) => void; error?: boolean; placeholder?: string; small?: boolean
+}) {
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const filtered = useMemo(() =>
+    SORTED_COUNTRIES.filter(c =>
+      c.name.common.toLowerCase().includes(search.toLowerCase()) ||
+      c.cca2.toLowerCase().includes(search.toLowerCase())
+    ),
+    [search]
+  )
+
+  const selected = SORTED_COUNTRIES.find(c => c.cca2 === value)
+
+  return (
+    <Popover open={open} onOpenChange={v => { setOpen(v); if (!v) setSearch('') }}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'w-full flex items-center gap-2 border rounded focus:outline-none focus:ring-2 focus:ring-gold/40 transition-colors text-left',
+            small ? 'px-3 py-2 text-xs' : 'px-4 py-2.5 text-sm',
+            error ? 'border-red-400' : 'border-navy/15',
+            !selected ? 'text-navy/30' : 'text-navy'
+          )}
+        >
+          {selected ? (
+            <>
+              <ReactCountryFlag countryCode={value} svg style={{ width: '1.1rem', height: '0.8rem', flexShrink: 0 }} />
+              <span className="truncate">{selected.name.common}</span>
+            </>
+          ) : (
+            <span className="truncate">{placeholder ?? 'Select country...'}</span>
+          )}
+          <ChevronDown className="w-3 h-3 ml-auto text-navy/40 shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 p-2" onOpenAutoFocus={e => e.preventDefault()}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search country..."
+          className="w-full px-3 py-1.5 border border-navy/15 rounded text-sm text-navy placeholder:text-navy/30 focus:outline-none focus:ring-1 focus:ring-gold/40 mb-1"
+          autoFocus
+        />
+        <div className="max-h-52 overflow-y-auto space-y-0.5">
+          {filtered.map(c => (
+            <button
+              key={c.cca2}
+              type="button"
+              onClick={() => { onChange(c.cca2); setOpen(false); setSearch('') }}
+              className={cn(
+                'w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-sm hover:bg-navy/5 transition-colors text-left',
+                c.cca2 === value && 'bg-gold/10 font-medium'
+              )}
+            >
+              <ReactCountryFlag countryCode={c.cca2} svg style={{ width: '1.25rem', height: '0.875rem', flexShrink: 0 }} />
+              <span className="text-navy/80 truncate">{c.name.common}</span>
+              <span className="text-navy/30 text-xs ml-auto shrink-0">{c.cca2}</span>
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ── ProfessionPicker ──────────────────────────────────────────────────────────
+function ProfessionPicker({ selected, onToggle, otherValue, onOtherChange, error, small }: {
+  selected: string[]
+  onToggle: (p: string) => void
+  otherValue: string
+  onOtherChange: (v: string) => void
+  error?: string
+  small?: boolean
+}) {
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5 mb-1.5">
+        {PROFESSIONS.map(p => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onToggle(p)}
+            className={cn(
+              'rounded border transition-all',
+              small ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm',
+              selected.includes(p)
+                ? 'border-gold bg-gold/10 text-navy font-medium'
+                : 'border-navy/15 text-navy/50 hover:border-navy/25 hover:text-navy'
+            )}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+      {selected.includes('Other') && (
+        <input
+          type="text"
+          value={otherValue}
+          onChange={e => onOtherChange(e.target.value)}
+          placeholder="Please specify..."
+          className={cn(
+            'w-full border rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40',
+            small ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm',
+            'border-navy/15'
+          )}
+        />
+      )}
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function ContactForm() {
   const t = useTranslations('form')
   const [step, setStep] = useState(1)
   const [dir, setDir] = useState(1)
   const [form, setForm] = useState<FormData>(defaultForm)
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
   const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
     setForm(prev => ({ ...prev, [key]: val }))
-    setErrors(prev => { const e = { ...prev }; delete e[key]; return e })
+    setErrors(prev => { const e = { ...prev }; delete e[key as string]; return e })
   }, [])
 
   const toggleFeature = (key: string) => {
@@ -213,22 +325,65 @@ export function ContactForm() {
         ? prev.features.includes('pets') ? prev.features : [...prev.features, 'pets']
         : prev.features.filter(f => f !== 'pets'),
     }))
-    setErrors(prev => { const e = { ...prev }; delete e.hasPets; return e })
   }, [])
 
-  const validate1 = () => {
-    const e: typeof errors = {}
+  const updateGroupSize = (n: number) => {
+    const count = Math.max(0, n === 6 ? (parseInt(form.group_size_other) || 1) - 1 : n - 1)
+    const persons = [...form.sharing_persons]
+    while (persons.length < count) {
+      persons.push({ name: '', nationality: '', professions: [], professions_other: '', age: '' })
+    }
+    setForm(prev => ({
+      ...prev,
+      group_size: n,
+      group_size_other: n === 6 ? prev.group_size_other : '',
+      sharing_persons: persons.slice(0, count),
+    }))
+  }
+
+  const applyGroupSizeOther = (raw: string) => {
+    const n = parseInt(raw)
+    const count = isNaN(n) || n < 2 ? 0 : n - 1
+    const persons = [...form.sharing_persons]
+    while (persons.length < count) {
+      persons.push({ name: '', nationality: '', professions: [], professions_other: '', age: '' })
+    }
+    setForm(prev => ({
+      ...prev,
+      group_size_other: raw,
+      sharing_persons: persons.slice(0, count),
+    }))
+  }
+
+  const updateSharingPerson = (i: number, field: keyof SharingPerson, val: string | string[]) => {
+    const persons = form.sharing_persons.map((p, idx) =>
+      idx === i ? { ...p, [field]: val } : p
+    )
+    setForm(prev => ({ ...prev, sharing_persons: persons }))
+    setErrors(prev => {
+      const e = { ...prev }
+      delete e[`sharing_nationality_${i}`]
+      delete e[`sharing_professions_${i}`]
+      return e
+    })
+  }
+
+  const validate1 = (): Record<string, string> => {
+    const e: Record<string, string> = {}
     if (!form.name.trim()) e.name = t('required')
     if (!form.phone.trim()) e.phone = t('required')
+    if (form.professions.length === 0) e.professions = t('required')
+    form.sharing_persons.forEach((p, i) => {
+      if (!p.nationality) e[`sharing_nationality_${i}`] = t('required')
+      if (p.professions.length === 0) e[`sharing_professions_${i}`] = t('required')
+    })
     return e
   }
 
   const go = (next: number) => {
-    if (next > step) {
-      if (step === 1) {
-        const e = validate1()
-        if (Object.keys(e).length) { setErrors(e); return }
-      }
+    if (next > step && step === 1) {
+      const e = validate1()
+      if (Object.keys(e).length) { setErrors(e); return }
     }
     setDir(next > step ? 1 : -1)
     setStep(next)
@@ -238,21 +393,42 @@ export function ContactForm() {
   const submit = async () => {
     const e = validate1()
     if (Object.keys(e).length) { setErrors(e); go(1); return }
-
     setSubmitting(true)
     try {
+      const effectiveGroupSize = form.group_size === 6
+        ? (parseInt(form.group_size_other) || 6)
+        : form.group_size
+
+      const buildProfession = (profs: string[], other: string) =>
+        [...profs.filter(p => p !== 'Other'), ...(profs.includes('Other') && other ? [other] : [])].join(', ')
+
+      const bedroomsFinal = form.bedrooms.includes('Any') ? null
+        : form.bedrooms.filter(b => b !== 'Any').map(b =>
+            b === 'Other' && form.bedrooms_other_value ? form.bedrooms_other_value : b
+          )
+      const bathroomsFinal = form.bathrooms.includes('Any') ? null
+        : form.bathrooms.filter(b => b !== 'Any').map(b =>
+            b === 'Other' && form.bathrooms_other_value ? form.bathrooms_other_value : b
+          )
+
       const payload = {
         name: form.name.trim(),
         phone: form.countryCode.replace('+', '') + form.phone.replace(/\D/g, ''),
         email: form.email || null,
         nationalities: form.nationality ? [form.nationality] : null,
-        group_size: form.group_size > 1 ? form.group_size : null,
+        group_size: effectiveGroupSize > 1 ? effectiveGroupSize : null,
         pets: form.hasPets ? (form.pets || 'yes') : null,
-        profession: form.profession || null,
+        profession: buildProfession(form.professions, form.professions_other) || null,
+        sharing_persons: form.sharing_persons.length > 0 ? form.sharing_persons.map(p => ({
+          name: p.name || null,
+          nationality: p.nationality || null,
+          profession: buildProfession(p.professions, p.professions_other) || null,
+          age: p.age || null,
+        })) : null,
         budget_min: form.budget_min,
         budget_max: form.budget_max,
-        bedrooms: form.bedrooms.length > 0 ? form.bedrooms.join(',') : null,
-        bathrooms: form.bathrooms.length > 0 ? form.bathrooms.join(',') : null,
+        bedrooms: bedroomsFinal && bedroomsFinal.length > 0 ? bedroomsFinal.join(',') : null,
+        bathrooms: bathroomsFinal && bathroomsFinal.length > 0 ? bathroomsFinal.join(',') : null,
         property_types: form.property_types.length > 0 ? form.property_types.join(',') : null,
         move_in: form.move_in_custom || form.move_in || null,
         preferred_regions: form.locationValue.selectedAreas.length > 0 ? form.locationValue.selectedAreas : null,
@@ -304,7 +480,7 @@ export function ContactForm() {
           </motion.div>
         </div>
         <h2 className="font-serif text-3xl text-navy mb-3">
-          {t('success_title').replace('{name}', form.name.split(' ')[0])}
+          Thanks {form.name.split(' ')[0]}!
         </h2>
         <p className="text-navy/60 text-lg mb-8">{t('success_desc')}</p>
         <a
@@ -350,7 +526,7 @@ export function ContactForm() {
       {/* Step label */}
       <div className="mb-6">
         <p className="text-gold text-xs tracking-[0.2em] uppercase mb-1">
-          {t('step').replace('{current}', String(step)).replace('{total}', '3')}
+          Step {step} of 3
         </p>
         <h3 className="font-serif text-2xl text-navy">
           {step === 1 ? t('step1_title') : step === 2 ? t('step2_title') : t('step3_title')}
@@ -368,9 +544,32 @@ export function ContactForm() {
           exit="exit"
           transition={{ duration: 0.25, ease: 'easeInOut' }}
         >
-          {step === 1 && <Step1 form={form} set={set} setHasPets={setHasPets} errors={errors} t={t} />}
+          {step === 1 && (
+            <Step1
+              form={form}
+              set={set}
+              setHasPets={setHasPets}
+              errors={errors}
+              updateGroupSize={updateGroupSize}
+              applyGroupSizeOther={applyGroupSizeOther}
+              updateSharingPerson={updateSharingPerson}
+              t={t}
+            />
+          )}
           {step === 2 && <Step2 form={form} set={set} t={t} />}
-          {step === 3 && <Step3 form={form} set={set} toggleRegion={toggleRegion} toggleLocation={toggleLocation} toggleFeature={toggleFeature} t={t} togglePropertyType={(pt: string) => set('property_types', form.property_types.includes(pt) ? form.property_types.filter(x => x !== pt) : [...form.property_types, pt])} />}
+          {step === 3 && (
+            <Step3
+              form={form}
+              set={set}
+              toggleFeature={toggleFeature}
+              togglePropertyType={(pt: string) =>
+                set('property_types', form.property_types.includes(pt)
+                  ? form.property_types.filter(x => x !== pt)
+                  : [...form.property_types, pt])
+              }
+              t={t}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
 
@@ -411,11 +610,14 @@ export function ContactForm() {
 }
 
 // ── Step 1: About You ─────────────────────────────────────────────────────────
-function Step1({ form, set, setHasPets, errors, t }: {
+function Step1({ form, set, setHasPets, errors, updateGroupSize, applyGroupSizeOther, updateSharingPerson, t }: {
   form: FormData
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
   setHasPets: (val: boolean) => void
-  errors: Partial<Record<keyof FormData, string>>
+  errors: Record<string, string>
+  updateGroupSize: (n: number) => void
+  applyGroupSizeOther: (raw: string) => void
+  updateSharingPerson: (i: number, field: keyof SharingPerson, val: string | string[]) => void
   t: (k: string) => string
 }) {
   return (
@@ -436,7 +638,7 @@ function Step1({ form, set, setHasPets, errors, t }: {
         {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
       </div>
 
-      {/* Phone with country code */}
+      {/* Phone */}
       <div>
         <Label>{t('phone')} *</Label>
         <div className={cn(
@@ -478,41 +680,122 @@ function Step1({ form, set, setHasPets, errors, t }: {
         />
       </div>
 
-      {/* Nationality */}
+      {/* Nationality — CountryPicker with SVG flags */}
       <div>
         <Label>{t('nationality')}</Label>
-        <div className="relative">
-          <select
-            value={form.nationality}
-            onChange={e => set('nationality', e.target.value)}
-            className="w-full appearance-none px-4 py-3 border border-navy/15 rounded text-navy focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold bg-white cursor-pointer"
-          >
-            <option value="">— {t('select')} —</option>
-            {NATIONALITIES.map(n => (
-              <option key={n.code} value={n.code}>{n.flag} {n.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="w-4 h-4 text-navy/40 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
+        <CountryPicker
+          value={form.nationality}
+          onChange={v => set('nationality', v)}
+          placeholder="Select your nationality..."
+        />
       </div>
 
-      {/* Group size */}
+      {/* Group size: 1,2,3,4,5,Other */}
       <div>
         <Label>{t('group_size')}</Label>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {[1, 2, 3, 4, 5].map(n => (
             <OptionCard
               key={n}
               active={form.group_size === n}
-              onClick={() => set('group_size', n)}
-              className="flex-1 flex flex-col items-center gap-1 py-3"
+              onClick={() => updateGroupSize(n)}
+              className="flex-1 flex flex-col items-center gap-1 py-3 min-w-[3rem]"
             >
-              <span className="text-lg">{n === 5 ? '5+' : n === 1 ? '👤' : n === 2 ? '👫' : n === 3 ? '👨‍👩‍👦' : '👨‍👩‍👧‍👦'}</span>
-              <span className="text-xs">{n === 5 ? '5+' : n}</span>
+              <span className="text-lg">
+                {n === 1 ? '👤' : n === 2 ? '👫' : n === 3 ? '👨‍👩‍👦' : n === 4 ? '👨‍👩‍👧‍👦' : '👥'}
+              </span>
+              <span className="text-xs">{n}</span>
             </OptionCard>
           ))}
+          <OptionCard
+            active={form.group_size === 6}
+            onClick={() => updateGroupSize(6)}
+            className="flex-1 flex flex-col items-center gap-1 py-3 min-w-[3rem]"
+          >
+            <span className="text-lg">👥</span>
+            <span className="text-xs">Other</span>
+          </OptionCard>
         </div>
+        {form.group_size === 6 && (
+          <input
+            type="number"
+            min="2"
+            max="50"
+            value={form.group_size_other}
+            onChange={e => applyGroupSizeOther(e.target.value)}
+            placeholder="How many people?"
+            className="mt-2 w-48 px-4 py-2.5 border border-navy/15 rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40 text-sm"
+          />
+        )}
       </div>
+
+      {/* Profession — multi-select, mandatory */}
+      <div>
+        <Label>Profession *</Label>
+        <ProfessionPicker
+          selected={form.professions}
+          onToggle={p => set('professions', form.professions.includes(p)
+            ? form.professions.filter(x => x !== p)
+            : [...form.professions, p]
+          )}
+          otherValue={form.professions_other}
+          onOtherChange={v => set('professions_other', v)}
+          error={errors.professions}
+        />
+      </div>
+
+      {/* Sharing sub-form: shown when group_size ≥ 2 */}
+      {form.sharing_persons.length > 0 && (
+        <div>
+          <Label>Additional Person Details</Label>
+          <div className="border border-navy/10 rounded-lg p-4 space-y-5 bg-navy/[0.02]">
+            {form.sharing_persons.map((p, i) => (
+              <div key={i} className="space-y-2">
+                <p className="text-xs text-navy/40 font-semibold uppercase tracking-wide">Person {i + 2}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={p.name}
+                    onChange={e => updateSharingPerson(i, 'name', e.target.value)}
+                    placeholder="Name (optional)"
+                    className="px-3 py-2 border border-navy/15 rounded text-xs text-navy placeholder:text-navy/30 focus:outline-none focus:ring-1 focus:ring-gold/40"
+                  />
+                  <CountryPicker
+                    value={p.nationality}
+                    onChange={v => updateSharingPerson(i, 'nationality', v)}
+                    error={!!errors[`sharing_nationality_${i}`]}
+                    placeholder="Nationality *"
+                    small
+                  />
+                  <input
+                    type="number"
+                    min="10"
+                    max="120"
+                    value={p.age}
+                    onChange={e => updateSharingPerson(i, 'age', e.target.value)}
+                    placeholder="Age (optional)"
+                    className="px-3 py-2 border border-navy/15 rounded text-xs text-navy placeholder:text-navy/30 focus:outline-none focus:ring-1 focus:ring-gold/40"
+                  />
+                </div>
+                {errors[`sharing_nationality_${i}`] && (
+                  <p className="text-red-500 text-xs">{errors[`sharing_nationality_${i}`]}</p>
+                )}
+                <ProfessionPicker
+                  selected={p.professions}
+                  onToggle={prof => updateSharingPerson(i, 'professions',
+                    p.professions.includes(prof)
+                      ? p.professions.filter(x => x !== prof)
+                      : [...p.professions, prof]
+                  )}
+                  otherValue={p.professions_other}
+                  onOtherChange={v => updateSharingPerson(i, 'professions_other', v)}
+                  error={errors[`sharing_professions_${i}`]}
+                  small
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pets */}
       <div>
@@ -552,23 +835,11 @@ function Step1({ form, set, setHasPets, errors, t }: {
           ))}
         </div>
       </div>
-
-      {/* Profession */}
-      <div>
-        <Label>{t('profession')}</Label>
-        <input
-          type="text"
-          value={form.profession}
-          onChange={e => set('profession', e.target.value)}
-          placeholder={t('profession_placeholder')}
-          className="w-full px-4 py-3 border border-navy/15 rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold transition-colors"
-        />
-      </div>
     </div>
   )
 }
 
-// ── Step 2: Budget & Space ─────────────────────────────────────────────────────
+// ── Step 2: Budget & Space ────────────────────────────────────────────────────
 function Step2({ form, set, t }: {
   form: FormData
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
@@ -576,10 +847,27 @@ function Step2({ form, set, t }: {
 }) {
   const isPremium = form.budget_min >= 2500
 
-  const toggleBedroom = (b: string) =>
-    set('bedrooms', form.bedrooms.includes(b) ? form.bedrooms.filter(x => x !== b) : [...form.bedrooms, b])
-  const toggleBathroom = (b: string) =>
-    set('bathrooms', form.bathrooms.includes(b) ? form.bathrooms.filter(x => x !== b) : [...form.bathrooms, b])
+  const toggleBedroom = (b: string) => {
+    if (b === 'Any') {
+      set('bedrooms', form.bedrooms.includes('Any') ? [] : ['Any'])
+    } else {
+      const next = form.bedrooms.includes(b)
+        ? form.bedrooms.filter(x => x !== b)
+        : [...form.bedrooms.filter(x => x !== 'Any'), b]
+      set('bedrooms', next)
+    }
+  }
+
+  const toggleBathroom = (b: string) => {
+    if (b === 'Any') {
+      set('bathrooms', form.bathrooms.includes('Any') ? [] : ['Any'])
+    } else {
+      const next = form.bathrooms.includes(b)
+        ? form.bathrooms.filter(x => x !== b)
+        : [...form.bathrooms.filter(x => x !== 'Any'), b]
+      set('bathrooms', next)
+    }
+  }
 
   return (
     <div className="space-y-7">
@@ -618,40 +906,62 @@ function Step2({ form, set, t }: {
         </div>
       </div>
 
-      {/* Bedrooms — multi-select */}
+      {/* Bedrooms */}
       <div>
         <Label>{t('bedrooms')}</Label>
         <div className="flex gap-2 flex-wrap">
-          {['Studio', '1', '2', '3', '4+'].map(b => (
+          {['1', '2', '3', '4', 'Other', 'Any'].map(b => (
             <OptionCard
               key={b}
               active={form.bedrooms.includes(b)}
               onClick={() => toggleBedroom(b)}
               className="flex flex-col items-center gap-1 px-4 py-3"
             >
-              <BedDouble className="w-4 h-4" />
+              {b !== 'Any' && b !== 'Other' && <BedDouble className="w-4 h-4" />}
               <span>{b}</span>
             </OptionCard>
           ))}
         </div>
+        {form.bedrooms.includes('Other') && (
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={form.bedrooms_other_value}
+            onChange={e => set('bedrooms_other_value', e.target.value)}
+            placeholder="Enter number..."
+            className="mt-2 w-48 px-4 py-2.5 border border-navy/15 rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40 text-sm"
+          />
+        )}
       </div>
 
-      {/* Bathrooms — multi-select */}
+      {/* Bathrooms */}
       <div>
         <Label>{t('bathrooms')}</Label>
-        <div className="flex gap-2">
-          {['1', '2', '3+'].map(b => (
+        <div className="flex gap-2 flex-wrap">
+          {['1', '2', '3', '4', 'Other', 'Any'].map(b => (
             <OptionCard
               key={b}
               active={form.bathrooms.includes(b)}
               onClick={() => toggleBathroom(b)}
-              className="flex flex-col items-center gap-1 px-5 py-3"
+              className="flex flex-col items-center gap-1 px-4 py-3"
             >
-              <Bath className="w-4 h-4" />
+              {b !== 'Any' && b !== 'Other' && <Bath className="w-4 h-4" />}
               <span>{b}</span>
             </OptionCard>
           ))}
         </div>
+        {form.bathrooms.includes('Other') && (
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={form.bathrooms_other_value}
+            onChange={e => set('bathrooms_other_value', e.target.value)}
+            placeholder="Enter number..."
+            className="mt-2 w-48 px-4 py-2.5 border border-navy/15 rounded text-navy placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-gold/40 text-sm"
+          />
+        )}
       </div>
 
       {/* Move-in */}
@@ -681,18 +991,16 @@ function Step2({ form, set, t }: {
 }
 
 // ── Step 3: Where & What ──────────────────────────────────────────────────────
-function Step3({ form, set, toggleRegion, toggleLocation, toggleFeature, togglePropertyType, t }: {
+function Step3({ form, set, toggleFeature, togglePropertyType, t }: {
   form: FormData
   set: <K extends keyof FormData>(k: K, v: FormData[K]) => void
-  toggleRegion: (r: string) => void
-  toggleLocation: (loc: string) => void
   toggleFeature: (key: string) => void
   togglePropertyType: (pt: string) => void
   t: (k: string) => string
 }) {
   return (
     <div className="space-y-7">
-      {/* Property type — multi-select */}
+      {/* Property type */}
       <div>
         <Label>Property Type</Label>
         <div className="flex flex-wrap gap-1.5">
