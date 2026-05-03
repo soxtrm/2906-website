@@ -5,22 +5,23 @@ import { Search, X } from 'lucide-react'
 import { fetchAreas, fetchVillages, type Area, type Village } from '@/lib/locations'
 
 interface SingleVillageSelectorProps {
-  value: string | null          // selected village code
+  value: string | null
   onChange: (code: string | null, displayName?: string) => void
   placeholder?: string
 }
 
 export function SingleVillageSelector({ value, onChange, placeholder = 'Search village…' }: SingleVillageSelectorProps) {
-  const [keyAreas, setKeyAreas]         = useState<Area[]>([])
-  const [allVillages, setAllVillages]   = useState<Village[]>([])
-  const [activeArea, setActiveArea]     = useState<string | null>(null)
-  const [search, setSearch]             = useState('')
-  const [loading, setLoading]           = useState(true)
+  const [keyAreas, setKeyAreas]       = useState<Area[]>([])
+  const [specialAreas, setSpecialAreas] = useState<Area[]>([])
+  const [allVillages, setAllVillages] = useState<Village[]>([])
+  const [activeArea, setActiveArea]   = useState<string | null>(null)
+  const [search, setSearch]           = useState('')
+  const [loading, setLoading]         = useState(true)
 
-  // Load all areas and then all villages on mount
   useEffect(() => {
     fetchAreas().then(res => {
       setKeyAreas(res.key_areas)
+      setSpecialAreas(res.special_areas)
       const allCodes = [...res.key_areas, ...res.special_areas].map(a => a.code)
       return fetchVillages(allCodes)
     })
@@ -28,6 +29,27 @@ export function SingleVillageSelector({ value, onChange, placeholder = 'Search v
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  const specialAreaCodes = new Set(specialAreas.map(a => a.code))
+
+  const handleAreaClick = (code: string | null) => {
+    if (code === activeArea) {
+      setActiveArea(null)
+    } else {
+      // If deselecting central, clear any central sub-area filter
+      if (code === null && activeArea && specialAreaCodes.has(activeArea)) {
+        setActiveArea(null)
+      } else {
+        setActiveArea(code)
+      }
+    }
+    // If switching away from central, clear special area filter
+    if (code !== 'central' && activeArea && specialAreaCodes.has(activeArea)) {
+      setActiveArea(code)
+    } else {
+      setActiveArea(prev => prev === code ? null : code)
+    }
+  }
 
   const visibleVillages = allVillages.filter(v => {
     const matchesSearch = search.length === 0 ||
@@ -42,6 +64,8 @@ export function SingleVillageSelector({ value, onChange, placeholder = 'Search v
   if (loading) {
     return <div className="text-sm text-navy/40 py-2">Loading villages…</div>
   }
+
+  const showSpecialAreas = activeArea === 'central' || (activeArea !== null && specialAreaCodes.has(activeArea))
 
   return (
     <div className="single-village-selector space-y-2">
@@ -81,7 +105,7 @@ export function SingleVillageSelector({ value, onChange, placeholder = 'Search v
         )}
       </div>
 
-      {/* Area filter pills */}
+      {/* Key area filter pills */}
       <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
@@ -98,9 +122,16 @@ export function SingleVillageSelector({ value, onChange, placeholder = 'Search v
           <button
             key={area.code}
             type="button"
-            onClick={() => setActiveArea(area.code === activeArea ? null : area.code)}
+            onClick={() => {
+              if (activeArea === area.code) {
+                setActiveArea(null)
+              } else {
+                // Clear special area filter when switching key areas
+                setActiveArea(area.code)
+              }
+            }}
             className={`px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${
-              activeArea === area.code
+              activeArea === area.code || (specialAreaCodes.has(activeArea ?? '') && area.code === 'central')
                 ? 'bg-navy text-white border-navy'
                 : 'bg-off-white text-navy/60 border-gray-200 hover:border-gray-300'
             }`}
@@ -109,6 +140,26 @@ export function SingleVillageSelector({ value, onChange, placeholder = 'Search v
           </button>
         ))}
       </div>
+
+      {/* Special areas — only visible when Central is selected */}
+      {showSpecialAreas && specialAreas.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pl-1 border-l-2 border-navy/10">
+          {specialAreas.map(area => (
+            <button
+              key={area.code}
+              type="button"
+              onClick={() => setActiveArea(prev => prev === area.code ? 'central' : area.code)}
+              className={`px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${
+                activeArea === area.code
+                  ? 'bg-navy/80 text-white border-navy/80'
+                  : 'bg-off-white text-navy/50 border-gray-100 hover:border-gray-300'
+              }`}
+            >
+              {area.display_name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Village list */}
       <div className="max-h-48 overflow-y-auto border border-gray-100 rounded bg-white">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Header } from '@/components/header'
 import { SingleVillageSelector } from '@/components/single-village-selector'
@@ -16,7 +16,7 @@ const PROPERTY_TYPE_GROUPS = [
     types: [
       'Apartment', 'Penthouse', 'Duplex Penthouse', 'Maisonette',
       'Townhouse', 'Terraced House', 'House of Character',
-      'Detached Villa', 'Semi-detached Villa', 'Farmhouse',
+      'Detached Villa', 'Semi-detached Villa', 'Farmhouse', 'Studio',
     ],
   },
   {
@@ -25,24 +25,18 @@ const PROPERTY_TYPE_GROUPS = [
   },
   {
     label: 'Commercial',
-    types: ['Office', 'Retail', 'Commercial Garage', 'Restaurant/Canteen', 'Gym'],
+    types: ['Office', 'Retail', 'Restaurant/Canteen', 'Gym', 'Commercial Garage', 'Warehouse', 'Other'],
   },
 ]
 
-const REGIONS = [
-  'Central Malta', 'Northern Malta', 'Southern Malta',
-  'Western Malta', 'Valletta', 'Gozo', 'Comino',
-]
+const COMMERCIAL_TYPES = new Set(PROPERTY_TYPE_GROUPS.find(g => g.label === 'Commercial')!.types)
 
-const LOCATION_GROUPS = [
-  { label: 'Central', items: ["Sliema", "St Julian's", "Gzira", "Msida", "Pieta", "Ta' Xbiex", "Swieqi", "Pembroke", "Madliena", "San Gwann", "Birkirkara"] },
-  { label: 'North',   items: ["Mellieha", "Bugibba", "Qawra", "St Paul's Bay", "Mosta", "Naxxar", "Gharghur", "Attard", "Balzan", "Lija", "Iklin"] },
-  { label: 'South',   items: ["Marsaskala", "Birzebbuga", "Zebbug", "Zejtun", "Valletta", "Floriana"] },
-  { label: 'West',    items: ["Rabat", "Mdina", "Mtarfa", "Dingli", "Siggiewi"] },
-  { label: 'Gozo',    items: ["Victoria", "Marsalforn", "Xlendi", "Nadur"] },
-]
+function isCommercial(propertyType: string) {
+  return COMMERCIAL_TYPES.has(propertyType)
+}
 
 const FEATURES = [
+  { key: 'brand_new',    label: 'Brand New' },
   { key: 'pool',         label: 'Pool' },
   { key: 'balcony',      label: 'Balcony' },
   { key: 'sea_view',     label: 'Sea View' },
@@ -67,16 +61,34 @@ const FURNITURE_STYLES = ['Ultra Modern', 'Modern', 'Standard', 'Character', 'Co
 
 const AGENTS = ['Kevin', 'Olga', 'Inna', 'Oleg', 'Kevin Christian', 'Anselme', 'Isabel', 'Tatyana', 'Kseniia', 'Julia', 'Other']
 
-const COUNTRY_CODES = [
-  { code: '+356', flag: '🇲🇹' }, { code: '+49', flag: '🇩🇪' }, { code: '+44', flag: '🇬🇧' },
-  { code: '+1',   flag: '🇺🇸' }, { code: '+33', flag: '🇫🇷' }, { code: '+39', flag: '🇮🇹' },
-  { code: '+34',  flag: '🇪🇸' }, { code: '+31', flag: '🇳🇱' }, { code: '+41', flag: '🇨🇭' },
-  { code: '+43',  flag: '🇦🇹' }, { code: '+7',  flag: '🇷🇺' }, { code: '+971', flag: '🇦🇪' },
-  { code: '+91',  flag: '🇮🇳' }, { code: '+86', flag: '🇨🇳' }, { code: '+61', flag: '🇦🇺' },
-]
+const BED_BATH_OPTIONS = ['1', '2', '3', '4', '5', '6+', 'Other']
 
 const STEPS = ['Contact', 'Type & Location', 'Details', 'Features', 'Photos', 'Review']
 const TOTAL_STEPS = STEPS.length
+
+// ── Auto-title ────────────────────────────────────────────────────────────────
+
+function generateTitle(form: typeof defaultForm): string {
+  const loc = form.village_display || form.location || 'Malta'
+  const price = form.price_rent
+    ? `€${Number(form.price_rent).toLocaleString()}/mo`
+    : form.price_sale
+      ? `€${Number(form.price_sale).toLocaleString()}`
+      : ''
+
+  if (isCommercial(form.property_type)) {
+    const sqm = form.size_sqm ? `${form.size_sqm}sqm` : ''
+    return [loc, price, sqm, form.property_type].filter(Boolean).join(' | ')
+  }
+
+  const bedsNum = form.bedrooms === 'Other' ? (form.bedrooms_other || '') : form.bedrooms
+  const bathsNum = form.bathrooms === 'Other' ? (form.bathrooms_other || '') : form.bathrooms
+  const beds  = bedsNum  ? `${bedsNum} Bedroom${bedsNum !== '1' ? 's' : ''}` : ''
+  const baths = bathsNum ? `${bathsNum} Bathroom${bathsNum !== '1' ? 's' : ''}` : ''
+  const roomStr = beds && baths ? `${beds} - ${baths}` : beds || baths
+
+  return [loc, price, roomStr].filter(Boolean).join(' | ')
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -94,21 +106,18 @@ function Field({ label, children, required, error }: {
   )
 }
 
-function Chip({ active, onClick, disabled, children }: {
-  active: boolean; onClick: () => void; disabled?: boolean; children: React.ReactNode
+function Chip({ active, onClick, children }: {
+  active: boolean; onClick: () => void; children: React.ReactNode
 }) {
   return (
     <button
       type="button"
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
+      onClick={onClick}
       className={cn(
         'text-xs px-2.5 py-1 rounded-full border transition-all',
         active
           ? 'border-gold bg-gold/10 text-navy font-medium'
-          : disabled
-            ? 'border-navy/8 text-navy/20 cursor-not-allowed'
-            : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
+          : 'border-navy/15 text-navy/50 hover:border-navy/30 hover:text-navy'
       )}
     >
       {children}
@@ -136,25 +145,21 @@ function ReviewRow({ label, value }: { label: string; value?: string | null }) {
 // ── Default state ─────────────────────────────────────────────────────────────
 
 const defaultForm = {
-  submitter_type:          'agent' as 'agent' | 'landlord',
   lead_agent:              'Kevin',
   lead_agent_other:        '',
-  owner_name:              '',
-  submitter_phone:         '',
-  submitter_dial:          '+356',
-  submitter_email:         '',
-  preferred_contact:       'whatsapp',
   property_type:           '',
-  region:                  '',
   location:                '',
-  viewings_from:           '',
+  available_from_type:     'now' as 'now' | 'specific' | 'other',
+  available_from_date:     '',
+  available_from_comment:  '',
   listing_type:            'For Rent',
-  bedrooms:                '' as string,
-  bathrooms:               '' as string,
+  bedrooms:                '',
+  bedrooms_other:          '',
+  bathrooms:               '',
+  bathrooms_other:         '',
   size_sqm:                '',
   price_rent:              '',
   price_sale:              '',
-  available_from:          '',
   furnished:               'Fully Furnished',
   shell_form:              false,
   features:                [] as string[],
@@ -171,31 +176,18 @@ const defaultForm = {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AddPropertyPage() {
-  const [form, setForm]           = useState(defaultForm)
-  const [step, setStep]           = useState(0)
-  const [errors, setErrors]       = useState<Record<string, string>>({})
+  const [form, setForm]             = useState(defaultForm)
+  const [step, setStep]             = useState(0)
+  const [errors, setErrors]         = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
-  const [toast, setToast]         = useState('')
-  const [done, setDone]           = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadErr, setUploadErr] = useState('')
+  const [toast, setToast]           = useState('')
+  const [done, setDone]             = useState(false)
+  const [uploading, setUploading]   = useState(false)
+  const [uploadErr, setUploadErr]   = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const set = useCallback(<K extends keyof typeof defaultForm>(key: K, val: (typeof defaultForm)[K]) => {
-    setForm(prev => {
-      const next = { ...prev, [key]: val }
-      // Auto-fill viewings_from from available_from when not yet set
-      if (key === 'available_from' && !prev.viewings_from) {
-        next.viewings_from = val as string
-      }
-      // Default furnished = Fully Furnished when switching to rental
-      if (key === 'listing_type' && (val === 'For Rent' || val === 'Both')) {
-        if (!prev.furnished || prev.furnished === 'Unfurnished') {
-          next.furnished = 'Fully Furnished'
-        }
-      }
-      return next
-    })
+    setForm(prev => ({ ...prev, [key]: val }))
     setErrors(prev => { const e = { ...prev }; delete e[key as string]; return e })
   }, [])
 
@@ -205,36 +197,44 @@ export default function AddPropertyPage() {
       : [...form.features, k]) as typeof form.features)
   }
 
-  // ── Per-step validation ────────────────────────────────────────────────────
+  // Auto-generate title when reaching review step
+  useEffect(() => {
+    if (step === TOTAL_STEPS - 1 && !form.title) {
+      const t = generateTitle(form)
+      if (t) setForm(prev => ({ ...prev, title: t }))
+    }
+  }, [step]) // eslint-disable-line
+
+  // ── Validation ────────────────────────────────────────────────────────────
 
   function validateStep(s: number): Record<string, string> {
     const e: Record<string, string> = {}
     if (s === 0) {
-      if (form.submitter_type === 'agent') {
-        if (!form.lead_agent) e.lead_agent = 'Required'
-        if (form.lead_agent === 'Other' && !form.lead_agent_other.trim()) e.lead_agent_other = 'Required'
-      } else {
-        if (!form.owner_name.trim())      e.owner_name = 'Required'
-        if (!form.submitter_phone.trim()) e.submitter_phone = 'Required'
-      }
+      if (!form.lead_agent) e.lead_agent = 'Required'
+      if (form.lead_agent === 'Other' && !form.lead_agent_other.trim()) e.lead_agent_other = 'Required'
     }
     if (s === 1) {
-      if (!form.property_type)        e.property_type = 'Required'
-      if (!form.village_code && !form.location.trim()) e.location = 'Required'
-      if (form.viewings_from && form.available_from && form.viewings_from > form.available_from) {
-        e.viewings_from = 'Must be on or before Available From'
-      }
+      if (!form.property_type)                                e.property_type = 'Required'
+      if (!form.village_code && !form.location.trim())        e.location = 'Required'
+      if (form.available_from_type === 'specific' && !form.available_from_date) e.available_from_date = 'Required'
     }
     if (s === 2) {
+      const commercial = isCommercial(form.property_type)
       const rent = form.listing_type === 'For Rent' || form.listing_type === 'Both'
       const sale = form.listing_type === 'For Sale' || form.listing_type === 'Both'
       if (rent && !form.price_rent) e.price_rent = 'Required'
       if (sale && !form.price_sale) e.price_sale = 'Required'
+      if (commercial) {
+        if (!form.size_sqm) e.size_sqm = 'Required'
+      } else {
+        if (!form.bedrooms) e.bedrooms = 'Required'
+        if (!form.bathrooms) e.bathrooms = 'Required'
+      }
     }
     if (s === 4) {
-      if (!form.description.trim())                    e.description = 'Required'
-      else if (form.description.trim().length < 50)    e.description = 'Minimum 50 characters'
-      else if (form.description.trim().length > 1000)  e.description = 'Maximum 1000 characters'
+      if (!form.description.trim())                   e.description = 'Required'
+      else if (form.description.trim().length < 50)   e.description = 'Minimum 50 characters'
+      else if (form.description.trim().length > 1000) e.description = 'Maximum 1000 characters'
     }
     return e
   }
@@ -281,37 +281,54 @@ export default function AddPropertyPage() {
     setSubmitting(true)
     try {
       const agentName = form.lead_agent === 'Other' ? form.lead_agent_other : form.lead_agent
+
+      // Resolve available_from date
+      const availableFrom = form.available_from_type === 'specific'
+        ? form.available_from_date
+        : form.available_from_type === 'now'
+          ? new Date().toISOString().slice(0, 10)
+          : null
+
+      // Resolve bedrooms/bathrooms: if 'Other', send numeric value from other field
+      const bedroomsVal = form.bedrooms === 'Other' ? (form.bedrooms_other || null) : (form.bedrooms || null)
+      const bathroomsVal = form.bathrooms === 'Other' ? (form.bathrooms_other || null) : (form.bathrooms || null)
+
+      const autoTitle = generateTitle(form)
+
       const payload = {
-        submitter_type:          form.submitter_type,
-        lead_agent:              form.submitter_type === 'agent' ? agentName : null,
-        owner_name:              form.owner_name || null,
-        submitter_name:          form.owner_name || null,
-        submitter_phone:         form.submitter_phone.trim()
-                                   ? `${form.submitter_dial}${form.submitter_phone.trim()}` : null,
-        submitter_email:         form.submitter_email.trim() || null,
-        preferred_contact:       form.preferred_contact,
+        submitter_type:          'agent',
+        lead_agent:              agentName,
+        owner_name:              null,
+        submitter_name:          null,
+        submitter_phone:         null,
+        submitter_email:         null,
+        preferred_contact:       'whatsapp',
         property_type:           form.property_type || null,
         regions:                 [],
         location:                form.village_display || form.location.trim() || null,
         village_code:            form.village_code || null,
-        title:                   form.title.trim() || (form.description.trim() ? form.description.trim().slice(0, 60) : null),
-        viewings_from:           form.viewings_from || null,
+        title:                   form.title.trim() || autoTitle || null,
         listing_type:            form.listing_type,
-        bedrooms:                form.bedrooms !== '' ? parseInt(form.bedrooms) : null,
-        bathrooms:               form.bathrooms !== '' ? parseInt(form.bathrooms) : null,
+        bedrooms:                bedroomsVal,
+        bathrooms:               bathroomsVal,
         size_sqm:                form.size_sqm !== '' ? parseInt(form.size_sqm) : null,
         price_rent:              form.price_rent !== '' ? parseInt(form.price_rent) : null,
         price_sale:              form.price_sale !== '' ? parseInt(form.price_sale) : null,
-        available_from:          form.available_from || null,
+        available_from:          availableFrom,
+        available_from_type:     form.available_from_type,
+        available_from_comment:  form.available_from_comment || null,
+        viewings_from:           availableFrom,
         furnished:               form.shell_form ? null : form.furnished,
         shell_form:              form.shell_form,
         features:                form.features,
+        brand_new:               form.features.includes('brand_new'),
         furniture_style:         form.shell_form ? null : form.furniture_style,
         description:             form.description.trim() || null,
         photos:                  form.photos,
         notes:                   form.notes.trim() || null,
         preferred_viewing_times: form.preferred_viewing_times.trim() || null,
       }
+
       const res = await fetch('/api/property-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -339,18 +356,18 @@ export default function AddPropertyPage() {
     setDone(false)
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Derived ────────────────────────────────────────────────────────────────
 
-  const isForSale = form.listing_type === 'For Sale' || form.listing_type === 'Both'
-  const isForRent = form.listing_type === 'For Rent' || form.listing_type === 'Both'
-  const agentLabel = form.lead_agent === 'Other' ? (form.lead_agent_other || 'Other') : form.lead_agent
+  const isForSale   = form.listing_type === 'For Sale' || form.listing_type === 'Both'
+  const isForRent   = form.listing_type === 'For Rent' || form.listing_type === 'Both'
+  const commercial  = isCommercial(form.property_type)
+  const agentLabel  = form.lead_agent === 'Other' ? (form.lead_agent_other || 'Other') : form.lead_agent
 
   return (
     <>
       <main className="min-h-screen bg-off-white">
         <Header />
 
-        {/* Toast */}
         <AnimatePresence>
           {toast && (
             <motion.div
@@ -368,28 +385,19 @@ export default function AddPropertyPage() {
         <section className="pt-28 pb-16">
           <div className="container mx-auto px-4 lg:px-8 max-w-3xl">
 
-            {/* Header */}
             <div className="mb-8">
               <p className="text-gold text-xs tracking-[0.2em] uppercase mb-1">2906 Internal</p>
               <h1 className="font-serif text-3xl text-navy">Submit Property</h1>
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-navy/50 text-sm">
-                  {form.submitter_type === 'landlord' ? 'Landlord property submission' : 'Agent property intake'}
-                </p>
+                <p className="text-navy/50 text-sm">Agent property intake</p>
                 {step > 0 && (
-                  <span className={cn(
-                    'text-xs px-2 py-0.5 rounded-full border',
-                    form.submitter_type === 'agent'
-                      ? 'border-blue-300/50 bg-blue-50 text-blue-700'
-                      : 'border-gold/30 bg-gold/5 text-gold'
-                  )}>
-                    {form.submitter_type === 'agent' ? `Agent: ${agentLabel}` : 'Landlord Form'}
+                  <span className="text-xs px-2 py-0.5 rounded-full border border-blue-300/50 bg-blue-50 text-blue-700">
+                    Agent: {agentLabel}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Done screen */}
             {done ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -400,11 +408,7 @@ export default function AddPropertyPage() {
                   <Check className="w-8 h-8 text-gold" />
                 </div>
                 <h2 className="font-serif text-2xl text-navy mb-2">Property Submitted</h2>
-                <p className="text-navy/50 text-sm mb-6">
-                  {form.submitter_type === 'landlord'
-                    ? "We'll review your property and get back to you within 24 hours."
-                    : 'Property saved and team notified.'}
-                </p>
+                <p className="text-navy/50 text-sm mb-6">Property saved and team notified.</p>
                 <button
                   onClick={reset}
                   className="px-6 py-2.5 bg-navy text-white text-sm rounded-lg hover:bg-navy/80 transition-colors"
@@ -415,13 +419,9 @@ export default function AddPropertyPage() {
             ) : (
               <div className="bg-white rounded-xl border border-navy/5 shadow-sm p-6 md:p-8">
 
-                {/* Step progress */}
                 <div className="flex gap-1 mb-8">
                   {STEPS.map((_, i) => (
-                    <div
-                      key={i}
-                      className={cn('flex-1 h-1 rounded-full transition-all', i <= step ? 'bg-gold' : 'bg-navy/10')}
-                    />
+                    <div key={i} className={cn('flex-1 h-1 rounded-full transition-all', i <= step ? 'bg-gold' : 'bg-navy/10')} />
                   ))}
                 </div>
                 <p className="text-xs text-navy/40 -mt-6 mb-6">
@@ -433,80 +433,23 @@ export default function AddPropertyPage() {
                   {/* ── Step 0: Contact ── */}
                   {step === 0 && (
                     <motion.div key="step0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
-                      <div className="flex gap-2">
-                        {(['agent', 'landlord'] as const).map(t => (
-                          <button
-                            key={t}
-                            type="button"
-                            onClick={() => set('submitter_type', t)}
-                            className={cn(
-                              'flex-1 py-2 rounded-lg border text-sm font-medium transition-all',
-                              form.submitter_type === t
-                                ? 'border-gold bg-gold/10 text-navy'
-                                : 'border-navy/15 text-navy/50 hover:border-navy/30'
-                            )}
-                          >
-                            {t === 'agent' ? '👤 Agent Intake' : '🏠 Landlord Form'}
-                          </button>
-                        ))}
-                      </div>
-
-                      {form.submitter_type === 'agent' ? (
-                        <>
-                          <Field label="Lead Agent" required error={errors.lead_agent}>
-                            <div className="flex flex-wrap gap-2">
-                              {AGENTS.map(a => (
-                                <Chip key={a} active={form.lead_agent === a} onClick={() => set('lead_agent', a)}>{a}</Chip>
-                              ))}
-                            </div>
-                          </Field>
-                          {form.lead_agent === 'Other' && (
-                            <Field label="Agent Name" required error={errors.lead_agent_other}>
-                              <input type="text" value={form.lead_agent_other}
-                                onChange={e => set('lead_agent_other', e.target.value)}
-                                placeholder="Agent name" className={inputCls(errors.lead_agent_other)} />
-                            </Field>
-                          )}
-                          <p className="text-xs text-navy/40 bg-navy/[0.03] border border-navy/8 rounded-lg px-3 py-2">
-                            Property will be marketed under your name.
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <Field label="Owner Name" required error={errors.owner_name}>
-                            <input type="text" value={form.owner_name}
-                              onChange={e => set('owner_name', e.target.value)}
-                              placeholder="Maria Borg" className={inputCls(errors.owner_name)} />
-                          </Field>
-                          <Field label="Phone Number" required error={errors.submitter_phone}>
-                            <div className="flex gap-2">
-                              <select value={form.submitter_dial}
-                                onChange={e => set('submitter_dial', e.target.value)}
-                                className="border border-navy/15 rounded text-navy px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40">
-                                {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-                              </select>
-                              <input type="tel" value={form.submitter_phone}
-                                onChange={e => set('submitter_phone', e.target.value)}
-                                placeholder="79000000" className={cn(inputCls(errors.submitter_phone), 'flex-1')} />
-                            </div>
-                          </Field>
-                          <Field label="Email Address">
-                            <input type="email" value={form.submitter_email}
-                              onChange={e => set('submitter_email', e.target.value)}
-                              placeholder="maria@example.com (optional)" className={inputCls()} />
-                          </Field>
-                          <Field label="Preferred Contact">
-                            <div className="flex gap-2">
-                              {['whatsapp', 'phone', 'email'].map(c => (
-                                <Chip key={c} active={form.preferred_contact === c}
-                                  onClick={() => set('preferred_contact', c)}>
-                                  {c.charAt(0).toUpperCase() + c.slice(1)}
-                                </Chip>
-                              ))}
-                            </div>
-                          </Field>
-                        </>
+                      <Field label="Lead Agent" required error={errors.lead_agent}>
+                        <div className="flex flex-wrap gap-2">
+                          {AGENTS.map(a => (
+                            <Chip key={a} active={form.lead_agent === a} onClick={() => set('lead_agent', a)}>{a}</Chip>
+                          ))}
+                        </div>
+                      </Field>
+                      {form.lead_agent === 'Other' && (
+                        <Field label="Agent Name" required error={errors.lead_agent_other}>
+                          <input type="text" value={form.lead_agent_other}
+                            onChange={e => set('lead_agent_other', e.target.value)}
+                            placeholder="Agent name" className={inputCls(errors.lead_agent_other)} />
+                        </Field>
                       )}
+                      <p className="text-xs text-navy/40 bg-navy/[0.03] border border-navy/8 rounded-lg px-3 py-2">
+                        Property will be marketed under your name.
+                      </p>
                     </motion.div>
                   )}
 
@@ -541,13 +484,37 @@ export default function AddPropertyPage() {
                         {errors.location && <p className="text-xs text-red-400 mt-1">{errors.location}</p>}
                       </Field>
 
-                      <Field label="Viewings From" error={errors.viewings_from}>
-                        <input type="date" value={form.viewings_from}
-                          onChange={e => set('viewings_from', e.target.value)}
-                          className={inputCls(errors.viewings_from)} />
-                        <p className="text-xs text-navy/35 mt-1">
-                          Can be earlier than Available From for pre-move-out viewings
-                        </p>
+                      <Field label="Available From" error={errors.available_from_date}>
+                        <div className="flex gap-2 mb-2">
+                          {([
+                            { key: 'now',      label: 'Now' },
+                            { key: 'specific', label: 'Specific date' },
+                            { key: 'other',    label: 'Other' },
+                          ] as const).map(opt => (
+                            <button key={opt.key} type="button"
+                              onClick={() => set('available_from_type', opt.key)}
+                              className={cn('px-3 py-1.5 rounded border text-sm transition-all',
+                                form.available_from_type === opt.key
+                                  ? 'border-gold bg-gold/10 text-navy font-medium'
+                                  : 'border-navy/15 text-navy/50 hover:border-navy/30')}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        {form.available_from_type === 'specific' && (
+                          <input type="date" value={form.available_from_date}
+                            onChange={e => set('available_from_date', e.target.value)}
+                            className={inputCls(errors.available_from_date)} />
+                        )}
+                        {form.available_from_type === 'other' && (
+                          <input type="text" value={form.available_from_comment}
+                            onChange={e => set('available_from_comment', e.target.value)}
+                            placeholder="e.g. After renovation, End of summer…"
+                            className={inputCls()} />
+                        )}
+                        {form.available_from_type === 'now' && (
+                          <p className="text-xs text-navy/35">Available immediately — today&apos;s date will be used.</p>
+                        )}
                       </Field>
                     </motion.div>
                   )}
@@ -567,27 +534,53 @@ export default function AddPropertyPage() {
                         </div>
                       </Field>
 
-                      <div className="grid grid-cols-3 gap-4">
-                        <Field label="Bedrooms">
-                          <select value={form.bedrooms} onChange={e => set('bedrooms', e.target.value)} className={inputCls()}>
-                            <option value="">—</option>
-                            {['0', '1', '2', '3', '4', '5', '6+'].map(n => (
-                              <option key={n} value={n}>{n === '0' ? 'Studio' : n}</option>
-                            ))}
-                          </select>
-                        </Field>
-                        <Field label="Bathrooms">
-                          <select value={form.bathrooms} onChange={e => set('bathrooms', e.target.value)} className={inputCls()}>
-                            <option value="">—</option>
-                            {['1', '2', '3', '4', '5+'].map(n => <option key={n} value={n}>{n}</option>)}
-                          </select>
-                        </Field>
-                        <Field label="Size (m²)">
-                          <input type="number" value={form.size_sqm}
-                            onChange={e => set('size_sqm', e.target.value)}
-                            placeholder="e.g. 85" className={inputCls()} />
-                        </Field>
-                      </div>
+                      {!commercial && (
+                        <>
+                          <Field label="Bedrooms" required error={errors.bedrooms}>
+                            <div className="flex flex-wrap gap-2">
+                              {BED_BATH_OPTIONS.map(b => (
+                                <button key={b} type="button"
+                                  onClick={() => set('bedrooms', b)}
+                                  className={cn('px-3 py-1.5 rounded border text-sm transition-all',
+                                    form.bedrooms === b ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25')}>
+                                  {b}
+                                </button>
+                              ))}
+                            </div>
+                            {form.bedrooms === 'Other' && (
+                              <input type="number" min="1" max="50" value={form.bedrooms_other}
+                                onChange={e => set('bedrooms_other', e.target.value)}
+                                placeholder="Enter number…"
+                                className="mt-2 w-32 px-3 py-1.5 border border-navy/15 rounded text-sm text-navy placeholder:text-navy/30 focus:outline-none focus:ring-1 focus:ring-gold/40" />
+                            )}
+                          </Field>
+
+                          <Field label="Bathrooms" required error={errors.bathrooms}>
+                            <div className="flex flex-wrap gap-2">
+                              {BED_BATH_OPTIONS.map(b => (
+                                <button key={b} type="button"
+                                  onClick={() => set('bathrooms', b)}
+                                  className={cn('px-3 py-1.5 rounded border text-sm transition-all',
+                                    form.bathrooms === b ? 'border-gold bg-gold/10 text-navy font-medium' : 'border-navy/15 text-navy/50 hover:border-navy/25')}>
+                                  {b}
+                                </button>
+                              ))}
+                            </div>
+                            {form.bathrooms === 'Other' && (
+                              <input type="number" min="1" max="20" value={form.bathrooms_other}
+                                onChange={e => set('bathrooms_other', e.target.value)}
+                                placeholder="Enter number…"
+                                className="mt-2 w-32 px-3 py-1.5 border border-navy/15 rounded text-sm text-navy placeholder:text-navy/30 focus:outline-none focus:ring-1 focus:ring-gold/40" />
+                            )}
+                          </Field>
+                        </>
+                      )}
+
+                      <Field label={commercial ? 'Size (m²) *' : 'Size (m²)'} error={errors.size_sqm}>
+                        <input type="number" value={form.size_sqm}
+                          onChange={e => set('size_sqm', e.target.value)}
+                          placeholder="e.g. 85" className={inputCls(errors.size_sqm)} />
+                      </Field>
 
                       {isForRent && (
                         <Field label="Monthly Rent (€)" required error={errors.price_rent}>
@@ -611,11 +604,6 @@ export default function AddPropertyPage() {
                         </Field>
                       )}
 
-                      <Field label="Available From">
-                        <input type="date" value={form.available_from}
-                          onChange={e => set('available_from', e.target.value)} className={inputCls()} />
-                      </Field>
-
                       {isForSale && (
                         <label className="flex items-center gap-3 p-3 border border-navy/10 rounded-lg cursor-pointer hover:bg-navy/[0.02] transition-colors">
                           <input
@@ -631,7 +619,7 @@ export default function AddPropertyPage() {
                         </label>
                       )}
 
-                      {!form.shell_form && (
+                      {!form.shell_form && !commercial && (
                         <Field label="Furnished">
                           <div className="flex flex-wrap gap-2">
                             {['Fully Furnished', 'Semi Furnished', 'Unfurnished'].map(f => (
@@ -670,7 +658,7 @@ export default function AddPropertyPage() {
                     </motion.div>
                   )}
 
-                  {/* ── Step 4: Photos ── */}
+                  {/* ── Step 4: Photos & Description ── */}
                   {step === 4 && (
                     <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
                       <Field label="Description" required error={errors.description}>
@@ -723,7 +711,7 @@ export default function AddPropertyPage() {
                           onChange={e => set('notes', e.target.value)}
                           rows={3}
                           maxLength={500}
-                          placeholder="Internal notes — not shown to public (e.g., 'available for clients only', 'flexible on price')"
+                          placeholder="Internal notes — not shown to public"
                           className={cn(inputCls(), 'resize-none')}
                         />
                         <p className="text-xs text-navy/35 mt-1 text-right">{form.notes.length}/500</p>
@@ -746,50 +734,40 @@ export default function AddPropertyPage() {
                   {/* ── Step 5: Review ── */}
                   {step === 5 && (
                     <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
-                      <Field label="Property Title (optional)">
+                      <Field label="Property Title">
                         <input type="text" value={form.title}
                           onChange={e => set('title', e.target.value)}
-                          placeholder={form.description ? form.description.slice(0, 60) : '2BR Apartment in Sliema — Modern Furnished'}
+                          placeholder="Auto-generated from property details"
                           className={inputCls()} />
-                        <p className="text-xs text-navy/35 mt-1">Leave blank to auto-generate from description</p>
+                        <p className="text-xs text-navy/35 mt-1">Pre-filled automatically — edit if needed</p>
                       </Field>
+
                       <h3 className="text-sm font-medium text-navy">Review your submission</h3>
 
                       <div>
-                        <p className="text-xs font-medium text-navy/40 uppercase tracking-wide mb-2">Submitter</p>
-                        <ReviewRow label="Type"
-                          value={form.submitter_type === 'agent' ? `Agent: ${agentLabel}` : 'Landlord'} />
-                        {form.owner_name && <ReviewRow label="Owner" value={form.owner_name} />}
-                        {form.submitter_phone && (
-                          <ReviewRow label="Phone" value={`${form.submitter_dial}${form.submitter_phone}`} />
-                        )}
-                        {form.submitter_email && <ReviewRow label="Email" value={form.submitter_email} />}
+                        <p className="text-xs font-medium text-navy/40 uppercase tracking-wide mb-2">Agent</p>
+                        <ReviewRow label="Lead Agent" value={agentLabel} />
                       </div>
 
                       <div>
                         <p className="text-xs font-medium text-navy/40 uppercase tracking-wide mb-2">Property</p>
-                        <ReviewRow label="Type"     value={form.property_type} />
-                        <ReviewRow label="Listing"  value={form.listing_type} />
-                        <ReviewRow label="Location" value={[form.location, form.region].filter(Boolean).join(', ')} />
-                        <ReviewRow label="Bedrooms" value={form.bedrooms || undefined} />
-                        <ReviewRow label="Bathrooms" value={form.bathrooms || undefined} />
-                        <ReviewRow label="Size"     value={form.size_sqm ? `${form.size_sqm} m²` : undefined} />
-                        {isForRent && (
-                          <ReviewRow label="Rent/mo"
-                            value={form.price_rent ? `€${Number(form.price_rent).toLocaleString()}` : undefined} />
-                        )}
-                        {isForSale && (
-                          <ReviewRow label="Sale Price"
-                            value={form.price_sale ? `€${Number(form.price_sale).toLocaleString()}` : undefined} />
-                        )}
-                        <ReviewRow label="Available" value={form.available_from || undefined} />
-                        <ReviewRow label="Viewings From" value={form.viewings_from || undefined} />
+                        <ReviewRow label="Type"       value={form.property_type} />
+                        <ReviewRow label="Listing"    value={form.listing_type} />
+                        <ReviewRow label="Location"   value={form.village_display || form.location} />
+                        <ReviewRow label="Available"  value={
+                          form.available_from_type === 'now' ? 'Now' :
+                          form.available_from_type === 'specific' ? form.available_from_date :
+                          form.available_from_comment || 'Other'
+                        } />
+                        {!commercial && <ReviewRow label="Bedrooms"  value={form.bedrooms === 'Other' ? form.bedrooms_other : form.bedrooms} />}
+                        {!commercial && <ReviewRow label="Bathrooms" value={form.bathrooms === 'Other' ? form.bathrooms_other : form.bathrooms} />}
+                        <ReviewRow label="Size"       value={form.size_sqm ? `${form.size_sqm} m²` : undefined} />
+                        {isForRent && <ReviewRow label="Rent/mo"    value={form.price_rent ? `€${Number(form.price_rent).toLocaleString()}` : undefined} />}
+                        {isForSale && <ReviewRow label="Sale Price" value={form.price_sale ? `€${Number(form.price_sale).toLocaleString()}` : undefined} />}
                         {form.shell_form && <ReviewRow label="Shell Form" value="Yes" />}
-                        {!form.shell_form && <ReviewRow label="Furnished" value={form.furnished} />}
+                        {!form.shell_form && !commercial && <ReviewRow label="Furnished" value={form.furnished} />}
                         {!form.shell_form && <ReviewRow label="Style" value={form.furniture_style} />}
-                        {form.features.length > 0 && (
-                          <ReviewRow label="Features" value={form.features.join(', ')} />
-                        )}
+                        {form.features.length > 0 && <ReviewRow label="Features" value={form.features.join(', ')} />}
                       </div>
 
                       {form.description && (
@@ -827,7 +805,6 @@ export default function AddPropertyPage() {
 
                 </AnimatePresence>
 
-                {/* Navigation */}
                 <div className="flex justify-between mt-8 pt-6 border-t border-navy/5">
                   <button type="button" onClick={back} disabled={step === 0}
                     className="flex items-center gap-1.5 text-sm text-navy/40 hover:text-navy disabled:opacity-0 transition-colors">
@@ -843,11 +820,7 @@ export default function AddPropertyPage() {
                   ) : (
                     <button type="button" onClick={submit} disabled={submitting}
                       className="flex items-center gap-1.5 px-6 py-2.5 bg-gold text-white text-sm font-medium rounded-lg hover:bg-gold/80 transition-colors disabled:opacity-50">
-                      {submitting
-                        ? 'Submitting…'
-                        : form.submitter_type === 'landlord'
-                          ? 'Submit & Get Verified'
-                          : 'Submit Property'}
+                      {submitting ? 'Submitting…' : 'Submit Property'}
                       {!submitting && <Check className="w-4 h-4" />}
                     </button>
                   )}
