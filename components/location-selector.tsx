@@ -88,9 +88,14 @@ export function LocationSelector({ value, onChange, showPriority = true }: Locat
   // ── Area toggle ────────────────────────────────────────────────────────────
 
   const toggleArea = (code: string) => {
-    const newAreas = value.selectedAreas.includes(code)
+    let newAreas = value.selectedAreas.includes(code)
       ? value.selectedAreas.filter(c => c !== code)
       : [...value.selectedAreas, code]
+    // When deselecting central, also remove all its sub-areas
+    if (code === 'central' && value.selectedAreas.includes('central')) {
+      const specialCodes = new Set(specialAreas.map(a => a.code))
+      newAreas = newAreas.filter(c => !specialCodes.has(c))
+    }
     onChange({ ...value, selectedAreas: newAreas })
   }
 
@@ -237,7 +242,8 @@ export function LocationSelector({ value, onChange, showPriority = true }: Locat
         </div>
       </div>
 
-      {/* Special areas */}
+      {/* Special areas — only shown when Central is selected */}
+      {value.selectedAreas.includes('central') && (
       <div>
         <p className="text-[11px] text-navy/40 mb-1.5">{t('narrowerSearch')}</p>
         <div className="flex flex-wrap gap-1.5">
@@ -257,6 +263,7 @@ export function LocationSelector({ value, onChange, showPriority = true }: Locat
           ))}
         </div>
       </div>
+      )}
 
       {/* Village sections — one per selected area */}
       {loadingVillages && (
