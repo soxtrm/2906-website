@@ -85,6 +85,7 @@ export default function CalendarInternaPage() {
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [clientPanelOpen, setClientPanelOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [calView, setCalView] = useState<string>('week')
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -92,6 +93,10 @@ export default function CalendarInternaPage() {
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  useEffect(() => {
+    setCalView(isMobile ? 'day' : 'week')
+  }, [isMobile])
 
   // Scroll to 1h before current time, clamped to 8am
   const scrollToTime = useMemo(() => {
@@ -103,13 +108,16 @@ export default function CalendarInternaPage() {
     fetch(`${API_BASE}/api/agents`)
       .then(r => r.json())
       .then((data: Agent[]) => {
-        // Sort: Olga first, Kev second, rest by display_order
-        const sorted = [...data].sort((a, b) => {
-          const rank = (u: string) => u === 'olga' ? 0 : u === 'kev' ? 1 : 2
-          return rank(a.username) - rank(b.username) || (a.id - b.id)
-        })
+        // Sort: Olga first, Kev second, rest by id
+        const rank = (name: string) => {
+          const l = name.toLowerCase()
+          return l === 'olga' ? 0 : (l === 'kev' || l === 'kevin') ? 1 : 2
+        }
+        const sorted = [...data].sort((a, b) =>
+          rank(a.display_name) - rank(b.display_name) || a.id - b.id
+        )
         setAgents(sorted)
-        setSelectedAgent(sorted.find(a => a.username === 'olga') || sorted[0] || null)
+        setSelectedAgent(sorted.find(a => a.display_name.toLowerCase() === 'olga') || sorted[0] || null)
       })
       .catch(console.error)
   }, [])
@@ -375,8 +383,10 @@ export default function CalendarInternaPage() {
             date={currentDate}
             onNavigate={(date) => { setCurrentDate(date); setWeekOffset(0) }}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            view={isMobile ? Views.DAY as any : Views.WEEK as any}
-            onView={() => {}}
+            view={calView as any}
+            onView={(v) => setCalView(v)}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            components={{ toolbar: () => null } as any}
             step={30}
             timeslots={2}
             min={new Date(2000, 0, 1, 8, 0, 0)}
