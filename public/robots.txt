@@ -3,5 +3,9 @@ Allow: /
 
 Disallow: /add-client
 Disallow: /*/add-client
+Disallow: /calendar_interna
+Disallow: /*/calendar_interna
+Disallow: /admin
+Disallow: /api
 
 Sitemap: https://2906.estate/sitemap.xml
