@@ -291,8 +291,17 @@ export default function CalendarInternaPage() {
           <h1 className="text-xl font-light text-stone-800">
             {selectedAgent ? `${selectedAgent.display_name}'s Calendar` : 'Calendar'}
           </h1>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-xs text-stone-400">Internal · 2906</span>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-stone-200 overflow-hidden text-xs font-medium">
+              <button
+                onClick={() => setCalView('day')}
+                className={`px-3 py-1.5 transition-colors ${calView === 'day' ? 'bg-stone-800 text-white' : 'bg-white text-stone-500 hover:bg-stone-50'}`}
+              >Day</button>
+              <button
+                onClick={() => setCalView('week')}
+                className={`px-3 py-1.5 transition-colors ${calView === 'week' ? 'bg-stone-800 text-white' : 'bg-white text-stone-500 hover:bg-stone-50'}`}
+              >Week</button>
+            </div>
             <button
               onClick={() => {
                 if (!selectedAgent) return
@@ -495,7 +504,7 @@ export default function CalendarInternaPage() {
               }`}
               style={selectedAgent?.id === agent.id ? { backgroundColor: agent.color_hex } : {}}
             >
-              {agent.nationality_code ? `${countryFlag(agent.nationality_code)} ` : ''}{agent.display_name}
+              {agent.display_name}
             </button>
           ))}
         </div>
