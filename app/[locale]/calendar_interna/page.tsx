@@ -1,14 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
-import moment from 'moment'
+import momentTZ from 'moment-timezone'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
-import { Search, X, Trash2, MapPin, Map, MessageSquare, Phone, Plus, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, X, Trash2, MapPin, Map, MessageSquare, Phone, Plus, Users, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 
-const localizer = momentLocalizer(moment)
+// Berlin timezone + Monday as first day of week (ISO)
+momentTZ.tz.setDefault('Europe/Berlin')
+momentTZ.updateLocale('en', { week: { dow: 1, doy: 4 } })
+
+const localizer = momentLocalizer(momentTZ)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const DnDCalendar = withDragAndDrop(Calendar as any)
 
@@ -20,6 +24,7 @@ interface Agent {
   display_name: string
   color_hex: string
   whatsapp_phone: string
+  nationality_code: string | null
 }
 
 interface CalEvent {
@@ -77,23 +82,42 @@ export default function CalendarInternaPage() {
   const [editingEvent, setEditingEvent] = useState<EditState | null>(null)
   const [draggingClient, setDraggingClient] = useState<Client | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(() => new Date())
   const [clientPanelOpen, setClientPanelOpen] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Scroll to 1h before current time, clamped to 8am
+  const scrollToTime = useMemo(() => {
+    const h = new Date().getHours()
+    return new Date(2000, 0, 1, Math.max(8, h - 1), 0, 0)
+  }, [])
 
   useEffect(() => {
     fetch(`${API_BASE}/api/agents`)
       .then(r => r.json())
       .then((data: Agent[]) => {
-        setAgents(data)
-        setSelectedAgent(data.find(a => a.username === 'kev') || data[0] || null)
+        // Sort: Olga first, Kev second, rest by display_order
+        const sorted = [...data].sort((a, b) => {
+          const rank = (u: string) => u === 'olga' ? 0 : u === 'kev' ? 1 : 2
+          return rank(a.username) - rank(b.username) || (a.id - b.id)
+        })
+        setAgents(sorted)
+        setSelectedAgent(sorted.find(a => a.username === 'olga') || sorted[0] || null)
       })
       .catch(console.error)
   }, [])
 
   const loadEvents = useCallback(() => {
     if (!selectedAgent) return
-    const from = moment(currentDate).startOf('week').toISOString()
-    const to = moment(currentDate).endOf('week').toISOString()
+    const from = momentTZ(currentDate).tz('Europe/Berlin').startOf('isoWeek').toISOString()
+    const to   = momentTZ(currentDate).tz('Europe/Berlin').endOf('isoWeek').toISOString()
     fetch(`${API_BASE}/api/calendar?agent_id=${selectedAgent.id}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
       .then(r => r.json())
       .then((data: Omit<CalEvent, 'start' | 'end'>[]) => {
@@ -117,8 +141,16 @@ export default function CalendarInternaPage() {
   }, [search])
 
   useEffect(() => {
-    setCurrentDate(moment().add(weekOffset, 'weeks').toDate())
+    if (weekOffset === 0) {
+      setCurrentDate(new Date())
+    } else {
+      setCurrentDate(momentTZ().startOf('isoWeek').add(weekOffset, 'weeks').toDate())
+    }
   }, [weekOffset])
+
+  const goToPrevDay = () => setCurrentDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n })
+  const goToNextDay = () => setCurrentDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n })
+  const goToToday  = () => { setWeekOffset(0); setCurrentDate(new Date()) }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEventDrop = async ({ event, start, end }: any) => {
@@ -247,12 +279,12 @@ export default function CalendarInternaPage() {
       <div className="max-w-7xl mx-auto p-4 pb-20">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 pt-4">
-          <h1 className="text-2xl font-light text-stone-800">
+        <div className="flex items-center justify-between mb-4 pt-4">
+          <h1 className="text-xl font-light text-stone-800">
             {selectedAgent ? `${selectedAgent.display_name}'s Calendar` : 'Calendar'}
           </h1>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-stone-400">Internal · 2906 Real Estate</span>
+            <span className="hidden sm:inline text-xs text-stone-400">Internal · 2906</span>
             <button
               onClick={() => {
                 if (!selectedAgent) return
@@ -274,15 +306,16 @@ export default function CalendarInternaPage() {
         </div>
 
         {/* Week switcher */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
           {weekLabels.map((label, offset) => {
-            const start = moment().add(offset, 'weeks').startOf('week')
-            const end = moment().add(offset, 'weeks').endOf('week')
+            const base  = momentTZ().tz('Europe/Berlin').add(offset, 'weeks')
+            const start = base.clone().startOf('isoWeek')
+            const end   = base.clone().endOf('isoWeek')
             return (
               <button
                 key={offset}
                 onClick={() => setWeekOffset(offset)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   weekOffset === offset
                     ? 'text-white shadow-sm'
                     : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-400'
@@ -298,10 +331,38 @@ export default function CalendarInternaPage() {
           })}
         </div>
 
+        {/* Mobile day navigation */}
+        {isMobile && (
+          <div className="flex items-center justify-between mb-3 bg-white rounded-xl border border-stone-100 px-3 py-2">
+            <button onClick={goToPrevDay} className="p-1 text-stone-500 hover:text-stone-800">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="text-center">
+              <div className="text-sm font-medium text-stone-800">
+                {momentTZ(currentDate).tz('Europe/Berlin').format('dddd')}
+              </div>
+              <div className="text-xs text-stone-400">
+                {momentTZ(currentDate).tz('Europe/Berlin').format('D MMMM YYYY')}
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={goToToday}
+                className="px-2 py-1 text-xs rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50"
+              >
+                Today
+              </button>
+              <button onClick={goToNextDay} className="p-1 text-stone-500 hover:text-stone-800">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Calendar */}
         <div
           className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden mb-6"
-          style={{ height: 600 }}
+          style={{ height: isMobile ? 520 : 620 }}
           onDragOver={e => e.preventDefault()}
           onDrop={e => {
             if (!draggingClient) return
@@ -312,14 +373,15 @@ export default function CalendarInternaPage() {
             localizer={localizer}
             events={events}
             date={currentDate}
-            onNavigate={setCurrentDate}
-            defaultView={Views.WEEK}
-            view={Views.WEEK}
+            onNavigate={(date) => { setCurrentDate(date); setWeekOffset(0) }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            view={isMobile ? Views.DAY as any : Views.WEEK as any}
             onView={() => {}}
             step={30}
             timeslots={2}
             min={new Date(2000, 0, 1, 8, 0, 0)}
             max={new Date(2000, 0, 1, 21, 0, 0)}
+            scrollToTime={scrollToTime}
             onEventDrop={handleEventDrop}
             onEventResize={handleEventDrop}
             onDropFromOutside={handleDropFromOutside}
@@ -423,7 +485,7 @@ export default function CalendarInternaPage() {
               }`}
               style={selectedAgent?.id === agent.id ? { backgroundColor: agent.color_hex } : {}}
             >
-              {agent.display_name}
+              {agent.nationality_code ? `${countryFlag(agent.nationality_code)} ` : ''}{agent.display_name}
             </button>
           ))}
         </div>
@@ -458,7 +520,7 @@ export default function CalendarInternaPage() {
                   <label className="text-xs text-stone-500 uppercase tracking-wide">Date & Time</label>
                   <input
                     type="datetime-local"
-                    value={moment(editingEvent.scheduled_at).format('YYYY-MM-DDTHH:mm')}
+                    value={momentTZ(editingEvent.scheduled_at).format('YYYY-MM-DDTHH:mm')}
                     onChange={e => setEditingEvent({ ...editingEvent, scheduled_at: new Date(e.target.value).toISOString() })}
                     className="w-full mt-1 px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-stone-400"
                   />
