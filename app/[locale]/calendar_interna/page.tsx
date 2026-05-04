@@ -6,7 +6,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
-import { Search, X, Trash2, MapPin, Map, MessageSquare, Phone, Plus } from 'lucide-react'
+import { Search, X, Trash2, MapPin, Map, MessageSquare, Phone, Plus, Users, ChevronDown, ChevronUp } from 'lucide-react'
 
 const localizer = momentLocalizer(moment)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +78,7 @@ export default function CalendarInternaPage() {
   const [draggingClient, setDraggingClient] = useState<Client | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [clientPanelOpen, setClientPanelOpen] = useState(true)
 
   useEffect(() => {
     fetch(`${API_BASE}/api/agents`)
@@ -243,7 +244,7 @@ export default function CalendarInternaPage() {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <div className="max-w-7xl mx-auto p-4 pb-32">
+      <div className="max-w-7xl mx-auto p-4 pb-20">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6 pt-4">
@@ -317,6 +318,8 @@ export default function CalendarInternaPage() {
             onView={() => {}}
             step={30}
             timeslots={2}
+            min={new Date(2000, 0, 1, 8, 0, 0)}
+            max={new Date(2000, 0, 1, 21, 0, 0)}
             onEventDrop={handleEventDrop}
             onEventResize={handleEventDrop}
             onDropFromOutside={handleDropFromOutside}
@@ -335,55 +338,77 @@ export default function CalendarInternaPage() {
           />
         </div>
 
-        {/* Client list */}
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-lg font-light text-stone-700">Clients</h2>
-            <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search clients..."
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-400"
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="w-3.5 h-3.5 text-stone-400" />
-                </button>
-              )}
-            </div>
-            <span className="text-xs text-stone-400">{clients.length} clients · drag to calendar</span>
-          </div>
+      </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
-            {clients.map(client => (
-              <div
-                key={client.id}
-                draggable
-                onDragStart={() => setDraggingClient(client)}
-                onDragEnd={() => setDraggingClient(null)}
-                className={`p-2.5 rounded-lg border cursor-grab active:cursor-grabbing select-none transition-all ${
-                  draggingClient?.id === client.id
-                    ? 'border-stone-400 bg-stone-50 opacity-60'
-                    : 'border-stone-200 bg-stone-50 hover:border-stone-400 hover:bg-white'
-                }`}
-              >
-                <div className="font-medium text-sm text-stone-800 truncate">
-                  {countryFlag(client.nationalities?.[0] || null)} {client.name}
-                </div>
-                {client.phone && (
-                  <div className="text-xs text-stone-500 mt-0.5 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />{client.phone}
-                  </div>
+      {/* Client panel - fixed bottom right */}
+      <div className="fixed bottom-14 right-4 z-40 w-72 shadow-2xl rounded-2xl overflow-hidden border border-stone-200">
+        {/* Header */}
+        <button
+          onClick={() => setClientPanelOpen(o => !o)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-white border-b border-stone-100 hover:bg-stone-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-stone-500" />
+            <span className="text-sm font-medium text-stone-700">Clients</span>
+            <span className="text-xs text-stone-400 bg-stone-100 rounded-full px-1.5 py-0.5">{clients.length}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-stone-400">
+            <span className="text-xs">{clientPanelOpen ? 'drag to calendar' : 'open'}</span>
+            {clientPanelOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+          </div>
+        </button>
+
+        {clientPanelOpen && (
+          <div className="bg-white">
+            {/* Search */}
+            <div className="px-3 pt-2.5 pb-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search…"
+                  className="w-full pl-8 pr-7 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-400 bg-stone-50"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                    <X className="w-3 h-3 text-stone-400" />
+                  </button>
                 )}
               </div>
-            ))}
-            {clients.length === 0 && (
-              <div className="col-span-4 text-center text-stone-400 py-6 text-sm">No clients found</div>
-            )}
+            </div>
+
+            {/* Client cards */}
+            <div className="overflow-y-auto max-h-72 px-2 pb-2 flex flex-col gap-1">
+              {clients.map(client => (
+                <div
+                  key={client.id}
+                  draggable
+                  onDragStart={() => setDraggingClient(client)}
+                  onDragEnd={() => setDraggingClient(null)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-grab active:cursor-grabbing select-none transition-all ${
+                    draggingClient?.id === client.id
+                      ? 'border-stone-400 bg-stone-100 opacity-50 scale-95'
+                      : 'border-stone-100 bg-stone-50 hover:border-stone-300 hover:bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <span className="text-base leading-none">{countryFlag(client.nationalities?.[0] || null) || '👤'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-stone-800 truncate">{client.name}</div>
+                    {client.phone && (
+                      <div className="text-xs text-stone-400 truncate flex items-center gap-1 mt-0.5">
+                        <Phone className="w-2.5 h-2.5 shrink-0" />{client.phone}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {clients.length === 0 && (
+                <div className="text-center text-stone-400 py-6 text-xs">No clients found</div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Agent tab switcher - fixed bottom */}
