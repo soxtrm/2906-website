@@ -23,6 +23,22 @@ export default function AboutPage() {
       <section className="pt-28 pb-16 bg-navy">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className="flex justify-center mb-10"
+          >
+            <img
+              src="/about-animation.gif"
+              alt="2906 Estate"
+              width={850}
+              height={492}
+              loading="eager"
+              className="w-full max-w-4xl h-auto"
+            />
+          </motion.div>
+
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
