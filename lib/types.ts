@@ -15,14 +15,13 @@ export type PropertyStatus = 'available' | 'viewings' | 'rented'
 
 export type PropertyCategory = 'letting' | 'aesthetics' | 'commercial' | 'sales'
 
-export type Region = 
-  | 'Central East' 
-  | 'Central West' 
-  | 'Central Surroundings' 
-  | 'North' 
-  | 'South' 
-  | 'South East' 
+export type Region =
   | 'Gozo'
+  | 'Comino'
+  | 'North'
+  | 'Central'
+  | 'Southeast'
+  | 'South'
 
 export interface Property {
   id: string
