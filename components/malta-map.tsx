@@ -242,9 +242,9 @@ export function MaltaMap() {
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="lg:col-span-2"
+            className="lg:col-span-3"
           >
-            <div className="bg-white rounded-lg shadow-sm p-4 mx-auto" style={{ maxWidth: 420 }}>
+            <div className="bg-white rounded-lg shadow-sm p-4 mx-auto" style={{ maxWidth: 620 }}>
               <div
                 ref={mapRef}
                 onMouseMove={onMapMove}
@@ -305,7 +305,7 @@ export function MaltaMap() {
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="lg:col-span-3 flex flex-col gap-4"
+            className="lg:col-span-2 flex flex-col gap-4"
           >
             <div className="bg-white rounded-lg shadow-sm p-4">
               <h3 className="hidden lg:block font-serif text-xs text-navy/60 uppercase tracking-wide mb-2">
@@ -322,7 +322,7 @@ export function MaltaMap() {
                       onMouseLeave={() => setHoveredRegion(null)}
                       onClick={() => handleRegionClick(r.id)}
                       className={`
-                        text-left px-3 py-2 rounded border text-sm transition-all
+                        text-left px-2 py-1 rounded border text-xs transition-all
                         ${isSelected
                           ? 'bg-navy text-white border-navy'
                           : isHovered
