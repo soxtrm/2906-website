@@ -308,7 +308,9 @@ export function MaltaMap() {
             className="lg:col-span-3 flex flex-col gap-4"
           >
             <div className="bg-white rounded-lg shadow-sm p-4">
-              <h3 className="font-serif text-base text-navy mb-3">{t('sections.selectRegion')}</h3>
+              <h3 className="hidden lg:block font-serif text-xs text-navy/60 uppercase tracking-wide mb-2">
+                {t('sections.selectRegion')}
+              </h3>
               <div className="grid grid-cols-2 gap-2">
                 {regions.map(r => {
                   const isSelected = selectedRegion?.id === r.id
@@ -335,34 +337,19 @@ export function MaltaMap() {
               </div>
             </div>
 
-            <div className="hidden lg:block">
-              <AnimatePresence mode="wait">
-                {selectedRegion ? (
-                  <motion.div
-                    key={selectedRegion.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                  >
-                    <RegionPanel region={selectedRegion} onClose={() => setSelectedRegion(null)} t={t} />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="bg-white rounded-lg shadow-sm p-5 text-center"
-                  >
-                    <div className="w-12 h-12 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <MapPin className="w-5 h-5 text-gold" />
-                    </div>
-                    <p className="text-navy/50 text-xs">
-                      {t('sections.clickMap')}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <AnimatePresence mode="wait">
+              {selectedRegion && (
+                <motion.div
+                  key={selectedRegion.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="hidden lg:block"
+                >
+                  <RegionPanel region={selectedRegion} onClose={() => setSelectedRegion(null)} t={t} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
       </div>
