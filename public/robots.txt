@@ -8,4 +8,4 @@ Disallow: /*/calendar_interna
 Disallow: /admin
 Disallow: /api
 
-Sitemap: https://2906.estate/sitemap.xml
+Sitemap: https://www.2906.estate/sitemap.xml

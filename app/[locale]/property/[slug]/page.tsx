@@ -1,10 +1,23 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { ArrowLeft, Bed, Bath, Ruler, MapPin, Check, MessageCircle, Mail, Waves, Car, DoorOpen } from 'lucide-react'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { cn } from '@/lib/utils'
 import { PropertyGallery } from './gallery'
+import { BreadcrumbNav } from '@/components/seo/BreadcrumbNav'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { SimilarProperties } from '@/components/seo/SimilarProperties'
+import { buildPageMetadata, SITE_URL } from '@/lib/seo/metadata'
+import {
+  breadcrumbSchema,
+  listingSchema,
+} from '@/lib/seo/schema'
+import { fetchAllPropertiesServer } from '@/lib/seo/fetch'
+import { isActive, isRental } from '@/lib/seo/filters'
+import { normalizeLocationKey } from '@/lib/seo/slug'
+import type { SeoProperty } from '@/lib/seo/filters'
 
 const VPS = 'http://178.104.162.193:3001'
 const COMMERCIAL_TYPES = ['Office', 'Retail', 'Warehouse']
@@ -44,6 +57,46 @@ async function getProperty(slug: string): Promise<Property | null> {
   } catch {
     return null
   }
+}
+
+function altForImage(p: Property, i: number): string {
+  const bedrooms = p.bedrooms ? `${p.bedrooms}-bedroom ` : ''
+  const type = (p.propertyType || 'property').toLowerCase()
+  const loc = p.location ? ` in ${p.location}` : ''
+  return `${bedrooms}${type} for rent${loc}, image ${i + 1}`
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; locale: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const property = await getProperty(slug)
+  if (!property) {
+    return buildPageMetadata({
+      title: 'Property not found | 2906 Estate',
+      description: 'The property you are looking for is no longer available.',
+      path: `/property/${slug}`,
+      index: false,
+    })
+  }
+  const indexable = property.status === 'available' || property.status === 'viewings'
+  const bedrooms = property.bedrooms ? `${property.bedrooms}-Bedroom ` : ''
+  const type = property.propertyType || 'Property'
+  const loc = property.location ? ` in ${property.location}` : ''
+  const title = `${bedrooms}${type}${loc} for Rent | 2906 Estate Malta`
+  const desc = property.summary
+    || property.description?.slice(0, 160)
+    || `${bedrooms}${type} for rent${loc}, Malta. Listed with 2906 Estate.`
+  return buildPageMetadata({
+    title,
+    description: desc.replace(/\s+/g, ' ').trim().slice(0, 200),
+    path: `/property/${slug}`,
+    index: indexable,
+    image: property.images?.[0],
+    type: 'article',
+  })
 }
 
 export default async function PropertyPage({
@@ -87,19 +140,51 @@ export default async function PropertyPage({
   }
   const viewingsInfo = viewingsConfig[property.status] ?? null
 
+  // Similar properties: same location, then bedrooms fallback, then random rentals
+  let similar: SeoProperty[] = []
+  try {
+    const all = await fetchAllPropertiesServer()
+    const candidates = all.filter(p =>
+      p.slug !== property.slug && isActive(p as SeoProperty) && isRental(p as SeoProperty),
+    )
+    const targetLocKey = normalizeLocationKey(property.location || '')
+    const sameLoc = candidates.filter(p => normalizeLocationKey(p.location || '') === targetLocKey)
+    const sameBeds = candidates.filter(p =>
+      (p.bedrooms ?? -1) === (property.bedrooms ?? -2) &&
+      normalizeLocationKey(p.location || '') !== targetLocKey,
+    )
+    similar = [...sameLoc, ...sameBeds, ...candidates].filter((p, i, arr) => arr.findIndex(q => q.id === p.id) === i).slice(0, 6)
+  } catch {
+    similar = []
+  }
+
+  const listingPath = `/property/${property.slug}`
+  const categoryListingHref = property.category === 'aesthetics' ? '/aesthetics'
+    : property.category === 'sales' ? '/sales'
+    : property.category === 'commercial' ? '/commercial'
+    : '/letting'
+
+  const breadcrumbs = [
+    { name: 'Home', href: '/' },
+    { name: property.category === 'sales' ? 'Sales' : property.category === 'commercial' ? 'Commercial' : property.category === 'aesthetics' ? 'Aesthetics' : 'Rent in Malta', href: categoryListingHref },
+    ...(property.location ? [{ name: property.location, href: `/rent/${normalizeLocationKey(property.location)}` }] : []),
+    { name: property.title },
+  ]
+
   return (
     <main className="min-h-screen bg-off-white overflow-x-hidden">
       <Header />
 
       <div className="pt-24 bg-white border-b border-navy/10">
-        <div className="container mx-auto px-4 lg:px-8 py-4">
+        <div className="container mx-auto px-4 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <Link
-            href={`/${property.category === 'aesthetics' ? 'aesthetics' : property.category === 'sales' ? 'sales' : property.category === 'commercial' ? 'commercial' : 'letting'}`}
+            href={categoryListingHref}
             className="inline-flex items-center gap-2 text-navy/60 hover:text-navy transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to listings
           </Link>
+          <BreadcrumbNav items={breadcrumbs} />
         </div>
       </div>
 
@@ -265,6 +350,31 @@ export default async function PropertyPage({
           </div>
         </div>
       </section>
+
+      {property.status === 'rented' && (
+        <section className="bg-amber-50 border-y border-amber-200">
+          <div className="container mx-auto px-4 lg:px-8 py-4 text-center">
+            <p className="text-amber-900 text-sm md:text-base">
+              <span className="font-medium">No longer available.</span> This property is currently rented. Browse similar properties below.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {similar.length > 0 && (
+        <section className="py-10 md:py-12">
+          <div className="container mx-auto px-4 lg:px-8">
+            <SimilarProperties items={similar} />
+          </div>
+        </section>
+      )}
+
+      <JsonLd
+        data={breadcrumbSchema(
+          breadcrumbs.map(b => ({ name: b.name, path: b.href ?? listingPath }))
+        )}
+      />
+      <JsonLd data={listingSchema(property as unknown as SeoProperty, listingPath)} />
 
       <Footer />
     </main>
