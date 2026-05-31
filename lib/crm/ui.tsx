@@ -281,6 +281,58 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
 
 export const useMobile = useIsMobile
 
+// ── favourite heart (per-agent, toggles via API) ─────────────────────────────
+export function Heart({ propertyId, fav: initial, size = 14, onChange }:
+  { propertyId: number; fav?: boolean; size?: number; onChange?: (fav: boolean) => void }) {
+  const [fav, setFav] = useState(!!initial)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { setFav(!!initial) }, [initial])
+  async function toggle(e?: any) {
+    e?.stopPropagation?.()
+    if (busy) return
+    setBusy(true)
+    const next = !fav
+    try {
+      if (next) await crmJson('favourites', 'POST', { property_id: propertyId })
+      else await crmFetch(`favourites/${propertyId}`, { method: 'DELETE' })
+      setFav(next); onChange?.(next)
+    } catch { /* keep prior state */ } finally { setBusy(false) }
+  }
+  return (
+    <button onClick={toggle} title={fav ? 'Remove favourite' : 'Add to favourites'}
+      style={{ background: 'none', border: 'none', cursor: busy ? 'wait' : 'pointer', color: fav ? A : '#CCC', fontSize: size, padding: 0, lineHeight: 1 }}>
+      {fav ? '♥' : '♡'}
+    </button>
+  )
+}
+
+// ── location select (dropdown from locations table; no free text; admin can add) ──
+export function LocationSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { me } = useCrm()
+  const [opts, setOpts] = useState<string[]>([])
+  const reload = useCallback(() => crmFetch('locations').then(d => setOpts(d.locations || [])).catch(() => {}), [])
+  useEffect(() => { reload() }, [reload])
+  async function addNew() {
+    const name = window.prompt('New location name (canonical, e.g. "St Paul\'s Bay"):')
+    if (!name || !name.trim()) return
+    try { const d = await crmJson('locations', 'POST', { name: name.trim() }); await reload(); onChange(d.location?.name || name.trim()) }
+    catch (e: any) { alert(e?.message || 'Failed to add location') }
+  }
+  const sel: React.CSSProperties = { flex: 1, background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1A1A1A', fontFamily: F, outline: 'none' }
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      <select style={sel} value={value || ''} onChange={e => onChange(e.target.value)}>
+        <option value="">Select location…</option>
+        {value && !opts.includes(value) && <option value={value}>{value} (current)</option>}
+        {opts.map(l => <option key={l} value={l}>{l}</option>)}
+      </select>
+      {me?.role === 'admin' && (
+        <button onClick={addNew} title="Add new location" style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 8, padding: '0 12px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: F }}>+</button>
+      )}
+    </div>
+  )
+}
+
 // ── owner slide-over panel (desktop right drawer / mobile bottom sheet) ───────
 export function OwnerPanel({ ownerId, onClose }: { ownerId: number; onClose: () => void }) {
   const isMobile = useIsMobile()

@@ -2,7 +2,7 @@
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, Masked, Pill, Bar, AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useCrm, describe } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, Masked, Pill, Bar, Heart, LocationSelect, AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useCrm, describe } from '@/lib/crm/ui'
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -62,6 +62,7 @@ function Detail({ id }: { id: number }) {
         <div style={{ marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={() => router.push('/inventory')} style={{ background: '#F4F2EC', border: '1px solid #E8E4DA', borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: F, color: '#888', fontWeight: 600 }}>← Inventory</button>
           {p?.exclusive && <span style={{ fontSize: 10, fontWeight: 700, color: A, background: AD, border: `1px solid ${AB}`, borderRadius: 5, padding: '3px 8px' }}>🔒 EXCLUSIVE until {fmtDate(p.exclusiveUntil)}</span>}
+          {p && <span style={{ background: '#FFF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#888' }}><Heart propertyId={p.id} fav={p.fav} size={15} /> Favourite</span>}
           {msg && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#15803D', fontWeight: 600 }}>{msg}</span>}
         </div>
         {!p && <div style={{ color: '#BBB' }}>Loading…</div>}
@@ -86,7 +87,7 @@ function Detail({ id }: { id: number }) {
                 <div style={head}>Edit details</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <Field label="Type"><input style={inp} value={form.property_type} onChange={e => set('property_type', e.target.value)} /></Field>
-                  <Field label="Town"><input style={inp} value={form.town} onChange={e => set('town', e.target.value)} /></Field>
+                  <Field label="Town"><LocationSelect value={form.town} onChange={v => set('town', v)} /></Field>
                   <Field label="Street"><input style={inp} value={form.street} onChange={e => set('street', e.target.value)} /></Field>
                   <Field label="Apt / Unit"><input style={inp} value={form.apt} onChange={e => set('apt', e.target.value)} /></Field>
                   <Field label="Bedrooms"><input style={inp} type="number" value={form.bedrooms} onChange={e => set('bedrooms', e.target.value)} /></Field>

@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, A, AD, AB, F, FM, fmtMoney } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, LocationSelect, A, AD, AB, F, FM, fmtMoney } from '@/lib/crm/ui'
 
 export default function NewPropertyPage() {
   return <CrmProvider><NewProperty /></CrmProvider>
@@ -129,7 +129,7 @@ function NewProperty() {
           <div style={card}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div><label style={lbl}>Type</label><select style={inp} value={p.property_type} onChange={e => setp('property_type', e.target.value)}>{TYPES.map(t => <option key={t}>{t}</option>)}</select></div>
-              <div><label style={lbl}>Location (town)</label><input style={inp} list="loc-list" value={p.town} onChange={e => setp('town', e.target.value)} /><datalist id="loc-list">{locations.map(l => <option key={l} value={l} />)}</datalist></div>
+              <div><label style={lbl}>Location (town)</label><LocationSelect value={p.town} onChange={v => setp('town', v)} /></div>
               <div><label style={lbl}>Sub-location</label><input style={inp} value={p.sub_location} onChange={e => setp('sub_location', e.target.value)} /></div>
               <div><label style={lbl}>Street</label><input style={inp} value={p.street} onChange={e => setp('street', e.target.value)} /></div>
               <div><label style={lbl}>Apt / Unit</label><input style={inp} value={p.apt} onChange={e => setp('apt', e.target.value)} /></div>

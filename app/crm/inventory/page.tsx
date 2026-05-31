@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch } from '@/lib/crm/api'
 import {
-  CrmProvider, CrmShell, OwnerPanel, Masked, Pill, Thumbs, Bar,
+  CrmProvider, CrmShell, OwnerPanel, Masked, Pill, Thumbs, Bar, Heart,
   AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useIsMobile, useCrm, describe,
 } from '@/lib/crm/ui'
 
@@ -22,7 +22,7 @@ function Inventory() {
   const [agents, setAgents] = useState<any[]>([])
   const [locations, setLocations] = useState<string[]>([])
   const [ownerPanel, setOwnerPanel] = useState<number | null>(null)
-  const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false })
+  const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false })
 
   useEffect(() => { crmFetch('agents').then(d => setAgents(d.agents || [])).catch(() => {}); crmFetch('locations').then(d => setLocations(d.locations || [])).catch(() => {}) }, [])
 
@@ -35,6 +35,7 @@ function Inventory() {
     if (f.agent) q.set('agent', f.agent)
     if (f.only_mine) q.set('only_mine', '1')
     if (f.exclusive) q.set('exclusive', '1')
+    if (f.only_favourites) q.set('only_favourites', '1')
     if (f.price) {
       const [mn, mx] = f.price.split('-')
       if (mn) q.set('price_min', mn); if (mx) q.set('price_max', mx)
@@ -57,8 +58,10 @@ function Inventory() {
         <>
           <label style={chk}><input type="checkbox" checked={f.only_mine} onChange={e => set('only_mine', e.target.checked)} style={{ accentColor: A }} /> Only mine</label>
           <label style={chk}><input type="checkbox" checked={f.exclusive} onChange={e => set('exclusive', e.target.checked)} style={{ accentColor: A }} /> Exclusive</label>
+          <label style={chk}><input type="checkbox" checked={f.only_favourites} onChange={e => set('only_favourites', e.target.checked)} style={{ accentColor: A }} /> ♥ Only favourites</label>
         </>
       )}
+      {isMobile && <label style={chk}><input type="checkbox" checked={f.only_favourites} onChange={e => set('only_favourites', e.target.checked)} style={{ accentColor: A }} /> ♥</label>}
     </>
   )
 
@@ -150,8 +153,9 @@ function RowFragment({ p, isOpen, incomplete, tdS, onToggle, onOwner, onOpen }: 
         <td style={tdS}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <button onClick={() => onOpen(p.id)} style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 7, padding: '5px 11px', fontSize: 10, cursor: 'pointer', fontFamily: F, fontWeight: 700 }}>Edit</button>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {[['♥', 'Favourite'], ['⏱', 'History'], ['⚑', 'Report']].map(([ico, tip]) => (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 6, padding: '3px 8px', display: 'inline-flex' }}><Heart propertyId={p.id} fav={p.fav} size={13} /></span>
+              {[['⏱', 'History'], ['⚑', 'Report']].map(([ico, tip]) => (
                 <button key={ico} title={tip} onClick={() => ico === '⏱' ? onToggle() : null}
                   style={{ background: ico === '⏱' && isOpen ? AD : '#F6F4EF', border: `1px solid ${ico === '⏱' && isOpen ? AB : '#E8E4DA'}`, borderRadius: 6, padding: '5px 8px', fontSize: 11, cursor: 'pointer', color: ico === '⏱' && isOpen ? A : '#AAA' }}>{ico}</button>
               ))}
@@ -200,9 +204,12 @@ function MobileCard({ p, onOwner, onOpen }: any) {
               <div style={{ fontSize: 13, fontWeight: 700, color: '#0F0F0F', fontFamily: F, marginTop: 2 }}>{p.location.town} · {p.type}</div>
               {p.location.street && <div style={{ fontSize: 10, color: '#AAA', fontFamily: F, marginTop: 1 }}>{p.location.street}</div>}
             </div>
-            <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: '#0F0F0F', fontFamily: F }}>{fmtMoney(p.prices.longlet || p.prices.sale || 0)}</div>
-              <div style={{ fontSize: 9, color: '#AAA', fontFamily: F }}>{p.prices.longlet ? '/mo' : 'sale'}</div>
+            <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <div onClick={e => e.stopPropagation()}><Heart propertyId={p.id} fav={p.fav} size={16} /></div>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: '#0F0F0F', fontFamily: F }}>{fmtMoney(p.prices.longlet || p.prices.sale || 0)}</div>
+                <div style={{ fontSize: 9, color: '#AAA', fontFamily: F }}>{p.prices.longlet ? '/mo' : 'sale'}</div>
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
