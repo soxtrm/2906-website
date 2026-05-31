@@ -307,10 +307,11 @@ export function Heart({ propertyId, fav: initial, size = 14, onChange }:
 }
 
 // ── location select (dropdown from locations table; no free text; admin can add) ──
+const REGION_ORDER = ['Central', 'North', 'South-East', 'South', 'Gozo']
 export function LocationSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { me } = useCrm()
-  const [opts, setOpts] = useState<string[]>([])
-  const reload = useCallback(() => crmFetch('locations').then(d => setOpts(d.locations || [])).catch(() => {}), [])
+  const [items, setItems] = useState<any[]>([])
+  const reload = useCallback(() => crmFetch('locations').then(d => setItems(d.items || [])).catch(() => {}), [])
   useEffect(() => { reload() }, [reload])
   async function addNew() {
     const name = window.prompt('New location name (canonical, e.g. "St Paul\'s Bay"):')
@@ -319,12 +320,20 @@ export function LocationSelect({ value, onChange }: { value: string; onChange: (
     catch (e: any) { alert(e?.message || 'Failed to add location') }
   }
   const sel: React.CSSProperties = { flex: 1, background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1A1A1A', fontFamily: F, outline: 'none' }
+  const groups: Record<string, any[]> = {}
+  for (const it of items) { const g = it.region || 'Other'; (groups[g] ||= []).push(it) }
+  const regionKeys = [...REGION_ORDER.filter(r => groups[r]), ...Object.keys(groups).filter(r => !REGION_ORDER.includes(r))]
+  const known = items.some(i => i.name === value)
   return (
     <div style={{ display: 'flex', gap: 6 }}>
       <select style={sel} value={value || ''} onChange={e => onChange(e.target.value)}>
         <option value="">Select location…</option>
-        {value && !opts.includes(value) && <option value={value}>{value} (current)</option>}
-        {opts.map(l => <option key={l} value={l}>{l}</option>)}
+        {value && !known && <option value={value}>{value} (current)</option>}
+        {regionKeys.map(rk => (
+          <optgroup key={rk} label={rk}>
+            {groups[rk].map((it: any) => <option key={it.id || it.name} value={it.name}>{it.name}</option>)}
+          </optgroup>
+        ))}
       </select>
       {me?.role === 'admin' && (
         <button onClick={addNew} title="Add new location" style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 8, padding: '0 12px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: F }}>+</button>
