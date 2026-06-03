@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, LocationSelect, A, AD, AB, F, FM, fmtMoney } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, LocationSelect, useCrm, A, AD, AB, F, FM, fmtMoney } from '@/lib/crm/ui'
 
 export default function NewPropertyPage() {
   return <CrmProvider><NewProperty /></CrmProvider>
@@ -16,8 +16,11 @@ const DURATIONS = [['2 weeks', 2], ['1 month', 4], ['3 months', 13], ['6 months'
 
 function NewProperty() {
   const router = useRouter()
+  const { me } = useCrm()
   const [step, setStep] = useState(1)
   const [locations, setLocations] = useState<string[]>([])
+  const [agents, setAgents] = useState<any[]>([])
+  const [listedBy, setListedBy] = useState<string>('')
   const [phone, setPhone] = useState('')
   const [checking, setChecking] = useState(false)
   const [check, setCheck] = useState<any>(null) // {exists, owner?}
@@ -31,6 +34,8 @@ function NewProperty() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { crmFetch('locations').then(d => setLocations(d.locations || [])).catch(() => {}) }, [])
+  useEffect(() => { crmFetch('agents').then(d => setAgents(d.agents || [])).catch(() => {}) }, [])
+  useEffect(() => { if (me?.id && !listedBy) setListedBy(String(me.id)) }, [me])
   const setp = (k: string, v: any) => setP((s: any) => ({ ...s, [k]: v }))
 
   async function doCheck() {
@@ -64,6 +69,7 @@ function NewProperty() {
       const body = {
         owner: { phone: phone.trim(), name: owner.name || check?.owner?.name || '', email: owner.email || '' },
         ...p, images,
+        listed_by_agent_id: listedBy ? parseInt(listedBy) : undefined,
         is_exclusive: excl.on, exclusive_weeks: excl.on ? excl.weeks : null,
       }
       const r = await crmJson('properties', 'POST', body)
@@ -110,7 +116,7 @@ function NewProperty() {
             ) : (
               <>
                 <div style={{ background: '#DCFCE7', border: '1px solid #86EFAC', borderRadius: 10, padding: '16px 18px', marginBottom: 18 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#15803D' }}>New owner! You become Owner-Creator 🔑</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#15803D' }}>New owner! You will be Owner-Creator: {me?.name || me?.username || 'you'} 🔑</div>
                   <div style={{ fontSize: 12.5, color: '#15803D', marginTop: 6, lineHeight: 1.6 }}>→ <strong>10% bonus on ALL future properties</strong> from this owner, forever.</div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -166,6 +172,13 @@ function NewProperty() {
               )}
             </div>
             <div style={{ marginTop: 12 }}><label style={lbl}>Internal notes (private)</label><textarea style={{ ...inp, minHeight: 50, resize: 'vertical', background: '#FFFBEB', borderColor: '#FDE68A' }} value={p.internal_notes} onChange={e => setp('internal_notes', e.target.value)} /></div>
+            <div style={{ marginTop: 12 }}>
+              <label style={lbl}>Listed by (attribution)</label>
+              <select style={inp} value={listedBy} onChange={e => setListedBy(e.target.value)}>
+                {agents.map(ag => <option key={ag.id} value={ag.id}>{ag.name || ag.username}</option>)}
+              </select>
+              <div style={{ fontSize: 10, color: '#BBB', marginTop: 3 }}>Defaults to you; change only if listing on behalf of another agent.</div>
+            </div>
             <Nav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel="Continue →" disabled={!p.town || !p.property_type} />
           </div>
         )}
@@ -202,6 +215,7 @@ function NewProperty() {
             <Review label="Availability" value={`${p.available_status}${p.available_date ? ` · ${p.available_date}` : ''}`} />
             <Review label="Images" value={`${images.length} uploaded`} />
             <Review label="Exclusive" value={excl.on ? `Yes · until ${exclDate()}` : 'No'} />
+            <Review label="Listed by" value={(() => { const ag = agents.find(x => String(x.id) === listedBy); return ag ? (ag.name || ag.username) : 'You' })()} />
             <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
               <button onClick={() => setStep(4)} style={ghost}>← Back</button>
               <button onClick={submit} disabled={submitting} style={{ ...primary, flex: 1 }}>{submitting ? 'Creating…' : 'Create property'}</button>

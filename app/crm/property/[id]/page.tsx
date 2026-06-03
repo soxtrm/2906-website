@@ -22,6 +22,8 @@ function Detail({ id }: { id: number }) {
   const [form, setForm] = useState<any>({})
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
+  const [agents, setAgents] = useState<any[]>([])
+  const isAdmin = me?.role === 'admin'
 
   const load = () => crmFetch(`properties/${id}`).then((r) => {
     setD(r); setActs(r.activities || [])
@@ -37,9 +39,20 @@ function Detail({ id }: { id: number }) {
     })
   }).catch(() => {})
   useEffect(() => { load() }, [id])
+  useEffect(() => { crmFetch('agents').then(d => setAgents(d.agents || [])).catch(() => {}) }, [])
 
   const p = d?.property
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
+
+  // Reassign an attribution agent (Listed-by: any agent · Owner-Creator/Activity: admin).
+  async function reassign(field: string, value: string) {
+    setMsg('')
+    try {
+      await crmJson(`properties/${id}`, 'PATCH', { [field]: value === '' ? null : parseInt(value) })
+      setMsg('Attribution updated · logged')
+      await load()
+    } catch (e: any) { setMsg(e?.message || 'Update failed') }
+  }
 
   async function save() {
     setSaving(true); setMsg('')
@@ -151,15 +164,19 @@ function Detail({ id }: { id: number }) {
                 </div>
               </div>
 
-              {/* commission */}
+              {/* property attribution (editable) */}
               <div style={card}>
-                <div style={head}>Commission</div>
-                {[['🔑 Owner Creator', p.ownerCreator || '—'], ['📋 Listing agent', p.listingAgents.join(' + ') || '—'], ['⚡ Activity', p.activityAgents.join(' + ') || '—']].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #F4F2EC', fontSize: 12 }}>
-                    <span style={{ color: '#999' }}>{k}</span><span style={{ fontWeight: 700, color: '#1A1A1A' }}>{v}</span>
-                  </div>
-                ))}
-                <div style={{ fontSize: 10, color: '#CCC', marginTop: 8 }}>Commission engine arrives in Phase 2.</div>
+                <div style={head}>Property Attribution</div>
+                <AttrRow label="📋 Listed by" hint="Any agent can correct this"
+                  value={p.listedByAgentId} agents={agents} editable={true}
+                  fallback={p.listingAgents.join(' + ')} onChange={v => reassign('listed_by_agent_id', v)} />
+                <AttrRow label="🔑 Owner Creator" hint={isAdmin ? 'Affects 10% bonus — admin only' : 'Admin only'}
+                  value={p.ownerCreatorId} agents={agents} editable={isAdmin}
+                  fallback={p.ownerCreator} onChange={v => reassign('owner_creator_id', v)} />
+                <AttrRow label="⚡ Activity Agent" hint={isAdmin ? 'Admin only' : 'Admin only'}
+                  value={p.activityAgentId} agents={agents} editable={isAdmin}
+                  fallback={p.activityAgent || p.activityAgents.join(' + ')} onChange={v => reassign('activity_agent_id', v)} />
+                <div style={{ fontSize: 10, color: '#CCC', marginTop: 8 }}>Reassignment is logged and never grants an Activity-Bonus. Commission engine arrives in Phase 2.</div>
               </div>
 
               {/* activity log */}
@@ -184,5 +201,28 @@ function Detail({ id }: { id: number }) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div><label style={lbl}>{label}</label>{children}</div>
+}
+
+// One attribution row: an editable agent dropdown (shows agents.name → username),
+// or read-only text when the current user lacks permission to change it.
+function AttrRow({ label, hint, value, agents, editable, fallback, onChange }:
+  { label: string; hint?: string; value: any; agents: any[]; editable: boolean; fallback?: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ padding: '8px 0', borderBottom: '1px solid #F4F2EC' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span style={{ color: '#999', fontSize: 12 }}>{label}</span>
+        {editable ? (
+          <select value={value ? String(value) : ''} onChange={e => onChange(e.target.value)}
+            style={{ flex: '0 1 158px', background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '6px 8px', fontSize: 12, fontWeight: 700, color: '#1A1A1A', fontFamily: F, cursor: 'pointer' }}>
+            <option value="">— Unassigned —</option>
+            {agents.map(a => <option key={a.id} value={a.id}>{a.name || a.username}</option>)}
+          </select>
+        ) : (
+          <span style={{ fontWeight: 700, color: '#1A1A1A', fontSize: 12 }}>{fallback || '—'}</span>
+        )}
+      </div>
+      {hint && <div style={{ fontSize: 9, color: '#C4C4C4', marginTop: 2, textAlign: 'right' }}>{hint}</div>}
+    </div>
+  )
 }
 const chk: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#666', cursor: 'pointer', fontFamily: F }
