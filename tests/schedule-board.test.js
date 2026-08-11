@@ -20,9 +20,13 @@ const puppeteer = require('puppeteer')
 const fs = require('fs')
 const path = require('path')
 
-const BASE = 'http://crm.localhost:3000'
+// Defaults to the local server behind the crm.* host rewrite; point BASE at
+// https://crm.2906.estate to run the same checks against production.
+const BASE = process.env.BASE || 'http://crm.localhost:3000'
+const COOKIE_DOMAIN = new URL(BASE).hostname
 const TOKEN = process.env.CRM_TOKEN
 const SHOTS = path.join(__dirname, 'screenshots')
+const PREFIX = process.env.SHOT_PREFIX || 'board'
 
 // Values that live in properties.street / owner_contacts — none may reach the DOM.
 const FORBIDDEN_TEXT = ['San Antnin', 'Residenza Denfil', 'Triq San Ġorġ']
@@ -62,7 +66,7 @@ async function run() {
     }
   })
 
-  await page.setCookie({ name: 'crm_session', value: TOKEN, domain: 'crm.localhost', path: '/' })
+  await page.setCookie({ name: 'crm_session', value: TOKEN, domain: COOKIE_DOMAIN, path: '/' })
 
   // ── optional: stubbed Maps API ─────────────────────────────────────────────
   // The real map needs Maps JavaScript API enabled on the key's Cloud project.
@@ -279,7 +283,7 @@ async function run() {
       const authErr = consoleErrors.find(t => /Google Maps JavaScript API (error|warning)/i.test(t))
       if (authErr) no('google map renders', authErr.slice(0, 160))
       else ok('google map renders', `drawing library ready, "Draw area" visible, ${tiles} tile/canvas nodes`)
-      await page.screenshot({ path: path.join(SHOTS, 'board-map.png') })
+      await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-map.png`) })
 
       // Draw an area for real: arm the tool, drag a box across the middle of
       // the map, and check it both filters and lands in the URL.
@@ -302,7 +306,7 @@ async function run() {
       await page.waitForFunction(() => document.body.innerText.includes('Clear area'), { timeout: 15000 })
       await new Promise(r => setTimeout(r, 1200))
       const drawn = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
-      await page.screenshot({ path: path.join(SHOTS, 'board-map-drawn.png') })
+      await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-map-drawn.png`) })
       if (Number(drawn) < Number(total)) ok('draw area filters', `${total} → ${drawn} inside the box, rect= in URL`)
       else no('draw area filters', `count did not narrow: ${total} → ${drawn}`)
 
@@ -319,7 +323,7 @@ async function run() {
     } catch (e) {
       const authErr = consoleErrors.find(t => /Google Maps JavaScript API (error|warning)/i.test(t))
       no('google map renders', authErr ? authErr.slice(0, 160) : e.message)
-      await page.screenshot({ path: path.join(SHOTS, 'board-map-failed.png') })
+      await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-map-failed.png`) })
     }
   }
 
@@ -340,10 +344,10 @@ async function run() {
     ok('card photos load', `${shot.loaded}/${shot.total} cloudinary images decoded`)
   } catch (e) { no('card photos load', e.message) }
 
-  await page.screenshot({ path: path.join(SHOTS, 'board-cards.png'), fullPage: false })
+  await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-cards.png`), fullPage: false })
   await page.evaluate(() => window.scrollTo(0, 0))
   await new Promise(r => setTimeout(r, 800))
-  await page.screenshot({ path: path.join(SHOTS, 'board-desktop.png'), fullPage: false })
+  await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-desktop.png`), fullPage: false })
 
   // ── 7. filters + URL state ────────────────────────────────────────────────
   try {
@@ -381,7 +385,7 @@ async function run() {
     await page.waitForFunction(() => /\d+\s+listings?/.test(document.body.innerText), { timeout: 60000 })
   } catch (e) {
     no('reload unfiltered board', e.message)
-    await page.screenshot({ path: path.join(SHOTS, 'board-reload-failed.png') })
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-reload-failed.png`) })
   }
 
   // ── 9. detail modal (the endpoint that used to 404) ────────────────────────
@@ -401,7 +405,7 @@ async function run() {
     const modalErr = await page.evaluate(() => document.body.innerText.includes('Could not load listing'))
     if (modalErr) no('detail modal loads', `error state for #${modalRef}`)
     else ok('detail modal loads', `#${modalRef}`)
-    await page.screenshot({ path: path.join(SHOTS, 'board-modal.png') })
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-modal.png`) })
     const mHtml = await page.content()
     const mLeak = FORBIDDEN_TEXT.filter(s => mHtml.includes(s))
     if (!mLeak.length) ok('firewall: modal clean')
@@ -433,7 +437,7 @@ async function run() {
     if (toast && /not armed yet/i.test(toast)) ok('Fall A dry run wired', toast.slice(0, 120))
     else if (toast) no('Fall A dry run wired', `unexpected toast: ${toast.slice(0, 160)}`)
     else no('Fall A dry run wired', 'no toast text')
-    await page.screenshot({ path: path.join(SHOTS, 'board-falla-toast.png') })
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-falla-toast.png`) })
   } catch (e) { no('Fall A dry run wired', e.message) }
 
   // ── 11. mobile ────────────────────────────────────────────────────────────
@@ -442,7 +446,7 @@ async function run() {
     await page.goto(`${BASE}/schedule-board`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForFunction(() => /\d+\s+listings?/.test(document.body.innerText), { timeout: 60000 })
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)
-    await page.screenshot({ path: path.join(SHOTS, 'board-mobile.png') })
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-mobile.png`) })
     if (!wide) ok('mobile: no horizontal overflow')
     else no('mobile: no horizontal overflow', `scrollWidth ${await page.evaluate(() => document.documentElement.scrollWidth)}`)
   } catch (e) { no('mobile: no horizontal overflow', e.message) }
