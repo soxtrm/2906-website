@@ -317,7 +317,7 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
   const shapeRef = useRef<any>(null)
   const areaRef = useRef<any[]>([])
   const anchorRef = useRef<any>(null)
-  const listenersRef = useRef<any[]>([])
+  const overlayRef = useRef<any>(null)
   const [ready, setReady] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const [loadErr, setLoadErr] = useState<string | null>(null)
@@ -360,6 +360,15 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
         { featureType: 'transit', stylers: [{ visibility: 'off' }] },
       ],
     })
+    // An empty OverlayView exists purely for its projection: it is the only
+    // supported way to turn a pixel inside the map container into a coordinate,
+    // which is what the area tool below needs.
+    const ov = new g.maps.OverlayView()
+    ov.onAdd = () => {}
+    ov.draw = () => {}
+    ov.onRemove = () => {}
+    ov.setMap(mapRef.current)
+    overlayRef.current = ov
   }, [ready, isMobile])
 
   // ── the area tool ─────────────────────────────────────────────────────────
@@ -367,46 +376,62 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
   // drag draws the box instead of moving Malta. A drag too small to be a real
   // selection counts as "changed my mind" and clears instead of filtering
   // everything away.
+  //
+  // The events are DOM pointer events on the map container, NOT map events:
+  // google.maps.Map fires click, mousemove and the drag events, but it has no
+  // mousedown or mouseup, so a rectangle tracked through map listeners never
+  // starts. Pointer events also cover touch and pen for free. Pixels become
+  // coordinates through the OverlayView projection created above.
   useEffect(() => {
-    if (!ready || !mapRef.current) return
+    if (!ready || !mapRef.current || !divRef.current) return
     const g = (window as any).google
     const map = mapRef.current
-
-    const drop = () => {
-      listenersRef.current.forEach(l => g.maps.event.removeListener(l))
-      listenersRef.current = []
-    }
-    drop()
+    const div = divRef.current
 
     if (!drawing) {
       map.setOptions({ draggable: true, draggableCursor: null })
+      div.style.touchAction = ''
       return
     }
     map.setOptions({ draggable: false, draggableCursor: 'crosshair' })
+    div.style.touchAction = 'none'   // otherwise a touch drag scrolls the page
 
+    const toLatLng = (ev: PointerEvent) => {
+      const proj = overlayRef.current && overlayRef.current.getProjection()
+      if (!proj) return null
+      const r = div.getBoundingClientRect()
+      return proj.fromContainerPixelToLatLng(
+        new g.maps.Point(ev.clientX - r.left, ev.clientY - r.top))
+    }
     const boundsOf = (a: any, b: any) => new g.maps.LatLngBounds(
       { lat: Math.min(a.lat(), b.lat()), lng: Math.min(a.lng(), b.lng()) },
       { lat: Math.max(a.lat(), b.lat()), lng: Math.max(a.lng(), b.lng()) },
     )
 
-    const down = map.addListener('mousedown', (e: any) => {
-      anchorRef.current = e.latLng
+    const onDown = (ev: PointerEvent) => {
+      const ll = toLatLng(ev)
+      if (!ll) return
+      ev.preventDefault()
+      anchorRef.current = ll
       if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
       shapeRef.current = new g.maps.Rectangle({
         map,
-        bounds: boundsOf(e.latLng, e.latLng),
+        bounds: boundsOf(ll, ll),
         fillColor: A, fillOpacity: 0.10, strokeColor: A, strokeWeight: 1.5, clickable: false,
       })
-    })
-    const move = map.addListener('mousemove', (e: any) => {
+    }
+    const onMove = (ev: PointerEvent) => {
       if (!anchorRef.current || !shapeRef.current) return
-      shapeRef.current.setBounds(boundsOf(anchorRef.current, e.latLng))
-    })
-    const up = map.addListener('mouseup', (e: any) => {
+      const ll = toLatLng(ev)
+      if (!ll) return
+      shapeRef.current.setBounds(boundsOf(anchorRef.current, ll))
+    }
+    const onUp = (ev: PointerEvent) => {
       const anchor = anchorRef.current
       anchorRef.current = null
       if (!anchor) return
-      const b = boundsOf(anchor, e.latLng)
+      const ll = toLatLng(ev) || anchor
+      const b = boundsOf(anchor, ll)
       const ne = b.getNorthEast(), sw = b.getSouthWest()
       const tiny = Math.abs(ne.lat() - sw.lat()) < 0.0008 && Math.abs(ne.lng() - sw.lng()) < 0.0008
       setDrawing(false)
@@ -416,10 +441,20 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
         return
       }
       onRect({ north: ne.lat(), east: ne.lng(), south: sw.lat(), west: sw.lng() })
-    })
+    }
 
-    listenersRef.current = [down, move, up]
-    return drop
+    // Capture phase, because the map's own panes sit inside this container and
+    // swallow some events on the way up. mouseup goes on the window so a
+    // release outside the map still finishes the box.
+    div.addEventListener('pointerdown', onDown, true)
+    div.addEventListener('pointermove', onMove, true)
+    window.addEventListener('pointerup', onUp, true)
+    return () => {
+      div.removeEventListener('pointerdown', onDown, true)
+      div.removeEventListener('pointermove', onMove, true)
+      window.removeEventListener('pointerup', onUp, true)
+      div.style.touchAction = ''
+    }
   }, [ready, drawing, onRect])
 
   // A rect restored from a shared link has no rectangle on the map yet — draw

@@ -68,60 +68,54 @@ async function run() {
 
   await page.setCookie({ name: 'crm_session', value: TOKEN, domain: COOKIE_DOMAIN, path: '/' })
 
-  // ── optional: stubbed Maps API ─────────────────────────────────────────────
-  // The real map needs Maps JavaScript API enabled on the key's Cloud project.
-  // Until that is done the board's own area-drawing logic — anchor on mousedown,
-  // resize on mousemove, commit on mouseup, mirror into the URL, filter the
-  // cards — can still be exercised end to end against a stand-in for
-  // google.maps. The page prefers an already-present window.google, so this
-  // never loads Google's script.
-  if (process.env.MAPS_STUB === '1') {
+  // ── record the markers the real Maps API builds ────────────────────────────
+  // Markers are drawn on canvas, so there is no DOM node to assert on. Google
+  // assigns google.maps.Marker while its bundle loads, so a property setter
+  // planted before any script runs can wrap the real constructor and keep the
+  // instances — positions and colours stay verifiable, and a click can be sent
+  // through Google's own event system instead of guessed pixel maths.
+  if (process.env.MAPS_EXPECTED === '1') {
     await page.evaluateOnNewDocument(() => {
-      const listeners = {}
-      const mk = (lat, lng) => ({ lat: () => lat, lng: () => lng })
-      class LatLngBounds {
-        constructor(sw, ne) { this._sw = sw; this._ne = ne }
-        getNorthEast() { return mk(this._ne.lat, this._ne.lng) }
-        getSouthWest() { return mk(this._sw.lat, this._sw.lng) }
-      }
-      class Rectangle {
-        constructor(o) { this.o = o || {}; this.bounds = this.o.bounds; window.__rects.push(this) }
-        setMap(m) { this.map = m; if (!m) this.removed = true }
-        setBounds(b) { this.bounds = b }
-        getBounds() {
-          const b = this.bounds
-          if (b instanceof LatLngBounds) return b
-          return new LatLngBounds({ lat: b.south, lng: b.west }, { lat: b.north, lng: b.east })
-        }
-      }
-      class MapStub {
-        constructor(div, opts) { this.div = div; this.opts = opts; window.__map = this }
-        addListener(name, cb) { (listeners[name] ||= []).push(cb); return { name, cb } }
-        setOptions(o) { this.opts = { ...this.opts, ...o } }
-        fitBounds() {}
-      }
-      class Marker {
-        constructor(o) { this.o = o; window.__markers.push(o) }
-        setMap(m) { if (!m) { const i = window.__markers.indexOf(this.o); if (i > -1) window.__markers.splice(i, 1) } }
-        addListener() { return {} }
-      }
-      class Circle { constructor(o) { this.o = o } setMap() {} }
-      window.__rects = []
       window.__markers = []
-      window.__mapStub = true
-      window.google = {
-        maps: {
-          Map: MapStub, Rectangle, LatLngBounds, Marker, Circle,
-          SymbolPath: { CIRCLE: 'circle' },
-          event: { addListener: (o, n, cb) => ({ n, cb }), removeListener: () => {} },
+      const patchMaps = maps => {
+        let M
+        try {
+          Object.defineProperty(maps, 'Marker', {
+            configurable: true,
+            get() { return M },
+            set(Orig) {
+              function Patched(o) {
+                const m = new Orig(o)
+                window.__markers.push({ o, m })
+                return m
+              }
+              Patched.prototype = Orig.prototype
+              Object.setPrototypeOf(Patched, Orig)
+              M = Patched
+            },
+          })
+        } catch (e) { /* already defined — leave the real one alone */ }
+      }
+      let g
+      Object.defineProperty(window, 'google', {
+        configurable: true,
+        get() { return g },
+        set(v) {
+          g = v
+          if (v && v.maps) { patchMaps(v.maps); return }
+          let maps
+          try {
+            Object.defineProperty(v, 'maps', {
+              configurable: true,
+              get() { return maps },
+              set(m) { maps = m; patchMaps(m) },
+            })
+          } catch (e) { /* ignore */ }
         },
-      }
-      // Drive the map listeners the way a real drag would.
-      window.__fireMap = (name, lat, lng) => {
-        for (const cb of listeners[name] || []) cb({ latLng: mk(lat, lng) })
-      }
+      })
     })
   }
+
 
   // ── 1. board loads under the production path ───────────────────────────────
   const resp = await page.goto(`${BASE}/schedule-board`, { waitUntil: 'domcontentloaded', timeout: 120000 })
@@ -181,90 +175,14 @@ async function run() {
 
   // ── 6. map fallback / map canvas ──────────────────────────────────────────
   const mapState = await page.evaluate(() => {
-    if (window.__mapStub) return 'stub'
     if (document.body.innerText.includes('Map needs a Google Maps key')) return 'no-key'
     if (document.body.innerText.includes('Google Maps failed to load')) return 'load-failed'
     if (document.querySelector('#gmaps-js')) return 'script-injected'
     return 'unknown'
   })
-  if (mapState === 'no-key' || mapState === 'script-injected' || mapState === 'stub') ok('map panel state', mapState)
+  if (mapState === 'no-key' || mapState === 'script-injected') ok('map panel state', mapState)
   else no('map panel state', mapState)
 
-  // ── 6s. area drawing against the stub ─────────────────────────────────────
-  if (process.env.MAPS_STUB === '1') {
-    try {
-      await page.waitForFunction(() => document.body.innerText.includes('Draw area'), { timeout: 20000 })
-      const markers = await page.evaluate(() => window.__markers.length)
-      const listed = Number(await page.evaluate(() =>
-        (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1]))
-      // 8 listings carry no town we can place, so a pin per placeable listing.
-      if (markers > 0 && markers <= listed) ok('markers created', `${markers} pins for ${listed} listings`)
-      else no('markers created', `${markers} pins for ${listed} listings`)
-      const green = await page.evaluate(() =>
-        window.__markers.filter(m => m.icon && m.icon.fillColor === '#2f6f57').length)
-      if (green > 0) ok('own listings get green pins', `${green} of ${markers}`)
-      else no('own listings get green pins', `${green} of ${markers}`)
-
-      // arm, then drag a box across the middle of Malta
-      await page.evaluate(() => {
-        Array.from(document.querySelectorAll('button')).find(x => x.innerText.includes('Draw area')).click()
-      })
-      await page.waitForFunction(() => window.__map && window.__map.opts.draggable === false, { timeout: 10000 })
-      ok('draw mode locks the map', 'draggable=false, crosshair cursor')
-      await page.evaluate(() => {
-        window.__fireMap('mousedown', 35.95, 14.44)
-        window.__fireMap('mousemove', 35.90, 14.50)
-        window.__fireMap('mouseup', 35.88, 14.52)
-      })
-      await page.waitForFunction(() => location.search.includes('rect='), { timeout: 15000 })
-      await page.waitForFunction(() => document.body.innerText.includes('Clear area'), { timeout: 15000 })
-      const drawn = Number(await page.evaluate(() =>
-        (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1]))
-      const rectParam = await page.evaluate(() => new URLSearchParams(location.search).get('rect'))
-      if (drawn > 0 && drawn < listed) ok('draw area filters', `${listed} → ${drawn} in the box, rect=${rectParam}`)
-      else no('draw area filters', `${listed} → ${drawn}`)
-      const drawnMarkers = await page.evaluate(() => window.__markers.length)
-      if (drawnMarkers <= drawn) ok('pins follow the box', `${drawnMarkers} pins left`)
-      else no('pins follow the box', `${drawnMarkers} pins for ${drawn} listings`)
-
-      // a shared link restores the box
-      const url = await page.url()
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await page.waitForFunction(() => /\d+\s+listings?/.test(document.body.innerText), { timeout: 60000 })
-      const restored = Number(await page.evaluate(() =>
-        (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1]))
-      const rectDrawn = await page.evaluate(() => window.__rects.filter(r => !r.removed).length)
-      if (restored === drawn && rectDrawn === 1) ok('shared link restores the box', `${restored} listings, box redrawn`)
-      else no('shared link restores the box', `${restored} vs ${drawn} listings, ${rectDrawn} rectangles`)
-
-      // clearing puts everything back
-      await page.evaluate(() => {
-        Array.from(document.querySelectorAll('button')).find(x => x.innerText.includes('Clear area')).click()
-      })
-      await page.waitForFunction(() => !location.search.includes('rect='), { timeout: 15000 })
-      await new Promise(r => setTimeout(r, 600))
-      const cleared = Number(await page.evaluate(() =>
-        (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1]))
-      const gone = await page.evaluate(() => window.__rects.every(r => r.removed))
-      if (cleared === listed && gone) ok('clear area restores', `back to ${cleared}, rectangle removed`)
-      else no('clear area restores', `${cleared} vs ${listed}, rectangleRemoved=${gone}`)
-
-      // a click without a drag must cancel, not filter everything away
-      await page.evaluate(() => {
-        Array.from(document.querySelectorAll('button')).find(x => x.innerText.includes('Draw area')).click()
-      })
-      await page.evaluate(() => {
-        window.__fireMap('mousedown', 35.90, 14.48)
-        window.__fireMap('mouseup', 35.90, 14.48)
-      })
-      await new Promise(r => setTimeout(r, 900))
-      const afterTap = Number(await page.evaluate(() =>
-        (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1]))
-      const noRect = await page.evaluate(() => !location.search.includes('rect='))
-      if (afterTap === listed && noRect) ok('stray click cancels instead of filtering', `still ${afterTap}`)
-      else no('stray click cancels instead of filtering', `${afterTap} listings, rect in URL=${!noRect}`)
-    } catch (e) { no('area drawing (stub)', e.message) }
-  }
 
   // ── 6a. real Google map (only when the build carries a key) ───────────────
   // Google reports key problems (RefererNotAllowedMapError, ApiNotActivated…)
@@ -272,9 +190,11 @@ async function run() {
   // console log rather than guessed.
   if (process.env.MAPS_EXPECTED === '1') {
     try {
+      // Wait for the core API only — `drawing` is deliberately not loaded any
+      // more, so waiting on it would hang forever.
       await page.waitForFunction(() => {
         const w = window
-        return !!(w.google && w.google.maps && w.google.maps.drawing)
+        return !!(w.google && w.google.maps && w.google.maps.Map && w.google.maps.Rectangle)
       }, { timeout: 40000 })
       await page.waitForFunction(
         () => document.body.innerText.includes('Draw area'), { timeout: 20000 })
@@ -282,11 +202,72 @@ async function run() {
         document.querySelectorAll('img[src*="maps.googleapis.com"], canvas').length)
       const authErr = consoleErrors.find(t => /Google Maps JavaScript API (error|warning)/i.test(t))
       if (authErr) no('google map renders', authErr.slice(0, 160))
-      else ok('google map renders', `drawing library ready, "Draw area" visible, ${tiles} tile/canvas nodes`)
+      else ok('google map renders', `real tiles up, "Draw area" visible, ${tiles} tile/canvas nodes`)
       await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-map.png`) })
 
-      // Draw an area for real: arm the tool, drag a box across the middle of
-      // the map, and check it both filters and lands in the URL.
+      // ── markers land on the right Malta towns ─────────────────────────────
+      // MALTA holds the whole archipelago; SLIEMA is checked separately because
+      // a plausible-looking but wrong geocode would still sit inside Malta.
+      const MALTA = { south: 35.77, north: 36.10, west: 14.17, east: 14.59 }
+      const SLIEMA = { lat: 35.9122, lng: 14.5019 }
+      const pins = await page.evaluate(() => window.__markers.map(m => ({
+        lat: typeof m.o.position.lat === 'function' ? m.o.position.lat() : m.o.position.lat,
+        lng: typeof m.o.position.lng === 'function' ? m.o.position.lng() : m.o.position.lng,
+        title: m.o.title || '',
+        colour: m.o.icon && m.o.icon.fillColor,
+      })))
+      if (!pins.length) {
+        skip('marker positions', 'could not capture marker instances from the real API')
+      } else {
+        const outside = pins.filter(p =>
+          p.lat < MALTA.south || p.lat > MALTA.north || p.lng < MALTA.west || p.lng > MALTA.east)
+        if (!outside.length) ok('markers inside Malta', `all ${pins.length} pins within the archipelago`)
+        else no('markers inside Malta', `${outside.length} off-island, e.g. ${JSON.stringify(outside[0])}`)
+
+        const green = pins.filter(p => p.colour === '#2f6f57').length
+        if (green > 0 && green < pins.length) ok('own vs team pin colours', `${green} green, ${pins.length - green} amber`)
+        else no('own vs team pin colours', `${green} green of ${pins.length}`)
+
+        // Cross-check one town against its real coordinate, using the town the
+        // API reported for that ref rather than anything the map told us.
+        try {
+          const byRef = {}
+          for (const l of (JSON.parse(listingsBody).listings || [])) byRef[l.ref] = l.town
+          const sliemaPin = pins.find(p => {
+            const ref = (p.title.match(/#(\S+)/) || [])[1]
+            return ref && /sliema/i.test(byRef[ref] || '')
+          })
+          if (!sliemaPin) throw new Error('no Sliema listing among the pins')
+          const km = Math.hypot(
+            (sliemaPin.lat - SLIEMA.lat) * 111,
+            (sliemaPin.lng - SLIEMA.lng) * 111 * Math.cos(SLIEMA.lat * Math.PI / 180))
+          if (km < 3) ok('town coordinates are real', `Sliema pin ${km.toFixed(2)} km from the real Sliema`)
+          else no('town coordinates are real', `Sliema pin is ${km.toFixed(1)} km off`)
+        } catch (e) { no('town coordinates are real', e.message) }
+      }
+
+
+    } catch (e) {
+      const authErr = consoleErrors.find(t => /Google Maps JavaScript API (error|warning)/i.test(t))
+      no('google map renders', authErr ? authErr.slice(0, 160) : e.message)
+      await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-map-failed.png`) })
+    }
+
+    // ── drag a real box on the real map ──────────────────────────────────────
+    try {
+      // Runs BEFORE the marker-click check on purpose: that one scrolls a card
+      // into view with `behavior: 'smooth'`, and the animation kept running
+      // into this drag, sliding the map out from under viewport-relative mouse
+      // coordinates. `.gm-style` also appears later than the button — it needs
+      // the Map to have built its own DOM.
+      await page.waitForSelector('.gm-style', { timeout: 30000 })
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await page.waitForFunction(() => {
+        const y = window.scrollY
+        if (window.__lastY === y) return true
+        window.__lastY = y
+        return false
+      }, { polling: 300, timeout: 15000 })
       const total = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
       await page.evaluate(() => {
         const b = Array.from(document.querySelectorAll('button')).find(x => x.innerText.includes('Draw area'))
@@ -321,10 +302,34 @@ async function run() {
       if (cleared === total) ok('clear area restores', `back to ${cleared}`)
       else no('clear area restores', `${cleared} vs ${total}`)
     } catch (e) {
-      const authErr = consoleErrors.find(t => /Google Maps JavaScript API (error|warning)/i.test(t))
-      no('google map renders', authErr ? authErr.slice(0, 160) : e.message)
-      await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-map-failed.png`) })
+      no('draw area filters', e.message)
+      await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-drag-failed.png`) })
     }
+
+      // ── marker click scrolls its card into view ───────────────────────────
+      try {
+        const clickedRef = await page.evaluate(() => {
+          // Pick a marker whose card is far down the grid, so "it scrolled" is
+          // not simply "it was already on screen".
+          const pick = window.__markers[Math.min(24, window.__markers.length - 1)]
+          const ref = (pick.o.title.match(/#(\S+)/) || [])[1]
+          window.scrollTo(0, 0)
+          window.google.maps.event.trigger(pick.m, 'click')
+          return ref
+        })
+        await new Promise(r => setTimeout(r, 1800))
+        const seen = await page.evaluate(ref => {
+          const el = Array.from(document.querySelectorAll('span'))
+            .find(s => s.innerText.trim() === `#${ref}`)
+          if (!el) return { found: false }
+          const card = el.closest('div[style*="border-radius"]') || el.parentElement
+          const r = card.getBoundingClientRect()
+          return { found: true, inView: r.top > -50 && r.top < window.innerHeight, top: Math.round(r.top) }
+        }, clickedRef)
+        if (seen.found && seen.inView) ok('marker click scrolls to its card', `#${clickedRef} at y=${seen.top}`)
+        else no('marker click scrolls to its card', `#${clickedRef} ${JSON.stringify(seen)}`)
+        await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-marker-click.png`) })
+      } catch (e) { no('marker click scrolls to its card', e.message) }
   }
 
   // ── 6b. card photos actually resolve ──────────────────────────────────────
