@@ -19,7 +19,11 @@ import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 const GREEN = '#2f6f57'
 const GREEN_SOFT = 'rgba(47,111,87,0.10)'
 const CARD = '#FFFDFA'
-const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''
+// The Maps key normally arrives from the backend (GET schedule-board/config),
+// which hands it to logged-in agents only. A NEXT_PUBLIC_GOOGLE_MAPS_KEY still
+// wins if one is set, but it would be inlined into a publicly downloadable
+// chunk — and this repo is public — so the served key is the better default.
+const BUNDLED_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''
 
 type Listing = {
   id: number; ref: string; town: string | null; subLocation: string | null
@@ -321,10 +325,22 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
   const [ready, setReady] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const [loadErr, setLoadErr] = useState<string | null>(null)
+  // null = still asking the backend, '' = there is no key
+  const [mapsKey, setMapsKey] = useState<string | null>(BUNDLED_MAPS_KEY || null)
 
-  // load the script once
   useEffect(() => {
-    if (!MAPS_KEY) { setLoadErr('no-key'); return }
+    if (mapsKey !== null) return
+    let alive = true
+    crmFetch('schedule-board/config')
+      .then(d => { if (alive) setMapsKey((d && d.mapsKey) || '') })
+      .catch(() => { if (alive) setMapsKey('') })
+    return () => { alive = false }
+  }, [mapsKey])
+
+  // load the script once the key is known
+  useEffect(() => {
+    if (mapsKey === null) return
+    if (!mapsKey) { setLoadErr('no-key'); return }
     const w = window as any
     if (w.google?.maps?.Map) { setReady(true); return }
     const existing = document.getElementById('gmaps-js') as HTMLScriptElement | null
@@ -337,12 +353,12 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
     s.id = 'gmaps-js'
     s.async = true
     // No `libraries=drawing`: that library's DrawingManager is gone since 3.65
-    // and the rectangle below is drawn from plain map events instead.
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(MAPS_KEY)}`
+    // and the rectangle below is drawn from pointer events instead.
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}`
     s.onload = () => setReady(true)
     s.onerror = () => setLoadErr('load-failed')
     document.head.appendChild(s)
-  }, [])
+  }, [mapsKey])
 
   // init map
   useEffect(() => {
@@ -535,8 +551,9 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
       <div style={{ ...mapBox, height, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 20 }}>
         <div>
           <div style={{ fontFamily: F, fontWeight: 700, color: '#8A6412', fontSize: 14 }}>Map needs a Google Maps key</div>
-          <div style={{ fontSize: 12, color: '#A99', marginTop: 6, maxWidth: 420, lineHeight: 1.5, color: '#999' }}>
-            Set <code style={{ fontFamily: FM }}>NEXT_PUBLIC_GOOGLE_MAPS_KEY</code> in Vercel and redeploy.
+          <div style={{ fontSize: 12, marginTop: 6, maxWidth: 420, lineHeight: 1.5, color: '#999' }}>
+            Set <code style={{ fontFamily: FM }}>SCHEDULE_BOARD_MAPS_KEY</code> in the backend
+            <code style={{ fontFamily: FM }}> .env</code> and restart it — no frontend deploy needed.
             Filters, villages and cards below all work without it.
           </div>
         </div>

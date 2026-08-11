@@ -43,10 +43,15 @@ async function run() {
   if (!TOKEN) throw new Error('CRM_TOKEN env var missing')
   fs.mkdirSync(SHOTS, { recursive: true })
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--host-resolver-rules=MAP crm.localhost 127.0.0.1', '--no-sandbox'],
-  })
+  // HOST_MAP lets the suite run against a real origin served locally, e.g.
+  // HOST_MAP="crm.2906.estate 127.0.0.1" with the TLS proxy — that is the only
+  // way to exercise a referrer-restricted Maps key before the key is deployed.
+  const args = [
+    `--host-resolver-rules=MAP ${process.env.HOST_MAP || 'crm.localhost 127.0.0.1'}`,
+    '--no-sandbox',
+  ]
+  if (process.env.IGNORE_CERT === '1') args.push('--ignore-certificate-errors')
+  const browser = await puppeteer.launch({ headless: 'new', args })
   const page = await browser.newPage()
   await page.setViewport({ width: 1440, height: 1000 })
 
