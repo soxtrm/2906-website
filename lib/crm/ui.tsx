@@ -182,6 +182,7 @@ export function Masked({ entityType, entityId, masked, hasValue, propertyId, siz
 const NAV = [
   { icon: '▦', label: 'Dashboard', href: '/' },
   { icon: '≡', label: 'Inventory', href: '/inventory' },
+  { icon: '◈', label: 'Board', href: '/schedule-board' },
   { icon: '◎', label: 'Owners', href: '/owners' },
   { icon: '€', label: 'Earnings', href: '/earnings', disabled: true },
   { icon: '⚙', label: 'Admin', href: '/admin', disabled: true },
