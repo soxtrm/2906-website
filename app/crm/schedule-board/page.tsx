@@ -12,12 +12,18 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, A, AD, AB, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
+import { BoardFilters, type BoardFilterValue } from '@/components/crm/board-filters'
+import { AskDialog, BookDialog } from '@/components/crm/board-dialogs'
 
-const GREEN = '#2f6f57'
-const GREEN_SOFT = 'rgba(47,111,87,0.10)'
+// "Mine" is navy rather than a separate green: on this board the distinction
+// that matters is whose listing it is, and navy is the brand's own way of
+// saying "ours". The availability traffic-light stays on AVAIL/VIEW.
+const GREEN = NAVY
+const GREEN_SOFT = 'rgba(27,42,74,0.08)'
 const CARD = '#FFFDFA'
 // The Maps key normally arrives from the backend (GET schedule-board/config),
 // which hands it to logged-in agents only. A NEXT_PUBLIC_GOOGLE_MAPS_KEY still
@@ -34,12 +40,22 @@ type Listing = {
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
+  // Decided server-side: whether the two contact buttons are live, and the
+  // sentence to show when they are not. The browser only renders the verdict.
+  contact: {
+    mode: 'owner' | 'agent'
+    reachesName: string | null
+    canAsk: boolean
+    reason: string | null
+    questionsUsed: number
+    questionsPerDay: number
+    canQuestion: boolean
+    questionReason: string | null
+  }
 }
 
-type Filters = {
-  beds: string; baths: string; min: string; max: string; type: string; towns: string[]
-}
-const EMPTY: Filters = { beds: '', baths: '', min: '', max: '', type: '', towns: [] }
+type Filters = BoardFilterValue & { towns: string[] }
+const EMPTY: Filters = { q: '', beds: '', baths: '', min: '', max: '', type: '', towns: [] }
 
 type Rect = { north: number; south: number; east: number; west: number }
 
@@ -70,6 +86,7 @@ function Board() {
 
   // Filters initialise from the URL so a shared link restores the search.
   const [f, setF] = useState<Filters>(() => ({
+    q: params.get('q') || '',
     beds: params.get('beds') || '',
     baths: params.get('baths') || '',
     min: params.get('min') || '',
@@ -83,6 +100,8 @@ function Board() {
   const [err, setErr] = useState<string | null>(null)
   const [focusRef, setFocusRef] = useState<string | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
+  const [booking, setBooking] = useState<Listing | null>(null)
+  const [asking, setAsking] = useState<Listing | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -94,6 +113,7 @@ function Board() {
   // ── URL mirror ────────────────────────────────────────────────────────────
   useEffect(() => {
     const q = new URLSearchParams()
+    if (f.q) q.set('q', f.q)
     if (f.beds) q.set('beds', f.beds)
     if (f.baths) q.set('baths', f.baths)
     if (f.min) q.set('min', f.min)
@@ -109,6 +129,11 @@ function Board() {
   // Server-side filters are the numeric/enum ones. Town selection is applied
   // client-side because the canonical-town folding (Gzira/Gżira, five
   // spellings of St Paul's Bay) lives in the browser table, not in SQL.
+  // Bumped after a question is sent, so the per-listing daily counter and the
+  // greyed-out state come back from the server rather than being guessed here.
+  const [refreshTick, setRefreshTick] = useState(0)
+  const reload = useCallback(() => setRefreshTick(t => t + 1), [])
+
   useEffect(() => {
     let alive = true
     setLoading(true)
@@ -123,7 +148,7 @@ function Board() {
       .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [f.beds, f.baths, f.min, f.max, f.type])
+  }, [f.beds, f.baths, f.min, f.max, f.type, refreshTick])
 
   // ── town index + positions ────────────────────────────────────────────────
   // Every listing gets a stable coordinate: town centre plus a deterministic
@@ -158,8 +183,16 @@ function Board() {
 
   // ── visible set: filters ∩ town selection ∩ drawn rectangle ───────────────
   const visible = useMemo(() => {
+    // Free text matches ref, town or sub-location. Applied here rather than in
+    // SQL because the whole result set is already local — typing filters at
+    // keystroke speed instead of a round trip per character.
+    const needle = f.q.trim().toLowerCase()
     return positioned.filter(r => {
       if (f.towns.length && !f.towns.includes(r.tkey)) return false
+      if (needle) {
+        const hay = [r.ref, r.town, r.subLocation, r.type].filter(Boolean).join(' ').toLowerCase()
+        if (!hay.includes(needle)) return false
+      }
       if (rect) {
         if (r.lat == null || r.lng == null) return false
         if (r.lat > rect.north || r.lat < rect.south) return false
@@ -167,7 +200,7 @@ function Board() {
       }
       return true
     })
-  }, [positioned, f.towns, rect])
+  }, [positioned, f.towns, f.q, rect])
 
   const mineCount = visible.filter(r => r.isMine).length
 
@@ -185,12 +218,11 @@ function Board() {
 
   // ── WhatsApp actions ──────────────────────────────────────────────────────
   // Fire-and-forget: the button never blocks, the result arrives as a toast.
-  async function act(kind: 'request-availability' | 'request-location' | 'comment', r: Listing) {
-    let note: string | null = null
-    if (kind === 'comment') {
-      note = window.prompt(`Message to ${r.listedBy.displayName || 'the listing agent'} about #${r.ref}:`)
-      if (!note || !note.trim()) return
-    }
+  // Questions used to be a window.prompt straight down the wire. They now go
+  // through AskDialog — write, rewrite, read, confirm — so `act` is left with
+  // only the two one-click requests.
+  async function act(kind: 'request-availability' | 'request-location', r: Listing) {
+    const note: string | null = null
     showToast('info', kind === 'request-availability' && r.isMine
       ? `Contacting the owner of #${r.ref}…`
       : `Sending to ${r.listedBy.displayName || 'listing agent'}…`)
@@ -209,25 +241,23 @@ function Board() {
 
   // ── filter bar ────────────────────────────────────────────────────────────
   const filterBar = (
-    <>
-      <Seg label="Beds" value={f.beds} onChange={v => setF(s => ({ ...s, beds: v }))}
-        opts={[['', 'Any'], ['1', '1+'], ['2', '2+'], ['3', '3+']]} />
-      <Seg label="Baths" value={f.baths} onChange={v => setF(s => ({ ...s, baths: v }))}
-        opts={[['', 'Any'], ['1', '1+'], ['2', '2+']]} />
-      <Num placeholder="Min €" value={f.min} onChange={v => setF(s => ({ ...s, min: v }))} />
-      <Num placeholder="Max €" value={f.max} onChange={v => setF(s => ({ ...s, max: v }))} />
-      <Seg label="Type" value={f.type} onChange={v => setF(s => ({ ...s, type: v }))}
-        opts={[['', 'Any'], ['apartment', 'Apartment'], ['penthouse', 'Penthouse'], ['house', 'House'], ['maisonette', 'Maisonette']]} />
-      {(f.beds || f.baths || f.min || f.max || f.type || f.towns.length || rect) && (
-        <button onClick={reset} style={{ ...btn, background: 'transparent', color: '#999', border: '1px solid #E5E1D8' }}>
-          Reset
+    <BoardFilters
+      value={f}
+      onChange={patch => setF(s => ({ ...s, ...patch }))}
+      onReset={reset}
+      count={visible.length}
+      mineCount={mineCount}
+      loading={loading}
+      extra={rect ? (
+        <button
+          onClick={() => setRect(null)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded bg-navy text-white text-xs whitespace-nowrap"
+          title="Clear the area drawn on the map"
+        >
+          Area drawn <span className="opacity-60">×</span>
         </button>
-      )}
-      <span style={{ marginLeft: 'auto', fontFamily: FM, fontSize: 11, color: '#AAA', whiteSpace: 'nowrap' }}>
-        {loading ? 'loading…' : `${visible.length} listing${visible.length === 1 ? '' : 's'}`}
-        {mineCount > 0 && <span style={{ color: GREEN, fontWeight: 600 }}> · {mineCount} yours</span>}
-      </span>
-    </>
+      ) : undefined}
+    />
   )
 
   return (
@@ -281,6 +311,8 @@ function Board() {
               innerRef={el => { cardRefs.current[r.ref] = el }}
               onOpen={() => setDetail(r.ref)}
               onAct={act}
+              onBook={() => setBooking(r)}
+              onAsk={() => setAsking(r)}
             />
           ))}
         </div>
@@ -293,6 +325,31 @@ function Board() {
       </div>
 
       {detail && <DetailModal refId={detail} onClose={() => setDetail(null)} onAct={act} />}
+
+      <AnimatePresence>
+        {booking && (
+          <BookDialog
+            key="book"
+            refId={booking.ref}
+            town={booking.town}
+            onClose={() => setBooking(null)}
+            onDone={msg => showToast('ok', msg)}
+          />
+        )}
+        {asking && (
+          <AskDialog
+            key="ask"
+            refId={asking.ref}
+            town={asking.town}
+            contact={asking.contact}
+            onClose={() => setAsking(null)}
+            // A sent question spends one of the day's two slots, so the cards
+            // have to be refetched or the counter lies until the next reload.
+            onDone={msg => { showToast('ok', msg); reload() }}
+          />
+        )}
+      </AnimatePresence>
+
       {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
     </CrmShell>
   )
@@ -600,16 +657,25 @@ const Dot = ({ c }: { c: string }) => (
 )
 
 // ── card ────────────────────────────────────────────────────────────────────
-function Card({ r, focused, innerRef, onOpen, onAct }: {
+function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
   onOpen: () => void
-  onAct: (kind: 'request-availability' | 'request-location' | 'comment', r: Listing) => void
+  onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
+  onBook: () => void
+  onAsk: () => void
 }) {
   const status = r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
     : r.availableStatus === 'rented' ? { c: '#B91C1C', t: 'rented' }
     : { c: '#C9C4B8', t: 'unknown' }
+  // Older cached responses predate the contact block; default to "usable" so a
+  // stale payload degrades to the previous behaviour instead of a dead card.
+  const c = r.contact || {
+    mode: r.isMine ? 'owner' : 'agent', reachesName: r.listedBy.displayName,
+    canAsk: true, reason: null, questionsUsed: 0, questionsPerDay: 2,
+    canQuestion: true, questionReason: null,
+  }
 
   return (
     <div
@@ -662,30 +728,72 @@ function Card({ r, focused, innerRef, onOpen, onAct }: {
           Listed by {r.listedBy.displayName || 'unassigned'}
         </div>
 
+        {/* Contact actions. `canAsk` / `canQuestion` are the server's verdict —
+            a do-not-contact owner, one already messaged today, or a listing
+            with no reachable agent all arrive here already decided. */}
         <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {r.isMine ? (
-            <button onClick={() => onAct('request-availability', r)} style={{ ...btn, background: GREEN, color: '#FFF', border: 'none', flex: 1 }}>
-              Ask owner
+          <button
+            onClick={() => c.canAsk && onAct('request-availability', r)}
+            disabled={!c.canAsk}
+            title={c.reason || (r.isMine ? 'Message the owner' : `Ask ${c.reachesName || 'the listing agent'}`)}
+            style={{
+              ...btn, flex: 1, border: 'none',
+              background: c.canAsk ? (r.isMine ? GREEN : A) : '#F1EFEA',
+              color: c.canAsk ? '#FFF' : '#B5AFA2',
+              cursor: c.canAsk ? 'pointer' : 'not-allowed',
+            }}>
+            Availability
+          </button>
+
+          <button
+            onClick={() => c.canQuestion && onAsk()}
+            disabled={!c.canQuestion}
+            title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
+            style={{
+              ...btn,
+              background: '#FFF',
+              color: c.canQuestion ? NAVY : '#C9C4B8',
+              border: `1px solid ${c.canQuestion ? 'rgba(27,42,74,0.18)' : '#EDE9E0'}`,
+              cursor: c.canQuestion ? 'pointer' : 'not-allowed',
+            }}>
+            Ask
+          </button>
+
+          {/* Booking is internal — never blocked by a contact rule. */}
+          <button
+            onClick={onBook}
+            title="Book a viewing"
+            style={{ ...btn, background: '#FFF', color: NAVY, border: `1px solid ${AB}`, fontWeight: 700 }}>
+            Book
+          </button>
+
+          {!r.isMine && !r.hasViewingLocation && c.canAsk && (
+            <button onClick={() => onAct('request-location', r)}
+              style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }}
+              title="Ask the listing agent where the viewing is">
+              Location
             </button>
-          ) : (
-            <>
-              <button onClick={() => onAct('request-availability', r)} style={{ ...btn, background: A, color: '#FFF', border: 'none', flex: 1 }}>
-                Availability
-              </button>
-              {!r.hasViewingLocation && (
-                <button onClick={() => onAct('request-location', r)} style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }} title="Ask the listing agent where the viewing is">
-                  Location
-                </button>
-              )}
-              <button onClick={() => onAct('comment', r)} style={{ ...btn, background: '#FFF', color: '#888', border: '1px solid #E9E5DC' }}>
-                Comment
-              </button>
-            </>
           )}
         </div>
-        {r.isMine && (
-          <div style={{ fontSize: 9.5, color: GREEN, marginTop: 6, opacity: 0.85 }}>
-            Messages the owner directly via the last account in contact.
+
+        {/* One line of truth under the buttons: why they are off, or where a
+            working button actually sends. */}
+        {!c.canAsk && c.reason ? (
+          <div style={{ fontSize: 9.5, color: '#B08968', marginTop: 6, lineHeight: 1.35 }}>
+            {c.reason}
+          </div>
+        ) : c.canAsk && !c.canQuestion && c.questionReason ? (
+          <div style={{ fontSize: 9.5, color: '#B08968', marginTop: 6, lineHeight: 1.35 }}>
+            {c.questionReason}
+          </div>
+        ) : r.isMine ? (
+          <div style={{ fontSize: 9.5, color: GREEN, marginTop: 6, opacity: 0.8 }}>
+            Reaches the owner directly · {c.questionsPerDay - c.questionsUsed} question
+            {c.questionsPerDay - c.questionsUsed === 1 ? '' : 's'} left today
+          </div>
+        ) : (
+          <div style={{ fontSize: 9.5, color: '#B5AFA2', marginTop: 6 }}>
+            Goes to {c.reachesName || 'the listing agent'} — never to the owner
           </div>
         )}
       </div>
@@ -697,7 +805,7 @@ function Card({ r, focused, innerRef, onOpen, onAct }: {
 function DetailModal({ refId, onClose, onAct }: {
   refId: string
   onClose: () => void
-  onAct: (kind: 'request-availability' | 'request-location' | 'comment', r: Listing) => void
+  onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
 }) {
   const [d, setD] = useState<any>(null)
   const [e, setE] = useState<string | null>(null)
@@ -799,27 +907,30 @@ function DetailModal({ refId, onClose, onAct }: {
                 {d.hasViewingLocation ? 'viewing location on file' : 'no viewing location on file'}
               </div>
 
+              {/* Same verdict the cards use, so the modal cannot offer a
+                  button the card has greyed out. */}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {d.isMine ? (
-                  <button onClick={() => onAct('request-availability', d)} style={{ ...btn, background: GREEN, color: '#FFF', border: 'none' }}>
-                    Ask the owner
+                <button
+                  onClick={() => d.contact?.canAsk !== false && onAct('request-availability', d)}
+                  disabled={d.contact?.canAsk === false}
+                  title={d.contact?.reason || undefined}
+                  style={{
+                    ...btn, border: 'none',
+                    background: d.contact?.canAsk === false ? '#F1EFEA' : (d.isMine ? GREEN : A),
+                    color: d.contact?.canAsk === false ? '#B5AFA2' : '#FFF',
+                    cursor: d.contact?.canAsk === false ? 'not-allowed' : 'pointer',
+                  }}>
+                  {d.isMine ? 'Ask the owner' : 'Request availability'}
+                </button>
+                {!d.isMine && !d.hasViewingLocation && d.contact?.canAsk !== false && (
+                  <button onClick={() => onAct('request-location', d)} style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }}>
+                    Request viewing location
                   </button>
-                ) : (
-                  <>
-                    <button onClick={() => onAct('request-availability', d)} style={{ ...btn, background: A, color: '#FFF', border: 'none' }}>
-                      Request availability
-                    </button>
-                    {!d.hasViewingLocation && (
-                      <button onClick={() => onAct('request-location', d)} style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }}>
-                        Request viewing location
-                      </button>
-                    )}
-                    <button onClick={() => onAct('comment', d)} style={{ ...btn, background: '#FFF', color: '#888', border: '1px solid #E9E5DC' }}>
-                      Comment
-                    </button>
-                  </>
                 )}
               </div>
+              {d.contact?.canAsk === false && d.contact?.reason && (
+                <div style={{ fontSize: 11, color: '#B08968', marginTop: 8 }}>{d.contact.reason}</div>
+              )}
             </div>
           </>
         )}
@@ -886,13 +997,16 @@ function Toast({ kind, text, onClose }: { kind: 'ok' | 'err' | 'info'; text: str
   )
 }
 
+// minHeight on both: 30px is the floor for a reliable tap on a phone, and the
+// village chips sat at 27px. Desktop is unaffected — the padding already
+// exceeded it there.
 const btn: React.CSSProperties = {
-  padding: '6px 11px', borderRadius: 7, fontSize: 11, fontFamily: F,
-  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+  padding: '7px 11px', borderRadius: 7, fontSize: 11, fontFamily: F,
+  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 32,
 }
 const chip: React.CSSProperties = {
-  padding: '4px 9px', borderRadius: 999, fontSize: 11, fontFamily: F,
-  border: '1px solid', cursor: 'pointer', background: '#FFF',
+  padding: '6px 11px', borderRadius: 999, fontSize: 11, fontFamily: F,
+  border: '1px solid', cursor: 'pointer', background: '#FFF', minHeight: 32,
 }
 const mapBox: React.CSSProperties = {
   width: '100%', borderRadius: 14, overflow: 'hidden',

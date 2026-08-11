@@ -20,3 +20,9 @@ node_modules
 
 tests/screenshots/
 tsconfig.tsbuildinfo
+
+# Local agent tooling — this repo is public, and these hold local paths,
+# machine config and the backend address. They are not part of the app.
+.claude/
+.mcp.json
+CLAUDE.md

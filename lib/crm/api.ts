@@ -23,7 +23,13 @@ export async function crmJson(path: string, method: string, body: any) {
 }
 
 export type Reveals = { used: number; limit: number }
+// 'board' is a whitelisted board-only agent: they authenticate against the
+// same agents table but their token is refused by every owner-data route, so
+// the shell must not offer them Inventory or Owners either.
+export type NavKey = 'dashboard' | 'inventory' | 'board' | 'owners' | 'earnings' | 'admin'
 export type Me = {
   id: number; username: string; email: string; name: string;
-  role: 'admin' | 'agent' | 'viewer'; daily_reveal_limit: number
+  role: 'admin' | 'agent' | 'viewer' | 'board'
+  daily_reveal_limit: number
+  boardOnly?: boolean
 }

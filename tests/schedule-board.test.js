@@ -142,22 +142,44 @@ async function run() {
   if (refs.length) ok('cards rendered', `${new Set(refs).size} refs`)
   else no('cards rendered', 'no #2906-xxx ref found in the DOM')
 
-  // ── 3. Fall A vs Fall B button sets ───────────────────────────────────────
+  // ── 3. card action set ────────────────────────────────────────────────────
+  // Every card now carries the same three buttons — Availability / Ask / Book.
+  // Fall A vs Fall B is no longer a different button set but a different
+  // destination, and the server decides which of them are enabled, so what
+  // this checks is: the buttons exist, and disabled ones carry a reason.
   const btns = await page.evaluate(() => {
-    const t = Array.from(document.querySelectorAll('button')).map(b => b.innerText.trim())
-    const c = l => t.filter(x => x === l).length
-    return { askOwner: c('Ask owner'), availability: c('Availability'), comment: c('Comment'), location: c('Location') }
+    const all = Array.from(document.querySelectorAll('button'))
+    const c = l => all.filter(x => x.innerText.trim() === l).length
+    const dis = l => all.filter(x => x.innerText.trim() === l && x.disabled).length
+    return {
+      availability: c('Availability'), ask: c('Ask'), book: c('Book'), location: c('Location'),
+      availabilityDisabled: dis('Availability'), askDisabled: dis('Ask'),
+      // A disabled button must explain itself — title is what the card sets.
+      disabledWithoutReason: all.filter(x =>
+        x.disabled && ['Availability', 'Ask'].includes(x.innerText.trim()) && !x.title.trim()).length,
+    }
   })
-  // NB: the badge is text-transform:uppercase, and innerText reports the
-  // *rendered* text — so it reads "YOURS", not "Yours".
   const yours = await page.evaluate(() =>
     Array.from(document.querySelectorAll('span')).filter(s => s.innerText.trim().toUpperCase() === 'YOURS').length)
-  if (btns.askOwner > 0 && yours > 0) ok('Fall A cards present', `${yours} "Yours" badges, ${btns.askOwner} "Ask owner"`)
-  else no('Fall A cards present', `askOwner=${btns.askOwner} yours=${yours}`)
-  if (btns.availability > 0 && btns.comment > 0) ok('Fall B cards present', `${btns.availability} Availability / ${btns.comment} Comment / ${btns.location} Location`)
-  else no('Fall B cards present', JSON.stringify(btns))
-  if (btns.askOwner === yours) ok('Ask-owner count matches Yours badges')
-  else no('Ask-owner count matches Yours badges', `${btns.askOwner} vs ${yours}`)
+
+  if (btns.availability > 0 && btns.ask > 0 && btns.book > 0)
+    ok('card actions present', `${btns.availability} Availability / ${btns.ask} Ask / ${btns.book} Book / ${btns.location} Location`)
+  else no('card actions present', JSON.stringify(btns))
+
+  if (btns.availability === btns.book) ok('every card can be booked', `${btns.book} Book buttons on ${btns.availability} cards`)
+  else no('every card can be booked', `${btns.book} Book vs ${btns.availability} Availability`)
+
+  if (yours > 0) ok('Fall A cards present', `${yours} "Yours" badges`)
+  else no('Fall A cards present', `yours=${yours}`)
+
+  // The greying is the point of the contact block — if nothing is ever
+  // disabled the server verdict is not reaching the card.
+  if (btns.availabilityDisabled > 0)
+    ok('do-not-contact greying reaches the card', `${btns.availabilityDisabled} Availability disabled, ${btns.askDisabled} Ask disabled`)
+  else no('do-not-contact greying reaches the card', 'no disabled contact button rendered')
+
+  if (btns.disabledWithoutReason === 0) ok('every disabled button states a reason')
+  else no('every disabled button states a reason', `${btns.disabledWithoutReason} silent`)
 
   // ── 4. firewall: DOM ──────────────────────────────────────────────────────
   const html = await page.content()
@@ -360,18 +382,76 @@ async function run() {
   await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-desktop.png`), fullPage: false })
 
   // ── 7. filters + URL state ────────────────────────────────────────────────
+  // Beds moved into a dropdown (the public-site filter idiom), so the chip has
+  // to be opened before it can be clicked.
+  // Exact match first, then prefix — several triggers restate their own state
+  // ("Beds" becomes "2+ beds") or carry a count badge ("Filters 2 · 174
+  // listings"), and an exact-only matcher fails on both.
+  const clickByText = (label) => page.evaluate(l => {
+    const all = Array.from(document.querySelectorAll('button'))
+    const b = all.find(x => x.innerText.trim() === l)
+      || all.find(x => x.innerText.trim().toLowerCase().startsWith(l.toLowerCase()))
+      || all.find(x => x.innerText.trim().toLowerCase().includes(l.toLowerCase()))
+    if (!b) throw new Error(`no button "${l}"`)
+    b.click()
+  }, label)
+
   try {
     const before = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
-    await page.evaluate(() => {
-      const b = Array.from(document.querySelectorAll('button')).find(x => x.innerText.trim() === '2+')
-      b.click()
-    })
-    await page.waitForFunction(u => location.search.includes('beds=2'), { timeout: 15000 })
+    await clickByText('Beds')
+    await new Promise(r => setTimeout(r, 300))
+    await clickByText('2+')
+    await page.waitForFunction(() => location.search.includes('beds=2'), { timeout: 15000 })
     await new Promise(r => setTimeout(r, 2500))
     const after = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
     if (Number(after) <= Number(before)) ok('beds filter narrows + URL state', `${before} → ${after}, ?beds=2`)
     else no('beds filter narrows + URL state', `${before} → ${after}`)
   } catch (e) { no('beds filter narrows + URL state', e.message) }
+
+  // ── 7b. the search box ────────────────────────────────────────────────────
+  // New control, and the one Kev asked for — it filters locally on ref, town
+  // and area, and mirrors into ?q=.
+  try {
+    const box = await page.$('input[placeholder*="Search ref"]')
+    if (!box) throw new Error('no search input rendered')
+    await clickByText('Beds'); await new Promise(r => setTimeout(r, 200))
+    await clickByText('2+')   // clear the beds filter again
+    await new Promise(r => setTimeout(r, 1200))
+
+    const all = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
+    await box.click()
+    await box.type('Sliema', { delay: 25 })
+    await page.waitForFunction(() => location.search.includes('q=Sliema'), { timeout: 10000 })
+    await new Promise(r => setTimeout(r, 900))
+    const hit = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
+
+    // Narrowing alone is weak — it would also pass if the filter dropped
+    // everything. Count the rendered refs and require each of their cards to
+    // actually mention the needle.
+    const check = await page.evaluate(() => {
+      const refs = Array.from(document.querySelectorAll('*'))
+        .filter(e => e.children.length === 0 && /^#?2906-\d+$/.test((e.textContent || '').trim()))
+      const cards = refs.map(e => e.closest('div[style*="grid"] > div') || e.parentElement?.parentElement)
+        .filter(Boolean)
+      const matching = cards.filter(c => /sliema/i.test(c.textContent || '')).length
+      return { cards: cards.length, matching }
+    })
+
+    if (Number(hit) > 0 && Number(hit) < Number(all) && check.cards > 0 && check.matching === check.cards)
+      ok('search box filters + ?q= state', `${all} → ${hit} on "Sliema", ${check.matching}/${check.cards} cards genuine`)
+    else no('search box filters + ?q= state', `${all} → ${hit}, ${check.matching}/${check.cards} cards matched`)
+
+    // Clearing restores the full set.
+    await page.evaluate(() => {
+      const i = document.querySelector('input[placeholder*="Search ref"]')
+      const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+      set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await new Promise(r => setTimeout(r, 1200))
+    const back = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
+    if (Number(back) === Number(all)) ok('search clears back to full set', `${back} listings`)
+    else no('search clears back to full set', `${back} vs ${all}`)
+  } catch (e) { no('search box filters + ?q= state', e.message) }
 
   // ── 8. village chip filter ────────────────────────────────────────────────
   try {
@@ -428,12 +508,13 @@ async function run() {
     skip('Fall A button click', 'backend is armed (SCHEDULE_BOARD_FALL_A_LIVE=1) — clicking would message a real owner')
   } else try {
     const clicked = await page.evaluate(() => {
-      const b = Array.from(document.querySelectorAll('button')).find(x => x.innerText.trim() === 'Ask owner')
+      const b = Array.from(document.querySelectorAll('button'))
+        .find(x => x.innerText.trim() === 'Availability' && !x.disabled)
       if (!b) return false
       b.click()
       return true
     })
-    if (!clicked) throw new Error('no "Ask owner" button')
+    if (!clicked) throw new Error('no enabled "Availability" button')
     // The optimistic "Contacting…" toast is replaced by the result toast, which
     // itself self-destructs after 5.2s — so wait for the *result* wording and
     // read it in the same breath, no sleep in between.
@@ -450,24 +531,204 @@ async function run() {
     await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-falla-toast.png`) })
   } catch (e) { no('Fall A dry run wired', e.message) }
 
-  // ── 11. mobile ────────────────────────────────────────────────────────────
+  // ── 10b. Book dialog ──────────────────────────────────────────────────────
+  // Opens and validates only. Booking writes a real clients + property_viewings
+  // row, so the run stops at the point where it would submit.
   try {
-    await page.setViewport({ width: 390, height: 844 })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await new Promise(r => setTimeout(r, 400))
+    await clickByText('Book')
+    await page.waitForFunction(() => /Book a viewing/i.test(document.body.innerText), { timeout: 10000 })
+    const fields = await page.evaluate(() => {
+      const labels = Array.from(document.querySelectorAll('label')).map(l => l.innerText.trim().toLowerCase())
+      return {
+        labels,
+        hasDate: !!document.querySelector('input[type="date"]'),
+        hasAgentSelect: !!document.querySelector('select'),
+        relations: Array.from(document.querySelectorAll('button'))
+          .filter(b => ['Couple', 'Family', 'Friends', 'Colleagues', 'Single'].includes(b.innerText.trim())).length,
+      }
+    })
+    const want = ['clients', 'ages', 'pets', 'jobs', 'relation']
+    const missing = want.filter(w => !fields.labels.some(l => l.startsWith(w)))
+    if (!missing.length && fields.hasDate && fields.hasAgentSelect && fields.relations === 5)
+      ok('Book dialog complete', `Clients/Ages/Pets/Jobs/Relation + date + agent picker + ${fields.relations} relation chips`)
+    else no('Book dialog complete', `missing=${missing.join(',') || 'none'} date=${fields.hasDate} agent=${fields.hasAgentSelect} relations=${fields.relations}`)
+
+    // Required-field guard, checked without creating anything.
+    await clickByText('Book viewing')
+    await new Promise(r => setTimeout(r, 700))
+    const guarded = await page.evaluate(() => /Who is viewing|at least one name/i.test(document.body.innerText))
+    if (guarded) ok('Book dialog validates before writing')
+    else no('Book dialog validates before writing', 'empty submit produced no error')
+
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-book-dialog.png`) })
+    await page.keyboard.press('Escape')
+    await new Promise(r => setTimeout(r, 500))
+  } catch (e) { no('Book dialog complete', e.message) }
+
+  // ── 10c. Ask dialog → Gemini preview ──────────────────────────────────────
+  // /ask/preview only rewrites and returns; it sends nothing and burns no
+  // daily quota. The run never touches "Send now" / "Queue for 08:00".
+  try {
+    await clickByText('Ask')
+    await page.waitForFunction(() => /Ask a question/i.test(document.body.innerText), { timeout: 10000 })
+    await page.type('textarea', 'pets ok??? and when free. my client pays 1400 max btw', { delay: 12 })
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-ask-compose.png`) })
+
+    await clickByText('Preview message')
+    // The heading lives in the dialog frame and flips the instant state
+    // changes — while the compose panel is still exiting and its textarea is
+    // still the only one in the DOM. Waiting on the heading (or on a textarea
+    // count) reads the raw note back. Wait for the preview panel's OWN label.
+    await page.waitForFunction(
+      () => /This is what .* receives/i.test(document.body.innerText),
+      { timeout: 45000 })
+    await new Promise(r => setTimeout(r, 400))
+    const prev = await page.evaluate(() => {
+      const ta = document.querySelector('textarea')
+      return {
+        text: ta ? ta.value : '',
+        // The confirm button must exist and must NOT be a second "Preview".
+        confirm: Array.from(document.querySelectorAll('button'))
+          .map(b => b.innerText.trim()).find(t => /Send now|Queue for 08:00/.test(t)) || null,
+        droppedNotice: /Left out of the message/i.test(document.body.innerText),
+      }
+    })
+    const leaked = /1400/.test(prev.text)
+    if (prev.text && prev.confirm && !leaked)
+      ok('Ask preview rewrites before sending', `"${prev.text.slice(0, 70)}…" → button "${prev.confirm}"`)
+    else no('Ask preview rewrites before sending', `text="${prev.text.slice(0, 60)}" confirm=${prev.confirm} budgetLeaked=${leaked}`)
+
+    if (prev.droppedNotice) ok('Ask preview reports what it dropped', 'client budget stripped and disclosed')
+    else no('Ask preview reports what it dropped', 'no "Left out of the message" notice')
+
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-ask-preview.png`) })
+    await page.keyboard.press('Escape')   // deliberately NOT confirming
+    await new Promise(r => setTimeout(r, 500))
+  } catch (e) { no('Ask preview rewrites before sending', e.message) }
+
+  // ── 11. mobile ────────────────────────────────────────────────────────────
+  // "Muss mobile genau so gut sein" — so this checks the things that actually
+  // break on a phone: overflow, the collapsed filter row, tap target size, and
+  // that a dialog is reachable and dismissible inside 844px.
+  try {
+    await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true })
     await page.goto(`${BASE}/schedule-board`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForFunction(() => /\d+\s+listings?/.test(document.body.innerText), { timeout: 60000 })
+
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)
     await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-mobile.png`) })
     if (!wide) ok('mobile: no horizontal overflow')
     else no('mobile: no horizontal overflow', `scrollWidth ${await page.evaluate(() => document.documentElement.scrollWidth)}`)
+
+    // The filter row must be collapsed behind the toggle, not spilling.
+    const collapsed = await page.evaluate(() => {
+      const t = Array.from(document.querySelectorAll('button')).find(b => /^Filters/.test(b.innerText.trim()))
+      if (!t) return { ok: false, why: 'no Filters toggle' }
+      const search = document.querySelector('input[placeholder*="Search ref"]')
+      const visible = search && search.getBoundingClientRect().height > 0
+      return { ok: !visible, why: visible ? 'search input visible before opening' : '' }
+    })
+    if (collapsed.ok) ok('mobile: filters collapsed behind toggle')
+    else no('mobile: filters collapsed behind toggle', collapsed.why)
+
+    await clickByText('Filters')
+    await new Promise(r => setTimeout(r, 500))
+    const opened = await page.evaluate(() => {
+      const s = document.querySelector('input[placeholder*="Search ref"]')
+      if (!s) return { ok: false, why: 'search never appeared' }
+      const r = s.getBoundingClientRect()
+      return { ok: r.height >= 34 && r.right <= window.innerWidth + 1, why: `h=${Math.round(r.height)} right=${Math.round(r.right)}` }
+    })
+    if (opened.ok) ok('mobile: filter panel opens in-bounds', opened.why)
+    else no('mobile: filter panel opens in-bounds', opened.why)
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-mobile-filters.png`) })
+
+    // Tap targets: anything below ~30px is a miss on a phone.
+    const small = await page.evaluate(() => Array.from(document.querySelectorAll('button'))
+      .filter(b => { const r = b.getBoundingClientRect(); return r.height > 0 && r.height < 30 && b.innerText.trim() })
+      .map(b => `${b.innerText.trim().slice(0, 14)}:${Math.round(b.getBoundingClientRect().height)}`))
+    if (!small.length) ok('mobile: no undersized tap targets')
+    else no('mobile: no undersized tap targets', small.slice(0, 6).join(' '))
+
+    // A dialog on a phone is a bottom sheet — it must fit and close.
+    await clickByText('Filters')   // collapse again so Book is reachable
+    await new Promise(r => setTimeout(r, 400))
+    await clickByText('Book')
+    await page.waitForFunction(() => /Book a viewing/i.test(document.body.innerText), { timeout: 10000 })
+    const sheet = await page.evaluate(() => {
+      const h = Array.from(document.querySelectorAll('h2')).find(x => /Book a viewing/i.test(x.innerText))
+      const box = h && h.closest('div[class*="fixed"]')
+      if (!box) return { ok: false, why: 'sheet not found' }
+      const r = box.getBoundingClientRect()
+      return { ok: r.left >= -1 && r.right <= window.innerWidth + 1 && r.height <= window.innerHeight + 1,
+               why: `${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.left)}` }
+    })
+    if (sheet.ok) ok('mobile: dialog fits the viewport', sheet.why)
+    else no('mobile: dialog fits the viewport', sheet.why)
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-mobile-book.png`) })
+    await page.keyboard.press('Escape')
+    await new Promise(r => setTimeout(r, 400))
   } catch (e) { no('mobile: no horizontal overflow', e.message) }
 
+  // ── 11b. role-aware menu ──────────────────────────────────────────────────
+  // A whitelisted board-only agent must see the Board and nothing else — the
+  // other entries lead to owner data their token is refused for anyway.
+  if (!process.env.BOARD_TOKEN) {
+    skip('board-only menu', 'no BOARD_TOKEN supplied')
+  } else try {
+    await page.setViewport({ width: 1440, height: 1000 })
+    await page.deleteCookie({ name: 'crm_session', domain: COOKIE_DOMAIN, path: '/' })
+    await page.setCookie({ name: 'crm_session', value: process.env.BOARD_TOKEN, domain: COOKIE_DOMAIN, path: '/' })
+    await page.goto(`${BASE}/schedule-board`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForFunction(() => /\d+\s+listings?/.test(document.body.innerText), { timeout: 60000 })
+    // Nav rows render as "<icon> Label" in one div, so match on the label
+    // rather than the whole string.
+    const nav = await page.evaluate(() => {
+      const aside = document.querySelector('aside')
+      if (!aside) return null
+      const LABELS = ['Dashboard', 'Inventory', 'Board', 'Owners', 'Earnings', 'Admin']
+      const rows = Array.from(aside.querySelectorAll('div'))
+        .filter(d => d.children.length <= 2 && d.innerText.trim().length < 24)
+      const seen = []
+      for (const l of LABELS) {
+        if (rows.some(d => new RegExp(`(^|\\s)${l}$`, 'i').test(d.innerText.trim()))) seen.push(l)
+      }
+      return seen
+    })
+    const forbidden = (nav || []).filter(t => /INVENTORY|OWNERS/i.test(t))
+    if (nav && nav.length && !forbidden.length) ok('board-only menu', `sees only: ${nav.join(', ')}`)
+    else no('board-only menu', `nav=${JSON.stringify(nav)} forbidden=${forbidden.join(',')}`)
+    await page.screenshot({ path: path.join(SHOTS, `${PREFIX}-board-only-nav.png`) })
+  } catch (e) { no('board-only menu', e.message) }
+
   // ── 12. console / network hygiene ─────────────────────────────────────────
+  // The browser Maps key is HTTP-referrer restricted to crm.2906.estate, so it
+  // can never authorise http://crm.localhost — that is the restriction working,
+  // not a regression. tests/probe_key_real_origin.js is what checks the key
+  // against the genuine origin; here it is reported and set aside.
+  const mapsRefererErrors = consoleErrors.filter(t => /RefererNotAllowedMapError/i.test(t))
   const realErrors = consoleErrors.filter(t =>
+    !/RefererNotAllowedMapError/i.test(t) &&
+    // The board-token run deliberately provokes one 403 on /api/crm/me; the
+    // browser logs it as a console error too, with no URL in the text.
+    !(process.env.BOARD_TOKEN && /status of 403 \(Forbidden\)/i.test(t)) &&
     !/favicon|Download the React DevTools|preload|Failed to load resource: the server responded with a status of 40[34].*(png|jpg|jpeg|webp)/i.test(t))
   if (!realErrors.length) ok('no console errors')
   else no('no console errors', realErrors.slice(0, 4).join(' | '))
-  if (!badResponses.length) ok('no failing /api/crm calls')
-  else no('no failing /api/crm calls', badResponses.slice(0, 4).join(' | '))
+  if (mapsRefererErrors.length) {
+    skip('Maps key authorises this origin',
+      'referrer-restricted to crm.2906.estate — localhost cannot be authorised; use tests/probe_key_real_origin.js')
+  }
+
+  // A board-only token is REFUSED by /api/crm/me on purpose; the shell then
+  // falls back to the board's own /me. Counting that 403 as a failure would
+  // mean the separation working looks like a bug.
+  const expected403 = /\/api\/crm\/me$/
+  const realBad = badResponses.filter(r => !(r.startsWith('403') && expected403.test(r.split(' ')[1] || '')))
+  if (!realBad.length) ok('no failing /api/crm calls')
+  else no('no failing /api/crm calls', realBad.slice(0, 4).join(' | '))
 
   await browser.close()
 

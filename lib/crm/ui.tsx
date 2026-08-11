@@ -1,10 +1,17 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { crmFetch, crmJson, type Me, type Reveals } from './api'
+import { crmFetch, crmJson, type Me, type NavKey, type Reveals } from './api'
 
-// ── design tokens (verbatim from the approved mockup) ────────────────────────
-export const A = 'rgba(212,137,26,1)', AD = 'rgba(212,137,26,0.10)', AB = 'rgba(212,137,26,0.28)'
+// ── design tokens ────────────────────────────────────────────────────────────
+// These are the brand values from tailwind.config.ts / globals.css, not the
+// mockup's warm orange. The CRM is the same product as 2906.estate and should
+// not read as a different one: gold #B8953F, navy #1B2A4A.
+//
+// A / AD / AB stay the accent triple (solid / 10% fill / 28% border) so every
+// existing call site keeps working — only the hue moved.
+export const A = 'rgba(184,149,63,1)', AD = 'rgba(184,149,63,0.10)', AB = 'rgba(184,149,63,0.28)'
+export const NAVY = '#1B2A4A', NAVY_LIGHT = '#2a3d66'
 export const F = "var(--font-bricolage), 'Bricolage Grotesque', Arial, sans-serif"
 export const FM = "var(--font-jetbrains), 'JetBrains Mono', 'Courier New', monospace"
 
@@ -88,6 +95,8 @@ export function Bar({ pct }: { pct: number }) {
 type CrmCtx = {
   me: Me | null
   reveals: Reveals
+  /** Menu items this account may see. Comes from the server, not inferred here. */
+  nav: NavKey[]
   doReveal: (entityType: string, entityId: number, propertyId?: number) => Promise<string>
   logout: () => Promise<void>
 }
@@ -98,17 +107,36 @@ export const useCrm = () => {
   return c
 }
 
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'owners', 'earnings', 'admin']
+
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [me, setMe] = useState<Me | null>(null)
   const [reveals, setReveals] = useState<Reveals>({ used: 0, limit: 50 })
+  const [nav, setNav] = useState<NavKey[]>(FULL_NAV)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
     let alive = true
+    // Staff bootstrap from /me. A board-only agent gets 403 there by design —
+    // that router serves owner data — so fall back to the board's own /me,
+    // which also states which menu items they are allowed.
     crmFetch('me')
-      .then(d => { if (!alive) return; setMe(d.agent); setReveals(d.reveals); setReady(true) })
-      .catch(() => { router.replace('/login') })
+      .then(d => {
+        if (!alive) return
+        setMe(d.agent); setReveals(d.reveals); setNav(FULL_NAV); setReady(true)
+      })
+      .catch(async (e: any) => {
+        if (!alive) return
+        if (e?.status !== 403) { router.replace('/login'); return }
+        try {
+          const d = await crmFetch('schedule-board/me')
+          if (!alive) return
+          setMe(d.agent); setReveals(d.reveals || { used: 0, limit: 0 })
+          setNav((d.nav as NavKey[]) || ['board'])
+          setReady(true)
+        } catch { router.replace('/login') }
+      })
     return () => { alive = false }
   }, [router])
 
@@ -128,7 +156,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F6F4EF', color: A, fontFamily: F, fontWeight: 800, fontSize: 22 }}>2906</div>
     )
   }
-  return <Ctx.Provider value={{ me, reveals, doReveal, logout }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ me, reveals, nav, doReveal, logout }}>{children}</Ctx.Provider>
 }
 
 // ── responsive hook ──────────────────────────────────────────────────────────
@@ -179,13 +207,13 @@ export function Masked({ entityType, entityId, masked, hasValue, propertyId, siz
 }
 
 // ── app shell (sidebar / header / mobile bottom nav) ─────────────────────────
-const NAV = [
-  { icon: '▦', label: 'Dashboard', href: '/' },
-  { icon: '≡', label: 'Inventory', href: '/inventory' },
-  { icon: '◈', label: 'Board', href: '/schedule-board' },
-  { icon: '◎', label: 'Owners', href: '/owners' },
-  { icon: '€', label: 'Earnings', href: '/earnings', disabled: true },
-  { icon: '⚙', label: 'Admin', href: '/admin', disabled: true },
+const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: boolean }[] = [
+  { key: 'dashboard', icon: '▦', label: 'Dashboard', href: '/' },
+  { key: 'inventory', icon: '≡', label: 'Inventory', href: '/inventory' },
+  { key: 'board',     icon: '◈', label: 'Board',     href: '/schedule-board' },
+  { key: 'owners',    icon: '◎', label: 'Owners',    href: '/owners' },
+  { key: 'earnings',  icon: '€', label: 'Earnings',  href: '/earnings', disabled: true },
+  { key: 'admin',     icon: '⚙', label: 'Admin',     href: '/admin', disabled: true },
 ]
 
 export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
@@ -193,40 +221,53 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
   const isMobile = useIsMobile()
   const pathname = usePathname() || '/'
   const router = useRouter()
-  const { me, reveals, logout } = useCrm()
+  const { me, reveals, nav, logout } = useCrm()
   const active = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
-  const warn = reveals.used >= 40 && reveals.used < reveals.limit
+  // A board-only agent has no reveal budget because there is nothing for them
+  // to reveal — hide the meter rather than show a meaningless 0/0.
+  const hasReveals = reveals.limit > 0
+  const warn = hasReveals && reveals.used >= 40 && reveals.used < reveals.limit
   const pct = Math.min(100, Math.round((reveals.used / Math.max(1, reveals.limit)) * 100))
+  // The server decides what this account may see. Filtering here is cosmetic —
+  // the routes themselves refuse a board token — but a menu that offers a
+  // door you cannot open is a bug in its own right.
+  const items = NAV.filter(i => nav.includes(i.key))
+  const roleLabel = me?.role === 'admin' ? 'Admin'
+    : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
 
   return (
     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: '#F6F4EF', fontFamily: F, color: '#1A1A1A', overflow: 'hidden', fontSize: 13 }}>
       {!isMobile && (
-        <aside style={{ width: 190, background: '#131313', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-          <div style={{ padding: '26px 22px 20px', borderBottom: '1px solid #222' }}>
+        <aside style={{ width: 190, background: NAVY, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+          <div style={{ padding: '26px 22px 20px', borderBottom: `1px solid ${NAVY_LIGHT}` }}>
             <div style={{ fontFamily: F, fontSize: 34, fontWeight: 800, color: A, letterSpacing: '-0.03em', lineHeight: 1 }}>2906</div>
-            <div style={{ fontSize: 9, color: '#444', marginTop: 5, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ESTATE · CRM</div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 5, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ESTATE · CRM</div>
           </div>
           <nav style={{ padding: '12px 0', flex: 1 }}>
-            {NAV.map(item => {
+            {items.map(item => {
               const on = active(item.href)
               return (
                 <div key={item.label} onClick={() => !item.disabled && router.push(item.href)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 22px', cursor: item.disabled ? 'default' : 'pointer', background: on ? 'rgba(212,137,26,0.1)' : 'transparent', borderLeft: on ? `2px solid ${A}` : '2px solid transparent', color: item.disabled ? '#333' : on ? A : '#555', fontSize: 12, fontWeight: on ? 700 : 400, letterSpacing: '0.05em', textTransform: 'uppercase', transition: 'all 0.12s' }}>
-                  <span style={{ fontSize: 15, opacity: on ? 1 : 0.4 }}>{item.icon}</span>{item.label}
-                  {item.disabled && <span style={{ fontSize: 8, marginLeft: 'auto', color: '#333' }}>soon</span>}
+                  style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 22px', cursor: item.disabled ? 'default' : 'pointer', background: on ? AD : 'transparent', borderLeft: on ? `2px solid ${A}` : '2px solid transparent', color: item.disabled ? 'rgba(255,255,255,0.22)' : on ? A : 'rgba(255,255,255,0.62)', fontSize: 12, fontWeight: on ? 700 : 400, letterSpacing: '0.05em', textTransform: 'uppercase', transition: 'all 0.12s' }}>
+                  <span style={{ fontSize: 15, opacity: on ? 1 : 0.5 }}>{item.icon}</span>{item.label}
+                  {item.disabled && <span style={{ fontSize: 8, marginLeft: 'auto', color: 'rgba(255,255,255,0.22)' }}>soon</span>}
                 </div>
               )
             })}
           </nav>
-          <div style={{ padding: '16px 22px', borderTop: '1px solid #222' }}>
-            <div style={{ fontSize: 9, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Signed in</div>
-            <div style={{ color: A, fontSize: 13, fontWeight: 700, marginTop: 3 }}>{me?.name || me?.username} · {me?.role === 'admin' ? 'Admin' : me?.role === 'agent' ? 'Agent' : 'Viewer'}</div>
-            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ flex: 1, height: 2, background: '#222', borderRadius: 1 }}><div style={{ width: `${pct}%`, height: '100%', background: warn ? '#EF4444' : A, borderRadius: 1 }} /></div>
-              <span style={{ fontSize: 10, color: '#555', fontFamily: FM }}>{reveals.used}/{reveals.limit}</span>
-            </div>
-            <div style={{ fontSize: 9, color: '#3a3a3a', marginTop: 2 }}>reveals today</div>
-            <div onClick={logout} style={{ marginTop: 12, fontSize: 10, color: '#555', cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}>↩ Sign out</div>
+          <div style={{ padding: '16px 22px', borderTop: `1px solid ${NAVY_LIGHT}` }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Signed in</div>
+            <div style={{ color: A, fontSize: 13, fontWeight: 700, marginTop: 3 }}>{me?.name || me?.username} · {roleLabel}</div>
+            {hasReveals && (
+              <>
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ flex: 1, height: 2, background: NAVY_LIGHT, borderRadius: 1 }}><div style={{ width: `${pct}%`, height: '100%', background: warn ? '#EF4444' : A, borderRadius: 1 }} /></div>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: FM }}>{reveals.used}/{reveals.limit}</span>
+                </div>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>reveals today</div>
+              </>
+            )}
+            <div onClick={logout} style={{ marginTop: 12, fontSize: 10, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}>↩ Sign out</div>
           </div>
         </aside>
       )}
@@ -264,10 +305,10 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
 
       {isMobile && (
         <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFF', borderTop: '1px solid #EDEBE5', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom,0px)', boxShadow: '0 -4px 20px rgba(0,0,0,0.07)' }}>
-          {NAV.map(item => {
+          {items.map(item => {
             const on = active(item.href)
             return (
-              <button key={item.label} onClick={() => !item.disabled && router.push(item.href)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0 8px', border: 'none', cursor: 'pointer', background: 'transparent', color: item.disabled ? '#DDD' : on ? A : '#BBB' }}>
+              <button key={item.label} onClick={() => !item.disabled && router.push(item.href)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0 8px', border: 'none', cursor: 'pointer', background: 'transparent', color: item.disabled ? '#DDD' : on ? A : NAVY + '66' }}>
                 <span style={{ fontSize: 19, lineHeight: 1 }}>{item.icon}</span>
                 <span style={{ fontSize: 9, marginTop: 4, fontFamily: F, fontWeight: on ? 700 : 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{item.label}</span>
                 {on && <div style={{ width: 4, height: 4, borderRadius: '50%', background: A, marginTop: 3 }} />}
