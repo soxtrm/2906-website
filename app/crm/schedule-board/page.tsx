@@ -39,6 +39,20 @@ const EMPTY: Filters = { beds: '', baths: '', min: '', max: '', type: '', towns:
 
 type Rect = { north: number; south: number; east: number; west: number }
 
+// The drawn area travels in the URL as rect=north,south,east,west so a shared
+// link restores the box, not just the filter row.
+function rectToParam(r: Rect): string {
+  return [r.north, r.south, r.east, r.west].map(n => n.toFixed(5)).join(',')
+}
+function parseRect(s: string | null): Rect | null {
+  if (!s) return null
+  const p = s.split(',').map(Number)
+  if (p.length !== 4 || p.some(n => !Number.isFinite(n))) return null
+  const [north, south, east, west] = p
+  if (north <= south || east <= west) return null
+  return { north, south, east, west }
+}
+
 // ── page ────────────────────────────────────────────────────────────────────
 export default function ScheduleBoardPage() {
   return <CrmProvider><Board /></CrmProvider>
@@ -59,7 +73,7 @@ function Board() {
     type: params.get('type') || '',
     towns: (params.get('towns') || '').split(',').map(s => s.trim()).filter(Boolean),
   }))
-  const [rect, setRect] = useState<Rect | null>(null)
+  const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
   const [rows, setRows] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
@@ -82,9 +96,10 @@ function Board() {
     if (f.max) q.set('max', f.max)
     if (f.type) q.set('type', f.type)
     if (f.towns.length) q.set('towns', f.towns.join(','))
+    if (rect) q.set('rect', rectToParam(rect))
     const qs = q.toString()
     router.replace(qs ? `/schedule-board?${qs}` : '/schedule-board', { scroll: false })
-  }, [f, router])
+  }, [f, rect, router])
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   // Server-side filters are the numeric/enum ones. Town selection is applied
@@ -280,9 +295,14 @@ function Board() {
 }
 
 // ── Google map ──────────────────────────────────────────────────────────────
-// Loaded lazily via the official loader script. The drawing library gives us
-// the rectangle tool; there is exactly one rectangle at a time and it can be
-// cleared and redrawn.
+// Loaded lazily via the official loader script.
+//
+// The rectangle tool is hand-rolled from map mouse events. google.maps.drawing
+// .DrawingManager was REMOVED in Maps JavaScript API 3.65 — asking for it does
+// not degrade, it throws, and an uncaught throw here takes the whole board down
+// with it. google.maps.Rectangle is still supported, so the box is drawn by
+// anchoring on mousedown and resizing until mouseup.
+// There is exactly one rectangle at a time and it can be cleared and redrawn.
 function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile }: {
   items: Array<Listing & { lat: number | null; lng: number | null; tkey: string }>
   rect: Rect | null
@@ -296,7 +316,8 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
   const markersRef = useRef<any[]>([])
   const shapeRef = useRef<any>(null)
   const areaRef = useRef<any[]>([])
-  const drawingRef = useRef<any>(null)
+  const anchorRef = useRef<any>(null)
+  const listenersRef = useRef<any[]>([])
   const [ready, setReady] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const [loadErr, setLoadErr] = useState<string | null>(null)
@@ -305,7 +326,7 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
   useEffect(() => {
     if (!MAPS_KEY) { setLoadErr('no-key'); return }
     const w = window as any
-    if (w.google?.maps?.drawing) { setReady(true); return }
+    if (w.google?.maps?.Map) { setReady(true); return }
     const existing = document.getElementById('gmaps-js') as HTMLScriptElement | null
     if (existing) {
       existing.addEventListener('load', () => setReady(true))
@@ -315,7 +336,9 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
     const s = document.createElement('script')
     s.id = 'gmaps-js'
     s.async = true
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(MAPS_KEY)}&libraries=drawing`
+    // No `libraries=drawing`: that library's DrawingManager is gone since 3.65
+    // and the rectangle below is drawn from plain map events instead.
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(MAPS_KEY)}`
     s.onload = () => setReady(true)
     s.onerror = () => setLoadErr('load-failed')
     document.head.appendChild(s)
@@ -337,26 +360,80 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
         { featureType: 'transit', stylers: [{ visibility: 'off' }] },
       ],
     })
-    drawingRef.current = new g.maps.drawing.DrawingManager({
-      drawingMode: null,
-      drawingControl: false,
-      rectangleOptions: {
+  }, [ready, isMobile])
+
+  // ── the area tool ─────────────────────────────────────────────────────────
+  // Armed by the "Draw area" button. While armed the map stops panning, so a
+  // drag draws the box instead of moving Malta. A drag too small to be a real
+  // selection counts as "changed my mind" and clears instead of filtering
+  // everything away.
+  useEffect(() => {
+    if (!ready || !mapRef.current) return
+    const g = (window as any).google
+    const map = mapRef.current
+
+    const drop = () => {
+      listenersRef.current.forEach(l => g.maps.event.removeListener(l))
+      listenersRef.current = []
+    }
+    drop()
+
+    if (!drawing) {
+      map.setOptions({ draggable: true, draggableCursor: null })
+      return
+    }
+    map.setOptions({ draggable: false, draggableCursor: 'crosshair' })
+
+    const boundsOf = (a: any, b: any) => new g.maps.LatLngBounds(
+      { lat: Math.min(a.lat(), b.lat()), lng: Math.min(a.lng(), b.lng()) },
+      { lat: Math.max(a.lat(), b.lat()), lng: Math.max(a.lng(), b.lng()) },
+    )
+
+    const down = map.addListener('mousedown', (e: any) => {
+      anchorRef.current = e.latLng
+      if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
+      shapeRef.current = new g.maps.Rectangle({
+        map,
+        bounds: boundsOf(e.latLng, e.latLng),
         fillColor: A, fillOpacity: 0.10, strokeColor: A, strokeWeight: 1.5, clickable: false,
-      },
-    })
-    drawingRef.current.setMap(mapRef.current)
-    g.maps.event.addListener(drawingRef.current, 'rectanglecomplete', (r: any) => {
-      if (shapeRef.current) shapeRef.current.setMap(null)
-      shapeRef.current = r
-      const b = r.getBounds()
-      onRect({
-        north: b.getNorthEast().lat(), east: b.getNorthEast().lng(),
-        south: b.getSouthWest().lat(), west: b.getSouthWest().lng(),
       })
-      drawingRef.current.setDrawingMode(null)
-      setDrawing(false)
     })
-  }, [ready, isMobile, onRect])
+    const move = map.addListener('mousemove', (e: any) => {
+      if (!anchorRef.current || !shapeRef.current) return
+      shapeRef.current.setBounds(boundsOf(anchorRef.current, e.latLng))
+    })
+    const up = map.addListener('mouseup', (e: any) => {
+      const anchor = anchorRef.current
+      anchorRef.current = null
+      if (!anchor) return
+      const b = boundsOf(anchor, e.latLng)
+      const ne = b.getNorthEast(), sw = b.getSouthWest()
+      const tiny = Math.abs(ne.lat() - sw.lat()) < 0.0008 && Math.abs(ne.lng() - sw.lng()) < 0.0008
+      setDrawing(false)
+      if (tiny) {
+        if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
+        onRect(null)
+        return
+      }
+      onRect({ north: ne.lat(), east: ne.lng(), south: sw.lat(), west: sw.lng() })
+    })
+
+    listenersRef.current = [down, move, up]
+    return drop
+  }, [ready, drawing, onRect])
+
+  // A rect restored from a shared link has no rectangle on the map yet — draw
+  // it once so the box is visible, not just silently filtering.
+  useEffect(() => {
+    if (!ready || !mapRef.current || !rect || shapeRef.current) return
+    const g = (window as any).google
+    shapeRef.current = new g.maps.Rectangle({
+      map: mapRef.current,
+      bounds: { north: rect.north, south: rect.south, east: rect.east, west: rect.west },
+      fillColor: A, fillOpacity: 0.10, strokeColor: A, strokeWeight: 1.5, clickable: false,
+    })
+    mapRef.current.fitBounds(shapeRef.current.getBounds())
+  }, [ready, rect])
 
   // markers
   useEffect(() => {
@@ -406,14 +483,12 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
   }, [ready, selectedTowns])
 
   function startDraw() {
-    const g = (window as any).google
-    if (!g || !drawingRef.current) return
-    drawingRef.current.setDrawingMode(g.maps.drawing.OverlayType.RECTANGLE)
+    if (!mapRef.current) return
+    if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
     setDrawing(true)
   }
   function clearDraw() {
     if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
-    if (drawingRef.current) drawingRef.current.setDrawingMode(null)
     setDrawing(false)
     onRect(null)
   }
