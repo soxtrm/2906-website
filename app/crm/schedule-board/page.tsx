@@ -880,6 +880,62 @@ const Dot = ({ c }: { c: string }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: c, marginRight: 3 }} />
 )
 
+// ── freshness ladder ────────────────────────────────────────────────────────
+// The Available button's green is a staleness gauge, not a boolean: the harder
+// it burns, the more recently a human stood behind it. An agent reads the
+// reliability of "available" off the colour without doing arithmetic.
+//
+//   never confirmed    outline only   uploaded, nobody has vouched for it yet
+//   < 30h              full strength  fresh, safe to quote to a client
+//   30–60h             half strength  ageing, still usable
+//   > 60h              faint + ring   stale; this is the auto-reachout band
+//
+// The hue is #2F6F57 — the green already in this file's vocabulary (the isMine
+// border) — and deliberately NOT the GREEN/NAVY token above, which means
+// "ours" rather than "fresh". Two different questions, two different colours.
+const FRESH_HUE = '47,111,87'
+const FRESH_HOURS = 30
+const AGEING_HOURS = 60
+
+type Freshness = {
+  tier: 'unconfirmed' | 'fresh' | 'ageing' | 'stale'
+  hours: number | null
+  bg: string
+  fg: string
+  border: string
+  label: string
+}
+
+function freshness(iso: string | null): Freshness {
+  if (!iso) {
+    return {
+      tier: 'unconfirmed', hours: null,
+      bg: '#FFF', fg: `rgba(${FRESH_HUE},0.75)`, border: `1px solid rgba(${FRESH_HUE},0.35)`,
+      label: 'Not confirmed yet',
+    }
+  }
+  const t = Date.parse(iso)
+  const hours = Number.isFinite(t) ? (Date.now() - t) / 3600000 : null
+  if (hours == null) {
+    return { tier: 'unconfirmed', hours: null, bg: '#FFF', fg: `rgba(${FRESH_HUE},0.75)`,
+             border: `1px solid rgba(${FRESH_HUE},0.35)`, label: 'Not confirmed yet' }
+  }
+  if (hours < FRESH_HOURS) {
+    return { tier: 'fresh', hours,
+             bg: `rgb(${FRESH_HUE})`, fg: '#FFF', border: `1px solid rgb(${FRESH_HUE})`,
+             label: 'Confirmed — fresh' }
+  }
+  if (hours < AGEING_HOURS) {
+    return { tier: 'ageing', hours,
+             bg: `rgba(${FRESH_HUE},0.55)`, fg: '#FFF', border: `1px solid rgba(${FRESH_HUE},0.55)`,
+             label: 'Confirmed — getting older' }
+  }
+  return { tier: 'stale', hours,
+           bg: `rgba(${FRESH_HUE},0.16)`, fg: `rgb(${FRESH_HUE})`,
+           border: '1px solid rgba(201,138,26,0.55)',
+           label: 'Confirmation is stale — owner is being re-asked' }
+}
+
 // "2h ago" beats a raw timestamp on a card whose only question is how stale the
 // confirmation is. Only ever called for rows fetched in an effect, so there is
 // no server render of a clock to mismatch on hydration.
@@ -910,6 +966,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   busy: boolean
 }) {
   const confirmed = r.availableStatus === 'available_confirmed'
+  // Drives the button's green and the timer badge — both read the same
+  // timestamp, so the colour and the number can never disagree.
+  const fresh = freshness(r.lastConfirmedAvailableAt)
   const status = confirmed ? { c: GREEN, t: 'confirmed available' }
     : r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
     : r.availableStatus === 'rented' ? { c: '#B91C1C', t: 'rented' }
@@ -951,6 +1010,22 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             {r.imageCount}
           </span>
         )}
+        {/* The timer, top right. Same source as the button's green, so the
+            number explains the colour instead of competing with it. */}
+        <span
+          title={fresh.label}
+          style={{
+            position: 'absolute', top: 9, right: 9,
+            background: fresh.tier === 'unconfirmed' ? 'rgba(0,0,0,0.45)' : fresh.bg,
+            color: fresh.tier === 'unconfirmed' ? '#FFF' : fresh.fg,
+            border: fresh.tier === 'stale' ? '1px solid rgba(201,138,26,0.8)' : '1px solid transparent',
+            fontSize: 9.5, fontFamily: FM, fontWeight: 600,
+            padding: '2px 6px', borderRadius: 999,
+          }}>
+          {fresh.hours == null
+            ? 'unconfirmed'
+            : fresh.hours < 1 ? 'just now' : `${Math.floor(fresh.hours)}h`}
+        </span>
       </div>
 
       <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -986,18 +1061,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           <button
             onClick={onCheckIn}
             disabled={busy}
-            title={confirmed
-              ? 'Confirm again — moves the timestamp to now'
-              : 'Mark this listing confirmed available'}
+            title={`${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} — click to confirm as of now`}
             style={{
-              ...btn, flex: 1, border: `1px solid ${confirmed ? GREEN : 'rgba(27,42,74,0.18)'}`,
-              background: confirmed ? GREEN_SOFT : '#FFF',
-              color: confirmed ? GREEN : NAVY,
+              ...btn, flex: 1,
+              // The whole ladder, straight from the timestamp.
+              background: fresh.bg,
+              color: fresh.fg,
+              border: fresh.border,
               fontWeight: 700,
               opacity: busy ? 0.5 : 1,
               cursor: busy ? 'wait' : 'pointer',
             }}>
-            {confirmed ? '✓ Available' : 'Available'}
+            {fresh.tier === 'unconfirmed' ? 'Available' : '✓ Available'}
           </button>
           <button
             onClick={() => onStatus('check-out')}
