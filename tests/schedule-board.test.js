@@ -201,13 +201,26 @@ async function run() {
   } else no('firewall: listings payload clean', 'listings response never captured')
 
   // ── 6. map fallback / map canvas ──────────────────────────────────────────
+  // The panel resolves asynchronously — the key comes from the backend and
+  // Google's loader then takes over — so wait for a settled state instead of
+  // sampling once and calling a still-loading map "unknown".
+  await page.waitForFunction(() => (
+    document.body.innerText.includes('Map needs a Google Maps key') ||
+    document.body.innerText.includes('Google Maps failed to load') ||
+    !!document.querySelector('#gmaps-js') ||
+    !!(window.google && window.google.maps)
+  ), { timeout: 20000 }).catch(() => {})
   const mapState = await page.evaluate(() => {
     if (document.body.innerText.includes('Map needs a Google Maps key')) return 'no-key'
     if (document.body.innerText.includes('Google Maps failed to load')) return 'load-failed'
+    // A rendered map is the strongest evidence and outranks the tag: on the
+    // production origin the key is accepted and Google's loader takes over,
+    // so #gmaps-js is not what survives in the DOM.
+    if (window.google && window.google.maps && document.querySelector('.gm-style')) return 'live'
     if (document.querySelector('#gmaps-js')) return 'script-injected'
     return 'unknown'
   })
-  if (mapState === 'no-key' || mapState === 'script-injected') ok('map panel state', mapState)
+  if (mapState === 'no-key' || mapState === 'script-injected' || mapState === 'live') ok('map panel state', mapState)
   else no('map panel state', mapState)
 
 
@@ -422,7 +435,13 @@ async function run() {
     await box.click()
     await box.type('Sliema', { delay: 25 })
     await page.waitForFunction(() => location.search.includes('q=Sliema'), { timeout: 10000 })
-    await new Promise(r => setTimeout(r, 900))
+    // Wait for the narrowed count itself, not for a guessed interval — the URL
+    // updates on keystroke, but re-rendering the grid takes as long as the
+    // network is slow, and over the production origin that outran a 900ms nap.
+    await page.waitForFunction(n => {
+      const m = document.body.innerText.match(/(\d+)\s+listings?/)
+      return !!m && m[1] !== n
+    }, { timeout: 20000 }, all)
     const hit = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
 
     // Narrowing alone is weak — it would also pass if the filter dropped
@@ -447,7 +466,10 @@ async function run() {
       const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
       set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    await new Promise(r => setTimeout(r, 1200))
+    await page.waitForFunction(n => {
+      const m = document.body.innerText.match(/(\d+)\s+listings?/)
+      return !!m && m[1] === n
+    }, { timeout: 20000 }, all).catch(() => {})
     const back = await page.evaluate(() => (document.body.innerText.match(/(\d+)\s+listings?/) || [])[1])
     if (Number(back) === Number(all)) ok('search clears back to full set', `${back} listings`)
     else no('search clears back to full set', `${back} vs ${all}`)
@@ -712,8 +734,10 @@ async function run() {
   const realErrors = consoleErrors.filter(t =>
     !/RefererNotAllowedMapError/i.test(t) &&
     // The board-token run deliberately provokes one 403 on /api/crm/me; the
-    // browser logs it as a console error too, with no URL in the text.
-    !(process.env.BOARD_TOKEN && /status of 403 \(Forbidden\)/i.test(t)) &&
+    // browser logs it as a console error too, with no URL in the text. HTTP/2
+    // carries no reason phrase, so production logs "403 ()" where the local
+    // HTTP/1.1 server logs "403 (Forbidden)" — match either.
+    !(process.env.BOARD_TOKEN && /status of 403\b/i.test(t)) &&
     !/favicon|Download the React DevTools|preload|Failed to load resource: the server responded with a status of 40[34].*(png|jpg|jpeg|webp)/i.test(t))
   if (!realErrors.length) ok('no console errors')
   else no('no console errors', realErrors.slice(0, 4).join(' | '))

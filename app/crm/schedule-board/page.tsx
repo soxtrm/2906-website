@@ -11,7 +11,7 @@
 // "Request Viewing-Location" button.
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
@@ -79,7 +79,6 @@ export default function ScheduleBoardPage() {
 }
 
 function Board() {
-  const router = useRouter()
   const params = useSearchParams()
   const isMobile = useIsMobile()
   const { me } = useCrm()
@@ -111,19 +110,29 @@ function Board() {
   }, [])
 
   // ── URL mirror ────────────────────────────────────────────────────────────
+  // history.replaceState, not router.replace: the URL here is a shareable
+  // mirror of local state, nothing re-reads it after mount (the filters and
+  // rect initialise from it once, above). router.replace would make every
+  // keystroke a navigation with an RSC round trip, and once the round trip is
+  // slow enough the route remounts mid-word — the initialiser then re-reads an
+  // older ?q= and the characters typed in between are gone. Typing "Sliema"
+  // over the production origin landed as "Slie".
   useEffect(() => {
-    const q = new URLSearchParams()
-    if (f.q) q.set('q', f.q)
-    if (f.beds) q.set('beds', f.beds)
-    if (f.baths) q.set('baths', f.baths)
-    if (f.min) q.set('min', f.min)
-    if (f.max) q.set('max', f.max)
-    if (f.type) q.set('type', f.type)
-    if (f.towns.length) q.set('towns', f.towns.join(','))
-    if (rect) q.set('rect', rectToParam(rect))
-    const qs = q.toString()
-    router.replace(qs ? `/schedule-board?${qs}` : '/schedule-board', { scroll: false })
-  }, [f, rect, router])
+    const t = setTimeout(() => {
+      const q = new URLSearchParams()
+      if (f.q) q.set('q', f.q)
+      if (f.beds) q.set('beds', f.beds)
+      if (f.baths) q.set('baths', f.baths)
+      if (f.min) q.set('min', f.min)
+      if (f.max) q.set('max', f.max)
+      if (f.type) q.set('type', f.type)
+      if (f.towns.length) q.set('towns', f.towns.join(','))
+      if (rect) q.set('rect', rectToParam(rect))
+      const qs = q.toString()
+      window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+    }, 200)
+    return () => clearTimeout(t)
+  }, [f, rect])
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   // Server-side filters are the numeric/enum ones. Town selection is applied
