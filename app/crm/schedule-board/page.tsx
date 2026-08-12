@@ -17,7 +17,7 @@ import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue } from '@/components/crm/board-filters'
-import { AskDialog, BookDialog } from '@/components/crm/board-dialogs'
+import { AskDialog, BookDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
 // that matters is whose listing it is, and navy is the brand's own way of
@@ -37,6 +37,16 @@ type Listing = {
   sizeSqm: number | null; price: number | null; salePrice: number | null
   shortlet: boolean; availableStatus: string | null; availableDate: string | null
   viewingStatus: string | null; hasViewingLocation: boolean; exclusive: boolean
+  // The upload timestamp. Sorted server-side, but carried here because the
+  // client re-groups cards by town to place the pins and would otherwise lose
+  // the server's newest-first ordering.
+  createdAt: string | null
+  // When somebody last pressed "Available" on this card, and why it last moved.
+  lastConfirmedAvailableAt: string | null
+  statusChangeReason: string | null
+  // The firewall's verdict, decided by boardAction.emitPinPrecision. Always
+  // 'locality_only' today: a pin is a village, never a doorstep.
+  pinPrecision?: string | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
@@ -56,6 +66,20 @@ type Listing = {
 
 type Filters = BoardFilterValue & { towns: string[] }
 const EMPTY: Filters = { q: '', beds: '', baths: '', min: '', max: '', type: '', towns: [] }
+
+// Newest-first is the default because it is what the board is for: the listing
+// that just came in is the one being asked about. The backend owns the actual
+// ORDER BY (routes/crmScheduleBoard.js SORTS) — these are the options it
+// accepts, and the label the menu shows.
+const SORTS: Array<[string, string]> = [
+  ['newest', 'Newest first'],
+  ['oldest', 'Oldest first'],
+  ['stalest', 'Needs confirming'],
+  ['confirmed', 'Just confirmed'],
+  ['price_low', 'Price ↑'],
+  ['price_high', 'Price ↓'],
+]
+const DEFAULT_SORT = 'newest'
 
 type Rect = { north: number; south: number; east: number; west: number }
 
@@ -94,13 +118,26 @@ function Board() {
     towns: (params.get('towns') || '').split(',').map(s => s.trim()).filter(Boolean),
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
+  const [sort, setSort] = useState<string>(() => {
+    const s = params.get('sort') || ''
+    return SORTS.some(([v]) => v === s) ? s : DEFAULT_SORT
+  })
+  // 'board' = the active worklist (available + available_confirmed).
+  // 'recheck' = the review queue, everything at pending_check: listings where
+  // the classifier could not read an owner's reply, plus anything flagged by
+  // hand. Two separate endpoints, one grid.
+  const [view, setView] = useState<'board' | 'recheck'>(
+    params.get('view') === 'recheck' ? 'recheck' : 'board')
+  const [onlyConfirmed, setOnlyConfirmed] = useState(params.get('only_confirmed') === '1')
   const [rows, setRows] = useState<Listing[]>([])
+  const [recheckCount, setRecheckCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [focusRef, setFocusRef] = useState<string | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [booking, setBooking] = useState<Listing | null>(null)
   const [asking, setAsking] = useState<Listing | null>(null)
+  const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -128,11 +165,14 @@ function Board() {
       if (f.type) q.set('type', f.type)
       if (f.towns.length) q.set('towns', f.towns.join(','))
       if (rect) q.set('rect', rectToParam(rect))
+      if (sort !== DEFAULT_SORT) q.set('sort', sort)
+      if (view !== 'board') q.set('view', view)
+      if (onlyConfirmed) q.set('only_confirmed', '1')
       const qs = q.toString()
       window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
     }, 200)
     return () => clearTimeout(t)
-  }, [f, rect])
+  }, [f, rect, sort, view, onlyConfirmed])
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   // Server-side filters are the numeric/enum ones. Town selection is applied
@@ -152,12 +192,30 @@ function Board() {
     if (f.min) q.set('price_min', f.min)
     if (f.max) q.set('price_max', f.max)
     if (f.type) q.set('type', f.type)
-    crmFetch(`schedule-board/listings?${q.toString()}`)
+    q.set('sort', sort)
+    if (onlyConfirmed) q.set('only_confirmed', '1')
+    // The review queue is its own endpoint — pending_check is excluded from
+    // /listings by the active filter, which is the point of both.
+    const path = view === 'recheck'
+      ? 'schedule-board/review-queue'
+      : `schedule-board/listings?${q.toString()}`
+    crmFetch(path)
       .then(d => { if (!alive) return; setRows(d.listings || []); setErr(null) })
       .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [f.beds, f.baths, f.min, f.max, f.type, refreshTick])
+  }, [f.beds, f.baths, f.min, f.max, f.type, sort, view, onlyConfirmed, refreshTick])
+
+  // The recheck tab's badge. Fetched separately so the count is visible while
+  // the agent is on the board — an unread review queue that only announces
+  // itself once you open it is a queue nobody empties.
+  useEffect(() => {
+    let alive = true
+    crmFetch('schedule-board/review-queue')
+      .then(d => { if (alive) setRecheckCount((d.listings || []).length) })
+      .catch(() => { if (alive) setRecheckCount(0) })
+    return () => { alive = false }
+  }, [refreshTick])
 
   // ── town index + positions ────────────────────────────────────────────────
   // Every listing gets a stable coordinate: town centre plus a deterministic
@@ -168,15 +226,23 @@ function Board() {
       const k = townKey(r.town) || '_unknown'
       ;(byTown[k] ||= []).push(r)
     }
-    const out: Array<Listing & { lat: number | null; lng: number | null; tkey: string }> = []
+    // Grouping by town is how the pins fan out; it must NOT become a re-sort of
+    // the cards. Positions are collected into a map and then read back in the
+    // server's order — the previous version pushed rows out town-bucket by
+    // town-bucket, which silently clustered the grid by village and threw the
+    // newest-first ordering away before it ever reached a card.
+    const pos = new Map<string, { lat: number | null; lng: number | null; tkey: string }>()
     for (const [k, list] of Object.entries(byTown)) {
       const base = k === '_unknown' ? null : TOWNS[k]
       list.forEach((r, i) => {
         const p = base ? spread(base, i, list.length) : null
-        out.push({ ...r, lat: p?.lat ?? null, lng: p?.lng ?? null, tkey: k })
+        pos.set(r.ref, { lat: p?.lat ?? null, lng: p?.lng ?? null, tkey: k })
       })
     }
-    return out
+    return rows.map(r => ({
+      ...r,
+      ...(pos.get(r.ref) || { lat: null, lng: null, tkey: '_unknown' }),
+    }))
   }, [rows])
 
   const townOptions = useMemo(() => {
@@ -248,6 +314,67 @@ function Board() {
     }
   }
 
+  // ── availability buttons ──────────────────────────────────────────────────
+  // "Available" is one click and nothing else: no dialog, no confirmation, no
+  // message to anybody. The card stays exactly where it is and its timestamp
+  // moves to now — which is why pressing it a second time is a real action and
+  // not a no-op the UI should swallow.
+  //
+  // Optimistic, then reconciled with what the server actually wrote. The
+  // operator clicked because they already know the answer; making them wait on
+  // a round trip to see it is how a card gets clicked twice.
+  const [busyRef, setBusyRef] = useState<string | null>(null)
+
+  async function checkIn(r: Listing) {
+    if (busyRef) return
+    setBusyRef(r.ref)
+    const optimistic = new Date().toISOString()
+    setRows(rs => rs.map(x => x.ref === r.ref
+      ? { ...x, availableStatus: 'available_confirmed', lastConfirmedAvailableAt: optimistic, statusChangeReason: null }
+      : x))
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/check-in`, 'POST', {})
+      // Confirming is how a listing LEAVES the review queue, so in that view the
+      // row goes; on the board it stays put with a fresh timestamp.
+      if (view === 'recheck') {
+        setRows(rs => rs.filter(x => x.ref !== r.ref))
+        setRecheckCount(n => Math.max(0, n - 1))
+      } else {
+        // Take the server's timestamp over ours — the card should show what is
+        // in the database, not what this browser guessed a moment ago.
+        setRows(rs => rs.map(x => x.ref === r.ref
+          ? { ...x, availableStatus: d.availableStatus || 'available_confirmed',
+                    lastConfirmedAvailableAt: d.lastConfirmedAvailableAt || optimistic }
+          : x))
+      }
+      showToast('ok', d.message || `#${r.ref} confirmed available.`)
+    } catch (e: any) {
+      // Put the card back the way it was. A refusal here is almost always the
+      // rented/archived guard, and the reason matters more than the failure.
+      setRows(rs => rs.map(x => x.ref === r.ref
+        ? { ...x, availableStatus: r.availableStatus, lastConfirmedAvailableAt: r.lastConfirmedAvailableAt }
+        : x))
+      const d = e?.data || {}
+      showToast('err', d.error || d.message || e?.message || 'Could not confirm this listing.')
+      reload()
+    } finally {
+      setBusyRef(null)
+    }
+  }
+
+  // The three removals all go through StatusDialog, which owns the POST so it
+  // can show a refusal in place rather than as a toast over an empty gap. The
+  // card is pulled the moment the server confirms — nothing is deleted, it has
+  // just stopped being active, and it is still in Inventory and its history.
+  function onStatusDone(msg: string, ref: string) {
+    setRows(rs => rs.filter(x => x.ref !== ref))
+    showToast('ok', msg)
+    // Refresh the recheck badge — a card that just moved to pending_check is
+    // now one more thing waiting in that queue.
+    setRefreshTick(t => t + 1)
+  }
+
   // ── filter bar ────────────────────────────────────────────────────────────
   const filterBar = (
     <BoardFilters
@@ -257,15 +384,48 @@ function Board() {
       count={visible.length}
       mineCount={mineCount}
       loading={loading}
-      extra={rect ? (
-        <button
-          onClick={() => setRect(null)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded bg-navy text-white text-xs whitespace-nowrap"
-          title="Clear the area drawn on the map"
-        >
-          Area drawn <span className="opacity-60">×</span>
-        </button>
-      ) : undefined}
+      extra={
+        <>
+          {/* Sort. Newest-first is the default and the reason the board reads
+              top-left-first: the listing that just arrived is the one being
+              asked about. The backend does the ordering. */}
+          <select
+            value={sort}
+            onChange={e => setSort(e.target.value)}
+            disabled={view === 'recheck'}
+            title={view === 'recheck'
+              ? 'The review queue is ordered oldest-doubt-first'
+              : 'Order the board'}
+            className="px-3 py-2 bg-off-white border-0 rounded text-sm text-navy/70
+                       focus:outline-none focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
+          >
+            {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+
+          {/* Only listings somebody has actually stood behind, with a timestamp
+              to prove it. */}
+          {view === 'board' && (
+            <button
+              onClick={() => setOnlyConfirmed(v => !v)}
+              title="Only listings an agent has confirmed as available"
+              className={`px-3 py-2 rounded text-xs whitespace-nowrap transition-colors ${
+                onlyConfirmed ? 'bg-navy text-white' : 'bg-off-white text-navy/60 hover:bg-navy/10'}`}
+            >
+              Confirmed only
+            </button>
+          )}
+
+          {rect && (
+            <button
+              onClick={() => setRect(null)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded bg-navy text-white text-xs whitespace-nowrap"
+              title="Clear the area drawn on the map"
+            >
+              Area drawn <span className="opacity-60">×</span>
+            </button>
+          )}
+        </>
+      }
     />
   )
 
@@ -277,6 +437,46 @@ function Board() {
     >
       <div style={{ padding: isMobile ? 14 : 22 }}>
         {err && <Notice text={err} />}
+
+        {/* Active board ⇄ review queue. The board shows only what an agent can
+            offer today; the queue holds the listings where the classifier could
+            not read an owner's reply and refused to guess. */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
+          {([['board', 'Active board'], ['recheck', 'Needs recheck']] as const).map(([v, label]) => {
+            const on = view === v
+            return (
+              <button key={v} onClick={() => setView(v)} style={{
+                ...chip, borderRadius: 8,
+                background: on ? NAVY : '#FFF',
+                borderColor: on ? NAVY : '#E9E5DC',
+                color: on ? '#FFF' : '#666',
+                fontWeight: on ? 700 : 500,
+              }}>
+                {label}
+                {v === 'recheck' && recheckCount > 0 && (
+                  <span style={{
+                    marginLeft: 6, fontFamily: FM, fontSize: 10,
+                    background: on ? 'rgba(255,255,255,0.22)' : AD,
+                    color: on ? '#FFF' : '#7A6534',
+                    padding: '1px 5px', borderRadius: 999,
+                  }}>{recheckCount}</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {view === 'recheck' && (
+          <div style={{
+            background: AD, border: `1px solid ${AB}`, borderRadius: 10,
+            padding: '10px 14px', fontSize: 11.5, color: '#7A6534',
+            marginBottom: 14, lineHeight: 1.5,
+          }}>
+            These owners replied, but the wording could not be read as a yes or a
+            no — so nothing was assumed. Confirm it or take it off the board.
+            Oldest doubt first.
+          </div>
+        )}
 
         {/* villages */}
         {townOptions.length > 0 && (
@@ -322,13 +522,18 @@ function Board() {
               onAct={act}
               onBook={() => setBooking(r)}
               onAsk={() => setAsking(r)}
+              onCheckIn={() => checkIn(r)}
+              onStatus={action => setStatusing({ r, action })}
+              busy={busyRef === r.ref}
             />
           ))}
         </div>
 
         {!loading && !visible.length && !err && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: '#BBB', fontSize: 13 }}>
-            Nothing matches this search.
+            {view === 'recheck'
+              ? 'Nothing waiting for a recheck.'
+              : 'Nothing matches this search.'}
           </div>
         )}
       </div>
@@ -355,6 +560,16 @@ function Board() {
             // A sent question spends one of the day's two slots, so the cards
             // have to be refetched or the counter lies until the next reload.
             onDone={msg => { showToast('ok', msg); reload() }}
+          />
+        )}
+        {statusing && (
+          <StatusDialog
+            key="status"
+            refId={statusing.r.ref}
+            town={statusing.r.town}
+            action={statusing.action}
+            onClose={() => setStatusing(null)}
+            onDone={onStatusDone}
           />
         )}
       </AnimatePresence>
@@ -665,8 +880,24 @@ const Dot = ({ c }: { c: string }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: c, marginRight: 3 }} />
 )
 
+// "2h ago" beats a raw timestamp on a card whose only question is how stale the
+// confirmation is. Only ever called for rows fetched in an effect, so there is
+// no server render of a clock to mismatch on hydration.
+function ago(iso: string): string {
+  const then = Date.parse(iso)
+  if (!Number.isFinite(then)) return 'recently'
+  const mins = Math.floor((Date.now() - then) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 30) return `${days}d ago`
+  return `${Math.floor(days / 30)}mo ago`
+}
+
 // ── card ────────────────────────────────────────────────────────────────────
-function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk }: {
+function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, busy }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -674,9 +905,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk }: {
   onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
   onBook: () => void
   onAsk: () => void
+  onCheckIn: () => void
+  onStatus: (action: StatusAction) => void
+  busy: boolean
 }) {
-  const status = r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
+  const confirmed = r.availableStatus === 'available_confirmed'
+  const status = confirmed ? { c: GREEN, t: 'confirmed available' }
+    : r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
     : r.availableStatus === 'rented' ? { c: '#B91C1C', t: 'rented' }
+    : r.availableStatus === 'pending_check' ? { c: '#C98A1A', t: 'needs a recheck' }
+    : r.availableStatus === 'not_available' ? { c: '#B91C1C', t: 'not available' }
     : { c: '#C9C4B8', t: 'unknown' }
   // Older cached responses predate the contact block; default to "usable" so a
   // stale payload degrades to the previous behaviour instead of a dead card.
@@ -736,6 +974,76 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk }: {
         <div style={{ fontSize: 10, color: '#B5AFA2', marginTop: 8, marginBottom: 10 }}>
           Listed by {r.listedBy.displayName || 'unassigned'}
         </div>
+
+        {/* ── availability ──────────────────────────────────────────────────
+            The two buttons Kev works the board with. Neither sends a message to
+            anybody: they record what this agent knows right now.
+              Available   → the card stays, the timestamp moves to now
+              Not available → the card leaves the active board immediately
+            Nothing is deleted either way — the listing keeps its row, its
+            photos and its history, and Inventory still has all of it. */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+          <button
+            onClick={onCheckIn}
+            disabled={busy}
+            title={confirmed
+              ? 'Confirm again — moves the timestamp to now'
+              : 'Mark this listing confirmed available'}
+            style={{
+              ...btn, flex: 1, border: `1px solid ${confirmed ? GREEN : 'rgba(27,42,74,0.18)'}`,
+              background: confirmed ? GREEN_SOFT : '#FFF',
+              color: confirmed ? GREEN : NAVY,
+              fontWeight: 700,
+              opacity: busy ? 0.5 : 1,
+              cursor: busy ? 'wait' : 'pointer',
+            }}>
+            {confirmed ? '✓ Available' : 'Available'}
+          </button>
+          <button
+            onClick={() => onStatus('check-out')}
+            disabled={busy}
+            title="Not available — asks for a reason, then takes it off the board"
+            style={{
+              ...btn, flex: 1, border: '1px solid rgba(185,28,28,0.22)',
+              background: '#FFF', color: '#B91C1C', fontWeight: 700,
+              opacity: busy ? 0.5 : 1,
+            }}>
+            Not available
+          </button>
+        </div>
+
+        {/* The timestamp is the whole product of the button above it. Without a
+            date on the card, "confirmed" is a claim with no expiry. */}
+        <div style={{ fontSize: 9.5, color: '#B5AFA2', marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span>
+            {r.lastConfirmedAvailableAt
+              ? <>Confirmed <strong style={{ color: GREEN, fontWeight: 700 }}>{ago(r.lastConfirmedAvailableAt)}</strong></>
+              : 'Never confirmed'}
+          </span>
+          {/* Quiet by design — these are the rarer actions — but still real tap
+              targets. minHeight 30 is the floor this board holds everything to:
+              at the 14px an underlined text run gives you, these were a miss on
+              a phone, which tests/schedule-board.test.js catches. */}
+          <button
+            onClick={() => onStatus('recheck')}
+            title="Park this in the review queue until somebody checks"
+            style={{ ...subtleLink, marginLeft: 'auto' }}>
+            recheck
+          </button>
+          <button
+            onClick={() => onStatus('archive')}
+            title="Archive — off the board for good, still in Inventory"
+            style={subtleLink}>
+            archive
+          </button>
+        </div>
+
+        {/* Why it last moved — the review queue is unusable without it. */}
+        {r.statusChangeReason && (
+          <div style={{ fontSize: 9.5, color: '#B08968', marginBottom: 10, lineHeight: 1.35 }}>
+            {r.statusChangeReason}
+          </div>
+        )}
 
         {/* Contact actions. `canAsk` / `canQuestion` are the server's verdict —
             a do-not-contact owner, one already messaged today, or a listing
@@ -1012,6 +1320,13 @@ function Toast({ kind, text, onClose }: { kind: 'ok' | 'err' | 'info'; text: str
 const btn: React.CSSProperties = {
   padding: '7px 11px', borderRadius: 7, fontSize: 11, fontFamily: F,
   fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 32,
+}
+// The two low-frequency card actions. Reads as a text link, sized as a button:
+// 30px is the same tap floor the buttons and village chips hold to.
+const subtleLink: React.CSSProperties = {
+  border: 'none', background: 'none', padding: '7px 4px', minHeight: 30,
+  font: 'inherit', color: '#B5AFA2', cursor: 'pointer',
+  textDecoration: 'underline', lineHeight: 1,
 }
 const chip: React.CSSProperties = {
   padding: '6px 11px', borderRadius: 999, fontSize: 11, fontFamily: F,

@@ -415,3 +415,147 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
     </Sheet>
   )
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// STATUS — the three actions that take a card OFF the active board.
+//
+// All three ask for a reason, and check-out requires one: the backend refuses a
+// blank. That is deliberate. A listing that vanished from the board with no
+// explanation is the thing nobody can account for three weeks later, and the
+// reason is what the review queue and the audit trail have to show.
+//
+// Presets exist because a free-text box gets "gone", "n/a" and "asked" typed
+// into it, which is data nobody can group by later. A chip is one tap and it
+// still lands in status_change_reason as readable text.
+//
+// Nothing here deletes anything. The listing stays in Inventory with its whole
+// history — it just stops being offered on the board.
+// ════════════════════════════════════════════════════════════════════════════
+export type StatusAction = 'check-out' | 'recheck' | 'archive'
+
+const ACTION_COPY: Record<StatusAction, {
+  title: string; sub: string; verb: string; presets: string[]; destructive: boolean
+}> = {
+  'check-out': {
+    title: 'Not available',
+    sub: 'Takes the card off the active board. Nothing is deleted.',
+    verb: 'Mark not available',
+    presets: ['Rented out', 'Owner withdrew it', 'Owner not reachable', 'Price changed', 'Not available yet'],
+    destructive: true,
+  },
+  recheck: {
+    title: 'Needs a recheck',
+    sub: 'Parks it in the review queue until somebody confirms either way.',
+    verb: 'Send to review queue',
+    presets: ['Owner reply unclear', 'No answer yet', 'Conflicting information', 'Photos look wrong'],
+    destructive: false,
+  },
+  archive: {
+    title: 'Archive listing',
+    sub: 'Off the board and out of the review queue. Still in Inventory.',
+    verb: 'Archive',
+    presets: ['Duplicate listing', 'Owner withdrew for good', 'Bad or incomplete data', 'Off market'],
+    destructive: true,
+  },
+}
+
+export function StatusDialog({ refId, town, action, onClose, onDone }: {
+  refId: string
+  town?: string | null
+  action: StatusAction
+  onClose: () => void
+  /** Called only after the server confirms. The board removes the card on
+      click, so this reports the outcome rather than driving it. */
+  onDone: (msg: string, ref: string) => void
+}) {
+  const copy = ACTION_COPY[action]
+  const [preset, setPreset] = useState<string | null>(null)
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  // A preset plus an optional detail, joined — "Rented out — owner said the
+  // tenant moved in on Monday" is worth more than either half alone.
+  const reason = [preset, note.trim()].filter(Boolean).join(' — ')
+  const needsReason = action === 'check-out'
+  const canSend = !busy && (!needsReason || reason.length > 0)
+
+  async function submit() {
+    if (!canSend) return
+    setErr(null)
+    setBusy(true)
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(refId)}/${action}`, 'POST',
+        { reason: reason || undefined })
+      onDone(d.message || `#${refId} updated.`, refId)
+      onClose()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not update this listing.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Sheet
+      title={copy.title}
+      sub={`#${refId}${town ? ` · ${town}` : ''} — ${copy.sub}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} className={GHOST}>Cancel</button>
+          <button
+            onClick={submit}
+            disabled={!canSend}
+            className={cn(PRIMARY, copy.destructive && 'bg-red-700 hover:bg-red-800')}
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {copy.verb}
+          </button>
+        </>
+      }
+    >
+      {err && <ErrorLine text={err} />}
+
+      <label className={LABEL}>
+        Reason{needsReason && <span className="text-red-600 normal-case tracking-normal"> · required</span>}
+      </label>
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {copy.presets.map(p => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPreset(preset === p ? null : p)}
+            className={cn('px-2.5 py-1.5 rounded text-[11px] transition-colors',
+              preset === p ? 'bg-navy text-white' : 'bg-off-white text-navy/60 hover:bg-navy/10')}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+
+      <textarea
+        value={note}
+        onChange={e => setNote(e.target.value)}
+        rows={3}
+        maxLength={400}
+        placeholder={preset ? 'Anything to add? (optional)' : 'Or write your own reason…'}
+        className={cn(FIELD, 'resize-none')}
+      />
+
+      {reason && (
+        <div className="mt-3 rounded bg-off-white px-3 py-2">
+          <div className="text-[10px] uppercase tracking-[0.12em] text-navy/40 mb-1">Recorded as</div>
+          <div className="text-xs text-navy/80 break-words">{reason}</div>
+        </div>
+      )}
+
+      {needsReason && !reason && (
+        <p className="mt-3 text-[11px] text-navy/40 leading-relaxed">
+          Pick a reason or write one. It is stored with the listing so the next
+          person can see why it left the board.
+        </p>
+      )}
+    </Sheet>
+  )
+}
