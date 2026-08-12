@@ -30,9 +30,13 @@ const navLabels = page => page.evaluate(() => {
 
 ;(async () => {
   console.log('==== board access E2E ====')
+  // The CRM only exists behind the crm.* host rewrite, so a local run has to
+  // resolve crm.localhost to this machine. Against the real origin that same
+  // rule would point crm.2906.estate at 127.0.0.1 and refuse every connection.
+  const local = /(^|\.)localhost$/.test(HOST)
   const browser = await puppeteer.launch({
     headless: 'new',
-    args: [`--host-resolver-rules=MAP ${HOST} 127.0.0.1`, '--no-sandbox'],
+    args: [...(local ? [`--host-resolver-rules=MAP ${HOST} 127.0.0.1`] : []), '--no-sandbox'],
   })
   const page = await browser.newPage()
   await page.setViewport({ width: 1280, height: 900 })
