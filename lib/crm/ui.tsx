@@ -107,7 +107,7 @@ export const useCrm = () => {
   return c
 }
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'owners', 'earnings', 'admin']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'earnings', 'admin']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -211,6 +211,9 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'dashboard', icon: '▦', label: 'Dashboard', href: '/' },
   { key: 'inventory', icon: '≡', label: 'Inventory', href: '/inventory' },
   { key: 'board',     icon: '◈', label: 'Board',     href: '/schedule-board' },
+  // Staff-only: who may sign in to the board. Board agents never see it —
+  // their nav comes from the backend and contains 'board' and nothing else.
+  { key: 'access',    icon: '◔', label: 'Board access', href: '/board-access' },
   { key: 'owners',    icon: '◎', label: 'Owners',    href: '/owners' },
   { key: 'earnings',  icon: '€', label: 'Earnings',  href: '/earnings', disabled: true },
   { key: 'admin',     icon: '⚙', label: 'Admin',     href: '/admin', disabled: true },
