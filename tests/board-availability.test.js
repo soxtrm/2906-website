@@ -166,17 +166,17 @@ async function run() {
     const btnCounts = await page.evaluate(() => {
       const texts = Array.from(document.querySelectorAll('button')).map(b => (b.textContent || '').trim())
       return {
-        available: texts.filter(t => t === 'Available' || t === '✓ Available').length,
-        notAvailable: texts.filter(t => t === 'Not available').length,
+        available: texts.filter(t => t === 'ON MARKET' || t === '✓ ON MARKET').length,
+        notAvailable: texts.filter(t => t === 'OFF MARKET').length,
         recheck: texts.filter(t => t === 'recheck').length,
         archive: texts.filter(t => t === 'archive').length,
         confirmedLines: (document.body.innerText.match(/Never confirmed|Confirmed /g) || []).length,
       }
     })
-    if (btnCounts.available >= domRefs.length && domRefs.length > 0) ok('every card has an Available button', `${btnCounts.available}`)
-    else no('every card has an Available button', `${btnCounts.available} buttons vs ${domRefs.length} cards`)
-    if (btnCounts.notAvailable >= domRefs.length) ok('every card has a Not available button', `${btnCounts.notAvailable}`)
-    else no('every card has a Not available button', `${btnCounts.notAvailable}`)
+    if (btnCounts.available >= domRefs.length && domRefs.length > 0) ok('every card has an ON MARKET button', `${btnCounts.available}`)
+    else no('every card has an ON MARKET button', `${btnCounts.available} buttons vs ${domRefs.length} cards`)
+    if (btnCounts.notAvailable >= domRefs.length) ok('every card has an OFF MARKET button', `${btnCounts.notAvailable}`)
+    else no('every card has an OFF MARKET button', `${btnCounts.notAvailable}`)
     if (btnCounts.recheck > 0 && btnCounts.archive > 0) ok('recheck and archive links render')
     else no('recheck and archive links render', JSON.stringify(btnCounts))
     if (btnCounts.confirmedLines > 0) ok('confirmation age is on the card', `${btnCounts.confirmedLines} lines`)
@@ -245,7 +245,7 @@ async function run() {
 
       // ── check-in ──────────────────────────────────────────────────────────
       await page.evaluate(() => {
-        const b = Array.from(document.querySelectorAll('button')).find(x => (x.textContent || '').trim() === 'Available')
+        const b = Array.from(document.querySelectorAll('button')).find(x => (x.textContent || '').trim() === 'ON MARKET')
         if (b) b.click()
       })
       await page.waitForFunction(
@@ -266,11 +266,11 @@ async function run() {
       else no('the card shows a fresh "Confirmed just now"', 'timestamp line did not update')
 
       const tick = await page.evaluate(() => {
-        const b = Array.from(document.querySelectorAll('button')).find(x => (x.textContent || '').trim() === '✓ Available')
+        const b = Array.from(document.querySelectorAll('button')).find(x => (x.textContent || '').trim() === '✓ ON MARKET')
         return !!b
       })
-      if (tick) ok('the Available button reads back as confirmed')
-      else no('the Available button reads back as confirmed', 'no ✓ state')
+      if (tick) ok('the ON MARKET button reads back as confirmed')
+      else no('the ON MARKET button reads back as confirmed', 'no ✓ state')
 
       const dbAfterIn = sql(`SELECT available_status FROM properties WHERE ref = '${subject}'`)
       if (dbAfterIn === 'available_confirmed') ok('the database really says available_confirmed')
@@ -280,7 +280,7 @@ async function run() {
 
       // ── check-out ─────────────────────────────────────────────────────────
       await page.evaluate(() => {
-        const b = Array.from(document.querySelectorAll('button')).find(x => (x.textContent || '').trim() === 'Not available')
+        const b = Array.from(document.querySelectorAll('button')).find(x => (x.textContent || '').trim() === 'OFF MARKET')
         if (b) b.click()
       })
       await page.waitForFunction(
@@ -290,7 +290,7 @@ async function run() {
       // The reason is mandatory, and the UI has to say so before the server does.
       const disabled = await page.evaluate(() => {
         const b = Array.from(document.querySelectorAll('button'))
-          .find(x => (x.textContent || '').trim() === 'Mark not available')
+          .find(x => (x.textContent || '').trim() === 'Mark off market')
         return b ? b.disabled : null
       })
       if (disabled === true) ok('confirm is disabled until a reason is given')
@@ -302,7 +302,7 @@ async function run() {
       })
       await page.waitForFunction(() => {
         const b = Array.from(document.querySelectorAll('button'))
-          .find(x => (x.textContent || '').trim() === 'Mark not available')
+          .find(x => (x.textContent || '').trim() === 'Mark off market')
         return b && !b.disabled
       }, { timeout: 10000 })
       ok('picking a preset enables confirm')
@@ -319,7 +319,7 @@ async function run() {
 
       await page.evaluate(() => {
         const b = Array.from(document.querySelectorAll('button'))
-          .find(x => (x.textContent || '').trim() === 'Mark not available')
+          .find(x => (x.textContent || '').trim() === 'Mark off market')
         if (b) b.click()
       })
       await page.waitForFunction(

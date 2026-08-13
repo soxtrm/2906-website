@@ -100,7 +100,7 @@ async function run() {
         }
         if (!card) continue
         const btn = Array.from(card.querySelectorAll('button'))
-          .find(b => /Available$/.test((b.textContent || '').trim()))
+          .find(b => /ON MARKET$/.test((b.textContent || '').trim()))
         const pill = Array.from(card.querySelectorAll('span'))
           .find(s => /^(unconfirmed|just now|\d+h)$/.test((s.textContent || '').trim()))
         if (!btn) continue
@@ -155,9 +155,9 @@ async function run() {
       if (s.pill === '80h') ok('timer reads 80h on the stale card', s.pill)
       else no('timer reads 80h on the stale card', String(s.pill))
 
-      if (f.text === '✓ Available' && s.text === '✓ Available')
-        ok('confirmed cards read "✓ Available"')
-      else no('confirmed cards read "✓ Available"', `${f.text} / ${s.text}`)
+      if (f.text === '✓ ON MARKET' && s.text === '✓ ON MARKET')
+        ok('confirmed cards read "✓ ON MARKET"')
+      else no('confirmed cards read "✓ ON MARKET"', `${f.text} / ${s.text}`)
     }
 
     // ── the unconfirmed tier, from a real untouched row ──────────────────────
@@ -177,7 +177,7 @@ async function run() {
       if (alphaOf(u.bg) === 0 || /rgba\(0,\s*0,\s*0,\s*0\)/.test(u.bg) || u.bg === 'rgb(255, 255, 255)')
         ok('never-confirmed is outline-only, no fill', u.bg)
       else no('never-confirmed is outline-only, no fill', u.bg)
-      if (u.text === 'Available') ok('never-confirmed omits the tick', u.text)
+      if (u.text === 'ON MARKET') ok('never-confirmed omits the tick', u.text)
       else no('never-confirmed omits the tick', u.text)
     }
 

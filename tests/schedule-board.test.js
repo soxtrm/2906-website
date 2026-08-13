@@ -29,7 +29,24 @@ const SHOTS = path.join(__dirname, 'screenshots')
 const PREFIX = process.env.SHOT_PREFIX || 'board'
 
 // Values that live in properties.street / owner_contacts — none may reach the DOM.
-const FORBIDDEN_TEXT = ['San Antnin', 'Residenza Denfil', 'Triq San Ġorġ']
+// Values that live in properties.street / owner_contacts.
+//
+// POLICY CHANGE 2026-08-13 (Kev's variant (a)): the STREET NAME of your OWN
+// listing may now be shown, without any house or flat number. So the list has
+// to say whose address each string is, not merely that it exists:
+//
+//   2906-001  agent 1 (Kev)   street "San Antnin"                        apt 51
+//   2906-007  agent 9 (Tomas) street "Residenza Denfil Triq San Ġorġ St" apt 15
+//
+// This suite runs as Kev, so "San Antnin" is his own street and is ALLOWED to
+// appear. Tomas's street is another agent's listing and must never appear — that
+// is the Fall B separation, and it is the half of this test that still matters.
+// The house numbers (51, 15) are checked structurally below rather than by
+// value: two-digit strings match prices and bedroom counts by accident.
+const FORBIDDEN_TEXT = ['Residenza Denfil', 'Triq San Ġorġ']
+// Kev's own street, permitted on his own card only. Asserted positively further
+// down: if it shows up, it must be digit-free and on an isMine listing.
+const OWN_STREET_ALLOWED = 'San Antnin'
 const FORBIDDEN_KEYS = ['street', 'apt', 'owner', 'owner_id', 'ownerPhone', 'owner_phone', 'phone', 'email']
 
 const pass = []
@@ -198,6 +215,32 @@ async function run() {
     const leakedVals = FORBIDDEN_TEXT.filter(s => listingsBody.includes(s))
     if (!leakedKeys.length && !leakedVals.length) ok('firewall: listings payload clean')
     else no('firewall: listings payload clean', `keys=${leakedKeys} values=${leakedVals}`)
+
+    // ── variant (a): a street may travel, a number may not ──────────────────
+    try {
+      const rows = JSON.parse(listingsBody).listings || []
+      const shown = rows.filter(r => r.streetName)
+      if (shown.every(r => r.isMine === true)) {
+        ok('firewall: a street only ever appears on your own listing', `${shown.length} shown`)
+      } else {
+        no('firewall: a street only ever appears on your own listing',
+          shown.filter(r => !r.isMine).map(r => r.ref).join(','))
+      }
+      if (shown.every(r => !/\d/.test(r.streetName))) {
+        ok('firewall: no house number survives in a shown street')
+      } else {
+        no('firewall: no house number survives in a shown street',
+          shown.filter(r => /\d/.test(r.streetName)).map(r => r.ref).join(','))
+      }
+      // apt is never selected at all — not for anybody, not even your own.
+      if (!/"apt"/i.test(listingsBody)) ok('firewall: apt is absent from the payload')
+      else no('firewall: apt is absent from the payload', 'apt key present')
+      // And the raw column must not ride along under its alias.
+      if (!/street_raw/i.test(listingsBody)) ok('firewall: street_raw never leaves the server')
+      else no('firewall: street_raw never leaves the server', 'street_raw present')
+    } catch (e) {
+      no('firewall: street rules checked', e.message)
+    }
   } else no('firewall: listings payload clean', 'listings response never captured')
 
   // ── 6. map fallback / map canvas ──────────────────────────────────────────

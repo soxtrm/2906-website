@@ -437,9 +437,9 @@ const ACTION_COPY: Record<StatusAction, {
   title: string; sub: string; verb: string; presets: string[]; destructive: boolean
 }> = {
   'check-out': {
-    title: 'Not available',
+    title: 'Off market',
     sub: 'Takes the card off the active board. Nothing is deleted.',
-    verb: 'Mark not available',
+    verb: 'Mark off market',
     presets: ['Rented out', 'Owner withdrew it', 'Owner not reachable', 'Price changed', 'Not available yet'],
     destructive: true,
   },

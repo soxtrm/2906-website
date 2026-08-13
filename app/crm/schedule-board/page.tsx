@@ -47,6 +47,11 @@ type Listing = {
   // The firewall's verdict, decided by boardAction.emitPinPrecision. Always
   // 'locality_only' today: a pin is a village, never a doorstep.
   pinPrecision?: string | null
+  // now / soon / a real date, decided server-side so the chip and the filter
+  // can never disagree. Anything not clearly free now or dated is 'soon'.
+  availability?: { kind: 'now' | 'soon' | 'date'; date: string | null; label: string }
+  // Street name, no number, own listings only. null on everybody else's.
+  streetName?: string | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
@@ -81,7 +86,51 @@ const SORTS: Array<[string, string]> = [
 ]
 const DEFAULT_SORT = 'newest'
 
+// The next N months as { value: 'YYYY-MM', label: 'October 2026' }, starting
+// with the current one — generated rather than hardcoded so the dropdown never
+// offers a month that is already gone.
+function nextMonths(n: number): Array<{ value: string; label: string }> {
+  const out: Array<{ value: string; label: string }> = []
+  const base = new Date()
+  for (let i = 0; i < n; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1)
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    out.push({
+      value: `${d.getFullYear()}-${mm}`,
+      label: d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+    })
+  }
+  return out
+}
+
 type Rect = { north: number; south: number; east: number; west: number }
+// Centre + radius in metres. Kev asked for a circle because that is how an area
+// is actually described ("within 2 km of Sliema"); a rectangle only happens to
+// be easier to draw. google.maps.Circle is still supported — unlike
+// DrawingManager, which was removed in Maps JS 3.65 and throws on use.
+type Circ = { lat: number; lng: number; r: number }
+
+function circToParam(c: Circ): string {
+  return [c.lat.toFixed(5), c.lng.toFixed(5), Math.round(c.r)].join(',')
+}
+function parseCirc(s: string | null): Circ | null {
+  if (!s) return null
+  const p = s.split(',').map(Number)
+  if (p.length !== 3 || p.some(n => !Number.isFinite(n))) return null
+  const [lat, lng, r] = p
+  if (r <= 0) return null
+  return { lat, lng, r }
+}
+// Equirectangular approximation — at Malta's scale the error is centimetres,
+// and it avoids pulling in a geo library for one distance check.
+function metresBetween(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371000
+  const dLat = (bLat - aLat) * Math.PI / 180
+  const dLng = (bLng - aLng) * Math.PI / 180
+  const mLat = (aLat + bLat) / 2 * Math.PI / 180
+  const x = dLng * Math.cos(mLat)
+  return Math.sqrt(dLat * dLat + x * x) * R
+}
 
 // The drawn area travels in the URL as rect=north,south,east,west so a shared
 // link restores the box, not just the filter row.
@@ -118,6 +167,7 @@ function Board() {
     towns: (params.get('towns') || '').split(',').map(s => s.trim()).filter(Boolean),
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
+  const [circ, setCirc] = useState<Circ | null>(() => parseCirc(params.get('circ')))
   const [sort, setSort] = useState<string>(() => {
     const s = params.get('sort') || ''
     return SORTS.some(([v]) => v === s) ? s : DEFAULT_SORT
@@ -129,6 +179,9 @@ function Board() {
   const [view, setView] = useState<'board' | 'recheck'>(
     params.get('view') === 'recheck' ? 'recheck' : 'board')
   const [onlyConfirmed, setOnlyConfirmed] = useState(params.get('only_confirmed') === '1')
+  // '' | 'now' | 'soon' | 'dated' | 'YYYY-MM'. The server owns what each means
+  // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
+  const [avail, setAvail] = useState<string>(() => params.get('avail') || params.get('avail_from') || '')
   const [rows, setRows] = useState<Listing[]>([])
   const [recheckCount, setRecheckCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -165,14 +218,16 @@ function Board() {
       if (f.type) q.set('type', f.type)
       if (f.towns.length) q.set('towns', f.towns.join(','))
       if (rect) q.set('rect', rectToParam(rect))
+      if (circ) q.set('circ', circToParam(circ))
       if (sort !== DEFAULT_SORT) q.set('sort', sort)
       if (view !== 'board') q.set('view', view)
       if (onlyConfirmed) q.set('only_confirmed', '1')
+      if (avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
       const qs = q.toString()
       window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
     }, 200)
     return () => clearTimeout(t)
-  }, [f, rect, sort, view, onlyConfirmed])
+  }, [f, rect, circ, sort, view, onlyConfirmed, avail])
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   // Server-side filters are the numeric/enum ones. Town selection is applied
@@ -194,6 +249,7 @@ function Board() {
     if (f.type) q.set('type', f.type)
     q.set('sort', sort)
     if (onlyConfirmed) q.set('only_confirmed', '1')
+    if (avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
     // The review queue is its own endpoint — pending_check is excluded from
     // /listings by the active filter, which is the point of both.
     const path = view === 'recheck'
@@ -204,7 +260,7 @@ function Board() {
       .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [f.beds, f.baths, f.min, f.max, f.type, sort, view, onlyConfirmed, refreshTick])
+  }, [f.beds, f.baths, f.min, f.max, f.type, sort, view, onlyConfirmed, avail, refreshTick])
 
   // The recheck tab's badge. Fetched separately so the count is visible while
   // the agent is on the board — an unread review queue that only announces
@@ -273,16 +329,20 @@ function Board() {
         if (r.lat > rect.north || r.lat < rect.south) return false
         if (r.lng > rect.east || r.lng < rect.west) return false
       }
+      if (circ) {
+        if (r.lat == null || r.lng == null) return false
+        if (metresBetween(circ.lat, circ.lng, r.lat, r.lng) > circ.r) return false
+      }
       return true
     })
-  }, [positioned, f.towns, f.q, rect])
+  }, [positioned, f.towns, f.q, rect, circ])
 
   const mineCount = visible.filter(r => r.isMine).length
 
   function toggleTown(k: string) {
     setF(s => ({ ...s, towns: s.towns.includes(k) ? s.towns.filter(x => x !== k) : [...s.towns, k] }))
   }
-  function reset() { setF(EMPTY); setRect(null) }
+  function reset() { setF(EMPTY); setRect(null); setCirc(null) }
 
   const onMarkerClick = useCallback((ref: string) => {
     setFocusRef(ref)
@@ -415,6 +475,26 @@ function Board() {
             </button>
           )}
 
+          {/* Free-from search. Months are generated from today, so the list
+              never offers one that has already passed. */}
+          {view === 'board' && (
+            <select
+              value={avail}
+              onChange={e => setAvail(e.target.value)}
+              title="Filter by when the property becomes free"
+              className="px-3 py-2 bg-off-white border-0 rounded text-sm text-navy/70
+                         focus:outline-none focus:ring-1 focus:ring-gold/50"
+            >
+              <option value="">Free — any</option>
+              <option value="now">Free now</option>
+              <option value="soon">Soon (no date)</option>
+              <option value="dated">Has a date</option>
+              {nextMonths(9).map(m => (
+                <option key={m.value} value={m.value}>From {m.label}</option>
+              ))}
+            </select>
+          )}
+
           {rect && (
             <button
               onClick={() => setRect(null)}
@@ -422,6 +502,15 @@ function Board() {
               title="Clear the area drawn on the map"
             >
               Area drawn <span className="opacity-60">×</span>
+            </button>
+          )}
+          {circ && (
+            <button
+              onClick={() => setCirc(null)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded bg-navy text-white text-xs whitespace-nowrap"
+              title="Clear the circle drawn on the map"
+            >
+              {(circ.r / 1000).toFixed(1)} km circle <span className="opacity-60">×</span>
             </button>
           )}
         </>
@@ -502,6 +591,8 @@ function Board() {
           items={visible}
           rect={rect}
           onRect={setRect}
+          circ={circ}
+          onCirc={setCirc}
           onMarkerClick={onMarkerClick}
           selectedTowns={f.towns}
           isMobile={isMobile}
@@ -588,10 +679,12 @@ function Board() {
 // with it. google.maps.Rectangle is still supported, so the box is drawn by
 // anchoring on mousedown and resizing until mouseup.
 // There is exactly one rectangle at a time and it can be cleared and redrawn.
-function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile }: {
+function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTowns, isMobile }: {
   items: Array<Listing & { lat: number | null; lng: number | null; tkey: string }>
   rect: Rect | null
   onRect: (r: Rect | null) => void
+  circ: Circ | null
+  onCirc: (c: Circ | null) => void
   onMarkerClick: (ref: string) => void
   selectedTowns: string[]
   isMobile: boolean
@@ -604,7 +697,10 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
   const anchorRef = useRef<any>(null)
   const overlayRef = useRef<any>(null)
   const [ready, setReady] = useState(false)
-  const [drawing, setDrawing] = useState(false)
+  // null = not drawing. 'rect' and 'circle' share every pointer handler below;
+  // only the shape they build differs.
+  const [drawing, setDrawing] = useState<null | 'rect' | 'circle'>(null)
+  const circleRef = useRef<any>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
   // null = still asking the backend, '' = there is no key
   const [mapsKey, setMapsKey] = useState<string | null>(BUNDLED_MAPS_KEY || null)
@@ -690,6 +786,7 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
       div.style.touchAction = ''
       return
     }
+    const mode = drawing
     map.setOptions({ draggable: false, draggableCursor: 'crosshair' })
     div.style.touchAction = 'none'   // otherwise a touch drag scrolls the page
 
@@ -705,38 +802,65 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
       { lat: Math.max(a.lat(), b.lat()), lng: Math.max(a.lng(), b.lng()) },
     )
 
+    const clearShapes = () => {
+      if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
+      if (circleRef.current) { circleRef.current.setMap(null); circleRef.current = null }
+    }
+
     const onDown = (ev: PointerEvent) => {
       const ll = toLatLng(ev)
       if (!ll) return
       ev.preventDefault()
       anchorRef.current = ll
-      if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
-      shapeRef.current = new g.maps.Rectangle({
-        map,
-        bounds: boundsOf(ll, ll),
-        fillColor: A, fillOpacity: 0.10, strokeColor: A, strokeWeight: 1.5, clickable: false,
-      })
+      clearShapes()
+      if (mode === 'circle') {
+        // Anchor is the CENTRE and the drag is the radius — the natural gesture
+        // for "within X of here".
+        circleRef.current = new g.maps.Circle({
+          map, center: ll, radius: 0,
+          fillColor: A, fillOpacity: 0.10, strokeColor: A, strokeWeight: 1.5, clickable: false,
+        })
+      } else {
+        shapeRef.current = new g.maps.Rectangle({
+          map,
+          bounds: boundsOf(ll, ll),
+          fillColor: A, fillOpacity: 0.10, strokeColor: A, strokeWeight: 1.5, clickable: false,
+        })
+      }
     }
     const onMove = (ev: PointerEvent) => {
-      if (!anchorRef.current || !shapeRef.current) return
+      if (!anchorRef.current) return
       const ll = toLatLng(ev)
       if (!ll) return
-      shapeRef.current.setBounds(boundsOf(anchorRef.current, ll))
+      if (mode === 'circle') {
+        if (!circleRef.current) return
+        circleRef.current.setRadius(
+          metresBetween(anchorRef.current.lat(), anchorRef.current.lng(), ll.lat(), ll.lng()))
+      } else {
+        if (!shapeRef.current) return
+        shapeRef.current.setBounds(boundsOf(anchorRef.current, ll))
+      }
     }
     const onUp = (ev: PointerEvent) => {
       const anchor = anchorRef.current
       anchorRef.current = null
       if (!anchor) return
       const ll = toLatLng(ev) || anchor
+      setDrawing(null)
+
+      if (mode === 'circle') {
+        const r = metresBetween(anchor.lat(), anchor.lng(), ll.lat(), ll.lng())
+        // A tap rather than a drag means "changed my mind" — clearing beats
+        // filtering everything away with a 5-metre circle.
+        if (r < 150) { clearShapes(); onCirc(null); return }
+        onCirc({ lat: anchor.lat(), lng: anchor.lng(), r })
+        return
+      }
+
       const b = boundsOf(anchor, ll)
       const ne = b.getNorthEast(), sw = b.getSouthWest()
       const tiny = Math.abs(ne.lat() - sw.lat()) < 0.0008 && Math.abs(ne.lng() - sw.lng()) < 0.0008
-      setDrawing(false)
-      if (tiny) {
-        if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
-        onRect(null)
-        return
-      }
+      if (tiny) { clearShapes(); onRect(null); return }
       onRect({ north: ne.lat(), east: ne.lng(), south: sw.lat(), west: sw.lng() })
     }
 
@@ -752,7 +876,7 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
       window.removeEventListener('pointerup', onUp, true)
       div.style.touchAction = ''
     }
-  }, [ready, drawing, onRect])
+  }, [ready, drawing, onRect, onCirc])
 
   // A rect restored from a shared link has no rectangle on the map yet — draw
   // it once so the box is visible, not just silently filtering.
@@ -766,6 +890,18 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
     })
     mapRef.current.fitBounds(shapeRef.current.getBounds())
   }, [ready, rect])
+
+  // A circ restored from a shared link has no shape on the map yet.
+  useEffect(() => {
+    if (!ready || !mapRef.current || !circ || circleRef.current) return
+    const g = (window as any).google
+    circleRef.current = new g.maps.Circle({
+      map: mapRef.current,
+      center: { lat: circ.lat, lng: circ.lng }, radius: circ.r,
+      fillColor: A, fillOpacity: 0.10, strokeColor: A, strokeWeight: 1.5, clickable: false,
+    })
+    mapRef.current.fitBounds(circleRef.current.getBounds())
+  }, [ready, circ])
 
   // markers
   useEffect(() => {
@@ -814,15 +950,19 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
     }
   }, [ready, selectedTowns])
 
-  function startDraw() {
+  function startDraw(mode: 'rect' | 'circle') {
     if (!mapRef.current) return
     if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
-    setDrawing(true)
+    if (circleRef.current) { circleRef.current.setMap(null); circleRef.current = null }
+    // One area at a time — two overlapping area filters is a set nobody can read.
+    onRect(null); onCirc(null)
+    setDrawing(mode)
   }
   function clearDraw() {
     if (shapeRef.current) { shapeRef.current.setMap(null); shapeRef.current = null }
-    setDrawing(false)
-    onRect(null)
+    if (circleRef.current) { circleRef.current.setMap(null); circleRef.current = null }
+    setDrawing(null)
+    onRect(null); onCirc(null)
   }
 
   const height = isMobile ? 260 : 420
@@ -857,10 +997,13 @@ function MapPanel({ items, rect, onRect, onMarkerClick, selectedTowns, isMobile 
       )}
       {ready && (
         <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: 6 }}>
-          <button onClick={startDraw} style={{ ...btn, background: drawing ? A : '#FFF', color: drawing ? '#FFF' : '#444', boxShadow: '0 1px 4px rgba(0,0,0,0.16)', border: 'none' }}>
-            {drawing ? 'Draw a box…' : '▭ Draw area'}
+          <button onClick={() => startDraw('circle')} style={{ ...btn, background: drawing === 'circle' ? A : '#FFF', color: drawing === 'circle' ? '#FFF' : '#444', boxShadow: '0 1px 4px rgba(0,0,0,0.16)', border: 'none' }}>
+            {drawing === 'circle' ? 'Drag out a radius…' : '◯ Circle area'}
           </button>
-          {rect && (
+          <button onClick={() => startDraw('rect')} style={{ ...btn, background: drawing === 'rect' ? A : '#FFF', color: drawing === 'rect' ? '#FFF' : '#444', boxShadow: '0 1px 4px rgba(0,0,0,0.16)', border: 'none' }}>
+            {drawing === 'rect' ? 'Draw a box…' : '▭ Box'}
+          </button>
+          {(rect || circ) && (
             <button onClick={clearDraw} style={{ ...btn, background: '#FFF', color: '#444', boxShadow: '0 1px 4px rgba(0,0,0,0.16)', border: 'none' }}>
               ✕ Clear area
             </button>
@@ -952,6 +1095,34 @@ function ago(iso: string): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
+// "13 Aug", or "13 Aug 25" once it is not this year — a bare "13 Aug" on a
+// listing from last April reads as recent, which is the opposite of the point.
+function fmtDay(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const t = new Date(iso)
+  if (!Number.isFinite(t.getTime())) return '—'
+  const d = t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const sameYear = t.getFullYear() === new Date().getFullYear()
+  return sameYear ? d : `${d} ${String(t.getFullYear()).slice(2)}`
+}
+
+// The free-from chip. 'soon' is deliberately the loudest of the three: it means
+// "nobody has told us", and an agent should feel that before quoting a date to a
+// client.
+function availChip(a?: Listing['availability']) {
+  const kind = a?.kind || 'soon'
+  if (kind === 'now') {
+    return { text: 'now', bg: 'rgba(47,111,87,0.14)', fg: 'rgb(47,111,87)',
+             title: 'Free now — a date on file, on or before today' }
+  }
+  if (kind === 'date') {
+    return { text: a?.label || 'dated', bg: AD, fg: '#7A6534',
+             title: `Free from ${a?.date || 'a date the owner gave'}` }
+  }
+  return { text: 'soon', bg: '#F1EFEA', fg: '#8A8578',
+           title: 'No clear date on file — treated as soon, never as "now"' }
+}
+
 // ── card ────────────────────────────────────────────────────────────────────
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, busy }: {
   r: Listing
@@ -969,6 +1140,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   // Drives the button's green and the timer badge — both read the same
   // timestamp, so the colour and the number can never disagree.
   const fresh = freshness(r.lastConfirmedAvailableAt)
+  const avail = availChip(r.availability)
   const status = confirmed ? { c: GREEN, t: 'confirmed available' }
     : r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
     : r.availableStatus === 'rented' ? { c: '#B91C1C', t: 'rented' }
@@ -1039,14 +1211,50 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.c, flexShrink: 0 }} title={status.t} />
           <span style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>{townLabel(r.town)}</span>
+          {/* Free from when, on the right. 'soon' is the default whenever the
+              listing is not clearly free now or carrying a real date — the
+              server decides, so this chip and the filter cannot disagree. */}
+          <span title={avail.title} style={{
+            marginLeft: 'auto', flexShrink: 0,
+            fontFamily: FM, fontSize: 9.5, fontWeight: 700,
+            padding: '2px 7px', borderRadius: 999,
+            background: avail.bg, color: avail.fg,
+          }}>
+            {avail.text}
+          </span>
         </div>
+
+        {/* The street, where we have one. Number never shown, and only on your
+            own listing — see streetWithoutNumber() on the server. */}
+        {r.streetName && (
+          <div style={{ fontSize: 11, color: '#7A6534', marginTop: 3 }}>
+            {r.streetName}
+          </div>
+        )}
 
         <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
           {[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type]
             .filter(Boolean).join(' · ')}
         </div>
 
-        <div style={{ fontSize: 10, color: '#B5AFA2', marginTop: 8, marginBottom: 10 }}>
+        {/* Uploaded vs free-from, side by side. Kev: "so we can see how
+            accurate they are" — a listing uploaded in April that still claims
+            "now" is exactly what this pairing exposes. */}
+        <div style={{
+          display: 'flex', gap: 10, marginTop: 8, fontSize: 9.5, fontFamily: FM,
+          color: '#B5AFA2', flexWrap: 'wrap',
+        }}>
+          <span title={r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB') : 'no upload date'}>
+            up <strong style={{ color: '#8A8578', fontWeight: 700 }}>{fmtDay(r.createdAt)}</strong>
+          </span>
+          <span title={r.availableDate ? `free from ${r.availableDate}` : 'no date on file — treated as soon'}>
+            free <strong style={{ color: '#8A8578', fontWeight: 700 }}>
+              {r.availableDate ? fmtDay(r.availableDate) : 'soon'}
+            </strong>
+          </span>
+        </div>
+
+        <div style={{ fontSize: 10, color: '#B5AFA2', marginTop: 6, marginBottom: 10 }}>
           Listed by {r.listedBy.displayName || 'unassigned'}
         </div>
 
@@ -1072,18 +1280,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               opacity: busy ? 0.5 : 1,
               cursor: busy ? 'wait' : 'pointer',
             }}>
-            {fresh.tier === 'unconfirmed' ? 'Available' : '✓ Available'}
+            {fresh.tier === 'unconfirmed' ? 'ON MARKET' : '✓ ON MARKET'}
           </button>
           <button
             onClick={() => onStatus('check-out')}
             disabled={busy}
-            title="Not available — asks for a reason, then takes it off the board"
+            title="Off market — asks for a reason, then takes it off the board"
             style={{
               ...btn, flex: 1, border: '1px solid rgba(185,28,28,0.22)',
               background: '#FFF', color: '#B91C1C', fontWeight: 700,
               opacity: busy ? 0.5 : 1,
             }}>
-            Not available
+            OFF MARKET
           </button>
         </div>
 
