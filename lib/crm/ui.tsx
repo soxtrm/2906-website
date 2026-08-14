@@ -36,11 +36,48 @@ export const fmtPhone = (p: string) => {
 export const fmtMoney = (n: any) => (n == null ? null : `€${Number(n).toLocaleString()}`)
 
 // Human-readable activity description from a property_activities row.
+//
+// Two families of rows land here. The old edit rows carry {field, old, new}. The
+// Schedule Board's rows (manual_check_out, marked_rented, archived, …) carry
+// {old_status, new_status, reason, changed_by} inside details instead — the
+// columns for those never existed. Without the branch below, the single most
+// useful line in the log rendered as the words "manual check out" and the reason
+// an agent typed — the whole point of asking for one — was invisible in
+// Inventory. See services/boardAction.js for the vocabulary.
+const ACT_LABEL: Record<string, string> = {
+  manual_check_in:      'Confirmed available',
+  manual_check_out:     'Off market',
+  manual_archive:       'Archived',
+  archived:             'Archived',
+  marked_pending_check: 'Sent to review queue',
+  marked_rented:        'Marked rented',
+  marked_rented_via_av: 'Marked rented (owner said so)',
+  returned_to_market:   'Back on market',
+  priority_changed:     'Priority changed',
+}
+// Who decided, when it was not the person clicking. 'agent' needs no badge —
+// the row already shows the agent.
+const ACT_BY: Record<string, string> = {
+  owner_reply: 'owner reply',
+  ai:          'AI',
+  emoji:       'emoji',
+  system:      'system',
+}
 export function describe(h: any) {
   const t = (h.type || '').replace(/_/g, ' ')
   const d = h.details || {}
   if (d.field && (d.old != null || d.new != null)) return `${t}: ${d.field} ${d.old ?? '∅'} → ${d.new ?? '∅'}`
-  return t
+
+  const label = ACT_LABEL[h.type] || t
+  const parts = [label]
+  if (d.priority_class) parts.push(`→ ${d.priority_class}${d.priority ? ` (rank ${d.priority})` : ''}`)
+  else if (d.old_status && d.new_status && d.old_status !== d.new_status) {
+    parts.push(`(${String(d.old_status).replace(/_/g, ' ')} → ${String(d.new_status).replace(/_/g, ' ')})`)
+  }
+  const by = ACT_BY[d.changed_by]
+  if (by) parts.push(`· ${by}`)
+  if (d.reason) parts.push(`— ${d.reason}`)
+  return parts.join(' ')
 }
 export const fmtDate = (d: any) => {
   if (!d) return null
