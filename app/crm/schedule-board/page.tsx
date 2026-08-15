@@ -52,6 +52,12 @@ type Listing = {
   availability?: { kind: 'now' | 'soon' | 'date'; date: string | null; label: string }
   // Street name, no number, own listings only. null on everybody else's.
   streetName?: string | null
+  // Read off the listing's own wording by services/listingRules.js.
+  // true = it says yes · false = it says no · null = it does not say.
+  // Three states on purpose: "no pets" and "nobody wrote it down" are different
+  // answers to give a client, so null is never drawn as either.
+  petFriendly?: boolean | null
+  sharing?: boolean | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
@@ -1123,6 +1129,155 @@ function availChip(a?: Listing['availability']) {
            title: 'No clear date on file — treated as soon, never as "now"' }
 }
 
+// ── pets / sharing ──────────────────────────────────────────────────────────
+// Two questions clients ask before anything else, answered on the card instead
+// of three clicks deeper. The flag comes from the server (services/listingRules.js
+// reads the listing's own wording); this only draws it.
+//
+// THREE STATES, because that is what the data says:
+//   yes     → solid icon, brand navy. The listing says so.
+//   no      → outline with a slash. The listing says the opposite.
+//   unknown → nothing at all. Not a faint icon, not a grey one: 168 of 200
+//             listings say nothing about pets, and 200 faint paws on a board
+//             would be noise that also invites reading them as "no".
+const PAW_PATH =
+  'M4.5 10.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm3.4-3.3c-1 0-1.9-1-1.9-2.2S6.9 2.8 7.9 2.8s1.9 1 1.9 2.2-.9 2.2-1.9 2.2Zm4.2 0c-1 0-1.9-1-1.9-2.2s.9-2.2 1.9-2.2 1.9 1 1.9 2.2-.9 2.2-1.9 2.2Zm3.4 3.3c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm-5.5.4c1.7 0 3.1.8 4 2 .8 1 .6 2.4-.4 3-.9.6-2.2.3-3.6.3s-2.7.3-3.6-.3c-1-.6-1.2-2 .4-3 .5-1.2 1.9-2 3.2-2Z'
+const PEOPLE_PATH =
+  'M7 9a2.6 2.6 0 1 0 0-5.2A2.6 2.6 0 0 0 7 9Zm6.2.4a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4ZM7 10.6c-2.5 0-4.6 1.4-4.6 3.1v1.1h9.2v-1.1c0-1.7-2.1-3.1-4.6-3.1Zm6.2.5c-.5 0-1 .05-1.5.16.9.7 1.5 1.6 1.5 2.6v.95h4.4v-.95c0-1.5-1.8-2.76-4.4-2.76Z'
+
+function RuleIcon({ state, label, path }: {
+  state: boolean | null | undefined
+  label: string
+  path: string
+}) {
+  if (state !== true && state !== false) return null
+  const yes = state === true
+  return (
+    <span
+      title={yes ? `${label}: the listing says yes` : `${label}: the listing says no`}
+      style={{ display: 'inline-flex', lineHeight: 0 }}
+    >
+      <svg width="15" height="15" viewBox="0 0 20 20" aria-label={`${label} ${yes ? 'yes' : 'no'}`}>
+        <path
+          d={path}
+          fill={yes ? NAVY : 'none'}
+          stroke={yes ? 'none' : '#C9C3B6'}
+          strokeWidth={yes ? 0 : 1.2}
+        />
+        {!yes && (
+          <line x1="3.2" y1="16.8" x2="16.8" y2="3.2"
+            stroke="#C0392B" strokeWidth="1.4" strokeLinecap="round" opacity="0.75" />
+        )}
+      </svg>
+    </span>
+  )
+}
+
+// ── download the photos ─────────────────────────────────────────────────────
+// For the agents who post to Facebook by hand. The order is the ranked order the
+// board already shows (Gemini best-first), so the first file is the one that
+// should lead the post.
+//
+// HOW, and why not the obvious way. A `download` attribute is IGNORED
+// cross-origin, so a plain anchor click navigates instead of saving. Cloudinary's
+// fl_attachment transformation fixes that by sending Content-Disposition — but
+// firing fifteen of those in a row does NOT give fifteen files: each top-level
+// navigation cancels the download the previous one had just started, and you end
+// up with exactly one file, the last. (Measured: 1 of 15.)
+//
+// So: fetch the bytes (res.cloudinary.com sends Access-Control-Allow-Origin: *)
+// and save each one from a blob URL, which is same-origin and therefore honours
+// both `download` and our own filename — #ref-01.jpg, not
+// rvmrl3rwsvsncckyjfd6.jpg. fl_attachment is kept only as the fallback for a
+// fetch that fails, opened in a tab so it cannot cancel anything.
+function attachmentUrl(url: string, name: string): string | null {
+  const marker = '/image/upload/'
+  const at = url.indexOf(marker)
+  if (at === -1) return null
+  return `${url.slice(0, at + marker.length)}fl_attachment:${encodeURIComponent(name)}/${url.slice(at + marker.length)}`
+}
+
+function clickDownload(href: string, filename?: string) {
+  const a = document.createElement('a')
+  a.href = href
+  if (filename) a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
+async function downloadPhotos(r: Listing, onProgress: (done: number) => void) {
+  const urls = r.images || []
+  for (let i = 0; i < urls.length; i++) {
+    const name = `${r.ref}-${String(i + 1).padStart(2, '0')}.jpg`
+    try {
+      const res = await fetch(urls[i], { mode: 'cors' })
+      if (!res.ok) throw new Error(String(res.status))
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      clickDownload(objectUrl, name)
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30000)
+    } catch {
+      // CORS refused or the network blinked. Fall back to Cloudinary's own
+      // attachment URL in a new tab: slower and noisier, but it cannot cancel
+      // the files that already landed.
+      const direct = attachmentUrl(urls[i], name.replace(/\.jpg$/, ''))
+      if (direct) window.open(direct, '_blank', 'noopener')
+    }
+    onProgress(i + 1)
+    // Chrome coalesces downloads fired in the same tick; a small gap keeps them
+    // all and is invisible to the agent.
+    if (i < urls.length - 1) await new Promise(res => setTimeout(res, 120))
+  }
+}
+
+// The button itself. Its own tiny component so the download state belongs to one
+// card and a click cannot bubble up into "open the listing".
+function PhotoDownload({ r }: { r: Listing }) {
+  const [done, setDone] = useState<number | null>(null)
+  const n = r.imageCount || (r.images || []).length
+  const running = done !== null && done < n
+
+  if (!n) {
+    return (
+      <span title="No photos on this listing" style={{ opacity: 0.3, cursor: 'default' }}>
+        {DownloadGlyph}
+      </span>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={e => {
+        e.stopPropagation()
+        if (running) return
+        setDone(0)
+        downloadPhotos(r, d => setDone(d))
+      }}
+      title={`Download ${n} photo${n === 1 ? '' : 's'} of #${r.ref}, best first — for posting to Facebook`}
+      aria-label={`Download ${n} photos`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        background: 'none', border: 'none', padding: 0, cursor: running ? 'default' : 'pointer',
+        color: running ? NAVY : '#B5AFA2', fontFamily: FM, fontSize: 9.5,
+      }}
+    >
+      {running ? `${done}/${n}` : done === n ? '✓' : ''}
+      {DownloadGlyph}
+    </button>
+  )
+}
+
+const DownloadGlyph = (
+  <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden>
+    <path d="M10 3v8m0 0 3.2-3.2M10 11 6.8 7.8" fill="none" stroke="currentColor"
+      strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3.6 13.2v1.6c0 .9.7 1.6 1.6 1.6h9.6c.9 0 1.6-.7 1.6-1.6v-1.6"
+      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+)
+
 // ── card ────────────────────────────────────────────────────────────────────
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, busy }: {
   r: Listing
@@ -1158,6 +1313,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   return (
     <div
       ref={innerRef}
+      // The ref on the DOM node, so a test can assert "this listing's card shows
+      // that icon" instead of matching on position in the grid.
+      data-ref={r.ref}
       style={{
         background: CARD,
         borderRadius: 14,
@@ -1232,9 +1390,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           </div>
         )}
 
-        <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-          {[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type]
-            .filter(Boolean).join(' · ')}
+        <div style={{
+          fontSize: 11, color: '#999', marginTop: 4,
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span>
+            {[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type]
+              .filter(Boolean).join(' · ')}
+          </span>
+          {/* Sharing and pets, whenever the listing actually says. Nothing is
+              drawn when it does not — see RuleIcon. */}
+          <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 5, alignItems: 'center' }}>
+            <RuleIcon state={r.sharing} label="Sharing" path={PEOPLE_PATH} />
+            <RuleIcon state={r.petFriendly} label="Pets" path={PAW_PATH} />
+          </span>
         </div>
 
         {/* Uploaded vs free-from, side by side. Kev: "so we can see how
@@ -1251,6 +1420,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             free <strong style={{ color: '#8A8578', fontWeight: 700 }}>
               {r.availableDate ? fmtDay(r.availableDate) : 'soon'}
             </strong>
+          </span>
+          <span style={{ marginLeft: 'auto' }}>
+            <PhotoDownload r={r} />
           </span>
         </div>
 
