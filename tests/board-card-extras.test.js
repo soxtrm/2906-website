@@ -60,7 +60,13 @@ async function run() {
   try {
     await page.setCookie({ name: 'crm_session', value: TOKEN, domain: COOKIE_DOMAIN, path: '/' })
     await page.goto(`${BASE}/schedule-board`, { waitUntil: 'networkidle2', timeout: 60000 })
-    await page.waitForSelector('[data-ref]', { timeout: 20000 }).catch(() => {})
+    // Wait for cards to actually be there. Production is slower than a local
+    // build (real Maps, 170 cards, cold start), and swallowing this timeout is
+    // how a run reports "0 cards in the DOM" as if that were a pass.
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-ref]').length > 0,
+      { timeout: 45000 },
+    ).catch(() => {})
     await new Promise(r => setTimeout(r, 1500))
 
     const rows = (payload && payload.listings) || []
@@ -90,7 +96,8 @@ async function run() {
       return out
     })
     const cardCount = Object.keys(shown).length
-    ok('cards are in the DOM', `${cardCount}`)
+    if (cardCount > 0) ok('cards are in the DOM', `${cardCount}`)
+    else { no('cards are in the DOM', '0 — nothing rendered, every icon check below is meaningless'); throw new Error('no cards') }
 
     const iconFor = (ref, what) => (shown[ref] || []).find(l => l && l.startsWith(what))
 
