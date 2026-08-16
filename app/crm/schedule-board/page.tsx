@@ -44,6 +44,9 @@ type Listing = {
   // When somebody last pressed "Available" on this card, and why it last moved.
   lastConfirmedAvailableAt: string | null
   statusChangeReason: string | null
+  // Whether the >60h robot has been told to leave THIS owner alone. A fact
+  // about our own scheduler, not about the listing or the owner.
+  autoReachoutOptOut?: boolean
   // The firewall's verdict, decided by boardAction.emitPinPrecision. Always
   // 'locality_only' today: a pin is a village, never a doorstep.
   pinPrecision?: string | null
@@ -58,6 +61,17 @@ type Listing = {
   // answers to give a client, so null is never drawn as either.
   petFriendly?: boolean | null
   sharing?: boolean | null
+  // Same three states, but no card icon by design — subletting is a search
+  // filter only (Kev, 2026-08-16). Derived server-side by listingRules.js.
+  subletting?: boolean | null
+  // WATag: whether this listing has a stored group message to anchor a "." to.
+  // 85 of the 215 listings predate the capture and have none — the button is
+  // dead for those, and it says so rather than failing on click.
+  canTag?: boolean
+  // Favourites only. When it was added, and the viewing it was added for —
+  // a favourite exists because somebody booked a viewing, so the card shows it.
+  favouritedAt?: string | null
+  viewing?: { id: number; date: string; time: string | null; status: string } | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
@@ -76,7 +90,10 @@ type Listing = {
 }
 
 type Filters = BoardFilterValue & { towns: string[] }
-const EMPTY: Filters = { q: '', beds: '', baths: '', min: '', max: '', type: '', towns: [] }
+const EMPTY: Filters = {
+  q: '', beds: '', baths: '', min: '', max: '', type: '', towns: [],
+  pets: '', sharing: '', sublet: false,
+}
 
 // Newest-first is the default because it is what the board is for: the listing
 // that just came in is the one being asked about. The backend owns the actual
@@ -91,6 +108,25 @@ const SORTS: Array<[string, string]> = [
   ['price_high', 'Price ↓'],
 ]
 const DEFAULT_SORT = 'newest'
+
+type BoardView = 'board' | 'recheck' | 'favourites'
+
+// ── WATag ───────────────────────────────────────────────────────────────────
+// The anti-spam ceiling. The backend enforces the same number and is the real
+// limit — this copy exists so the agent is stopped at selection time with a
+// sentence, instead of at send time with fifteen successes and a list of
+// leftovers. If they ever disagree, the server wins.
+const MAX_TAGS = 15
+
+// The server's off-market guard, mirrored. A tag invites somebody to forward
+// the listing, so a flat that has gone must not be offered one. Favourites is
+// the tab where this bites: it deliberately keeps showing a listing that went
+// off-market after you booked a viewing on it.
+// routes/crmScheduleBoard.js lockedReason() is the real gate; this only decides
+// whether the control is drawn.
+function lockedStatus(s: string | null | undefined) {
+  return s === 'rented' || s === 'archived'
+}
 
 // The next N months as { value: 'YYYY-MM', label: 'October 2026' }, starting
 // with the current one — generated rather than hardcoded so the dropdown never
@@ -171,6 +207,13 @@ function Board() {
     max: params.get('max') || '',
     type: params.get('type') || '',
     towns: (params.get('towns') || '').split(',').map(s => s.trim()).filter(Boolean),
+    // Tenancy rules. Narrowed back to the union so a hand-edited URL like
+    // ?pets=maybe falls back to "don't care" instead of filtering everything out.
+    pets: (params.get('pets') === 'yes' || params.get('pets') === 'no'
+      ? params.get('pets') : '') as '' | 'yes' | 'no',
+    sharing: (params.get('sharing') === 'yes' || params.get('sharing') === 'no'
+      ? params.get('sharing') : '') as '' | 'yes' | 'no',
+    sublet: params.get('sublet') === '1',
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
   const [circ, setCirc] = useState<Circ | null>(() => parseCirc(params.get('circ')))
@@ -181,15 +224,31 @@ function Board() {
   // 'board' = the active worklist (available + available_confirmed).
   // 'recheck' = the review queue, everything at pending_check: listings where
   // the classifier could not read an owner's reply, plus anything flagged by
-  // hand. Two separate endpoints, one grid.
-  const [view, setView] = useState<'board' | 'recheck'>(
-    params.get('view') === 'recheck' ? 'recheck' : 'board')
+  // hand.
+  // 'favourites' = the listings this agent has a viewing on. Filled
+  // automatically by the Book button, and NOT filtered to what is still on the
+  // market — a booking on a flat that just went is the one thing you must not
+  // stop seeing. Three endpoints, one grid.
+  const [view, setView] = useState<BoardView>(
+    params.get('view') === 'recheck' ? 'recheck'
+      : params.get('view') === 'favourites' ? 'favourites' : 'board')
   const [onlyConfirmed, setOnlyConfirmed] = useState(params.get('only_confirmed') === '1')
   // '' | 'now' | 'soon' | 'dated' | 'YYYY-MM'. The server owns what each means
   // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
   const [avail, setAvail] = useState<string>(() => params.get('avail') || params.get('avail_from') || '')
   const [rows, setRows] = useState<Listing[]>([])
   const [recheckCount, setRecheckCount] = useState(0)
+  const [favCount, setFavCount] = useState(0)
+  // ── WATag selection ───────────────────────────────────────────────────────
+  // Refs, not ids: the API speaks refs, and a ref is what the agent reads off
+  // the card. A Set keeps "is this one picked?" O(1) across 200 cards.
+  //
+  // Insertion ORDER is load-bearing. Over fifteen the tail is dropped, so
+  // "the first fifteen" has to mean the first fifteen the agent clicked — a Set
+  // preserves that, and the backend re-applies the same rule on the order it
+  // receives.
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [tagging, setTagging] = useState(false)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [focusRef, setFocusRef] = useState<string | null>(null)
@@ -223,6 +282,12 @@ function Board() {
       if (f.max) q.set('max', f.max)
       if (f.type) q.set('type', f.type)
       if (f.towns.length) q.set('towns', f.towns.join(','))
+      // Selection is NOT mirrored into the URL. A shared board link is a
+      // search, and fifteen refs a colleague did not pick riding along in it
+      // would be a WATag run waiting to be fired by somebody else.
+      if (f.pets) q.set('pets', f.pets)
+      if (f.sharing) q.set('sharing', f.sharing)
+      if (f.sublet) q.set('sublet', '1')
       if (rect) q.set('rect', rectToParam(rect))
       if (circ) q.set('circ', circToParam(circ))
       if (sort !== DEFAULT_SORT) q.set('sort', sort)
@@ -256,10 +321,17 @@ function Board() {
     q.set('sort', sort)
     if (onlyConfirmed) q.set('only_confirmed', '1')
     if (avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
-    // The review queue is its own endpoint — pending_check is excluded from
-    // /listings by the active filter, which is the point of both.
+    // The review queue and Favourites are each their own endpoint. Neither can
+    // be a query parameter on /listings: pending_check is excluded there by the
+    // active filter (which is the point of both), and Favourites is joined to
+    // this agent's own bookmark rows.
+    //
+    // Neither takes the sort or the server-side filters, so the sort control is
+    // disabled on those tabs rather than sending a parameter that is ignored.
     const path = view === 'recheck'
       ? 'schedule-board/review-queue'
+      : view === 'favourites'
+      ? 'schedule-board/favourites'
       : `schedule-board/listings?${q.toString()}`
     crmFetch(path)
       .then(d => { if (!alive) return; setRows(d.listings || []); setErr(null) })
@@ -276,6 +348,16 @@ function Board() {
     crmFetch('schedule-board/review-queue')
       .then(d => { if (alive) setRecheckCount((d.listings || []).length) })
       .catch(() => { if (alive) setRecheckCount(0) })
+    return () => { alive = false }
+  }, [refreshTick])
+
+  // Same idea for the Favourites badge: a booking that silently added a card to
+  // a tab nobody is looking at is a card nobody finds again.
+  useEffect(() => {
+    let alive = true
+    crmFetch('schedule-board/favourites')
+      .then(d => { if (alive) setFavCount((d.listings || []).length) })
+      .catch(() => { if (alive) setFavCount(0) })
     return () => { alive = false }
   }, [refreshTick])
 
@@ -330,6 +412,19 @@ function Board() {
         const hay = [r.ref, r.town, r.subLocation, r.type].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(needle)) return false
       }
+      // ── tenancy rules ─────────────────────────────────────────────────────
+      // Three states, so match EXACTLY: 'yes' keeps only true, 'no' keeps only
+      // false, and null (nobody wrote it down) is excluded by both. That is the
+      // honest reading — a listing that never mentions pets is not evidence
+      // either way, so it must not be returned for "pet-friendly" and must not
+      // be hidden as if it said no. Applied here with the other client-side
+      // filters because petFriendly / sharing / subletting are derived from the
+      // listing's own wording by services/listingRules.js, not stored columns.
+      if (f.pets === 'yes' && r.petFriendly !== true) return false
+      if (f.pets === 'no' && r.petFriendly !== false) return false
+      if (f.sharing === 'yes' && r.sharing !== true) return false
+      if (f.sharing === 'no' && r.sharing !== false) return false
+      if (f.sublet && r.subletting !== true) return false
       if (rect) {
         if (r.lat == null || r.lng == null) return false
         if (r.lat > rect.north || r.lat < rect.south) return false
@@ -341,7 +436,7 @@ function Board() {
       }
       return true
     })
-  }, [positioned, f.towns, f.q, rect, circ])
+  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, rect, circ])
 
   const mineCount = visible.filter(r => r.isMine).length
 
@@ -377,6 +472,32 @@ function Board() {
     } catch (e: any) {
       const d = e?.data || {}
       showToast('err', d.message || d.error || e?.message || 'Request failed')
+    }
+  }
+
+  // ── pause the robot for one owner ─────────────────────────────────────────
+  // The per-listing exception to the reachout schedule (backend migration 019).
+  // Optimistic like check-in, and rolled back on failure: the whole point of
+  // this control is trust, so a click that silently did nothing would be worse
+  // than an error toast.
+  async function optOut(r: Listing, next: boolean) {
+    if (busyRef) return
+    setBusyRef(r.ref)
+    setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, autoReachoutOptOut: next } : x))
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/reachout-opt-out`,
+        'POST', { optOut: next })
+      setRows(rs => rs.map(x => x.ref === r.ref
+        ? { ...x, autoReachoutOptOut: d.optOut === true } : x))
+      showToast('ok', d.message || (next
+        ? `Robot paused for #${r.ref}.` : `Robot may ask about #${r.ref} again.`))
+    } catch (e: any) {
+      setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, autoReachoutOptOut: !next } : x))
+      const d = e?.data || {}
+      showToast('err', d.error || e?.message || 'Could not change it')
+    } finally {
+      setBusyRef(null)
     }
   }
 
@@ -429,6 +550,104 @@ function Board() {
     }
   }
 
+  // ── WATag ─────────────────────────────────────────────────────────────────
+  // Drops a "." into the listing's own category group as a reply to the listing
+  // message. The dot is a handle, not a comment: an agent taps the quote above
+  // it, WhatsApp jumps to the listing, and they forward that.
+  //
+  // Two ways in — one card at a time, or a selection from the toolbar — and
+  // both land on services/waTag.js, so the ceiling and the one-account rule are
+  // the same rule in both.
+
+  function toggleSelect(ref: string) {
+    setSelected(s => {
+      const next = new Set(s)
+      if (next.has(ref)) { next.delete(ref); return next }
+      // The stop happens HERE, at the click that would be the sixteenth,
+      // because that is the moment the agent can still choose differently. The
+      // alternative — letting them pick thirty and truncating at send — tells
+      // them which fifteen they got only after the dots are already sent.
+      if (next.size >= MAX_TAGS) {
+        showToast('info',
+          `${MAX_TAGS} is the limit. Unpick one first, or tag these ${MAX_TAGS} and select the rest after.`)
+        return s
+      }
+      next.add(ref)
+      return next
+    })
+  }
+
+  // "Select all" over a filtered board is how the map and the search become the
+  // selection tool: draw a circle round Sliema, search 2-bed, hit select.
+  // Only listings that CAN be tagged, and only up to the ceiling.
+  function selectVisible() {
+    const eligible = visible.filter(r => r.canTag !== false && !lockedStatus(r.availableStatus))
+    const take = eligible.slice(0, MAX_TAGS).map(r => r.ref)
+    setSelected(new Set(take))
+    if (eligible.length > MAX_TAGS) {
+      showToast('info',
+        `Picked the first ${MAX_TAGS} of ${eligible.length}. Unpick any you do not want, or send these and select the rest after.`)
+    } else if (!take.length) {
+      showToast('info', 'None of these listings has a group message to anchor to.')
+    }
+  }
+
+  async function tagOne(r: Listing) {
+    if (tagging) return
+    setTagging(true)
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/watag`, 'POST', {})
+      showToast('ok', d.message || `#${r.ref} tagged.`)
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || d.message || e?.message || 'Could not tag this listing.')
+    } finally {
+      setTagging(false)
+    }
+  }
+
+  async function tagSelected() {
+    if (tagging || !selected.size) return
+    setTagging(true)
+    const refs = [...selected]
+    showToast('info', `Tagging ${refs.length} listing${refs.length === 1 ? '' : 's'}…`)
+    try {
+      const d = await crmJson('schedule-board/watag', 'POST', { refs })
+      showToast(d.tagged ? 'ok' : 'err', d.message || `${d.tagged} tagged.`)
+      // Keep only what did NOT go out, so a second click finishes the job
+      // instead of repeating it. Anything the server refused by name stays
+      // picked and visible; everything it tagged is dropped.
+      const failed = new Set<string>([
+        ...(d.skipped || []),
+        ...((d.results || []) as Array<{ ref: string; status: string }>)
+          .filter(x => x.status !== 'ok' && x.status !== 'duplicate')
+          .map(x => x.ref),
+      ])
+      setSelected(new Set(refs.filter(x => failed.has(x))))
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || e?.message || 'WATag failed')
+    } finally {
+      setTagging(false)
+    }
+  }
+
+  // Take one off the Favourites list. Removes the bookmark and nothing else —
+  // the viewing stays in the diary, which is what the toast says.
+  async function unfavourite(r: Listing) {
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/favourite`, 'DELETE', {})
+      setRows(rs => rs.filter(x => x.ref !== r.ref))
+      setFavCount(n => Math.max(0, n - 1))
+      showToast('ok', d.message || `#${r.ref} removed from Favourites.`)
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || e?.message || 'Could not remove it')
+    }
+  }
+
   // The three removals all go through StatusDialog, which owns the POST so it
   // can show a refusal in place rather than as a toast over an empty gap. The
   // card is pulled the moment the server confirms — nothing is deleted, it has
@@ -458,9 +677,11 @@ function Board() {
           <select
             value={sort}
             onChange={e => setSort(e.target.value)}
-            disabled={view === 'recheck'}
+            disabled={view !== 'board'}
             title={view === 'recheck'
               ? 'The review queue is ordered oldest-doubt-first'
+              : view === 'favourites'
+              ? 'Favourites are ordered by when you saved them, newest first'
               : 'Order the board'}
             className="px-3 py-2 bg-off-white border-0 rounded text-sm text-navy/70
                        focus:outline-none focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
@@ -536,11 +757,20 @@ function Board() {
         {/* Active board ⇄ review queue. The board shows only what an agent can
             offer today; the queue holds the listings where the classifier could
             not read an owner's reply and refused to guess. */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
-          {([['board', 'Active board'], ['recheck', 'Needs recheck']] as const).map(([v, label]) => {
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          {([['board', 'Active board'], ['recheck', 'Needs recheck'],
+             ['favourites', 'Favourites']] as const).map(([v, label]) => {
             const on = view === v
+            const badge = v === 'recheck' ? recheckCount : v === 'favourites' ? favCount : 0
             return (
-              <button key={v} onClick={() => setView(v)} style={{
+              <button key={v} data-tab={v} onClick={() => {
+                setView(v)
+                // Drop the selection when the grid underneath it changes. A ref
+                // picked on the active board that is not in Favourites would
+                // still be sent — an invisible selection is the kind of thing
+                // that puts a dot in a group nobody meant to touch.
+                setSelected(new Set())
+              }} style={{
                 ...chip, borderRadius: 8,
                 background: on ? NAVY : '#FFF',
                 borderColor: on ? NAVY : '#E9E5DC',
@@ -548,17 +778,23 @@ function Board() {
                 fontWeight: on ? 700 : 500,
               }}>
                 {label}
-                {v === 'recheck' && recheckCount > 0 && (
+                {badge > 0 && (
                   <span style={{
                     marginLeft: 6, fontFamily: FM, fontSize: 10,
                     background: on ? 'rgba(255,255,255,0.22)' : AD,
                     color: on ? '#FFF' : '#7A6534',
                     padding: '1px 5px', borderRadius: 999,
-                  }}>{recheckCount}</span>
+                  }}>{badge}</span>
                 )}
               </button>
             )
           })}
+          {/* The owner-reachout switch. Sits here rather than in a settings page
+              because this is where you notice the robot's work, and it is where
+              Kev asked for it (2026-08-16). Admin only, and read-only for
+              everybody else — an agent still benefits from seeing whether the
+              robot is chasing owners before deciding to chase one himself. */}
+          <ReachoutSwitch />
         </div>
 
         {view === 'recheck' && (
@@ -572,6 +808,73 @@ function Board() {
             Oldest doubt first.
           </div>
         )}
+
+        {view === 'favourites' && (
+          <div style={{
+            background: '#F3F6F4', border: '1px solid rgba(47,111,87,0.22)', borderRadius: 10,
+            padding: '10px 14px', fontSize: 11.5, color: '#3C5A4C',
+            marginBottom: 14, lineHeight: 1.5,
+          }}>
+            Everything you have booked a viewing on, newest first. Listings land
+            here by themselves when a booking goes through — including ones that
+            have since gone off the market, because that is a viewing somebody
+            still has to be told about.
+          </div>
+        )}
+
+        {/* ── WATag toolbar ──────────────────────────────────────────────────
+            The multi-select half of WATag. It appears only once something is
+            picked, so the board is not carrying a dead bar around all day, and
+            it names the count in the button rather than beside it — the number
+            is the thing you check before firing. */}
+        <div style={{
+          display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
+          marginBottom: 14,
+        }}>
+          <button
+            data-watag-selectall
+            onClick={selectVisible}
+            disabled={!visible.length}
+            title={`Pick the first ${MAX_TAGS} listings in this search that can be tagged`}
+            style={{
+              ...chip, borderRadius: 8, background: '#FFF', borderColor: '#E9E5DC',
+              color: visible.length ? '#666' : '#C9C4B8',
+              cursor: visible.length ? 'pointer' : 'not-allowed',
+            }}>
+            Select for WATag
+          </button>
+
+          {selected.size > 0 && (
+            <>
+              <button
+                data-watag-send
+                onClick={tagSelected}
+                disabled={tagging}
+                title={`Put a "." under each of these ${selected.size} listings in its group`}
+                style={{
+                  ...chip, borderRadius: 8, background: tagging ? '#8A93A6' : NAVY,
+                  borderColor: tagging ? '#8A93A6' : NAVY, color: '#FFF', fontWeight: 700,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  cursor: tagging ? 'wait' : 'pointer',
+                }}>
+                <PersonGlyph color="#FFF" />
+                {tagging ? 'Tagging…' : `WATag ${selected.size}`}
+              </button>
+              <button
+                onClick={() => setSelected(new Set())}
+                style={{ ...subtleLink, fontSize: 11 }}>
+                clear
+              </button>
+              {/* Say the ceiling out loud once it is reached, rather than
+                  letting the next click look broken. */}
+              <span style={{ fontSize: 10.5, color: selected.size >= MAX_TAGS ? '#B08968' : '#B5AFA2' }}>
+                {selected.size >= MAX_TAGS
+                  ? `${MAX_TAGS} is the maximum — send these, then pick the rest.`
+                  : `${MAX_TAGS - selected.size} more can be picked`}
+              </span>
+            </>
+          )}
+        </div>
 
         {/* villages */}
         {townOptions.length > 0 && (
@@ -621,7 +924,13 @@ function Board() {
               onAsk={() => setAsking(r)}
               onCheckIn={() => checkIn(r)}
               onStatus={action => setStatusing({ r, action })}
+              onOptOut={next => optOut(r, next)}
               busy={busyRef === r.ref}
+              selected={selected.has(r.ref)}
+              onSelect={() => toggleSelect(r.ref)}
+              onTag={() => tagOne(r)}
+              tagging={tagging}
+              onUnfavourite={view === 'favourites' ? () => unfavourite(r) : undefined}
             />
           ))}
         </div>
@@ -630,6 +939,8 @@ function Board() {
           <div style={{ padding: '48px 0', textAlign: 'center', color: '#BBB', fontSize: 13 }}>
             {view === 'recheck'
               ? 'Nothing waiting for a recheck.'
+              : view === 'favourites'
+              ? 'No favourites yet. Book a viewing and the listing lands here.'
               : 'Nothing matches this search.'}
           </div>
         )}
@@ -1029,6 +1340,19 @@ const Dot = ({ c }: { c: string }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: c, marginRight: 3 }} />
 )
 
+// The WATag mark. A person, per Kev's brief — the tag is about handing a
+// listing to another human, which is not something a paperclip or an arrow
+// says. Inline SVG like the paw and the people icon above it, so the card does
+// not pull an icon package in for one glyph.
+const PersonGlyph = ({ color = 'currentColor', size = 13 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden focusable="false"
+    style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="8" r="3.4" stroke={color} strokeWidth="1.9" />
+    <path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"
+      stroke={color} strokeWidth="1.9" strokeLinecap="round" />
+  </svg>
+)
+
 // ── freshness ladder ────────────────────────────────────────────────────────
 // The Available button's green is a staleness gauge, not a boolean: the harder
 // it burns, the more recently a human stood behind it. An agent reads the
@@ -1279,7 +1603,114 @@ const DownloadGlyph = (
 )
 
 // ── card ────────────────────────────────────────────────────────────────────
-function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, busy }: {
+// ── the owner-reachout switch ────────────────────────────────────────────────
+//
+// One control for the whole robot flow (backend: reachout_settings, migration
+// 019). Reading is open to any board user; only an admin may move it.
+//
+// It shows the EFFECTIVE state, not just the setting. There is a second,
+// independent kill switch in the backend's environment, and a UI that said
+// "every 3 days" while that flag was off would be lying about what happens.
+function ReachoutSwitch() {
+  // `canEdit` comes from the server (it re-reads the live role), so this
+  // component does not need the role from context — and cannot disagree with
+  // the backend about who may change the schedule.
+  const [s, setS] = useState<{
+    mode: string; retryDays: number | null; dailyCap: number; enabled: boolean
+    envArmed: boolean; effective: boolean; optedOutCount: number; canEdit: boolean
+  } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    crmFetch('schedule-board/reachout-settings')
+      .then(d => { if (alive) setS(d) })
+      .catch(() => { if (alive) setS(null) })
+    return () => { alive = false }
+  }, [])
+
+  if (!s) return null
+
+  const LABEL: Record<string, string> = {
+    '2d': 'every 2 days', '3d': 'every 3 days', weekly: 'weekly',
+    monthly: 'monthly', never: 'off',
+  }
+
+  async function change(mode: string) {
+    setSaving(true); setNote(null)
+    try {
+      const d = await crmJson('schedule-board/reachout-settings', 'PUT', { mode })
+      setS(prev => (prev ? { ...prev, ...d } : prev))
+      setNote(d.message || null)
+    } catch (e: any) {
+      setNote(e?.data?.error || e?.message || 'Could not save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const on = s.effective
+  return (
+    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 10.5, color: '#B5AFA2', whiteSpace: 'nowrap' }}>
+        auto owner check
+      </span>
+      {s.canEdit ? (
+        <select
+          value={s.mode}
+          disabled={saving}
+          onChange={e => change(e.target.value)}
+          title={s.envArmed
+            ? 'How often the robot may re-ask one owner whether a listing is still on the market'
+            : 'The backend kill switch (AVAILABILITY_AUTO_REACHOUT) is off, so nothing is sent whatever this says'}
+          style={{
+            ...chip, borderRadius: 8, cursor: saving ? 'wait' : 'pointer',
+            background: on ? NAVY : '#FFF',
+            borderColor: on ? NAVY : '#E9E5DC',
+            color: on ? '#FFF' : '#666',
+            fontWeight: on ? 700 : 500,
+            paddingRight: 8,
+          }}>
+          {(['never', '2d', '3d', 'weekly', 'monthly'] as const).map(m => (
+            <option key={m} value={m} style={{ color: '#222', background: '#FFF' }}>
+              {LABEL[m]}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <span style={{
+          ...chip, borderRadius: 8, background: on ? NAVY : '#FFF',
+          borderColor: on ? NAVY : '#E9E5DC', color: on ? '#FFF' : '#666',
+        }}>
+          {LABEL[s.mode] || s.mode}
+        </span>
+      )}
+      {/* The setting says on, the environment says no. Say so out loud rather
+          than letting somebody believe owners are being contacted. */}
+      {s.enabled && !s.envArmed && (
+        <span title="AVAILABILITY_AUTO_REACHOUT is not set in the backend environment"
+          style={{ fontSize: 10, color: '#B91C1C', fontWeight: 700 }}>
+          blocked by backend
+        </span>
+      )}
+      {s.optedOutCount > 0 && (
+        <span title={`${s.optedOutCount} listing(s) have the robot paused individually`}
+          style={{ fontSize: 10, color: '#B08968', fontFamily: FM }}>
+          {s.optedOutCount} paused
+        </span>
+      )}
+      {note && (
+        <span style={{ fontSize: 10, color: '#7A6534', maxWidth: 260, lineHeight: 1.3 }}>
+          {note}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, onOptOut, busy,
+                selected, onSelect, onTag, tagging, onUnfavourite }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -1289,9 +1720,36 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   onAsk: () => void
   onCheckIn: () => void
   onStatus: (action: StatusAction) => void
+  onOptOut: (next: boolean) => void
   busy: boolean
+  // WATag. `selected` drives the tick in the corner; `onTag` is the per-card
+  // button, which does not touch the selection at all — one listing, one dot.
+  selected: boolean
+  onSelect: () => void
+  onTag: () => void
+  tagging: boolean
+  // Only passed on the Favourites tab. Its absence is what hides the control
+  // everywhere else, rather than a second copy of "which tab am I on".
+  onUnfavourite?: () => void
 }) {
+  // Role decides which of the rarer controls this card even offers. Read from
+  // context rather than passed down: every card wants the same answer, and
+  // threading it through the list would be one more prop to forget.
+  const { me } = useCrm()
+  const isAdmin = me?.role === 'admin'
   const confirmed = r.availableStatus === 'available_confirmed'
+  // Can this listing be anchored at all? Two independent reasons it cannot:
+  // there is no stored group message to quote (85 of 215 listings), or it is
+  // off the market and must not be offered for forwarding. The server refuses
+  // both; this decides whether the control is drawn live or dead.
+  const offMarket = lockedStatus(r.availableStatus)
+  const noAnchor  = r.canTag === false
+  const canTag    = !offMarket && !noAnchor
+  const tagWhy    = offMarket
+    ? 'Off the market — tagging it would invite somebody to forward it.'
+    : noAnchor
+    ? 'This listing has no saved group message to anchor a tag to.'
+    : 'Put a "." under this listing in its group, so it can be forwarded quickly'
   // Drives the button's green and the timer badge — both read the same
   // timestamp, so the colour and the number can never disagree.
   const fresh = freshness(r.lastConfirmedAvailableAt)
@@ -1339,6 +1797,35 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           <span style={{ position: 'absolute', bottom: 9, right: 9, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '2px 6px', borderRadius: 4 }}>
             {r.imageCount}
           </span>
+        )}
+
+        {/* The WATag pick box. Bottom-left of the photo, out of the way of the
+            "Yours" badge and the freshness timer, and 30px square so it clears
+            the tap floor the mobile pass enforces.
+            stopPropagation because the photo itself opens the detail modal —
+            picking a listing and opening it are different intentions. */}
+        {canTag && (
+          <button
+            data-watag-pick={r.ref}
+            aria-pressed={selected}
+            onClick={e => { e.stopPropagation(); onSelect() }}
+            title={selected ? 'Picked for WATag — click to unpick' : 'Pick for WATag'}
+            style={{
+              position: 'absolute', bottom: 7, left: 7,
+              width: 30, height: 30, borderRadius: 8, padding: 0,
+              display: 'grid', placeItems: 'center',
+              background: selected ? NAVY : 'rgba(255,255,255,0.86)',
+              border: `1.5px solid ${selected ? NAVY : 'rgba(0,0,0,0.14)'}`,
+              color: selected ? '#FFF' : '#7A7A7A',
+              cursor: 'pointer', lineHeight: 0,
+            }}>
+            {selected
+              ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M5 12.5l4.5 4.5L19 7" stroke="#FFF" strokeWidth="2.6"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              : <PersonGlyph color="#7A7A7A" size={15} />}
+          </button>
         )}
         {/* The timer, top right. Same source as the button's green, so the
             number explains the colour instead of competing with it. */}
@@ -1478,20 +1965,56 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           {/* Quiet by design — these are the rarer actions — but still real tap
               targets. minHeight 30 is the floor this board holds everything to:
               at the 14px an underlined text run gives you, these were a miss on
-              a phone, which tests/schedule-board.test.js catches. */}
-          <button
-            onClick={() => onStatus('recheck')}
-            title="Park this in the review queue until somebody checks"
-            style={{ ...subtleLink, marginLeft: 'auto' }}>
-            recheck
-          </button>
-          <button
-            onClick={() => onStatus('archive')}
-            title="Archive — off the board for good, still in Inventory"
-            style={subtleLink}>
-            archive
-          </button>
+              a phone, which tests/schedule-board.test.js catches.
+
+              ADMIN ONLY since 2026-08-16 (Kev). Two different reasons:
+              • archive is irreversible from this board — it is the one action
+                that takes a listing out of the review queue as well.
+              • recheck is redundant for an agent: a listing nobody has
+                confirmed goes stale on its own (STALE_HOURS, backend) and shows
+                up in "Needs recheck" without anybody clicking anything.
+              The routes still accept both from any agent — this hides the
+              buttons, it does not change permissions. */}
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => onStatus('recheck')}
+                title="Park this in the review queue until somebody checks"
+                style={{ ...subtleLink, marginLeft: 'auto' }}>
+                recheck
+              </button>
+              <button
+                onClick={() => onStatus('archive')}
+                title="Archive — off the board for good, still in Inventory"
+                style={subtleLink}>
+                archive
+              </button>
+            </>
+          )}
         </div>
+
+        {/* "Leave this owner alone" — the per-listing exception to the robot's
+            reachout schedule. Shown to an admin and to the agent the listing
+            belongs to; the backend enforces the same rule and 403s otherwise.
+            Deliberately NOT a status: it changes nothing about the listing, only
+            whether our scheduler is allowed to message this owner. */}
+        {(isAdmin || r.isMine) && (
+          <button
+            onClick={() => onOptOut(!r.autoReachoutOptOut)}
+            disabled={busy}
+            title={r.autoReachoutOptOut
+              ? 'The robot is not asking this owner. Click to allow it again.'
+              : 'Stop the automatic owner check for this listing. You can still ask by hand.'}
+            style={{
+              ...subtleLink,
+              marginBottom: 10,
+              alignSelf: 'flex-start',
+              color: r.autoReachoutOptOut ? '#B08968' : '#B5AFA2',
+              opacity: busy ? 0.5 : 1,
+            }}>
+            {r.autoReachoutOptOut ? '⏸ robot paused for this owner' : 'pause robot for this owner'}
+          </button>
+        )}
 
         {/* Why it last moved — the review queue is unusable without it. */}
         {r.statusChangeReason && (
@@ -1514,7 +2037,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               color: c.canAsk ? '#FFF' : '#B5AFA2',
               cursor: c.canAsk ? 'pointer' : 'not-allowed',
             }}>
-            Availability
+            {/* Kev, 2026-08-16: the label is the QUESTION we are about to ask,
+                not the topic. "Availability" reads like a status you are being
+                shown; this reads like the message that is about to go out. */}
+            Still on Market?
           </button>
 
           <button
@@ -1528,7 +2054,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               border: `1px solid ${c.canQuestion ? 'rgba(27,42,74,0.18)' : '#EDE9E0'}`,
               cursor: c.canQuestion ? 'pointer' : 'not-allowed',
             }}>
-            Ask
+            {/* Kev asked for "Ask Owner" (2026-08-16). It says Owner only where
+                that is TRUE: routes/crmScheduleBoard.js ask/send resolves the
+                owner with `isMine ? ownerFor(...) : null`, so on a colleague's
+                listing this question reaches the listing AGENT. A button that
+                said "Ask Owner" there would be a lie about who we messaged. */}
+            {r.isMine ? 'Ask Owner' : 'Ask Agent'}
           </button>
 
           {/* Booking is internal — never blocked by a contact rule. */}
@@ -1539,6 +2070,27 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             Book
           </button>
 
+          {/* WATag, one listing. Deliberately separate from the pick box on the
+              photo: this is "tag this one now", that is "add it to a batch".
+              Drawn even when it cannot fire, greyed with the reason in the
+              tooltip — a button that vanishes teaches nobody why. */}
+          <button
+            data-watag-one={r.ref}
+            onClick={() => canTag && !tagging && onTag()}
+            disabled={!canTag || tagging}
+            title={tagWhy}
+            style={{
+              ...btn,
+              background: '#FFF',
+              color: canTag ? NAVY : '#C9C4B8',
+              border: `1px solid ${canTag ? 'rgba(27,42,74,0.18)' : '#EDE9E0'}`,
+              cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}>
+            <PersonGlyph color={canTag ? NAVY : '#C9C4B8'} />
+            WATag
+          </button>
+
           {!r.isMine && !r.hasViewingLocation && c.canAsk && (
             <button onClick={() => onAct('request-location', r)}
               style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }}
@@ -1547,6 +2099,32 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             </button>
           )}
         </div>
+
+        {/* Favourites only: the viewing this card is here for, and a way off the
+            list. Reads under the buttons so the card's shape does not change
+            between tabs. */}
+        {onUnfavourite && (
+          <div style={{
+            marginTop: 8, paddingTop: 8, borderTop: '1px solid #F1EEE7',
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          }}>
+            <span style={{ fontSize: 10.5, color: GREEN, fontWeight: 600 }}>
+              {r.viewing
+                ? `Viewing ${fmtDay(r.viewing.date)}${r.viewing.time ? ` at ${r.viewing.time}` : ''}`
+                : 'Saved'}
+            </span>
+            {r.viewing && r.viewing.status !== 'confirmed' && (
+              <span style={{ fontSize: 9.5, color: '#B08968' }}>{r.viewing.status}</span>
+            )}
+            <button
+              data-unfavourite={r.ref}
+              onClick={onUnfavourite}
+              title="Take it off Favourites. The viewing stays in the diary."
+              style={{ ...subtleLink, marginLeft: 'auto', fontSize: 10.5 }}>
+              remove
+            </button>
+          </div>
+        )}
 
         {/* One line of truth under the buttons: why they are off, or where a
             working button actually sends. */}

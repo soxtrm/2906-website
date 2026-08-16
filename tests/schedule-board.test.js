@@ -164,16 +164,27 @@ async function run() {
   // Fall A vs Fall B is no longer a different button set but a different
   // destination, and the server decides which of them are enabled, so what
   // this checks is: the buttons exist, and disabled ones carry a reason.
+  //
+  // The two contact buttons are matched by PATTERN, not by an exact string.
+  // Kev renamed both on 2026-08-16 — "Availability" became "Still on Market?"
+  // (the question being asked, not the topic) and "Ask" became "Ask Owner" or
+  // "Ask Agent" depending on who it actually reaches. An exact-match test
+  // silently reported zero of each and read like the buttons had vanished.
   const btns = await page.evaluate(() => {
     const all = Array.from(document.querySelectorAll('button'))
-    const c = l => all.filter(x => x.innerText.trim() === l).length
-    const dis = l => all.filter(x => x.innerText.trim() === l && x.disabled).length
+    const AVAIL = /^still on market/i
+    const ASK   = /^ask (owner|agent)$/i
+    const txt = x => x.innerText.trim()
+    const c   = re => all.filter(x => re.test(txt(x))).length
+    const dis = re => all.filter(x => re.test(txt(x)) && x.disabled).length
     return {
-      availability: c('Availability'), ask: c('Ask'), book: c('Book'), location: c('Location'),
-      availabilityDisabled: dis('Availability'), askDisabled: dis('Ask'),
+      availability: c(AVAIL), ask: c(ASK),
+      book: all.filter(x => txt(x) === 'Book').length,
+      location: all.filter(x => txt(x) === 'Location').length,
+      availabilityDisabled: dis(AVAIL), askDisabled: dis(ASK),
       // A disabled button must explain itself — title is what the card sets.
       disabledWithoutReason: all.filter(x =>
-        x.disabled && ['Availability', 'Ask'].includes(x.innerText.trim()) && !x.title.trim()).length,
+        x.disabled && (AVAIL.test(txt(x)) || ASK.test(txt(x))) && !x.title.trim()).length,
     }
   })
   const yours = await page.evaluate(() =>
@@ -573,13 +584,14 @@ async function run() {
     skip('Fall A button click', 'backend is armed (SCHEDULE_BOARD_FALL_A_LIVE=1) — clicking would message a real owner')
   } else try {
     const clicked = await page.evaluate(() => {
+      // Renamed to "Still on Market?" on 2026-08-16 — same button, same route.
       const b = Array.from(document.querySelectorAll('button'))
-        .find(x => x.innerText.trim() === 'Availability' && !x.disabled)
+        .find(x => /^still on market/i.test(x.innerText.trim()) && !x.disabled)
       if (!b) return false
       b.click()
       return true
     })
-    if (!clicked) throw new Error('no enabled "Availability" button')
+    if (!clicked) throw new Error('no enabled "Still on Market?" button')
     // The optimistic "Contacting…" toast is replaced by the result toast, which
     // itself self-destructs after 5.2s — so wait for the *result* wording and
     // read it in the same breath, no sleep in between.
