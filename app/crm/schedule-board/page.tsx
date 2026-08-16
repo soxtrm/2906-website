@@ -68,6 +68,9 @@ type Listing = {
   // 85 of the 215 listings predate the capture and have none — the button is
   // dead for those, and it says so rather than failing on click.
   canTag?: boolean
+  // Whether THIS agent has starred it. Drives the star on the photo, which is a
+  // toggle and so has to know which way it is already pointing.
+  isFavourite?: boolean
   // Favourites only. When it was added, and the viewing it was added for —
   // a favourite exists because somebody booked a viewing, so the card shows it.
   favouritedAt?: string | null
@@ -633,18 +636,31 @@ function Board() {
     }
   }
 
-  // Take one off the Favourites list. Removes the bookmark and nothing else —
-  // the viewing stays in the diary, which is what the toast says.
-  async function unfavourite(r: Listing) {
+  // ── the star ──────────────────────────────────────────────────────────────
+  // Top-left of every card. Filled = on this agent's Favourites. Booking still
+  // fills the list by itself; this is the manual half, for the flat you found
+  // and want to keep before there is a viewing to book.
+  //
+  // Optimistic and rolled back on failure, like check-in: the agent already
+  // knows what they meant, and a star that waits for a round trip gets clicked
+  // twice. Removing the bookmark never touches the viewing.
+  async function toggleFavourite(r: Listing, next: boolean) {
+    setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, isFavourite: next } : x))
+    setFavCount(n => Math.max(0, n + (next ? 1 : -1)))
     try {
       const d = await crmJson(
-        `schedule-board/listings/${encodeURIComponent(r.ref)}/favourite`, 'DELETE', {})
-      setRows(rs => rs.filter(x => x.ref !== r.ref))
-      setFavCount(n => Math.max(0, n - 1))
-      showToast('ok', d.message || `#${r.ref} removed from Favourites.`)
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/favourite`,
+        next ? 'POST' : 'DELETE', {})
+      // On the Favourites tab an unstarred card has no reason to still be there.
+      if (!next && view === 'favourites') setRows(rs => rs.filter(x => x.ref !== r.ref))
+      showToast('ok', d.message || (next
+        ? `#${r.ref} saved to Favourites.`
+        : `#${r.ref} removed from Favourites.`))
     } catch (e: any) {
+      setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, isFavourite: !next } : x))
+      setFavCount(n => Math.max(0, n + (next ? -1 : 1)))
       const d = e?.data || {}
-      showToast('err', d.error || e?.message || 'Could not remove it')
+      showToast('err', d.error || e?.message || 'Could not change it')
     }
   }
 
@@ -930,7 +946,8 @@ function Board() {
               onSelect={() => toggleSelect(r.ref)}
               onTag={() => tagOne(r)}
               tagging={tagging}
-              onUnfavourite={view === 'favourites' ? () => unfavourite(r) : undefined}
+              onFavourite={next => toggleFavourite(r, next)}
+              onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
             />
           ))}
         </div>
@@ -946,7 +963,21 @@ function Board() {
         )}
       </div>
 
-      {detail && <DetailModal refId={detail} onClose={() => setDetail(null)} onAct={act} />}
+      {detail && (
+        <DetailModal
+          refId={detail}
+          onClose={() => setDetail(null)}
+          onAct={act}
+          // The modal used to offer one button — "Request availability" — while
+          // the card behind it offered five. Opening a listing to read it made
+          // every other action disappear (Kev, 2026-08-16). These are the same
+          // handlers the card uses, so the two surfaces cannot drift.
+          onTag={r => tagOne(r)}
+          tagging={tagging}
+          onFavourite={(r, next) => toggleFavourite(r, next)}
+          onBook={r => { setDetail(null); setBooking(r) }}
+        />
+      )}
 
       <AnimatePresence>
         {booking && (
@@ -1340,6 +1371,17 @@ const Dot = ({ c }: { c: string }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: c, marginRight: 3 }} />
 )
 
+// The Favourites star. One glyph, two states: outline when it is not saved,
+// solid white on gold when it is. Same shape either way, so the card does not
+// shift when it is clicked.
+const StarGlyph = ({ filled, size = 15 }: { filled: boolean; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false"
+    fill={filled ? '#FFF' : 'none'} style={{ flexShrink: 0 }}>
+    <path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85L12 3.6z"
+      stroke={filled ? '#FFF' : '#7A7A7A'} strokeWidth="1.8" strokeLinejoin="round" />
+  </svg>
+)
+
 // The WATag mark. A person, per Kev's brief — the tag is about handing a
 // listing to another human, which is not something a paperclip or an arrow
 // says. Inline SVG like the paw and the people icon above it, so the card does
@@ -1710,7 +1752,7 @@ function ReachoutSwitch() {
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, onOptOut, busy,
-                selected, onSelect, onTag, tagging, onUnfavourite }: {
+                selected, onSelect, onTag, tagging, onFavourite, onUnfavourite }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -1728,6 +1770,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   onSelect: () => void
   onTag: () => void
   tagging: boolean
+  // The star, top-left. Passed everywhere, on every tab.
+  onFavourite: (next: boolean) => void
   // Only passed on the Favourites tab. Its absence is what hides the control
   // everywhere else, rather than a second copy of "which tab am I on".
   onUnfavourite?: () => void
@@ -1788,8 +1832,31 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         {r.images[0]
           ? <img src={r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#CCC', fontSize: 11 }}>no photo</div>}
+        {/* The star. Top-left corner, Kev's call (2026-08-16) — the first place
+            the eye lands on a card, and the same corner the Inventory star
+            lives in. Filled = on your Favourites.
+            stopPropagation: the photo opens the detail modal, and starring a
+            listing is not asking to read it. */}
+        <button
+          data-favourite={r.ref}
+          aria-pressed={!!r.isFavourite}
+          onClick={e => { e.stopPropagation(); onFavourite(!r.isFavourite) }}
+          title={r.isFavourite
+            ? 'On your Favourites — click to remove. The viewing, if any, stays.'
+            : 'Save to your Favourites'}
+          style={{
+            position: 'absolute', top: 7, left: 7,
+            width: 30, height: 30, borderRadius: 8, padding: 0,
+            display: 'grid', placeItems: 'center', lineHeight: 0,
+            background: r.isFavourite ? 'rgba(212,137,26,0.95)' : 'rgba(255,255,255,0.86)',
+            border: `1.5px solid ${r.isFavourite ? A : 'rgba(0,0,0,0.14)'}`,
+            cursor: 'pointer',
+          }}>
+          <StarGlyph filled={!!r.isFavourite} />
+        </button>
+
         {r.isMine && (
-          <span style={{ position: 'absolute', top: 9, left: 9, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+          <span style={{ position: 'absolute', top: 9, left: 44, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Yours
           </span>
         )}
@@ -2085,10 +2152,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               color: canTag ? NAVY : '#C9C4B8',
               border: `1px solid ${canTag ? 'rgba(27,42,74,0.18)' : '#EDE9E0'}`,
               cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
-              display: 'inline-flex', alignItems: 'center', gap: 5,
+              display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
-            <PersonGlyph color={canTag ? NAVY : '#C9C4B8'} />
-            WATag
+            {/* Person + @, no word (Kev, 2026-08-16). The row already carries
+                three worded buttons; a fourth pushed the set onto two lines on a
+                laptop. The tooltip is where the sentence lives. */}
+            <PersonGlyph color={canTag ? NAVY : '#C9C4B8'} size={14} />
+            <span style={{ fontFamily: FM, fontSize: 13, fontWeight: 600, lineHeight: 1 }}>@</span>
           </button>
 
           {!r.isMine && !r.hasViewingLocation && c.canAsk && (
@@ -2152,19 +2222,27 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
 }
 
 // ── detail modal ────────────────────────────────────────────────────────────
-function DetailModal({ refId, onClose, onAct }: {
+function DetailModal({ refId, onClose, onAct, onTag, tagging, onFavourite, onBook }: {
   refId: string
   onClose: () => void
   onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
+  onTag: (r: Listing) => void
+  tagging: boolean
+  onFavourite: (r: Listing, next: boolean) => void
+  onBook: (r: Listing) => void
 }) {
   const [d, setD] = useState<any>(null)
   const [e, setE] = useState<string | null>(null)
   const [i, setI] = useState(0)
+  // The star's state lives here as well as on the board: the modal fetches its
+  // own copy of the listing, so it would otherwise keep showing the value it
+  // loaded with after the star is clicked.
+  const [fav, setFav] = useState(false)
 
   useEffect(() => {
     let alive = true
     crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}`)
-      .then(x => { if (alive) setD(x) })
+      .then(x => { if (alive) { setD(x); setFav(!!x.isFavourite) } })
       .catch(x => { if (alive) setE(x?.message || 'Could not load listing') })
     return () => { alive = false }
   }, [refId])
@@ -2277,6 +2355,57 @@ function DetailModal({ refId, onClose, onAct }: {
                     Request viewing location
                   </button>
                 )}
+
+                {/* Book, WATag and the star — the rest of what the card offers.
+                    Same verdicts as the card: off-market or no stored group
+                    message means the tag is drawn dead with the reason on it. */}
+                <button
+                  onClick={() => onBook(d)}
+                  style={{ ...btn, background: '#FFF', color: NAVY, border: `1px solid ${AB}`, fontWeight: 700 }}>
+                  Book
+                </button>
+
+                {(() => {
+                  const off = lockedStatus(d.availableStatus)
+                  const can = !off && d.canTag !== false
+                  return (
+                    <button
+                      data-watag-one={d.ref}
+                      onClick={() => can && !tagging && onTag(d)}
+                      disabled={!can || tagging}
+                      title={off
+                        ? 'Off the market — tagging it would invite somebody to forward it.'
+                        : d.canTag === false
+                        ? 'This listing has no saved group message to anchor a tag to.'
+                        : 'Put a "." under this listing in its group, so it can be forwarded quickly'}
+                      style={{
+                        ...btn, background: '#FFF',
+                        color: can ? NAVY : '#C9C4B8',
+                        border: `1px solid ${can ? 'rgba(27,42,74,0.18)' : '#EDE9E0'}`,
+                        cursor: can && !tagging ? 'pointer' : 'not-allowed',
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                      }}>
+                      <PersonGlyph color={can ? NAVY : '#C9C4B8'} size={14} />
+                      <span style={{ fontFamily: FM, fontSize: 13, fontWeight: 600, lineHeight: 1 }}>@</span>
+                    </button>
+                  )
+                })()}
+
+                <button
+                  data-favourite={d.ref}
+                  aria-pressed={fav}
+                  onClick={() => { setFav(!fav); onFavourite(d, !fav) }}
+                  title={fav ? 'On your Favourites — click to remove' : 'Save to your Favourites'}
+                  style={{
+                    ...btn,
+                    background: fav ? 'rgba(212,137,26,0.95)' : '#FFF',
+                    border: `1px solid ${fav ? A : AB}`,
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    color: fav ? '#FFF' : '#7A6534',
+                  }}>
+                  <StarGlyph filled={fav} size={14} />
+                  {fav ? 'Saved' : 'Save'}
+                </button>
               </div>
               {d.contact?.canAsk === false && d.contact?.reason && (
                 <div style={{ fontSize: 11, color: '#B08968', marginTop: 8 }}>{d.contact.reason}</div>

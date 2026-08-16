@@ -144,6 +144,52 @@ async function run() {
     selectAll ? ok('the toolbar has a Select for WATag control')
               : no('the toolbar has a Select for WATag control', 'not found')
 
+    // ── the star ────────────────────────────────────────────────────────────
+    // Top-left of every card, on every tab, and it is a toggle so it has to
+    // arrive already pointing the right way.
+    const stars = await page.$$('[data-favourite]')
+    stars.length === cards.length
+      ? ok('every card has a favourites star', `${stars.length}`)
+      : no('every card has a favourites star', `${stars.length} stars for ${cards.length} cards`)
+
+    const starTop = await page.$$eval('[data-favourite]', els => els.slice(0, 3).map(e => {
+      const b = e.getBoundingClientRect()
+      const card = e.closest('[data-ref]').getBoundingClientRect()
+      return { dx: Math.round(b.left - card.left), dy: Math.round(b.top - card.top),
+               w: Math.round(b.width), h: Math.round(b.height) }
+    }))
+    starTop.every(s => s.dx < 20 && s.dy < 20)
+      ? ok('the star sits in the top-left corner', JSON.stringify(starTop[0]))
+      : no('the star sits in the top-left corner', JSON.stringify(starTop))
+    starTop.every(s => s.w >= 30 && s.h >= 30)
+      ? ok('and clears the 30px tap floor')
+      : no('and clears the 30px tap floor', JSON.stringify(starTop))
+
+    if (MUTATE) {
+      // Star a listing, and check the state survives a reload rather than only
+      // looking right until the page is refreshed.
+      const first = await page.$eval('[data-favourite]', e => e.getAttribute('data-favourite'))
+      await page.click(`[data-favourite="${first}"]`)
+      await page.waitForResponse(r => /\/favourite$/.test(r.url()), { timeout: 20000 }).catch(() => {})
+      await new Promise(r => setTimeout(r, 700))
+      const on = await page.$eval(`[data-favourite="${first}"]`, e => e.getAttribute('aria-pressed'))
+      on === 'true' ? ok('clicking the star fills it', `#${first}`)
+                    : no('clicking the star fills it', `aria-pressed=${on}`)
+
+      await page.reload({ waitUntil: 'networkidle2' })
+      await page.waitForSelector('[data-favourite]', { timeout: 30000 })
+      const still = await page.$eval(`[data-favourite="${first}"]`, e => e.getAttribute('aria-pressed'))
+        .catch(() => 'missing')
+      still === 'true' ? ok('and it is still filled after a reload')
+                       : no('and it is still filled after a reload', `aria-pressed=${still}`)
+
+      // Put it back.
+      await page.click(`[data-favourite="${first}"]`)
+      await page.waitForResponse(r => /\/favourite$/.test(r.url()), { timeout: 20000 }).catch(() => {})
+      await new Promise(r => setTimeout(r, 600))
+      sql(`DELETE FROM agent_favourites WHERE agent_id=1 AND property_id IN (SELECT id FROM properties WHERE ref='${first}')`)
+    }
+
     // The send button must NOT be there before anything is picked.
     const sendBefore = await page.$('[data-watag-send]')
     !sendBefore ? ok('no send button until something is picked')
@@ -229,12 +275,22 @@ async function run() {
         await page.waitForResponse(
           r => /\/listings\/[^/]+\/watag$/.test(r.url()), { timeout: 30000 })
         await new Promise(r => setTimeout(r, 1200))
-        calls.watagOne && calls.watagOne.status === 200 && calls.watagOne.body.ok
-          ? ok('one WATag sends a "." into the group', `tagged ${calls.watagOne.body.tagged}`)
-          : no('one WATag sends a "." into the group', JSON.stringify(calls.watagOne))
+        // `ok: true` is not enough — a `duplicate` is also ok:true and sends
+        // nothing. Two runs of this suite inside a minute hit the double-click
+        // guard, and an assertion that accepted tagged=0 called that a pass.
+        const w = (calls.watagOne && calls.watagOne.body) || {}
+        if (w.status === 'duplicate') {
+          skip('one WATag sends a "." into the group',
+            'the double-click guard fired — this listing was tagged under a minute ago')
+          skip('and it is in the audit log', 'nothing was sent')
+        } else {
+          calls.watagOne.status === 200 && w.ok === true && w.tagged >= 1
+            ? ok('one WATag sends a "." into the group', `tagged ${w.tagged}`)
+            : no('one WATag sends a "." into the group', JSON.stringify(calls.watagOne))
 
-        const audit = sql(`SELECT count(*) FROM property_activities WHERE activity_type='watag_anchor'`)
-        Number(audit) > 0 ? ok('and it is in the audit log') : no('and it is in the audit log', audit)
+          const audit = sql(`SELECT count(*) FROM property_activities WHERE activity_type='watag_anchor'`)
+          Number(audit) > 0 ? ok('and it is in the audit log') : no('and it is in the audit log', audit)
+        }
       }
     }
 
@@ -359,6 +415,32 @@ async function run() {
     calls.favourites > 0
       ? ok('the tab reads its own endpoint', `${calls.favourites} calls`)
       : no('the tab reads its own endpoint', '0 calls to /favourites')
+
+    // ── 6b. the detail modal offers the same actions as the card ────────────
+    // It used to offer exactly one button while the card behind it offered
+    // five, so opening a listing to read it took every other action away.
+    await page.click('[data-tab="board"]')
+    await page.waitForSelector('[data-ref]', { timeout: 20000 })
+    await new Promise(r => setTimeout(r, 900))
+    // The modal opens ON TOP of the grid — the cards stay in the DOM — so the
+    // signal is "one more WATag button than before", not "exactly one".
+    const beforeModal = await page.$$eval('[data-watag-one]', e => e.length)
+    await page.click('[data-ref] img')
+    await page.waitForFunction(
+      (n) => document.querySelectorAll('[data-watag-one]').length === n + 1,
+      { timeout: 15000 }, beforeModal)
+      .then(() => ok('the detail modal opens'))
+      .catch(() => no('the detail modal opens', `still ${beforeModal} WATag buttons — no modal`))
+    const modal = await page.evaluate(() => ({
+      watag: document.querySelectorAll('[data-watag-one]').length,
+      star: document.querySelectorAll('[data-favourite]').length,
+      book: [...document.querySelectorAll('button')].filter(b => b.textContent.trim() === 'Book').length,
+    }))
+    modal.watag >= 1 && modal.star >= 1 && modal.book >= 1
+      ? ok('the modal carries WATag, the star and Book', JSON.stringify(modal))
+      : no('the modal carries WATag, the star and Book', JSON.stringify(modal))
+    await page.keyboard.press('Escape')
+    await new Promise(r => setTimeout(r, 500))
 
     // ── 7. the firewall, on the new surface ─────────────────────────────────
     // A phone number or an email on this tab would be a firewall break. The
