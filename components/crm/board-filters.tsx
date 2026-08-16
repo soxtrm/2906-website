@@ -24,6 +24,21 @@ export type BoardFilterValue = {
   min: string
   max: string
   type: string
+  // ── the three tenancy rules ───────────────────────────────────────────────
+  // The card has shown a paw and a people icon for a while, but there was no way
+  // to filter on either — you could see which listings allowed pets only by
+  // reading every card. These three close that.
+  //
+  // 'pets' / 'sharing': '' = don't care · 'yes' = the listing says yes ·
+  // 'no' = it says no. Deliberately NOT a boolean: the backend answers three
+  // states (yes / no / nobody wrote it down) and a two-state filter would fold
+  // "no pets" together with "unknown", which is the one mistake that gets a
+  // client taken to a flat that will turn them away.
+  pets: '' | 'yes' | 'no'
+  sharing: '' | 'yes' | 'no'
+  // Subletting gets no card icon by design — a checkbox in the search only.
+  // Checked = show only listings that actually say subletting is allowed.
+  sublet: boolean
 }
 
 const TYPES: [string, string][] = [
@@ -99,7 +114,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
   const activeCount =
     (value.q ? 1 : 0) + (value.beds ? 1 : 0) + (value.baths ? 1 : 0) +
-    (value.type ? 1 : 0) + (value.min || value.max ? 1 : 0)
+    (value.type ? 1 : 0) + (value.min || value.max ? 1 : 0) +
+    (value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0)
 
   const typeLabel = value.type
     ? (TYPES.find(t => t[0] === value.type)?.[1] || value.type)
@@ -107,6 +123,19 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const budgetLabel = value.min || value.max
     ? `€${value.min || '0'} – ${value.max ? `€${value.max}` : '∞'}`
     : 'Budget'
+
+  // One dropdown holds all three tenancy rules. Three separate triggers would
+  // push the row past the width the map leaves it on a laptop, and these are
+  // asked together on the phone anyway ("pets? can they share?").
+  const rulesActive = !!(value.pets || value.sharing || value.sublet)
+  const rulesLabel = (() => {
+    if (!rulesActive) return 'Pets & Sharing'
+    const bits: string[] = []
+    if (value.pets)    bits.push(value.pets === 'yes' ? 'Pets ok' : 'No pets')
+    if (value.sharing) bits.push(value.sharing === 'yes' ? 'Sharing ok' : 'No sharing')
+    if (value.sublet)  bits.push('Sublet ok')
+    return bits.join(' · ')
+  })()
 
   return (
     <div ref={ref} className="w-full">
@@ -220,6 +249,57 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
               Clear
             </button>
           )}
+        </Dropdown>
+
+        {/* ── Pets · Sharing · Subletting ──────────────────────────────────
+            Yes/No chips rather than a single toggle, because the data has three
+            states and "the listing says no pets" is a different, useful search
+            from "the listing does not mention pets". Leaving both chips off means
+            "don't care" and shows everything, including the unknowns. */}
+        <Dropdown id="rules" label={rulesLabel} active={rulesActive}
+          open={open === 'rules'} onToggle={setOpen}>
+          <div className="min-w-[210px] space-y-2">
+            {([
+              ['pets', 'Pets', 'Pet-friendly', 'No pets'],
+              ['sharing', 'Sharing', 'Sharing ok', 'No sharing'],
+            ] as const).map(([key, title, yesLabel, noLabel]) => (
+              <div key={key}>
+                <div className="text-[10px] uppercase tracking-wide text-navy/40 mb-1">{title}</div>
+                <div className="flex gap-1">
+                  <button type="button"
+                    onClick={() => onChange({ [key]: value[key] === 'yes' ? '' : 'yes' } as Partial<BoardFilterValue>)}
+                    className={cn(CHIP, value[key] === 'yes' ? CHIP_ON : CHIP_OFF)}>
+                    {yesLabel}
+                  </button>
+                  <button type="button"
+                    onClick={() => onChange({ [key]: value[key] === 'no' ? '' : 'no' } as Partial<BoardFilterValue>)}
+                    className={cn(CHIP, value[key] === 'no' ? CHIP_ON : CHIP_OFF)}>
+                    {noLabel}
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Subletting: a checkbox, no card icon — Kev's call. It is only ever
+                asked as "can they sublet at all?", so one box is the whole control. */}
+            <label className="flex items-center gap-2 pt-2 border-t border-gray-100 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={value.sublet}
+                onChange={e => onChange({ sublet: e.target.checked })}
+                className="w-3.5 h-3.5 accent-navy"
+              />
+              <span className="text-[11px] text-navy/70">Subletting allowed</span>
+            </label>
+
+            {rulesActive && (
+              <button type="button"
+                onClick={() => onChange({ pets: '', sharing: '', sublet: false })}
+                className="mt-1 pt-2 border-t border-gray-100 w-full text-[10px] text-navy/40 hover:text-navy">
+                Clear
+              </button>
+            )}
+          </div>
         </Dropdown>
 
         {extra}

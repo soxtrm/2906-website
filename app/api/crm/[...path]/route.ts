@@ -41,4 +41,9 @@ type Ctx = { params: Promise<{ path: string[] }> }
 export async function GET(req: NextRequest, ctx: Ctx) { return proxy(req, (await ctx.params).path, 'GET') }
 export async function POST(req: NextRequest, ctx: Ctx) { return proxy(req, (await ctx.params).path, 'POST') }
 export async function PATCH(req: NextRequest, ctx: Ctx) { return proxy(req, (await ctx.params).path, 'PATCH') }
+// PUT was missing until 2026-08-16, so any backend PUT route reached this proxy
+// as a 405 from Next itself — the request never left the box. Added for
+// schedule-board/reachout-settings; harmless for everything else, since the
+// backend is what decides which verbs a path accepts.
+export async function PUT(req: NextRequest, ctx: Ctx) { return proxy(req, (await ctx.params).path, 'PUT') }
 export async function DELETE(req: NextRequest, ctx: Ctx) { return proxy(req, (await ctx.params).path, 'DELETE') }
