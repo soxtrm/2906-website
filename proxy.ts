@@ -4,8 +4,8 @@ import { routing } from './i18n/routing'
 
 const intlMiddleware = createMiddleware(routing)
 
-// The bot backend, same origin CLAUDE.md documents for /app/api/* proxying.
-const BACKEND = process.env.BACKEND_ORIGIN || 'http://178.104.162.193:3001'
+// Same origin every app/api/*/route.ts proxies to.
+const BACKEND = 'http://178.104.162.193:3001'
 
 // Agent Workspace short links (2906.estate/<slug>, e.g. "/493katya" — see
 // services/agentWorkspace.js:generateShortSlugCandidate on the backend).
