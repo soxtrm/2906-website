@@ -92,6 +92,15 @@ type Listing = {
   }
 }
 
+// An availability answer this agent asked for, not yet seen on the website
+// (GET schedule-board/notifications). Rides alongside the WhatsApp DM
+// services/availability.js sends for the same answer — same firewalled
+// fields (ref/town/beds/price/photo), no owner data.
+type AvNotification = {
+  id: number; ref: string; town: string | null; beds: number | null
+  price: number | null; image: string | null; status: string; statusLabel: string
+}
+
 type Filters = BoardFilterValue & { towns: string[] }
 const EMPTY: Filters = {
   q: '', beds: '', baths: '', min: '', max: '', type: '', towns: [],
@@ -261,10 +270,46 @@ function Board() {
   const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  // Collapsible: the map was permanently taking ~420px above the cards, and a
+  // plain scroll over it used to zoom instead of moving the page (fixed via
+  // gestureHandling below). Open by default so existing behaviour is
+  // unsurprising; agents who only use the town chips can now hide it.
+  const [mapOpen, setMapOpen] = useState(true)
 
   const showToast = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
     setToast({ kind, text })
     setTimeout(() => setToast(t => (t && t.text === text ? null : t)), 5200)
+  }, [])
+
+  // ── availability-answer notifications ────────────────────────────────────
+  // "You have an answer" for a request-availability click, without a full
+  // request-tracking inbox (that's separate, later work). Polled rather than
+  // pushed — this board has no websocket — and left on screen until the agent
+  // dismisses it, unlike the auto-hiding Toast: a photo + status is worth more
+  // than 5 seconds of attention.
+  const [avNotifications, setAvNotifications] = useState<AvNotification[]>([])
+
+  useEffect(() => {
+    let alive = true
+    async function poll() {
+      try {
+        const d = await crmFetch('schedule-board/notifications')
+        if (!alive || !Array.isArray(d?.notifications)) return
+        setAvNotifications(prev => {
+          const known = new Set(prev.map((n: AvNotification) => n.id))
+          const fresh = (d.notifications as AvNotification[]).filter(n => !known.has(n.id))
+          return fresh.length ? [...prev, ...fresh] : prev
+        })
+      } catch { /* a missed poll just tries again next interval */ }
+    }
+    poll()
+    const t = setInterval(poll, 30_000)
+    return () => { alive = false; clearInterval(t) }
+  }, [])
+
+  const dismissAvNotification = useCallback((id: number) => {
+    setAvNotifications(prev => prev.filter(n => n.id !== id))
+    crmJson(`schedule-board/notifications/${id}/seen`, 'POST', {}).catch(() => {})
   }, [])
 
   // ── URL mirror ────────────────────────────────────────────────────────────
@@ -912,7 +957,17 @@ function Board() {
           </div>
         )}
 
-        <MapPanel
+        <button
+          onClick={() => setMapOpen(v => !v)}
+          style={{
+            ...chip, marginBottom: mapOpen ? 8 : 14, background: '#FFF',
+            borderColor: '#E9E5DC', color: '#666', fontWeight: 600,
+          }}
+        >
+          {mapOpen ? '▾ Hide map' : '▸ Show map'}
+        </button>
+
+        {mapOpen && <MapPanel
           items={visible}
           rect={rect}
           onRect={setRect}
@@ -921,7 +976,7 @@ function Board() {
           onMarkerClick={onMarkerClick}
           selectedTowns={f.towns}
           isMobile={isMobile}
-        />
+        />}
 
         {/* cards */}
         <div style={{
@@ -1014,6 +1069,9 @@ function Board() {
       </AnimatePresence>
 
       {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
+      {avNotifications.length > 0 && (
+        <AvNotificationStack items={avNotifications} onDismiss={dismissAvNotification} />
+      )}
     </CrmShell>
   )
 }
@@ -1096,6 +1154,12 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
       streetViewControl: false,
       fullscreenControl: false,
       clickableIcons: false,
+      // 'greedy' (Maps JS default outside an iframe) grabs a bare mouse-wheel
+      // as a zoom, so scrolling the page while the cursor happens to be over
+      // the map gets you stuck zooming instead. 'cooperative' needs
+      // ctrl/⌘+scroll to zoom and lets a plain wheel pass through to the page;
+      // a one-finger drag still pans, a two-finger drag still zooms on touch.
+      gestureHandling: 'cooperative',
       styles: [
         { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
         { featureType: 'transit', stylers: [{ visibility: 'off' }] },
@@ -1313,7 +1377,10 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
     onRect(null); onCirc(null)
   }
 
-  const height = isMobile ? 260 : 420
+  // Was 420/260 — the map ate almost a full screen of scroll before the
+  // cards even started. Still tall enough to draw a usable area with the
+  // circle/box tool; the "Hide map" toggle above covers the rest.
+  const height = isMobile ? 220 : 320
 
   if (loadErr === 'no-key') {
     return (
@@ -2277,14 +2344,32 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onFavourite, onBoo
                 borderRadius: '50%', fontSize: 15, lineHeight: 1,
               }}>×</button>
               {d.images?.length > 1 && (
-                <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 5 }}>
-                  {d.images.map((_: string, n: number) => (
-                    <button key={n} onClick={() => setI(n)} style={{
-                      width: 7, height: 7, borderRadius: '50%', border: 'none', cursor: 'pointer', padding: 0,
-                      background: n === i ? '#FFF' : 'rgba(255,255,255,0.45)',
-                    }} />
-                  ))}
-                </div>
+                <>
+                  {/* click-through arrows, not the small dots agents kept missing on
+                      touch — wrap around at both ends so there is no dead end */}
+                  <button
+                    onClick={ev => { ev.stopPropagation(); setI(n => (n - 1 + d.images.length) % d.images.length) }}
+                    aria-label="Previous photo"
+                    style={{
+                      position: 'absolute', top: '50%', left: 10, transform: 'translateY(-50%)',
+                      border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.45)', color: '#FFF',
+                      width: 34, height: 34, borderRadius: '50%', fontSize: 18, lineHeight: 1,
+                    }}
+                  >‹</button>
+                  <button
+                    onClick={ev => { ev.stopPropagation(); setI(n => (n + 1) % d.images.length) }}
+                    aria-label="Next photo"
+                    style={{
+                      position: 'absolute', top: '50%', right: 10, transform: 'translateY(-50%)',
+                      border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.45)', color: '#FFF',
+                      width: 34, height: 34, borderRadius: '50%', fontSize: 18, lineHeight: 1,
+                    }}
+                  >›</button>
+                  <div style={{
+                    position: 'absolute', bottom: 10, right: 12, fontFamily: FM, fontSize: 11,
+                    color: '#FFF', background: 'rgba(0,0,0,0.45)', borderRadius: 10, padding: '3px 8px',
+                  }}>{i + 1} / {d.images.length}</div>
+                </>
               )}
             </div>
 
@@ -2458,6 +2543,56 @@ function Notice({ text }: { text: string }) {
   return (
     <div style={{ background: '#FEE2E2', color: '#B91C1C', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 600, marginBottom: 14 }}>
       {text}
+    </div>
+  )
+}
+
+// Self-explanatory by design: photo + town/beds/price + status, so an agent
+// who asked about "#204" days ago does not have to go back to the board to
+// remember which flat that was. Click anywhere on a card (or its ×) to mark
+// it seen — see dismissAvNotification above.
+function AvNotificationStack({ items, onDismiss }: {
+  items: AvNotification[]
+  onDismiss: (id: number) => void
+}) {
+  return (
+    <div style={{
+      position: 'fixed', top: 16, right: 16, zIndex: 310,
+      display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320, width: 'calc(100vw - 32px)',
+    }}>
+      {items.map(n => {
+        const facts = [
+          townLabel(n.town),
+          n.beds != null ? `${n.beds} bed${n.beds === 1 ? '' : 's'}` : null,
+          n.price ? `€${n.price.toLocaleString()}` : null,
+        ].filter(Boolean).join(' · ')
+        return (
+          <div key={n.id} onClick={() => onDismiss(n.id)} style={{
+            display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer',
+            background: CARD, borderRadius: 12, padding: 10,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.22)', fontFamily: F,
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 8, background: '#F1EEE7',
+              flexShrink: 0, overflow: 'hidden',
+            }}>
+              {n.image
+                ? <img src={n.image} alt={`#${n.ref}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                : null}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontFamily: FM, fontSize: 11, color: A }}>#{n.ref} · {n.statusLabel}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {facts || 'Availability answered'}
+              </div>
+            </div>
+            <button onClick={ev => { ev.stopPropagation(); onDismiss(n.id) }} style={{
+              border: 'none', background: 'none', color: '#B5AFA2', cursor: 'pointer',
+              fontSize: 16, lineHeight: 1, padding: 4, flexShrink: 0,
+            }}>×</button>
+          </div>
+        )
+      })}
     </div>
   )
 }
