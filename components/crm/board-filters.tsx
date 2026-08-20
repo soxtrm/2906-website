@@ -45,17 +45,12 @@ const TYPES: [string, string][] = [
   ['apartment', 'Apartment'], ['penthouse', 'Penthouse'], ['house', 'House'],
   ['maisonette', 'Maisonette'], ['townhouse', 'Townhouse'], ['villa', 'Villa'],
 ]
-const BEDS = ['1', '2', '3', '4']
+// '4+' is the open-ended top tier — everything below it means "exactly this
+// many", not "this many or more" (Kev, 2026-08-20). The '+' rides in the
+// value itself so the label and the filter semantics can never drift apart;
+// the backend (routes/crmScheduleBoard.js) reads the trailing '+' the same way.
+const BEDS = ['1', '2', '3', '4+']
 const BATHS = ['1', '2', '3']
-// Budget as €-tier chips instead of two number inputs — same min/max state and
-// API filter underneath, just quicker to pick on a board this size. Bands are
-// monthly-rent shaped since that is what the vast majority of listings here are.
-const BUDGET_TIERS: [string, string, string][] = [
-  ['€', '', '1000'],
-  ['€€', '1000', '2000'],
-  ['€€€', '2000', '3500'],
-  ['€€€€', '3500', ''],
-]
 
 // ── shared shells, so every control lines up on the same baseline ───────────
 const TRIGGER =
@@ -129,12 +124,9 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const typeLabel = value.type
     ? (TYPES.find(t => t[0] === value.type)?.[1] || value.type)
     : 'Property Type'
-  const matchedTier = BUDGET_TIERS.find(t => t[1] === value.min && t[2] === value.max)
-  const budgetLabel = matchedTier
-    ? matchedTier[0]
-    : (value.min || value.max)
+  const priceLabel = value.min || value.max
     ? `€${value.min || '0'} – ${value.max ? `€${value.max}` : '∞'}`
-    : 'Budget'
+    : 'Price'
 
   // One dropdown holds all three tenancy rules. Three separate triggers would
   // push the row past the width the map leaves it on a laptop, and these are
@@ -216,14 +208,14 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           )}
         </Dropdown>
 
-        <Dropdown id="beds" label={value.beds ? `${value.beds}+ beds` : 'Beds'} active={!!value.beds}
+        <Dropdown id="beds" label={value.beds ? `${value.beds} beds` : 'Beds'} active={!!value.beds}
           open={open === 'beds'} onToggle={setOpen}>
           <div className="flex flex-wrap gap-1">
             {BEDS.map(b => (
               <button key={b} type="button"
                 onClick={() => { onChange({ beds: value.beds === b ? '' : b }); setOpen(null) }}
                 className={cn(CHIP, 'min-w-[38px]', value.beds === b ? CHIP_ON : CHIP_OFF)}>
-                {b}+
+                {b}
               </button>
             ))}
           </div>
@@ -242,19 +234,18 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           </div>
         </Dropdown>
 
-        <Dropdown id="budget" label={budgetLabel} active={!!(value.min || value.max)}
-          open={open === 'budget'} onToggle={setOpen}>
-          <div className="flex flex-wrap gap-1">
-            {BUDGET_TIERS.map(([label, min, max]) => {
-              const on = value.min === min && value.max === max
-              return (
-                <button key={label} type="button"
-                  onClick={() => { onChange(on ? { min: '', max: '' } : { min, max }); setOpen(null) }}
-                  className={cn(CHIP, 'min-w-[38px]', on ? CHIP_ON : CHIP_OFF)}>
-                  {label}
-                </button>
-              )
-            })}
+        <Dropdown id="price" label={priceLabel} active={!!(value.min || value.max)}
+          open={open === 'price'} onToggle={setOpen}>
+          <div className="flex items-center gap-2">
+            <input type="number" inputMode="numeric" placeholder="Min €" value={value.min}
+              onChange={e => onChange({ min: e.target.value })}
+              className="w-24 px-2 py-1.5 bg-off-white border-0 rounded text-sm text-navy
+                         placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50" />
+            <span className="text-navy/30 text-xs">–</span>
+            <input type="number" inputMode="numeric" placeholder="Max €" value={value.max}
+              onChange={e => onChange({ max: e.target.value })}
+              className="w-24 px-2 py-1.5 bg-off-white border-0 rounded text-sm text-navy
+                         placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50" />
           </div>
           {(value.min || value.max) && (
             <button type="button" onClick={() => onChange({ min: '', max: '' })}
