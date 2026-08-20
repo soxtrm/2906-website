@@ -47,6 +47,15 @@ const TYPES: [string, string][] = [
 ]
 const BEDS = ['1', '2', '3', '4']
 const BATHS = ['1', '2', '3']
+// Budget as €-tier chips instead of two number inputs — same min/max state and
+// API filter underneath, just quicker to pick on a board this size. Bands are
+// monthly-rent shaped since that is what the vast majority of listings here are.
+const BUDGET_TIERS: [string, string, string][] = [
+  ['€', '', '1000'],
+  ['€€', '1000', '2000'],
+  ['€€€', '2000', '3500'],
+  ['€€€€', '3500', ''],
+]
 
 // ── shared shells, so every control lines up on the same baseline ───────────
 const TRIGGER =
@@ -120,7 +129,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const typeLabel = value.type
     ? (TYPES.find(t => t[0] === value.type)?.[1] || value.type)
     : 'Property Type'
-  const budgetLabel = value.min || value.max
+  const matchedTier = BUDGET_TIERS.find(t => t[1] === value.min && t[2] === value.max)
+  const budgetLabel = matchedTier
+    ? matchedTier[0]
+    : (value.min || value.max)
     ? `€${value.min || '0'} – ${value.max ? `€${value.max}` : '∞'}`
     : 'Budget'
 
@@ -232,16 +244,17 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
         <Dropdown id="budget" label={budgetLabel} active={!!(value.min || value.max)}
           open={open === 'budget'} onToggle={setOpen}>
-          <div className="flex items-center gap-2">
-            <input type="number" inputMode="numeric" placeholder="Min €" value={value.min}
-              onChange={e => onChange({ min: e.target.value })}
-              className="w-24 px-2 py-1.5 bg-off-white border-0 rounded text-sm text-navy
-                         placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50" />
-            <span className="text-navy/30 text-xs">–</span>
-            <input type="number" inputMode="numeric" placeholder="Max €" value={value.max}
-              onChange={e => onChange({ max: e.target.value })}
-              className="w-24 px-2 py-1.5 bg-off-white border-0 rounded text-sm text-navy
-                         placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50" />
+          <div className="flex flex-wrap gap-1">
+            {BUDGET_TIERS.map(([label, min, max]) => {
+              const on = value.min === min && value.max === max
+              return (
+                <button key={label} type="button"
+                  onClick={() => { onChange(on ? { min: '', max: '' } : { min, max }); setOpen(null) }}
+                  className={cn(CHIP, 'min-w-[38px]', on ? CHIP_ON : CHIP_OFF)}>
+                  {label}
+                </button>
+              )
+            })}
           </div>
           {(value.min || value.max) && (
             <button type="button" onClick={() => onChange({ min: '', max: '' })}
