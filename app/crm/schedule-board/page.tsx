@@ -25,6 +25,10 @@ import { AskDialog, BookDialog, StatusDialog, type StatusAction } from '@/compon
 const GREEN = NAVY
 const GREEN_SOFT = 'rgba(27,42,74,0.08)'
 const CARD = '#FFFDFA'
+// Hot Property (migration 031). Deliberately its own colour, not the gold used
+// for a personal Favourite and not the red used for "rented" — three different
+// facts, three different colours, so a glance never confuses them.
+const HOT = '#C7391A'
 // The Maps key normally arrives from the backend (GET schedule-board/config),
 // which hands it to logged-in agents only. A NEXT_PUBLIC_GOOGLE_MAPS_KEY still
 // wins if one is set, but it would be inlined into a publicly downloadable
@@ -74,6 +78,17 @@ type Listing = {
   // Favourites only. When it was added, and the viewing it was added for —
   // a favourite exists because somebody booked a viewing, so the card shows it.
   favouritedAt?: string | null
+  // Global Hot Property (migration 031) — admin-set, everyone sees it, sorted
+  // first server-side. Unlike isFavourite this is the SAME value for every
+  // agent looking at this card.
+  isHotProperty?: boolean
+  hotSince?: string | null
+  // 0 normal, 1 favourite (mine only), 2 hot (global). Hot always wins the
+  // display over this agent's own favourite — see routes/crmScheduleBoard.js
+  // withCardFlags(). The star's one glyph reads this, not the two booleans
+  // separately, so the card and the click handler can never disagree about
+  // which step it is on.
+  starStep?: number
   viewing?: { id: number; date: string; time: string | null; status: string } | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
@@ -209,6 +224,7 @@ function Board() {
   const params = useSearchParams()
   const isMobile = useIsMobile()
   const { me } = useCrm()
+  const isAdmin = me?.role === 'admin'
 
   // Filters initialise from the URL so a shared link restores the search.
   const [f, setF] = useState<Filters>(() => ({
@@ -709,6 +725,52 @@ function Board() {
     }
   }
 
+  // ── the star, stage 2: Hot Property (migration 031) ────────────────────────
+  // One icon, three clicks. Stage 0<->1 is the toggleFavourite above, entirely
+  // unchanged — this only adds what happens on top of it:
+  //   admin,     step 0 -> click -> step 1  (toggleFavourite, as before)
+  //   admin,     step 1 -> click -> step 2  (POST  .../hot)
+  //   admin,     step 2 -> click -> step 0  (DELETE .../hot — server also
+  //                                          drops this admin's own favourite,
+  //                                          so the reset is a real reset)
+  //   non-admin, step 2 -> click -> nothing. Hot is locked for them; the
+  //                                  server would 403 it anyway, so the
+  //                                  frontend does not even round-trip to find
+  //                                  that out.
+  //   non-admin, step 0/1 -> click -> toggleFavourite, exactly as any agent's
+  //                                    star always worked.
+  // Optimistic + rolled back on failure, same as toggleFavourite.
+  async function toggleStar(r: Listing) {
+    const step = starStepOf(r)
+    if (!isAdmin) {
+      if (step === 2) { showToast('err', 'Only an admin can change a Hot property.'); return }
+      return toggleFavourite(r, !r.isFavourite)
+    }
+    if (step === 0) return toggleFavourite(r, true)
+    if (step === 1) {
+      setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, isHotProperty: true } : x))
+      try {
+        const d = await crmJson(`schedule-board/listings/${encodeURIComponent(r.ref)}/hot`, 'POST', {})
+        showToast('ok', d.message || `#${r.ref} is now Hot.`)
+      } catch (e: any) {
+        setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, isHotProperty: false } : x))
+        const d = e?.data || {}
+        showToast('err', d.error || e?.message || 'Could not mark it Hot')
+      }
+      return
+    }
+    // step === 2
+    setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, isHotProperty: false, isFavourite: false } : x))
+    try {
+      const d = await crmJson(`schedule-board/listings/${encodeURIComponent(r.ref)}/hot`, 'DELETE', {})
+      showToast('ok', d.message || `#${r.ref} is no longer Hot.`)
+    } catch (e: any) {
+      setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, isHotProperty: true, isFavourite: r.isFavourite } : x))
+      const d = e?.data || {}
+      showToast('err', d.error || e?.message || 'Could not clear Hot')
+    }
+  }
+
   // The three removals all go through StatusDialog, which owns the POST so it
   // can show a refusal in place rather than as a toast over an empty gap. The
   // card is pulled the moment the server confirms — nothing is deleted, it has
@@ -1001,7 +1063,7 @@ function Board() {
               onSelect={() => toggleSelect(r.ref)}
               onTag={() => tagOne(r)}
               tagging={tagging}
-              onFavourite={next => toggleFavourite(r, next)}
+              onStar={() => toggleStar(r)}
               onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
             />
           ))}
@@ -1029,7 +1091,7 @@ function Board() {
           // handlers the card uses, so the two surfaces cannot drift.
           onTag={r => tagOne(r)}
           tagging={tagging}
-          onFavourite={(r, next) => toggleFavourite(r, next)}
+          onStar={r => toggleStar(r)}
           onBook={r => { setDetail(null); setBooking(r) }}
         />
       )}
@@ -1438,9 +1500,11 @@ const Dot = ({ c }: { c: string }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: c, marginRight: 3 }} />
 )
 
-// The Favourites star. One glyph, two states: outline when it is not saved,
-// solid white on gold when it is. Same shape either way, so the card does not
-// shift when it is clicked.
+// The star. Same shape at every step so the card never shifts on click —
+// only the fill changes: outline (0, normal), solid white (1, favourite —
+// the wrapping button supplies the gold), solid white again (2, hot — the
+// wrapping button supplies red/orange instead). The glyph itself only needs
+// to know "is this the outline state or not".
 const StarGlyph = ({ filled, size = 15 }: { filled: boolean; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false"
     fill={filled ? '#FFF' : 'none'} style={{ flexShrink: 0 }}>
@@ -1448,6 +1512,13 @@ const StarGlyph = ({ filled, size = 15 }: { filled: boolean; size?: number }) =>
       stroke={filled ? '#FFF' : '#7A7A7A'} strokeWidth="1.8" strokeLinejoin="round" />
   </svg>
 )
+
+// starStep helper — the one place that turns the two flags into the number
+// the click handler and the render both key off. Falls back to the plain
+// isFavourite boolean for a payload from before migration 031.
+function starStepOf(r: { isHotProperty?: boolean; isFavourite?: boolean }): number {
+  return r.isHotProperty ? 2 : (r.isFavourite ? 1 : 0)
+}
 
 // The WATag mark. A person, per Kev's brief — the tag is about handing a
 // listing to another human, which is not something a paperclip or an arrow
@@ -1819,7 +1890,7 @@ function ReachoutSwitch() {
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, onOptOut, busy,
-                selected, onSelect, onTag, tagging, onFavourite, onUnfavourite }: {
+                selected, onSelect, onTag, tagging, onStar, onUnfavourite }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -1837,8 +1908,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   onSelect: () => void
   onTag: () => void
   tagging: boolean
-  // The star, top-left. Passed everywhere, on every tab.
-  onFavourite: (next: boolean) => void
+  // The star, top-left. Passed everywhere, on every tab. Owns the whole
+  // 3-click cycle (see Board():toggleStar) — the card only ever fires it and
+  // reads r.starStep back, never decides the transition itself.
+  onStar: () => void
   // Only passed on the Favourites tab. Its absence is what hides the control
   // everywhere else, rather than a second copy of "which tab am I on".
   onUnfavourite?: () => void
@@ -1901,28 +1974,44 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#CCC', fontSize: 11 }}>no photo</div>}
         {/* The star. Top-left corner, Kev's call (2026-08-16) — the first place
             the eye lands on a card, and the same corner the Inventory star
-            lives in. Filled = on your Favourites.
+            lives in. Three steps (migration 031): outline = normal, gold =
+            your Favourite, red = Hot Property (global, admin-set — see
+            Board():toggleStar for the click cycle this fires into).
             stopPropagation: the photo opens the detail modal, and starring a
             listing is not asking to read it. */}
         <button
           data-favourite={r.ref}
-          aria-pressed={!!r.isFavourite}
-          onClick={e => { e.stopPropagation(); onFavourite(!r.isFavourite) }}
-          title={r.isFavourite
-            ? 'On your Favourites — click to remove. The viewing, if any, stays.'
-            : 'Save to your Favourites'}
+          data-star-step={starStepOf(r)}
+          aria-pressed={starStepOf(r) > 0}
+          onClick={e => { e.stopPropagation(); onStar() }}
+          title={
+            starStepOf(r) === 2
+              ? (isAdmin
+                  ? 'HOT property — visible to everyone. Click to clear.'
+                  : 'HOT property — set by an admin, visible to everyone.')
+              : starStepOf(r) === 1
+                ? (isAdmin
+                    ? 'On your Favourites — click to make it Hot for everyone.'
+                    : 'On your Favourites — click to remove. The viewing, if any, stays.')
+                : 'Save to your Favourites'
+          }
           style={{
             position: 'absolute', top: 7, left: 7,
             width: 30, height: 30, borderRadius: 8, padding: 0,
             display: 'grid', placeItems: 'center', lineHeight: 0,
-            background: r.isFavourite ? 'rgba(212,137,26,0.95)' : 'rgba(255,255,255,0.86)',
-            border: `1.5px solid ${r.isFavourite ? A : 'rgba(0,0,0,0.14)'}`,
+            background: starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? 'rgba(212,137,26,0.95)' : 'rgba(255,255,255,0.86)',
+            border: `1.5px solid ${starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : 'rgba(0,0,0,0.14)'}`,
             cursor: 'pointer',
           }}>
-          <StarGlyph filled={!!r.isFavourite} />
+          <StarGlyph filled={starStepOf(r) > 0} />
         </button>
 
-        {r.isMine && (
+        {r.isHotProperty && (
+          <span style={{ position: 'absolute', top: 9, left: 44, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+            Hot
+          </span>
+        )}
+        {r.isMine && !r.isHotProperty && (
           <span style={{ position: 'absolute', top: 9, left: 44, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Yours
           </span>
@@ -2289,15 +2378,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
 }
 
 // ── detail modal ────────────────────────────────────────────────────────────
-function DetailModal({ refId, onClose, onAct, onTag, tagging, onFavourite, onBook }: {
+function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook }: {
   refId: string
   onClose: () => void
   onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
   onTag: (r: Listing) => void
   tagging: boolean
-  onFavourite: (r: Listing, next: boolean) => void
+  // Same shared cycle as the card (Board():toggleStar) — the modal hands it a
+  // Listing shaped from its OWN local fav/hot state (not the board's row,
+  // which the modal never touches) and mirrors the result back locally.
+  onStar: (r: Listing) => Promise<void>
   onBook: (r: Listing) => void
 }) {
+  const { me } = useCrm()
+  const isAdmin = me?.role === 'admin'
   const [d, setD] = useState<any>(null)
   const [e, setE] = useState<string | null>(null)
   const [i, setI] = useState(0)
@@ -2305,14 +2399,27 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onFavourite, onBoo
   // own copy of the listing, so it would otherwise keep showing the value it
   // loaded with after the star is clicked.
   const [fav, setFav] = useState(false)
+  const [hot, setHot] = useState(false)
 
   useEffect(() => {
     let alive = true
     crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}`)
-      .then(x => { if (alive) { setD(x); setFav(!!x.isFavourite) } })
+      .then(x => { if (alive) { setD(x); setFav(!!x.isFavourite); setHot(!!x.isHotProperty) } })
       .catch(x => { if (alive) setE(x?.message || 'Could not load listing') })
     return () => { alive = false }
   }, [refId])
+
+  // Mirrors Board():toggleStar's decision locally so the modal's own star
+  // updates in place, then lets the same shared function make the real call
+  // (and, for admin's own view on the board, keep the list card in sync too).
+  async function clickStar() {
+    const step = hot ? 2 : (fav ? 1 : 0)
+    if (!isAdmin && step === 2) return // locked, same rule as the card
+    if (step === 0) setFav(true)
+    else if (step === 1) { if (isAdmin) setHot(true); else setFav(false) }
+    else { setHot(false); setFav(false) }
+    await onStar({ ...d, isFavourite: fav, isHotProperty: hot })
+  }
 
   useEffect(() => {
     const k = (ev: KeyboardEvent) => { if (ev.key === 'Escape') onClose() }
@@ -2478,18 +2585,24 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onFavourite, onBoo
 
                 <button
                   data-favourite={d.ref}
-                  aria-pressed={fav}
-                  onClick={() => { setFav(!fav); onFavourite(d, !fav) }}
-                  title={fav ? 'On your Favourites — click to remove' : 'Save to your Favourites'}
+                  aria-pressed={hot || fav}
+                  onClick={clickStar}
+                  title={
+                    hot
+                      ? (isAdmin ? 'HOT property — click to clear' : 'HOT property — set by an admin')
+                      : fav
+                        ? (isAdmin ? 'On your Favourites — click to make it Hot for everyone' : 'On your Favourites — click to remove')
+                        : 'Save to your Favourites'
+                  }
                   style={{
                     ...btn,
-                    background: fav ? 'rgba(212,137,26,0.95)' : '#FFF',
-                    border: `1px solid ${fav ? A : AB}`,
+                    background: hot ? HOT : fav ? 'rgba(212,137,26,0.95)' : '#FFF',
+                    border: `1px solid ${hot ? HOT : fav ? A : AB}`,
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    color: fav ? '#FFF' : '#7A6534',
+                    color: hot || fav ? '#FFF' : '#7A6534',
                   }}>
-                  <StarGlyph filled={fav} size={14} />
-                  {fav ? 'Saved' : 'Save'}
+                  <StarGlyph filled={hot || fav} size={14} />
+                  {hot ? 'Hot' : fav ? 'Saved' : 'Save'}
                 </button>
               </div>
               {d.contact?.canAsk === false && d.contact?.reason && (
