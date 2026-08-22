@@ -1118,7 +1118,11 @@ function Board() {
             breathing room between cards, less packed-admin-table. */}
         <div style={{
           display: 'grid', gap: 20, marginTop: 20,
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(268px,1fr))',
+          // Kev, 2026-08-22: 268 was too narrow — the action row could not fit
+          // its buttons and the on/off-market pair got clipped off the right
+          // edge of the card. Wider minimum = one fewer card per row, and the
+          // buttons have room to sit on one line instead of overflowing.
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(340px,1fr))',
         }}>
           {visible.map(r => (
             <Card
@@ -2159,13 +2163,22 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         boxShadow: focused ? '0 6px 16px rgba(212,137,26,0.18)' : (frame?.glow || '0 1px 2px rgba(0,0,0,0.04)'),
         transition: 'box-shadow 0.18s, border-color 0.18s',
         display: 'flex', flexDirection: 'column',
+        // A grid item's default min-width is `auto`, i.e. "as wide as my
+        // widest un-shrinkable child" — a row of nowrap buttons could push
+        // the card past its own column and clip against the next one. 0 makes
+        // the column width authoritative and the button rows wrap instead.
+        minWidth: 0,
       }}
     >
       {/* ── photo ──────────────────────────────────────────────────────────── */}
       {/* Taller hero image (was 190) — the photo is the listing's first
           impression, and the old height under-weighted it against the button
-          block below. */}
-      <div onClick={onOpen} style={{ cursor: 'pointer', position: 'relative', height: 214, background: '#111' }}>
+          block below.
+          Kev, 2026-08-22: a fixed 214px became a different crop on every
+          column width. A 16:10 ratio (his mockup) keeps the same crop whether
+          the grid gives the card 340px or 520px, which is what makes a wall of
+          cards read as one grid instead of a ragged one. */}
+      <div onClick={onOpen} style={{ cursor: 'pointer', position: 'relative', aspectRatio: '16 / 10', background: '#111' }}>
         {r.images[0]
           ? <img src={r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
@@ -2180,6 +2193,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0) 22%, ' +
             'rgba(0,0,0,0) 72%, rgba(0,0,0,0.42) 100%)',
         }} />
+
+        {/* The wordmark, dead centre of the photo's top edge (Kev's mockup,
+            2026-08-22). Set as text rather than /logo-wide.png: the asset is
+            dark-on-transparent and would disappear against half the photos on
+            the board. pointerEvents none so it never steals the open-listing
+            click from the photo underneath it. */}
+        <span aria-hidden style={{
+          position: 'absolute', top: 9, left: '50%', transform: 'translateX(-50%)',
+          pointerEvents: 'none', fontFamily: FM, fontSize: 9, fontWeight: 700,
+          letterSpacing: '0.34em', textIndent: '0.34em',
+          color: 'rgba(255,255,255,0.78)',
+        }}>
+          2906
+        </span>
 
         {/* The star. Top-left corner, Kev's call (2026-08-16). Three steps
             (migration 031): outline = normal, gold = your Favourite, red = Hot
@@ -2213,12 +2240,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           />
         </button>
         {r.isHotProperty && (
-          <span style={{ position: 'absolute', top: 10, left: 44, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+          <span style={{ position: 'absolute', top: 10, left: 44, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Hot
           </span>
         )}
         {r.isMine && !r.isHotProperty && (
-          <span style={{ position: 'absolute', top: 10, left: 44, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+          <span style={{ position: 'absolute', top: 10, left: 44, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Yours
           </span>
         )}
@@ -2276,18 +2303,26 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         )}
       </div>
 
-      <div style={{ padding: '16px 16px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      {/* The white body. flex:1 so the tinted action tray and the reference
+          bar below it stay pinned to the bottom of every card in a row, no
+          matter how long this one's description runs. */}
+      <div style={{ padding: '14px 16px 13px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* ── location + price ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
           <div onClick={onOpen} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: status.c, flexShrink: 0 }} title={status.t} />
-            <PinGlyph color="#B5AFA2" size={13} />
-            <span style={{ fontSize: 16, fontWeight: 800, color: '#0F0F0F', letterSpacing: '-0.01em' }}>{townLabel(r.town)}</span>
+            <PinGlyph color="#B5AFA2" size={12} />
+            {/* 16→18 semibold (Kev's mockup, 2026-08-22). Truncates rather
+                than wrapping: the price beside it must keep its line. */}
+            <span style={{
+              fontSize: 18, fontWeight: 600, color: '#222222', letterSpacing: '-0.02em',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{townLabel(r.town)}</span>
           </div>
-          {/* Kev's redesign brief (2026-08-22): 17→19, tighter tracking — the
-              price is the number an agent scans for first; it should read
+          {/* Kev's redesign brief (2026-08-22): 17→19→21, tighter tracking —
+              the price is the number an agent scans for first; it should read
               with a touch more authority than the town name next to it. */}
-          <div style={{ fontFamily: FM, fontSize: 19, fontWeight: 700, color: '#0F0F0F', letterSpacing: '-0.01em', flexShrink: 0 }}>
+          <div style={{ fontFamily: FM, fontSize: 21, fontWeight: 500, color: '#222222', letterSpacing: '-0.03em', flexShrink: 0, lineHeight: 1.1 }}>
             {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
           </div>
         </div>
@@ -2322,15 +2357,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         )}
 
         {/* ── uploaded / confirmed / viewable ──────────────────────────────── */}
-        <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
+        {/* Three fixed columns rather than a gap-16 flex row (Kev's mockup,
+            2026-08-22): with flex the three facts started at a different x on
+            every card, so a column of cards had nothing to scan down. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 11 }}>
           {([
             ['uploaded', daysAgoCaps(r.createdAt)],
             ['confirmed', r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt).toUpperCase() : 'NEVER'],
             ['viewable', r.availableDate ? fmtDateDots(r.availableDate) : (avail.text || 'soon').toUpperCase()],
           ] as const).map(([label, value]) => (
-            <div key={label}>
-              <div style={{ fontSize: 8.5, color: '#C9C4B8', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: F }}>{label}</div>
-              <div style={{ fontSize: 10, color: '#8A8578', fontFamily: FM, fontWeight: 700, marginTop: 1 }}>{value}</div>
+            <div key={label} style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 9.5, color: '#B5AFA2', letterSpacing: '0.04em', fontFamily: F }}>{label}</div>
+              <div style={{ fontSize: 10, color: '#5F5A50', fontFamily: FM, fontWeight: 500, marginTop: 2, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
             </div>
           ))}
         </div>
@@ -2338,7 +2376,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         {/* ── description preview ──────────────────────────────────────────── */}
         {r.description && (
           <p onClick={onOpen} title="Click to read the full listing" style={{
-            fontSize: 11, color: '#9A9488', lineHeight: 1.45, marginTop: 9, marginBottom: 0, cursor: 'pointer',
+            fontSize: 11.5, color: '#9A9488', lineHeight: 1.5, marginTop: 10, marginBottom: 0, cursor: 'pointer',
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
             {r.description}
@@ -2346,14 +2384,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         )}
 
         {/* ── thumbnails + utility icons ────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 11 }}>
           {thumbs.map((src, i) => (
-            <img key={i} src={src} onClick={onOpen} alt="" style={{ width: 30, height: 30, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', flexShrink: 0 }} />
+            <img key={i} src={src} onClick={onOpen} alt="" style={{ width: 34, height: 34, borderRadius: 7, objectFit: 'cover', cursor: 'pointer', flexShrink: 0 }} />
           ))}
           {moreCount > 0 && (
-            <span onClick={onOpen} style={{ fontSize: 10, color: '#B5AFA2', fontFamily: FM, cursor: 'pointer' }}>+{moreCount}</span>
+            <span onClick={onOpen} style={{ fontSize: 10, color: '#B5AFA2', fontFamily: FM, cursor: 'pointer', marginLeft: 2 }}>+{moreCount}</span>
           )}
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Flag / pause / download live at the far right of the strip. Kev,
+              2026-08-22 ("kleinere icons"): one step smaller and one step
+              greyer than the buttons below — these are the card's rarest
+              actions and should not compete with the action panel. */}
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             {/* "Leave this owner alone" — the per-listing exception to the
                 robot's reachout schedule. Shown to an admin and to the agent
                 the listing belongs to; the backend enforces the same rule.
@@ -2366,7 +2408,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
                 title={r.autoReachoutOptOut
                   ? 'The robot is not asking this owner. Click to allow it again.'
                   : 'Stop the automatic owner check for this listing. You can still ask by hand.'}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: r.autoReachoutOptOut ? A : '#D8D3C6', fontSize: 13, lineHeight: 0 }}>
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: r.autoReachoutOptOut ? A : '#D8D3C6', fontSize: 12, lineHeight: 0 }}>
                 {r.autoReachoutOptOut ? '⏸' : '▸'}
               </button>
             )}
@@ -2375,7 +2417,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
                 admin, it is not a shortcut for On/Off Market. */}
             <button onClick={onReport} title="Report a problem with this listing — notifies admin"
               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#C9C4B8', lineHeight: 0 }}>
-              <FlagGlyph size={14} />
+              <FlagGlyph size={13} />
             </button>
             <PhotoDownload r={r} />
           </span>
@@ -2385,201 +2427,223 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
         {r.statusChangeReason && (
           <div style={{ fontSize: 9.5, color: '#B08968', marginTop: 8, lineHeight: 1.35 }}>{r.statusChangeReason}</div>
         )}
+      </div>
 
-        {/* ── actions ───────────────────────────────────────────────────────────
-            Kev's mockup (2026-08-22), not a grid of equal tiers: one flowing
-            row of light, auto-width utility/communication buttons — each
-            sized to its own content, not stretched into equal grid columns —
-            with a SINGLE standout: "Still on Market?" is the only filled-navy
-            button on the card. Every onClick/disabled condition below is
-            unchanged from before — this is a restyle, not a behaviour
-            change. ──────────────────────────────────────────────────────── */}
-        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
-          {/* Row 1 — communication + meta actions, natural width, flex-wrap so
-              a narrow card reflows instead of squeezing text. */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {/* Kev asked for "Ask Owner" (2026-08-16). It says Owner only where
-                that is TRUE: routes/crmScheduleBoard.js ask/send resolves the
-                owner with `isMine ? ownerFor(...) : null`, so on a colleague's
-                listing this question reaches the listing AGENT. */}
+      {/* ── actions ─────────────────────────────────────────────────────────────
+          Kev's mockup (2026-08-22), not a grid of equal tiers: one flowing
+          row of light, auto-width utility/communication buttons — each
+          sized to its own content, not stretched into equal grid columns —
+          with a SINGLE standout: "Still on Market?" is the only filled-navy
+          button on the card. Every onClick/disabled condition below is
+          unchanged from before — this is a restyle, not a behaviour change.
+
+          Kev, 2026-08-22: the buttons now live in their own tinted panel
+          OUTSIDE the white body padding, spanning the full card width. Two
+          reasons. (1) His mockup: the card reads photo → facts → a distinct
+          tray of things you can DO → reference stamp, instead of eight
+          controls floating in the same white space as the description.
+          (2) The body is flex:1, so with the panel as a sibling the trays of
+          every card in a grid row line up at the same height even when their
+          descriptions differ. ──────────────────────────────────────────── */}
+      <div style={{
+        background: '#F7F6F3', borderTop: '1px solid #EFEDE8',
+        padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
+      }}>
+        {/* Row 1 — communication + meta actions, natural width, flex-wrap so
+            a narrow card reflows instead of squeezing text. */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {/* Kev asked for "Ask Owner" (2026-08-16). It says Owner only where
+              that is TRUE: routes/crmScheduleBoard.js ask/send resolves the
+              owner with `isMine ? ownerFor(...) : null`, so on a colleague's
+              listing this question reaches the listing AGENT. */}
+          <button
+            onClick={() => c.canQuestion && onAsk()}
+            disabled={!c.canQuestion}
+            title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
+            style={{
+              ...secondaryBtn, flex: '0 1 auto',
+              color: c.canQuestion ? '#222222' : '#C9C4B8',
+              borderColor: c.canQuestion ? '#DFDCD5' : '#EDEAE2',
+              cursor: c.canQuestion ? 'pointer' : 'not-allowed',
+            }}>
+            {r.isMine ? 'Ask Owner' : 'Ask Agent'}
+          </button>
+
+          {/* Booking is internal — never blocked by a contact rule. */}
+          <button onClick={onBook} title="Book a viewing" style={{ ...secondaryBtn, flex: '0 1 auto' }}>
+            Book
+          </button>
+
+          {/* Create Group — visible so the feature is known to exist, but hard
+              disabled until the automated group welcome-message flow ships
+              (Kev, 2026-08-22). It is NOT deleted, and once that flow lands
+              this becomes: isAdmin && r.viewing?.status === 'confirmed'.
+              Dashed border and NO white fill — on the tinted panel the other
+              buttons are the only white things, so "not white" now reads as
+              unavailable on its own, before anyone reads the grey text. */}
+          <button
+            disabled
+            title={r.viewing?.status === 'confirmed'
+              ? 'Coming soon — waiting on the automated group welcome message, not on this booking.'
+              : 'Coming soon — needs a confirmed booking and the automated group welcome message.'}
+            style={{
+              ...secondaryBtn, flex: '0 1 auto', color: '#B7B1A4', background: 'transparent',
+              border: '1px dashed #DAD5CB', cursor: 'not-allowed',
+            }}>
+            Create Group
+          </button>
+
+          {/* Facebook posting-queue toggle. Admin only — hidden entirely for
+              everyone else, same convention recheck/archive used to. Thin
+              control over the existing per-property campaign
+              (services/facebookCampaign.js); this button starts/pauses it.
+              Kev, 2026-08-22: text stays navy either way now — the
+              Facebook glyph itself already carries its own brand blue, so
+              colouring the label blue too was a second colour saying the
+              same thing. "Queued" reads from bold weight, not a new hue. */}
+          {isAdmin && (
             <button
-              onClick={() => c.canQuestion && onAsk()}
-              disabled={!c.canQuestion}
-              title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
+              onClick={onFbQueue}
+              disabled={fbQueueBusy}
+              title={r.facebookQueueStatus === 'queued'
+                ? 'In the Facebook posting queue — click to pause'
+                : 'Not in the Facebook posting queue — click to enqueue'}
               style={{
                 ...secondaryBtn, flex: '0 1 auto',
-                color: c.canQuestion ? '#222222' : '#C9C4B8',
-                borderColor: c.canQuestion ? '#DDDDDD' : '#EDEAE2',
-                cursor: c.canQuestion ? 'pointer' : 'not-allowed',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                fontWeight: r.facebookQueueStatus === 'queued' ? 700 : 500,
+                opacity: fbQueueBusy ? 0.5 : 1, cursor: fbQueueBusy ? 'wait' : 'pointer',
               }}>
-              {r.isMine ? 'Ask Owner' : 'Ask Agent'}
-            </button>
-
-            {/* Booking is internal — never blocked by a contact rule. */}
-            <button onClick={onBook} title="Book a viewing" style={{ ...secondaryBtn, flex: '0 1 auto' }}>
-              Book
-            </button>
-
-            {/* Create Group — visible so the feature is known to exist, but hard
-                disabled until the automated group welcome-message flow ships
-                (Kev, 2026-08-22). It is NOT deleted, and once that flow lands
-                this becomes: isAdmin && r.viewing?.status === 'confirmed'.
-                Dashed border on top of the greyed fill — a solid-border grey
-                button reads as "active but boring", not "unavailable". */}
-            <button
-              disabled
-              title={r.viewing?.status === 'confirmed'
-                ? 'Coming soon — waiting on the automated group welcome message, not on this booking.'
-                : 'Coming soon — needs a confirmed booking and the automated group welcome message.'}
-              style={{
-                ...secondaryBtn, flex: '0 1 auto', color: '#C4BEB0', background: '#FAFAFA',
-                border: '1px dashed #DDDDDD', cursor: 'not-allowed',
-              }}>
-              Create Group
-            </button>
-
-            {/* Facebook posting-queue toggle. Admin only — hidden entirely for
-                everyone else, same convention recheck/archive used to. Thin
-                control over the existing per-property campaign
-                (services/facebookCampaign.js); this button starts/pauses it.
-                Kev, 2026-08-22: text stays navy either way now — the
-                Facebook glyph itself already carries its own brand blue, so
-                colouring the label blue too was a second colour saying the
-                same thing. "Queued" reads from bold weight, not a new hue. */}
-            {isAdmin && (
-              <button
-                onClick={onFbQueue}
-                disabled={fbQueueBusy}
-                title={r.facebookQueueStatus === 'queued'
-                  ? 'In the Facebook posting queue — click to pause'
-                  : 'Not in the Facebook posting queue — click to enqueue'}
-                style={{
-                  ...secondaryBtn, flex: '0 1 auto',
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  fontWeight: r.facebookQueueStatus === 'queued' ? 700 : 600,
-                  opacity: fbQueueBusy ? 0.5 : 1, cursor: fbQueueBusy ? 'wait' : 'pointer',
-                }}>
-                <FacebookGlyph size={13} /> Queue
-              </button>
-            )}
-          </div>
-
-          {/* Rare: only when this is a colleague's listing with no viewing
-              location on file yet. Its own line so it never competes with the
-              row above for a slot. */}
-          {!r.isMine && !r.hasViewingLocation && c.canAsk && (
-            <button onClick={() => onAct('request-location', r)}
-              style={{ ...secondaryBtn, flex: '0 1 auto' }}
-              title="Ask the listing agent where the viewing is">
-              Location
+              <FacebookGlyph size={12} /> Queue
             </button>
           )}
-
-          {/* Row 2 — the one dark button on the card (Still on Market?, the
-              most-asked question), then +Tag@, then the on/off-market pair
-              at the end. Still-on-Market takes the leftover width (flex: 1);
-              everything else stays exactly as wide as its own content. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {/* Kev, 2026-08-16: the label is the QUESTION we are about to ask,
-                not the topic — this is the primary action, styled to match. */}
-            <button
-              onClick={() => c.canAsk && onAct('request-availability', r)}
-              disabled={!c.canAsk}
-              title={c.reason || (r.isMine ? 'Message the owner' : `Ask ${c.reachesName || 'the listing agent'}`)}
-              style={{
-                ...pillBtn, flex: 1, fontWeight: 700,
-                background: c.canAsk ? NAVY : '#F1EFEA',
-                color: c.canAsk ? '#FFF' : '#B5AFA2',
-                cursor: c.canAsk ? 'pointer' : 'not-allowed',
-              }}>
-              Still on Market?
-            </button>
-
-            {/* WATag, one listing. Deliberately separate from the pick box on
-                the photo: this is "tag this one now", that is "add it to a
-                batch". Drawn even when it cannot fire, greyed with the reason
-                in the tooltip — a button that vanishes teaches nobody why. */}
-            <button
-              data-watag-one={r.ref}
-              onClick={() => canTag && !tagging && onTag()}
-              disabled={!canTag || tagging}
-              title={tagWhy}
-              style={{
-                ...secondaryBtn, flex: '0 0 auto',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-                color: canTag ? '#222222' : '#C9C4B8', cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
-              }}>
-              <span>+Tag</span>
-              <span style={{ fontFamily: FM }}>@</span>
-            </button>
-
-            {/* On Market / Off Market. Neither sends a message to anybody: they
-                record what this agent knows right now.
-                  On Market  → the card stays, the timestamp moves to now
-                  Off Market → the card leaves the active board immediately
-                Nothing is deleted either way — the listing keeps its row, its
-                photos and its history, and Inventory still has all of it.
-                Kev, 2026-08-22: the coloured-BLOCK background (a full light
-                green / light pink fill) was one accent colour too many next
-                to a HOT badge, a Yours badge and a gold-accented tab — but a
-                plain grey-bordered pill turned out invisible instead: a pale
-                icon on white, easy to miss entirely as a button (that's the
-                "a button is buggy" report). Landing point: white pill, but
-                the BORDER carries the colour instead of the fill — visible
-                at a glance, still one clear step lighter than a solid block. */}
-            <button
-              onClick={onCheckIn}
-              disabled={busy}
-              title={`On Market — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} · click to confirm as of now`}
-              style={{
-                ...secondaryBtn, width: 36, minHeight: 36, flex: '0 0 auto', padding: 0,
-                display: 'grid', placeItems: 'center', borderRadius: 999,
-                borderColor: fresh.tier === 'unconfirmed' ? 'rgba(47,111,87,0.35)' : 'rgba(27,42,74,0.2)',
-                opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
-              }}>
-              <CartGlyph color={fresh.tier === 'unconfirmed' ? 'rgb(47,111,87)' : fresh.fg} size={15} />
-            </button>
-            <button
-              onClick={() => onStatus('check-out')}
-              disabled={busy}
-              title="Off Market — asks for a reason, then takes it off the board"
-              style={{
-                ...secondaryBtn, width: 36, minHeight: 36, flex: '0 0 auto', padding: 0,
-                display: 'grid', placeItems: 'center', borderRadius: 999,
-                borderColor: 'rgba(185,28,28,0.3)',
-                opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
-              }}>
-              <CartGlyph color="#B91C1C" size={15} off />
-            </button>
-          </div>
         </div>
 
-        {/* Favourites only: the viewing this card is here for, and a way off the
-            list. Reads under the buttons so the card's shape does not change
-            between tabs. */}
-        {onUnfavourite && (
-          <div style={{
-            marginTop: 8, paddingTop: 8, borderTop: '1px solid #F1EEE7',
-            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-          }}>
-            <span style={{ fontSize: 10.5, color: GREEN, fontWeight: 600 }}>
-              {r.viewing
-                ? `Viewing ${fmtDay(r.viewing.date)}${r.viewing.time ? ` at ${r.viewing.time}` : ''}`
-                : 'Saved'}
-            </span>
-            {r.viewing && r.viewing.status !== 'confirmed' && (
-              <span style={{ fontSize: 9.5, color: '#B08968' }}>{r.viewing.status}</span>
-            )}
-            <button
-              data-unfavourite={r.ref}
-              onClick={onUnfavourite}
-              title="Take it off Favourites. The viewing stays in the diary."
-              style={{ ...subtleLink, marginLeft: 'auto', fontSize: 10.5 }}>
-              remove
-            </button>
-          </div>
+        {/* Rare: only when this is a colleague's listing with no viewing
+            location on file yet. Its own line so it never competes with the
+            row above for a slot. */}
+        {!r.isMine && !r.hasViewingLocation && c.canAsk && (
+          <button onClick={() => onAct('request-location', r)}
+            style={{ ...secondaryBtn, flex: '0 1 auto', alignSelf: 'flex-start' }}
+            title="Ask the listing agent where the viewing is">
+            Location
+          </button>
         )}
+
+        {/* Row 2 — the one dark button on the card (Still on Market?, the
+            most-asked question), then +Tag@, then the on/off-market pair
+            at the end. Still-on-Market takes the leftover width; everything
+            else stays exactly as wide as its own content.
+            flexWrap + a flex-basis (not a bare flex:1) on the dark button is
+            what stops the pair at the end being clipped off a narrow card:
+            below ~300px of row the dark button drops to its own line instead
+            of squeezing its three neighbours past the right edge. */}
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+          {/* Kev, 2026-08-16: the label is the QUESTION we are about to ask,
+              not the topic — this is the primary action, styled to match. */}
+          <button
+            onClick={() => c.canAsk && onAct('request-availability', r)}
+            disabled={!c.canAsk}
+            title={c.reason || (r.isMine ? 'Message the owner' : `Ask ${c.reachesName || 'the listing agent'}`)}
+            style={{
+              ...pillBtn, flex: '1 1 148px', minWidth: 0, fontWeight: 600,
+              background: c.canAsk ? NAVY : '#EDEAE3',
+              color: c.canAsk ? '#FFF' : '#B5AFA2',
+              cursor: c.canAsk ? 'pointer' : 'not-allowed',
+            }}>
+            Still on Market?
+          </button>
+
+          {/* WATag, one listing. Deliberately separate from the pick box on
+              the photo: this is "tag this one now", that is "add it to a
+              batch". Drawn even when it cannot fire, greyed with the reason
+              in the tooltip — a button that vanishes teaches nobody why. */}
+          <button
+            data-watag-one={r.ref}
+            onClick={() => canTag && !tagging && onTag()}
+            disabled={!canTag || tagging}
+            title={tagWhy}
+            style={{
+              ...secondaryBtn, flex: '0 0 auto',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+              color: canTag ? '#222222' : '#C9C4B8', cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
+            }}>
+            <span>+Tag</span>
+            <span style={{ fontFamily: FM }}>@</span>
+          </button>
+
+          {/* On Market / Off Market. Neither sends a message to anybody: they
+              record what this agent knows right now.
+                On Market  → the card stays, the timestamp moves to now
+                Off Market → the card leaves the active board immediately
+              Nothing is deleted either way — the listing keeps its row, its
+              photos and its history, and Inventory still has all of it.
+              Kev, 2026-08-22, third pass. First they were solid coloured
+              BLOCKS — one accent too many beside a HOT badge, a Yours badge
+              and a gold tab. Then a plain grey-bordered white pill, which
+              went the other way and turned invisible — literally, not
+              loosely: the glyph took freshness().fg, and fg is '#FFF' for
+              both the fresh and the ageing tier, so on a white pill the cart
+              drew white-on-white and the button looked empty. That is the
+              "a button is buggy" report, and it was fair. The glyph now
+              carries the hue itself and only its OPACITY moves with the
+              tier, so it can never disappear.
+              Landing point (his mockup): a small tinted SQUARE — a ~10% wash
+              of its own colour with a hairline border of the same hue. Reads
+              unmistakably as a button, still nowhere near a solid block.
+              Both are flex '0 0 auto' in a wrapping row and sit AFTER a
+              button that can wrap away from them, so the pair can no longer
+              be clipped off the right edge of a narrow card. */}
+          <button
+            onClick={onCheckIn}
+            disabled={busy}
+            title={`On Market — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} · click to confirm as of now`}
+            style={{
+              ...iconSquareBtn,
+              background: 'rgba(47,111,87,0.10)', borderColor: 'rgba(47,111,87,0.22)',
+              opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
+            }}>
+            <CartGlyph color={fresh.tier === 'unconfirmed' ? 'rgba(47,111,87,0.72)' : 'rgb(47,111,87)'} size={14} />
+          </button>
+          <button
+            onClick={() => onStatus('check-out')}
+            disabled={busy}
+            title="Off Market — asks for a reason, then takes it off the board"
+            style={{
+              ...iconSquareBtn,
+              background: 'rgba(185,28,28,0.09)', borderColor: 'rgba(185,28,28,0.20)',
+              opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
+            }}>
+            <CartGlyph color="#B91C1C" size={14} off />
+          </button>
+        </div>
       </div>
+
+      {/* Favourites only: the viewing this card is here for, and a way off the
+          list. Reads under the buttons so the card's shape does not change
+          between tabs. */}
+      {onUnfavourite && (
+        <div style={{
+          padding: '9px 16px', borderTop: '1px solid #EFEDE8', background: CARD,
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 10.5, color: GREEN, fontWeight: 600 }}>
+            {r.viewing
+              ? `Viewing ${fmtDay(r.viewing.date)}${r.viewing.time ? ` at ${r.viewing.time}` : ''}`
+              : 'Saved'}
+          </span>
+          {r.viewing && r.viewing.status !== 'confirmed' && (
+            <span style={{ fontSize: 9.5, color: '#B08968' }}>{r.viewing.status}</span>
+          )}
+          <button
+            data-unfavourite={r.ref}
+            onClick={onUnfavourite}
+            title="Take it off Favourites. The viewing stays in the diary."
+            style={{ ...subtleLink, marginLeft: 'auto', fontSize: 10.5 }}>
+            remove
+          </button>
+        </div>
+      )}
 
       {/* ── reference bar ─────────────────────────────────────────────────── */}
       {/* The one authoritative reference (r.ref), straight from the listing —
@@ -2589,8 +2653,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           reads as the card's closing stamp, not one more left-aligned row. */}
       <div style={{
         background: '#0F0F0F', color: 'rgba(255,255,255,0.55)', fontFamily: FM, fontSize: 9.5,
-        letterSpacing: '0.04em', padding: '8px 14px', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', gap: 8,
+        letterSpacing: '0.04em', padding: '7px 14px', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
       }}>
         <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}>REFERENCE {r.ref}</span>
         <span style={{ opacity: 0.4 }}>—</span>
@@ -2965,20 +3029,35 @@ const btn: React.CSSProperties = {
 // border, near-black text, no fill. That's the model for every button here
 // except "Still on Market?" (the one filled, brand-navy action — Airbnb's
 // own primary buttons are filled pills the same way).
+// Kev, 2026-08-22 ("kleinere icons, übersichtlicher"): one notch down from
+// 12.5/38 to 12/34. Two rows of buttons at 38px tall made the tray heavier
+// than the photo above it; 34 is still well over the 32px tap floor `btn`
+// holds to, and the row now fits a 340px column without wrapping.
 const pillBtn: React.CSSProperties = {
-  padding: '9px 14px', borderRadius: 999, fontSize: 12.5, fontFamily: F,
-  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 38,
+  padding: '8px 14px', borderRadius: 999, fontSize: 12, fontFamily: F,
+  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
   background: '#F3F1EC', border: 'none', flex: 1,
 }
 // The card's light, auto-width buttons (Ask Owner/Agent, Create Group, Queue,
 // +Tag@, Location). Outline rather than filled — "Still on Market?" is the
 // only filled-navy button on the card, so everything here stays one clear
 // step below it, sized to its own content rather than stretched into an
-// equal grid column.
+// equal grid column. White on the tray's warm grey: the fill is what makes
+// them read as buttons now, so the border only has to be a hairline.
 const secondaryBtn: React.CSSProperties = {
-  padding: '8px 14px', borderRadius: 999, fontSize: 12.5, fontFamily: F,
-  fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36,
-  background: '#FFF', border: `1px solid #DDDDDD`, color: '#222222',
+  padding: '7px 12px', borderRadius: 999, fontSize: 12, fontFamily: F,
+  fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
+  background: '#FFF', border: `1px solid #DFDCD5`, color: '#222222',
+}
+// The two on/off-market carts, and nothing else. A square (radius 9) rather
+// than one more pill, deliberately: they are the only icon-only controls in
+// the tray, and a different shape is how you tell at a glance that they do
+// not belong to the row of worded buttons beside them. Callers supply the
+// tint and border colour — see the On Market / Off Market pair.
+const iconSquareBtn: React.CSSProperties = {
+  width: 34, height: 34, minHeight: 34, flex: '0 0 auto', padding: 0,
+  borderRadius: 9, border: '1px solid transparent', display: 'grid',
+  placeItems: 'center', cursor: 'pointer', fontFamily: F,
 }
 // The two low-frequency card actions. Reads as a text link, sized as a button:
 // 30px is the same tap floor the buttons and village chips hold to.

@@ -327,7 +327,9 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
                 tracking — the page title is the one place a bit of scale
                 actually earns its keep instead of reading as "just another
                 label the same size as everything else". */}
-            <h1 style={{ fontFamily: F, fontSize: isMobile ? 20 : 28, fontWeight: 800, margin: 0, letterSpacing: '-0.03em', color: '#0F0F0F' }}>{title}</h1>
+            {/* Kev, 2026-08-22: 800→600. Bricolage at 800 reads heavy/blocky
+                at 28px; Airbnb's own page titles sit at semibold. */}
+            <h1 style={{ fontFamily: F, fontSize: isMobile ? 20 : 28, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', color: '#222222' }}>{title}</h1>
             {subtitle && <div style={{ fontSize: 11.5, color: '#A39D8F', marginTop: 4, letterSpacing: '0.01em' }}>{subtitle}</div>}
           </div>
           {onAdd && <button onClick={onAdd} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: isMobile ? '9px 14px' : '10px 18px', fontSize: isMobile ? 11 : 12, cursor: 'pointer', fontFamily: F, fontWeight: 700, letterSpacing: '0.03em' }}>+ Add</button>}
