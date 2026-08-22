@@ -12,6 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
@@ -846,21 +847,33 @@ function Board() {
         <>
           {/* Sort. Newest-first is the default and the reason the board reads
               top-left-first: the listing that just arrived is the one being
-              asked about. The backend does the ordering. */}
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-            disabled={view !== 'board'}
-            title={view === 'recheck'
-              ? 'The review queue is ordered oldest-doubt-first'
-              : view === 'favourites'
-              ? 'Favourites are ordered by when you saved them, newest first'
-              : 'Order the board'}
-            className="px-3 py-2 bg-off-white border-0 rounded text-sm text-navy/70
-                       focus:outline-none focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
-          >
-            {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
+              asked about. The backend does the ordering.
+              Kev, 2026-08-22: was its own bg-off-white/no-shadow className,
+              copy-pasted separately from board-filters.tsx's TRIGGER — so
+              when TRIGGER got the raised-pill shadow treatment, these three
+              controls silently fell behind and stood out as "the ones that
+              still look like plain HTML". Now the same shell, and the native
+              select arrow (which read as a different design system on its
+              own) is hidden behind the same ChevronDown every other trigger
+              uses. */}
+          <div className="relative">
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              disabled={view !== 'board'}
+              title={view === 'recheck'
+                ? 'The review queue is ordered oldest-doubt-first'
+                : view === 'favourites'
+                ? 'Favourites are ordered by when you saved them, newest first'
+                : 'Order the board'}
+              className="appearance-none pl-3 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded
+                         text-sm text-navy/70 hover:text-navy transition-all
+                         focus:outline-none focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
+            >
+              {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <ChevronDown className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-navy/40 pointer-events-none" />
+          </div>
 
           {/* Only listings somebody has actually stood behind, with a timestamp
               to prove it. */}
@@ -868,8 +881,10 @@ function Board() {
             <button
               onClick={() => setOnlyConfirmed(v => !v)}
               title="Only listings an agent has confirmed as available"
-              className={`px-3 py-2 rounded text-xs whitespace-nowrap transition-colors ${
-                onlyConfirmed ? 'bg-navy text-white' : 'bg-off-white text-navy/60 hover:bg-navy/10'}`}
+              className={`px-3 py-2 rounded text-xs whitespace-nowrap transition-all ${
+                onlyConfirmed
+                  ? 'bg-gold/10 ring-1 ring-gold/50 text-navy font-medium'
+                  : 'bg-white shadow-sm shadow-navy/5 text-navy/60 hover:text-navy hover:shadow-navy/10'}`}
             >
               Confirmed only
             </button>
@@ -878,21 +893,25 @@ function Board() {
           {/* Free-from search. Months are generated from today, so the list
               never offers one that has already passed. */}
           {view === 'board' && (
-            <select
-              value={avail}
-              onChange={e => setAvail(e.target.value)}
-              title="Filter by when the property becomes free"
-              className="px-3 py-2 bg-off-white border-0 rounded text-sm text-navy/70
-                         focus:outline-none focus:ring-1 focus:ring-gold/50"
-            >
-              <option value="">Free — any</option>
-              <option value="now">Free now</option>
-              <option value="soon">Soon (no date)</option>
-              <option value="dated">Has a date</option>
-              {nextMonths(9).map(m => (
-                <option key={m.value} value={m.value}>From {m.label}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={avail}
+                onChange={e => setAvail(e.target.value)}
+                title="Filter by when the property becomes free"
+                className="appearance-none pl-3 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded
+                           text-sm text-navy/70 hover:text-navy transition-all
+                           focus:outline-none focus:ring-1 focus:ring-gold/50"
+              >
+                <option value="">Free — any</option>
+                <option value="now">Free now</option>
+                <option value="soon">Soon (no date)</option>
+                <option value="dated">Has a date</option>
+                {nextMonths(9).map(m => (
+                  <option key={m.value} value={m.value}>From {m.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-navy/40 pointer-events-none" />
+            </div>
           )}
 
           {rect && (
@@ -2419,7 +2438,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             {/* Facebook posting-queue toggle. Admin only — hidden entirely for
                 everyone else, same convention recheck/archive used to. Thin
                 control over the existing per-property campaign
-                (services/facebookCampaign.js); this button starts/pauses it. */}
+                (services/facebookCampaign.js); this button starts/pauses it.
+                Kev, 2026-08-22: text stays navy either way now — the
+                Facebook glyph itself already carries its own brand blue, so
+                colouring the label blue too was a second colour saying the
+                same thing. "Queued" reads from bold weight, not a new hue. */}
             {isAdmin && (
               <button
                 onClick={onFbQueue}
@@ -2430,7 +2453,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
                 style={{
                   ...secondaryBtn, flex: '0 1 auto',
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  color: r.facebookQueueStatus === 'queued' ? '#1877F2' : '#7A7A7A',
+                  fontWeight: r.facebookQueueStatus === 'queued' ? 700 : 600,
                   opacity: fbQueueBusy ? 0.5 : 1, cursor: fbQueueBusy ? 'wait' : 'pointer',
                 }}>
                 <FacebookGlyph size={13} /> Queue
@@ -2492,17 +2515,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
                   On Market  → the card stays, the timestamp moves to now
                   Off Market → the card leaves the active board immediately
                 Nothing is deleted either way — the listing keeps its row, its
-                photos and its history, and Inventory still has all of it. The
-                icon's colour still carries the freshness ladder that used to
-                be the whole button's background. */}
+                photos and its history, and Inventory still has all of it.
+                Kev, 2026-08-22: the coloured-block background (light green /
+                light pink fill) was one accent colour too many on a card that
+                already has a HOT badge, a Yours badge and a gold-accented
+                tab — neutral button, coloured icon only, same convention as
+                the rest of the row now that "Still on Market?" is the one
+                thing on the card allowed to be a solid colour. */}
             <button
               onClick={onCheckIn}
               disabled={busy}
               title={`On Market — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} · click to confirm as of now`}
               style={{
-                ...pillBtn, width: 40, flex: '0 0 auto', padding: 0,
+                ...secondaryBtn, width: 40, flex: '0 0 auto', padding: 0,
                 display: 'grid', placeItems: 'center',
-                background: fresh.tier === 'unconfirmed' ? '#EAF4EF' : fresh.bg,
                 opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
               }}>
               <CartGlyph color={fresh.tier === 'unconfirmed' ? 'rgb(47,111,87)' : fresh.fg} size={17} />
@@ -2512,8 +2538,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               disabled={busy}
               title="Off Market — asks for a reason, then takes it off the board"
               style={{
-                ...pillBtn, width: 40, flex: '0 0 auto', padding: 0,
-                display: 'grid', placeItems: 'center', background: '#FBEAE8',
+                ...secondaryBtn, width: 40, flex: '0 0 auto', padding: 0,
+                display: 'grid', placeItems: 'center',
                 opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
               }}>
               <CartGlyph color="#B91C1C" size={17} off />
