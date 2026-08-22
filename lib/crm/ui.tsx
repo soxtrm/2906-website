@@ -189,8 +189,13 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   }, [router])
 
   if (!ready) {
+    // Kev, 2026-08-22: this used to be the literal text "2906" — the real
+    // wordmark (same file the sidebar already uses) so the loading screen
+    // doesn't show a stale placeholder before the real logo ever renders.
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F6F4EF', color: A, fontFamily: F, fontWeight: 800, fontSize: 22 }}>2906</div>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F6F4EF' }}>
+        <img src="/logo-wide.png" alt="2906" style={{ width: 150 }} />
+      </div>
     )
   }
   return <Ctx.Provider value={{ me, reveals, nav, doReveal, logout }}>{children}</Ctx.Provider>
