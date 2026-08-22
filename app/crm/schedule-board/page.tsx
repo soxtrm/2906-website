@@ -2171,14 +2171,15 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
       }}
     >
       {/* ── photo ──────────────────────────────────────────────────────────── */}
-      {/* Taller hero image (was 190) — the photo is the listing's first
-          impression, and the old height under-weighted it against the button
-          block below.
-          Kev, 2026-08-22: a fixed 214px became a different crop on every
-          column width. A 16:10 ratio (his mockup) keeps the same crop whether
-          the grid gives the card 340px or 520px, which is what makes a wall of
-          cards read as one grid instead of a ragged one. */}
-      <div onClick={onOpen} style={{ cursor: 'pointer', position: 'relative', aspectRatio: '16 / 10', background: '#111' }}>
+      {/* Hero image. Kev, 2026-08-22 (second pass): back to a FIXED height,
+          not `aspectRatio: 16/10`. The grid columns are `1fr` and stretch to
+          fill the row, so a ratio made the photo's height a function of the
+          viewport — on a wide screen a column lands at 450–500px and the
+          photo grew to ~300px tall, dwarfing the text below it. A fixed
+          height is the only way every photo on the board is the same size no
+          matter how many columns fit. `objectFit: cover` still crops rather
+          than distorts, so nothing is squashed. */}
+      <div onClick={onOpen} style={{ cursor: 'pointer', position: 'relative', height: 200, flexShrink: 0, background: '#111' }}>
         {r.images[0]
           ? <img src={r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
