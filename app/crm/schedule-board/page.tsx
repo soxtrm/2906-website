@@ -949,6 +949,10 @@ function Board() {
                 borderColor: on ? NAVY : '#E9E5DC',
                 color: on ? '#FFF' : '#666',
                 fontWeight: on ? 700 : 500,
+                // Kev's redesign brief (2026-08-22): a thin gold trim on the
+                // active tab — same navy fill as before, now with the accent
+                // that was otherwise only living on the sidebar.
+                boxShadow: on ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.20)` : 'none',
               }}>
                 {label}
                 {badge > 0 && (
@@ -1091,8 +1095,10 @@ function Board() {
         />}
 
         {/* cards */}
+        {/* Gap 14→20 (Kev's redesign brief, 2026-08-22) — more editorial
+            breathing room between cards, less packed-admin-table. */}
         <div style={{
-          display: 'grid', gap: 14, marginTop: 18,
+          display: 'grid', gap: 20, marginTop: 20,
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(268px,1fr))',
         }}>
           {visible.map(r => (
@@ -1275,9 +1281,23 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
       // ctrl/⌘+scroll to zoom and lets a plain wheel pass through to the page;
       // a one-finger drag still pans, a two-finger drag still zooms on touch.
       gestureHandling: 'cooperative',
+      // Kev's redesign brief (2026-08-22): default Google blue/green reads as
+      // "embedded widget", not part of the product. Warm, muted palette tuned
+      // to the board's own NAVY/gold/beige instead — same POI/transit
+      // suppression as before, now folded into one custom style.
       styles: [
+        { elementType: 'geometry', stylers: [{ color: '#F2EFE6' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#7A7568' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#F2EFE6' }] },
         { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+        { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#E4E7DA' }] },
         { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+        { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#DAD5C7' }] },
+        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
+        { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#E4E0D3' }] },
+        { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#EDE4C8' }] },
+        { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#D9C08A' }] },
+        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#C7D2DC' }] },
       ],
     })
     // An empty OverlayView exists purely for its projection: it is the only
@@ -2128,6 +2148,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           ? <img src={r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
 
+        {/* Kev's redesign brief (2026-08-22): a real scrim instead of relying on
+            each badge's own drop-shadow filter for contrast — guarantees the
+            star/tags/counters stay legible over a bright photo, not just a
+            dark one. Top and bottom, since badges sit at both edges; the
+            middle stays clear so the photo itself is still the focus. */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0) 22%, ' +
+            'rgba(0,0,0,0) 72%, rgba(0,0,0,0.42) 100%)',
+        }} />
+
         {/* The star. Top-left corner, Kev's call (2026-08-16). Three steps
             (migration 031): outline = normal, gold = your Favourite, red = Hot
             Property (global, admin-set — see Board():toggleStar). */}
@@ -2231,7 +2262,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             <PinGlyph color="#B5AFA2" size={13} />
             <span style={{ fontSize: 16, fontWeight: 800, color: '#0F0F0F', letterSpacing: '-0.01em' }}>{townLabel(r.town)}</span>
           </div>
-          <div style={{ fontFamily: FM, fontSize: 17, fontWeight: 700, color: '#0F0F0F', flexShrink: 0 }}>
+          {/* Kev's redesign brief (2026-08-22): 17→19, tighter tracking — the
+              price is the number an agent scans for first; it should read
+              with a touch more authority than the town name next to it. */}
+          <div style={{ fontFamily: FM, fontSize: 19, fontWeight: 700, color: '#0F0F0F', letterSpacing: '-0.01em', flexShrink: 0 }}>
             {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
           </div>
         </div>

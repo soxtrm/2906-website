@@ -53,10 +53,15 @@ const BEDS = ['1', '2', '3', '4+']
 const BATHS = ['1', '2', '3']
 
 // ── shared shells, so every control lines up on the same baseline ───────────
+// Kev's redesign brief (2026-08-22): the row read flat — every control the
+// same off-white block with no lift. A soft shadow gives each trigger the
+// same "raised pill" feel the card buttons already have; the gold tint on
+// an active filter (was ring-only) makes "something is set here" readable
+// at a glance instead of requiring a close look at the ring.
 const TRIGGER =
-  'flex items-center gap-2 px-3 py-2 bg-off-white rounded text-sm text-navy/70 ' +
-  'hover:text-navy transition-colors whitespace-nowrap'
-const TRIGGER_ON = 'text-navy font-medium ring-1 ring-gold/40'
+  'flex items-center gap-2 px-3 py-2 bg-white shadow-sm shadow-navy/5 rounded text-sm text-navy/70 ' +
+  'hover:text-navy hover:shadow-navy/10 transition-all whitespace-nowrap'
+const TRIGGER_ON = 'text-navy font-medium bg-gold/10 ring-1 ring-gold/50 shadow-gold/10'
 const PANEL =
   'absolute top-full left-0 mt-1 bg-white rounded shadow-lg z-30 p-2 ' +
   'border border-gray-100 min-w-[200px]'
@@ -175,7 +180,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
             value={value.q}
             onChange={e => onChange({ q: e.target.value })}
             placeholder="Search ref, town or area…"
-            className="w-full pl-8 pr-7 py-2 bg-off-white border-0 rounded text-sm text-navy
+            className="w-full pl-8 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded text-sm text-navy
                        placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"
           />
           {value.q && (

@@ -284,7 +284,10 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: '#F6F4EF', fontFamily: F, color: '#1A1A1A', overflow: 'hidden', fontSize: 13 }}>
       {!isMobile && (
         <aside style={{ width: 190, background: NAVY, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-          <div style={{ padding: '26px 22px 20px', borderBottom: `1px solid ${NAVY_LIGHT}` }}>
+          {/* Gold hairline under the logo (Kev's redesign brief, 2026-08-22) —
+              was a navy-on-navy border, nearly invisible; this is the first
+              accent a user sees, so it should actually read as one. */}
+          <div style={{ padding: '26px 22px 19px', borderBottom: `1px solid rgba(184,149,63,0.35)` }}>
             <img src="/logo-wide.png" alt="2906" style={{ width: 108, display: 'block' }} />
             <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 8, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ESTATE · CRM</div>
           </div>
@@ -320,8 +323,12 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <header style={{ background: '#FFF', borderBottom: '1px solid #EDEBE5', padding: isMobile ? '12px 16px' : '16px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <h1 style={{ fontFamily: F, fontSize: isMobile ? 18 : 22, fontWeight: 800, margin: 0, letterSpacing: '-0.025em', color: '#0F0F0F' }}>{title}</h1>
-            {subtitle && <div style={{ fontSize: 11, color: '#AAA', marginTop: 2 }}>{subtitle}</div>}
+            {/* Kev's redesign brief (2026-08-22): bumped 22→28 with tighter
+                tracking — the page title is the one place a bit of scale
+                actually earns its keep instead of reading as "just another
+                label the same size as everything else". */}
+            <h1 style={{ fontFamily: F, fontSize: isMobile ? 20 : 28, fontWeight: 800, margin: 0, letterSpacing: '-0.03em', color: '#0F0F0F' }}>{title}</h1>
+            {subtitle && <div style={{ fontSize: 11.5, color: '#A39D8F', marginTop: 4, letterSpacing: '0.01em' }}>{subtitle}</div>}
           </div>
           {onAdd && <button onClick={onAdd} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: isMobile ? '9px 14px' : '10px 18px', fontSize: isMobile ? 11 : 12, cursor: 'pointer', fontFamily: F, fontWeight: 700, letterSpacing: '0.03em' }}>+ Add</button>}
         </header>
