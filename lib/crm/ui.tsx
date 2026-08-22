@@ -280,8 +280,8 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
       {!isMobile && (
         <aside style={{ width: 190, background: NAVY, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div style={{ padding: '26px 22px 20px', borderBottom: `1px solid ${NAVY_LIGHT}` }}>
-            <div style={{ fontFamily: F, fontSize: 34, fontWeight: 800, color: A, letterSpacing: '-0.03em', lineHeight: 1 }}>2906</div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 5, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ESTATE · CRM</div>
+            <img src="/logo-wide.png" alt="2906" style={{ width: 108, display: 'block' }} />
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 8, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ESTATE · CRM</div>
           </div>
           <nav style={{ padding: '12px 0', flex: 1 }}>
             {items.map(item => {

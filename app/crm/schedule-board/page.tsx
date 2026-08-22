@@ -93,6 +93,15 @@ type Listing = {
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
+  // The public site's own listing category ('letting' | 'aesthetics' | 'commercial'
+  // | 'sales') — 'aesthetics' is the site's existing Luxury collection. Reused
+  // here as-is rather than inventing a parallel classification field.
+  category?: string | null
+  description?: string | null
+  // Per-property state of the existing Facebook posting campaign
+  // (services/facebookCampaign.js). Admin-only control; absent/undefined on a
+  // payload from before this shipped, which the button treats as 'none'.
+  facebookQueueStatus?: 'queued' | 'paused' | 'none' | null
   // Decided server-side: whether the two contact buttons are live, and the
   // sentence to show when they are not. The browser only renders the verdict.
   contact: {
@@ -771,6 +780,47 @@ function Board() {
     }
   }
 
+  // ── report a problem ──────────────────────────────────────────────────────
+  // Deliberately minimal: a reason is nice-to-have, not a form. The backend
+  // records it against the listing and pings admin — this button's whole job
+  // is to get that started, not to be a support ticket system.
+  async function reportListing(r: Listing) {
+    const reason = window.prompt(
+      `Report a problem with #${r.ref} (${townLabel(r.town)}). What's wrong? (optional)`)
+    if (reason === null) return // cancelled
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/report`, 'POST', { reason: reason.trim() || null })
+      showToast('ok', d.message || `Reported #${r.ref} — admin has been notified.`)
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || d.message || e?.message || 'Could not send the report.')
+    }
+  }
+
+  // ── Facebook queue (admin only) ───────────────────────────────────────────
+  // Thin toggle over the existing per-property campaign in
+  // services/facebookCampaign.js — this button starts/pauses it, it does not
+  // reimplement it.
+  const [fbBusyRef, setFbBusyRef] = useState<string | null>(null)
+  async function toggleFbQueue(r: Listing) {
+    if (fbBusyRef) return
+    const action = r.facebookQueueStatus === 'queued' ? 'pause' : 'enqueue'
+    setFbBusyRef(r.ref)
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/facebook-queue`, 'POST', { action })
+      setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, facebookQueueStatus: d.status } : x))
+      showToast('ok', d.status === 'queued'
+        ? `#${r.ref} queued for Facebook.` : `#${r.ref} paused from the Facebook queue.`)
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || d.message || e?.message || 'Could not change the Facebook queue.')
+    } finally {
+      setFbBusyRef(null)
+    }
+  }
+
   // The three removals all go through StatusDialog, which owns the POST so it
   // can show a refusal in place rather than as a toast over an empty gap. The
   // card is pulled the moment the server confirms — nothing is deleted, it has
@@ -1065,6 +1115,9 @@ function Board() {
               tagging={tagging}
               onStar={() => toggleStar(r)}
               onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
+              onReport={() => reportListing(r)}
+              onFbQueue={() => toggleFbQueue(r)}
+              fbQueueBusy={fbBusyRef === r.ref}
             />
           ))}
         </div>
@@ -1533,6 +1586,49 @@ const PersonGlyph = ({ color = 'currentColor', size = 13 }: { color?: string; si
   </svg>
 )
 
+// A plain "+", for the batch-pick corner on the photo. Same action as the
+// person icon it replaces (Board():toggleSelect) — this is purely the visual
+// the mockup asked for; picked state still flips to a checkmark.
+const PlusGlyph = ({ color = 'currentColor', size = 14 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden focusable="false">
+    <path d="M10 4v12M4 10h12" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
+const PinGlyph = ({ color = 'currentColor', size = 13 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden focusable="false">
+    <path d="M10 18s6-5.6 6-10.2A6 6 0 0 0 4 7.8C4 12.4 10 18 10 18Z" stroke={color} strokeWidth="1.6" strokeLinejoin="round" />
+    <circle cx="10" cy="7.6" r="2.1" stroke={color} strokeWidth="1.6" />
+  </svg>
+)
+
+// The flag icon means REPORT A PROBLEM, never a status — see reportListing().
+const FlagGlyph = ({ color = 'currentColor', size = 14 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden focusable="false">
+    <path d="M5 17V3.6M5 4l9 .01c.9 0 1.3 1 .6 1.6l-2.8 2.4 2.8 2.4c.7.6.3 1.6-.6 1.6L5 12" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+  </svg>
+)
+
+const FacebookGlyph = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden focusable="false">
+    <circle cx="10" cy="10" r="10" fill="#1877F2" />
+    <path d="M12.9 10.4h-1.7V16h-2.3v-5.6H7.7V8.6h1.2V7.3c0-1.4.7-2.6 2.7-2.6h1.6v2h-1c-.4 0-.6.2-.6.7v1.2h1.7l-.4 1.8Z" fill="#FFF" />
+  </svg>
+)
+
+// On-market / off-market. Same shopping-cart metaphor as the mockup, just
+// drawn instead of emoji so the two states hold their colour precisely.
+const CartGlyph = ({ color = 'currentColor', size = 15, off }: { color?: string; size?: number; off?: boolean }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden focusable="false">
+    <path d="M3 4h1.6L6 12.2a1.4 1.4 0 0 0 1.4 1.2h6.3a1.4 1.4 0 0 0 1.38-1.15L16 6.4H5.1" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="8" cy="16.2" r="1.05" fill={color} />
+    <circle cx="13.4" cy="16.2" r="1.05" fill={color} />
+    {off
+      ? <path d="M13.2 2.8l3.6 3.6M16.8 2.8l-3.6 3.6" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+      : <path d="M15 1.6v3.6M13.2 3.4h3.6" stroke={color} strokeWidth="1.6" strokeLinecap="round" />}
+  </svg>
+)
+
 // ── freshness ladder ────────────────────────────────────────────────────────
 // The Available button's green is a staleness gauge, not a boolean: the harder
 // it burns, the more recently a human stood behind it. An agent reads the
@@ -1614,6 +1710,34 @@ function fmtDay(iso: string | null | undefined): string {
   const d = t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const sameYear = t.getFullYear() === new Date().getFullYear()
   return sameYear ? d : `${d} ${String(t.getFullYear()).slice(2)}`
+}
+
+// "01.10.2026" — the dotted, full-year format the card's metadata favours
+// over fmtDay's short form, which reads fine as a headline but not as a fact.
+function fmtDateDots(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const t = new Date(iso)
+  if (!Number.isFinite(t.getTime())) return null
+  return t.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.')
+}
+
+// "Uploaded 2 days ago" for the photo overlay, sentence case because it sits
+// on a photo next to nothing else that shouts.
+function uploadedLabel(iso: string | null | undefined): string {
+  if (!iso) return 'Upload date unknown'
+  const days = Math.floor((Date.now() - Date.parse(iso)) / 86400000)
+  if (days <= 0) return 'Uploaded today'
+  if (days === 1) return 'Uploaded 1 day ago'
+  return `Uploaded ${days} days ago`
+}
+
+// Same fact, upper-case and bare, for the small metadata row under the price.
+function daysAgoCaps(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const days = Math.floor((Date.now() - Date.parse(iso)) / 86400000)
+  if (days <= 0) return 'TODAY'
+  if (days === 1) return '1 DAY AGO'
+  return `${days} DAYS AGO`
 }
 
 // The free-from chip. 'soon' is deliberately the loudest of the three: it means
@@ -1890,7 +2014,7 @@ function ReachoutSwitch() {
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, onOptOut, busy,
-                selected, onSelect, onTag, tagging, onStar, onUnfavourite }: {
+                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -1915,6 +2039,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   // Only passed on the Favourites tab. Its absence is what hides the control
   // everywhere else, rather than a second copy of "which tab am I on".
   onUnfavourite?: () => void
+  // Report a problem — any board user, see Board():reportListing.
+  onReport: () => void
+  // Facebook posting-queue toggle. Admin-only: the card hides the button
+  // itself for everyone else, and the backend route re-checks the role.
+  onFbQueue: () => void
+  fbQueueBusy: boolean
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
@@ -1934,8 +2064,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
     : noAnchor
     ? 'This listing has no saved group message to anchor a tag to.'
     : 'Put a "." under this listing in its group, so it can be forwarded quickly'
-  // Drives the button's green and the timer badge — both read the same
-  // timestamp, so the colour and the number can never disagree.
+  // Drives the on-market icon and the "confirmed" metadata line — both read
+  // the same timestamp, so the colour and the fact can never disagree.
   const fresh = freshness(r.lastConfirmedAvailableAt)
   const avail = availChip(r.availability)
   const status = confirmed ? { c: GREEN, t: 'confirmed available' }
@@ -1952,6 +2082,25 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
     canQuestion: true, questionReason: null,
   }
 
+  // ── visual classification ─────────────────────────────────────────────────
+  // 'aesthetics' is the public site's existing Luxury collection (the same
+  // `category` field /api/properties already returns) — reused as-is rather
+  // than inventing a parallel tier. There is no "top deal" field anywhere in
+  // the system yet, so that state has nowhere to come from; the frame below
+  // is ready for it the day a real field exists, but nothing sets it today.
+  const isLuxury = r.category === 'aesthetics'
+  const isTopDeal = false
+  const frame = isTopDeal
+    ? { border: '1px solid rgba(199,57,26,0.45)', glow: '0 0 0 1px rgba(199,57,26,0.16), 0 6px 22px rgba(199,57,26,0.16)' }
+    : isLuxury
+    ? { border: '1px solid rgba(184,149,63,0.5)', glow: '0 0 0 1px rgba(184,149,63,0.18), 0 6px 22px rgba(184,149,63,0.18)' }
+    : null
+
+  // First four photos as thumbnails, "+N" for the rest — matches the count
+  // badge on the photo (4 shown + N more = imageCount).
+  const thumbs = (r.images || []).slice(0, 4)
+  const moreCount = Math.max(0, (r.imageCount || r.images.length) - thumbs.length)
+
   return (
     <div
       ref={innerRef}
@@ -1960,25 +2109,23 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
       data-ref={r.ref}
       style={{
         background: CARD,
-        borderRadius: 14,
+        borderRadius: 16,
         overflow: 'hidden',
-        border: focused ? `2px solid ${A}` : `1px solid ${r.isMine ? 'rgba(47,111,87,0.28)' : '#EDE9E0'}`,
-        boxShadow: focused ? '0 6px 22px rgba(212,137,26,0.20)' : '0 1px 3px rgba(0,0,0,0.05)',
+        border: focused ? `2px solid ${A}` : (frame?.border || `1px solid ${r.isMine ? 'rgba(47,111,87,0.28)' : '#EDE9E0'}`),
+        boxShadow: focused ? '0 6px 22px rgba(212,137,26,0.20)' : (frame?.glow || '0 1px 3px rgba(0,0,0,0.05), 0 10px 24px rgba(0,0,0,0.04)'),
         transition: 'box-shadow 0.18s, border-color 0.18s',
         display: 'flex', flexDirection: 'column',
       }}
     >
-      <div onClick={onOpen} style={{ cursor: 'pointer', position: 'relative', height: 150, background: '#F1EEE7' }}>
+      {/* ── photo ──────────────────────────────────────────────────────────── */}
+      <div onClick={onOpen} style={{ cursor: 'pointer', position: 'relative', height: 190, background: '#111' }}>
         {r.images[0]
           ? <img src={r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#CCC', fontSize: 11 }}>no photo</div>}
-        {/* The star. Top-left corner, Kev's call (2026-08-16) — the first place
-            the eye lands on a card, and the same corner the Inventory star
-            lives in. Three steps (migration 031): outline = normal, gold =
-            your Favourite, red = Hot Property (global, admin-set — see
-            Board():toggleStar for the click cycle this fires into).
-            stopPropagation: the photo opens the detail modal, and starring a
-            listing is not asking to read it. */}
+          : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
+
+        {/* The star. Top-left corner, Kev's call (2026-08-16). Three steps
+            (migration 031): outline = normal, gold = your Favourite, red = Hot
+            Property (global, admin-set — see Board():toggleStar). */}
         <button
           data-favourite={r.ref}
           data-star-step={starStepOf(r)}
@@ -1996,330 +2143,334 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
                 : 'Save to your Favourites'
           }
           style={{
-            position: 'absolute', top: 7, left: 7,
-            width: 30, height: 30, borderRadius: 8, padding: 0,
+            position: 'absolute', top: 8, left: 8,
+            width: 30, height: 30, borderRadius: 9, padding: 0,
             display: 'grid', placeItems: 'center', lineHeight: 0,
-            background: starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? 'rgba(212,137,26,0.95)' : 'rgba(255,255,255,0.86)',
-            border: `1.5px solid ${starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : 'rgba(0,0,0,0.14)'}`,
+            background: starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? 'rgba(212,137,26,0.95)' : 'rgba(255,255,255,0.18)',
+            backdropFilter: starStepOf(r) === 0 ? 'blur(3px)' : undefined,
+            border: `1px solid ${starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : 'rgba(255,255,255,0.45)'}`,
             cursor: 'pointer',
           }}>
           <StarGlyph filled={starStepOf(r) > 0} />
         </button>
-
         {r.isHotProperty && (
-          <span style={{ position: 'absolute', top: 9, left: 44, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+          <span style={{ position: 'absolute', top: 10, left: 44, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Hot
           </span>
         )}
         {r.isMine && !r.isHotProperty && (
-          <span style={{ position: 'absolute', top: 9, left: 44, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+          <span style={{ position: 'absolute', top: 10, left: 44, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Yours
           </span>
         )}
-        {r.imageCount > 1 && (
-          <span style={{ position: 'absolute', bottom: 9, right: 9, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '2px 6px', borderRadius: 4 }}>
-            {r.imageCount}
-          </span>
-        )}
 
-        {/* The WATag pick box. Bottom-left of the photo, out of the way of the
-            "Yours" badge and the freshness timer, and 30px square so it clears
-            the tap floor the mobile pass enforces.
-            stopPropagation because the photo itself opens the detail modal —
-            picking a listing and opening it are different intentions. */}
+        {/* Small 2906 mark, top centre — the same asset as the CRM header,
+            recoloured to white so it reads on any photo. */}
+        <img src="/logo-wide.png" alt="" aria-hidden style={{
+          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+          width: 42, opacity: 0.92, pointerEvents: 'none',
+          filter: 'brightness(0) invert(1) drop-shadow(0 1px 3px rgba(0,0,0,0.5))',
+        }} />
+
+        {/* Upload age + responsible agent, top right. Subtle by design — this
+            replaces the old freshness timer here, which now lives in the
+            "confirmed" metadata line below, next to "uploaded" and "viewable"
+            where it can be compared against them instead of standing alone. */}
+        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <span title={r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB') : 'no upload date'} style={{
+            background: 'rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.9)', fontSize: 9, fontFamily: FM,
+            padding: '3px 7px', borderRadius: 999, whiteSpace: 'nowrap',
+          }}>
+            {uploadedLabel(r.createdAt)}
+          </span>
+          {r.listedBy.displayName && (
+            <span style={{
+              background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
+              padding: '2px 7px', borderRadius: 999, whiteSpace: 'nowrap',
+            }}>
+              {r.listedBy.displayName}
+            </span>
+          )}
+        </div>
+
+        {/* Tag — batch pick, bottom-left. Same action as before
+            (Board():toggleSelect); a "+" glyph now instead of the person icon,
+            per the mockup — picking still turns it into a check. */}
         {canTag && (
           <button
             data-watag-pick={r.ref}
             aria-pressed={selected}
             onClick={e => { e.stopPropagation(); onSelect() }}
-            title={selected ? 'Picked for WATag — click to unpick' : 'Pick for WATag'}
+            title={selected ? 'Picked for WATag — click to unpick' : 'Tag — pick for a batch WATag'}
             style={{
-              position: 'absolute', bottom: 7, left: 7,
-              width: 30, height: 30, borderRadius: 8, padding: 0,
+              position: 'absolute', bottom: 8, left: 8,
+              width: 30, height: 30, borderRadius: 9, padding: 0,
               display: 'grid', placeItems: 'center',
-              background: selected ? NAVY : 'rgba(255,255,255,0.86)',
-              border: `1.5px solid ${selected ? NAVY : 'rgba(0,0,0,0.14)'}`,
-              color: selected ? '#FFF' : '#7A7A7A',
-              cursor: 'pointer', lineHeight: 0,
+              background: selected ? NAVY : 'rgba(0,0,0,0.45)',
+              border: `1px solid ${selected ? NAVY : 'rgba(255,255,255,0.45)'}`,
+              color: '#FFF', cursor: 'pointer', lineHeight: 0,
             }}>
             {selected
               ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path d="M5 12.5l4.5 4.5L19 7" stroke="#FFF" strokeWidth="2.6"
                     strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              : <PersonGlyph color="#7A7A7A" size={15} />}
+              : <PlusGlyph color="#FFF" size={16} />}
           </button>
         )}
-        {/* The timer, top right. Same source as the button's green, so the
-            number explains the colour instead of competing with it. */}
-        <span
-          title={fresh.label}
-          style={{
-            position: 'absolute', top: 9, right: 9,
-            background: fresh.tier === 'unconfirmed' ? 'rgba(0,0,0,0.45)' : fresh.bg,
-            color: fresh.tier === 'unconfirmed' ? '#FFF' : fresh.fg,
-            border: fresh.tier === 'stale' ? '1px solid rgba(201,138,26,0.8)' : '1px solid transparent',
-            fontSize: 9.5, fontFamily: FM, fontWeight: 600,
-            padding: '2px 6px', borderRadius: 999,
-          }}>
-          {fresh.hours == null
-            ? 'unconfirmed'
-            : fresh.hours < 1 ? 'just now' : `${Math.floor(fresh.hours)}h`}
-        </span>
+
+        {/* Image count, bottom right. */}
+        {r.imageCount > 0 && (
+          <span style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '3px 7px', borderRadius: 999 }}>
+            {r.imageCount}
+          </span>
+        )}
       </div>
 
-      <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <span onClick={onOpen} style={{ fontFamily: FM, fontSize: 12, fontWeight: 500, color: A, cursor: 'pointer' }}>#{r.ref}</span>
-          <span style={{ fontFamily: FM, fontSize: 14, fontWeight: 500, color: '#0F0F0F' }}>
+      <div style={{ padding: '13px 14px 12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* ── location + price ─────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+          <div onClick={onOpen} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: status.c, flexShrink: 0 }} title={status.t} />
+            <PinGlyph color="#B5AFA2" size={13} />
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#0F0F0F', letterSpacing: '-0.01em' }}>{townLabel(r.town)}</span>
+          </div>
+          <div style={{ fontFamily: FM, fontSize: 17, fontWeight: 700, color: '#0F0F0F', flexShrink: 0 }}>
             {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
-          </span>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.c, flexShrink: 0 }} title={status.t} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>{townLabel(r.town)}</span>
-          {/* Free from when, on the right. 'soon' is the default whenever the
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 3 }}>
+          <span style={{ fontSize: 11.5, color: '#999' }}>
+            {[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type]
+              .filter(Boolean).join(' - ')}
+          </span>
+          {/* Free-from, on the right. 'soon' is the default whenever the
               listing is not clearly free now or carrying a real date — the
-              server decides, so this chip and the filter cannot disagree. */}
+              server decides, so this pill and the filter cannot disagree. */}
           <span title={avail.title} style={{
-            marginLeft: 'auto', flexShrink: 0,
-            fontFamily: FM, fontSize: 9.5, fontWeight: 700,
-            padding: '2px 7px', borderRadius: 999,
-            background: avail.bg, color: avail.fg,
+            flexShrink: 0, fontFamily: FM, fontSize: 9.5, fontWeight: 700,
+            padding: '2px 8px', borderRadius: 999, background: avail.bg, color: avail.fg,
           }}>
-            {avail.text}
+            {r.availableDate ? fmtDateDots(r.availableDate) : avail.text}
           </span>
         </div>
 
         {/* The street, where we have one. Number never shown, and only on your
             own listing — see streetWithoutNumber() on the server. */}
-        {r.streetName && (
-          <div style={{ fontSize: 11, color: '#7A6534', marginTop: 3 }}>
-            {r.streetName}
+        {r.streetName && <div style={{ fontSize: 11, color: '#7A6534', marginTop: 3 }}>{r.streetName}</div>}
+
+        {/* Sharing / pets, whenever the listing actually says. Nothing is
+            drawn when it does not — see RuleIcon. */}
+        {(r.sharing != null || r.petFriendly != null) && (
+          <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
+            <RuleIcon state={r.sharing} label="Sharing" path={PEOPLE_PATH} />
+            <RuleIcon state={r.petFriendly} label="Pets" path={PAW_PATH} />
           </div>
         )}
 
-        <div style={{
-          fontSize: 11, color: '#999', marginTop: 4,
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          <span>
-            {[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type]
-              .filter(Boolean).join(' · ')}
-          </span>
-          {/* Sharing and pets, whenever the listing actually says. Nothing is
-              drawn when it does not — see RuleIcon. */}
-          <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 5, alignItems: 'center' }}>
-            <RuleIcon state={r.sharing} label="Sharing" path={PEOPLE_PATH} />
-            <RuleIcon state={r.petFriendly} label="Pets" path={PAW_PATH} />
-          </span>
+        {/* ── uploaded / confirmed / viewable ──────────────────────────────── */}
+        <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
+          {([
+            ['uploaded', daysAgoCaps(r.createdAt)],
+            ['confirmed', r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt).toUpperCase() : 'NEVER'],
+            ['viewable', r.availableDate ? fmtDateDots(r.availableDate) : (avail.text || 'soon').toUpperCase()],
+          ] as const).map(([label, value]) => (
+            <div key={label}>
+              <div style={{ fontSize: 8.5, color: '#C9C4B8', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: F }}>{label}</div>
+              <div style={{ fontSize: 10, color: '#8A8578', fontFamily: FM, fontWeight: 700, marginTop: 1 }}>{value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Uploaded vs free-from, side by side. Kev: "so we can see how
-            accurate they are" — a listing uploaded in April that still claims
-            "now" is exactly what this pairing exposes. */}
-        <div style={{
-          display: 'flex', gap: 10, marginTop: 8, fontSize: 9.5, fontFamily: FM,
-          color: '#B5AFA2', flexWrap: 'wrap',
-        }}>
-          <span title={r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB') : 'no upload date'}>
-            up <strong style={{ color: '#8A8578', fontWeight: 700 }}>{fmtDay(r.createdAt)}</strong>
-          </span>
-          <span title={r.availableDate ? `free from ${r.availableDate}` : 'no date on file — treated as soon'}>
-            free <strong style={{ color: '#8A8578', fontWeight: 700 }}>
-              {r.availableDate ? fmtDay(r.availableDate) : 'soon'}
-            </strong>
-          </span>
-          <span style={{ marginLeft: 'auto' }}>
+        {/* ── description preview ──────────────────────────────────────────── */}
+        {r.description && (
+          <p onClick={onOpen} title="Click to read the full listing" style={{
+            fontSize: 11, color: '#9A9488', lineHeight: 1.45, marginTop: 9, marginBottom: 0, cursor: 'pointer',
+            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {r.description}
+          </p>
+        )}
+
+        {/* ── thumbnails + utility icons ────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10 }}>
+          {thumbs.map((src, i) => (
+            <img key={i} src={src} onClick={onOpen} alt="" style={{ width: 30, height: 30, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', flexShrink: 0 }} />
+          ))}
+          {moreCount > 0 && (
+            <span onClick={onOpen} style={{ fontSize: 10, color: '#B5AFA2', fontFamily: FM, cursor: 'pointer' }}>+{moreCount}</span>
+          )}
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* "Leave this owner alone" — the per-listing exception to the
+                robot's reachout schedule. Shown to an admin and to the agent
+                the listing belongs to; the backend enforces the same rule.
+                Deliberately not a status: it changes nothing about the
+                listing, only whether the scheduler may message this owner. */}
+            {(isAdmin || r.isMine) && (
+              <button
+                onClick={() => onOptOut(!r.autoReachoutOptOut)}
+                disabled={busy}
+                title={r.autoReachoutOptOut
+                  ? 'The robot is not asking this owner. Click to allow it again.'
+                  : 'Stop the automatic owner check for this listing. You can still ask by hand.'}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: r.autoReachoutOptOut ? A : '#D8D3C6', fontSize: 13, lineHeight: 0 }}>
+                {r.autoReachoutOptOut ? '⏸' : '▸'}
+              </button>
+            )}
+            {/* recheck / archive — admin only, same reasoning as before: archive
+                is irreversible from this board, recheck is redundant for an
+                agent (a stale confirmation lands in "Needs recheck" on its
+                own). The routes still accept both from any agent — this hides
+                the buttons, it does not change permissions. */}
+            {isAdmin && (
+              <>
+                <button onClick={() => onStatus('recheck')} title="Park this in the review queue until somebody checks"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#D8D3C6', fontSize: 12, lineHeight: 0 }}>↻</button>
+                <button onClick={() => onStatus('archive')} title="Archive — off the board for good, still in Inventory"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#D8D3C6', fontSize: 12, lineHeight: 0 }}>🗄</button>
+              </>
+            )}
+            {/* Report = something is wrong with this listing, not a status.
+                See Board():reportListing — it records the reason and pings
+                admin, it is not a shortcut for On/Off Market. */}
+            <button onClick={onReport} title="Report a problem with this listing — notifies admin"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#C9C4B8', lineHeight: 0 }}>
+              <FlagGlyph size={14} />
+            </button>
             <PhotoDownload r={r} />
           </span>
         </div>
 
-        <div style={{ fontSize: 10, color: '#B5AFA2', marginTop: 6, marginBottom: 10 }}>
-          Listed by {r.listedBy.displayName || 'unassigned'}
-        </div>
-
-        {/* ── availability ──────────────────────────────────────────────────
-            The two buttons Kev works the board with. Neither sends a message to
-            anybody: they record what this agent knows right now.
-              Available   → the card stays, the timestamp moves to now
-              Not available → the card leaves the active board immediately
-            Nothing is deleted either way — the listing keeps its row, its
-            photos and its history, and Inventory still has all of it. */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-          <button
-            onClick={onCheckIn}
-            disabled={busy}
-            title={`${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} — click to confirm as of now`}
-            style={{
-              ...btn, flex: 1,
-              // The whole ladder, straight from the timestamp.
-              background: fresh.bg,
-              color: fresh.fg,
-              border: fresh.border,
-              fontWeight: 700,
-              opacity: busy ? 0.5 : 1,
-              cursor: busy ? 'wait' : 'pointer',
-            }}>
-            {fresh.tier === 'unconfirmed' ? 'ON MARKET' : '✓ ON MARKET'}
-          </button>
-          <button
-            onClick={() => onStatus('check-out')}
-            disabled={busy}
-            title="Off market — asks for a reason, then takes it off the board"
-            style={{
-              ...btn, flex: 1, border: '1px solid rgba(185,28,28,0.22)',
-              background: '#FFF', color: '#B91C1C', fontWeight: 700,
-              opacity: busy ? 0.5 : 1,
-            }}>
-            OFF MARKET
-          </button>
-        </div>
-
-        {/* The timestamp is the whole product of the button above it. Without a
-            date on the card, "confirmed" is a claim with no expiry. */}
-        <div style={{ fontSize: 9.5, color: '#B5AFA2', marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span>
-            {r.lastConfirmedAvailableAt
-              ? <>Confirmed <strong style={{ color: GREEN, fontWeight: 700 }}>{ago(r.lastConfirmedAvailableAt)}</strong></>
-              : 'Never confirmed'}
-          </span>
-          {/* Quiet by design — these are the rarer actions — but still real tap
-              targets. minHeight 30 is the floor this board holds everything to:
-              at the 14px an underlined text run gives you, these were a miss on
-              a phone, which tests/schedule-board.test.js catches.
-
-              ADMIN ONLY since 2026-08-16 (Kev). Two different reasons:
-              • archive is irreversible from this board — it is the one action
-                that takes a listing out of the review queue as well.
-              • recheck is redundant for an agent: a listing nobody has
-                confirmed goes stale on its own (STALE_HOURS, backend) and shows
-                up in "Needs recheck" without anybody clicking anything.
-              The routes still accept both from any agent — this hides the
-              buttons, it does not change permissions. */}
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => onStatus('recheck')}
-                title="Park this in the review queue until somebody checks"
-                style={{ ...subtleLink, marginLeft: 'auto' }}>
-                recheck
-              </button>
-              <button
-                onClick={() => onStatus('archive')}
-                title="Archive — off the board for good, still in Inventory"
-                style={subtleLink}>
-                archive
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* "Leave this owner alone" — the per-listing exception to the robot's
-            reachout schedule. Shown to an admin and to the agent the listing
-            belongs to; the backend enforces the same rule and 403s otherwise.
-            Deliberately NOT a status: it changes nothing about the listing, only
-            whether our scheduler is allowed to message this owner. */}
-        {(isAdmin || r.isMine) && (
-          <button
-            onClick={() => onOptOut(!r.autoReachoutOptOut)}
-            disabled={busy}
-            title={r.autoReachoutOptOut
-              ? 'The robot is not asking this owner. Click to allow it again.'
-              : 'Stop the automatic owner check for this listing. You can still ask by hand.'}
-            style={{
-              ...subtleLink,
-              marginBottom: 10,
-              alignSelf: 'flex-start',
-              color: r.autoReachoutOptOut ? '#B08968' : '#B5AFA2',
-              opacity: busy ? 0.5 : 1,
-            }}>
-            {r.autoReachoutOptOut ? '⏸ robot paused for this owner' : 'pause robot for this owner'}
-          </button>
-        )}
-
         {/* Why it last moved — the review queue is unusable without it. */}
         {r.statusChangeReason && (
-          <div style={{ fontSize: 9.5, color: '#B08968', marginBottom: 10, lineHeight: 1.35 }}>
-            {r.statusChangeReason}
-          </div>
+          <div style={{ fontSize: 9.5, color: '#B08968', marginTop: 8, lineHeight: 1.35 }}>{r.statusChangeReason}</div>
         )}
 
-        {/* Contact actions. `canAsk` / `canQuestion` are the server's verdict —
-            a do-not-contact owner, one already messaged today, or a listing
-            with no reachable agent all arrive here already decided. */}
-        <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          <button
-            onClick={() => c.canAsk && onAct('request-availability', r)}
-            disabled={!c.canAsk}
-            title={c.reason || (r.isMine ? 'Message the owner' : `Ask ${c.reachesName || 'the listing agent'}`)}
-            style={{
-              ...btn, flex: 1, border: 'none',
-              background: c.canAsk ? (r.isMine ? GREEN : A) : '#F1EFEA',
-              color: c.canAsk ? '#FFF' : '#B5AFA2',
-              cursor: c.canAsk ? 'pointer' : 'not-allowed',
-            }}>
-            {/* Kev, 2026-08-16: the label is the QUESTION we are about to ask,
-                not the topic. "Availability" reads like a status you are being
-                shown; this reads like the message that is about to go out. */}
-            Still on Market?
-          </button>
-
+        {/* ── actions ───────────────────────────────────────────────────────── */}
+        <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <button
             onClick={() => c.canQuestion && onAsk()}
             disabled={!c.canQuestion}
             title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
-            style={{
-              ...btn,
-              background: '#FFF',
-              color: c.canQuestion ? NAVY : '#C9C4B8',
-              border: `1px solid ${c.canQuestion ? 'rgba(27,42,74,0.18)' : '#EDE9E0'}`,
-              cursor: c.canQuestion ? 'pointer' : 'not-allowed',
-            }}>
+            style={{ ...pillBtn, color: c.canQuestion ? NAVY : '#C9C4B8', cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
             {/* Kev asked for "Ask Owner" (2026-08-16). It says Owner only where
                 that is TRUE: routes/crmScheduleBoard.js ask/send resolves the
                 owner with `isMine ? ownerFor(...) : null`, so on a colleague's
-                listing this question reaches the listing AGENT. A button that
-                said "Ask Owner" there would be a lie about who we messaged. */}
+                listing this question reaches the listing AGENT. */}
             {r.isMine ? 'Ask Owner' : 'Ask Agent'}
           </button>
 
           {/* Booking is internal — never blocked by a contact rule. */}
-          <button
-            onClick={onBook}
-            title="Book a viewing"
-            style={{ ...btn, background: '#FFF', color: NAVY, border: `1px solid ${AB}`, fontWeight: 700 }}>
+          <button onClick={onBook} title="Book a viewing" style={{ ...pillBtn, color: NAVY, fontWeight: 700 }}>
             Book
           </button>
 
-          {/* WATag, one listing. Deliberately separate from the pick box on the
-              photo: this is "tag this one now", that is "add it to a batch".
-              Drawn even when it cannot fire, greyed with the reason in the
-              tooltip — a button that vanishes teaches nobody why. */}
+          {/* Create Group — visible so the feature is known to exist, but hard
+              disabled until the automated group welcome-message flow ships
+              (Kev, 2026-08-22). It is NOT deleted, and once that flow lands
+              this becomes: isAdmin && r.viewing?.status === 'confirmed'. */}
           <button
-            data-watag-one={r.ref}
-            onClick={() => canTag && !tagging && onTag()}
-            disabled={!canTag || tagging}
-            title={tagWhy}
-            style={{
-              ...btn,
-              background: '#FFF',
-              color: canTag ? NAVY : '#C9C4B8',
-              border: `1px solid ${canTag ? 'rgba(27,42,74,0.18)' : '#EDE9E0'}`,
-              cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-            }}>
-            {/* Person + @, no word (Kev, 2026-08-16). The row already carries
-                three worded buttons; a fourth pushed the set onto two lines on a
-                laptop. The tooltip is where the sentence lives. */}
-            <PersonGlyph color={canTag ? NAVY : '#C9C4B8'} size={14} />
-            <span style={{ fontFamily: FM, fontSize: 13, fontWeight: 600, lineHeight: 1 }}>@</span>
+            disabled
+            title={r.viewing?.status === 'confirmed'
+              ? 'Coming soon — waiting on the automated group welcome message, not on this booking.'
+              : 'Coming soon — needs a confirmed booking and the automated group welcome message.'}
+            style={{ ...pillBtn, color: '#C9C4B8', cursor: 'not-allowed', background: '#F6F4EF' }}>
+            Create Group
           </button>
+
+          {/* Facebook posting-queue toggle. Admin only — hidden entirely for
+              everyone else, same convention as recheck/archive above. Thin
+              control over the existing per-property campaign
+              (services/facebookCampaign.js); this button starts/pauses it. */}
+          {isAdmin && (
+            <button
+              onClick={onFbQueue}
+              disabled={fbQueueBusy}
+              title={r.facebookQueueStatus === 'queued'
+                ? 'In the Facebook posting queue — click to pause'
+                : 'Not in the Facebook posting queue — click to enqueue'}
+              style={{
+                ...pillBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                color: r.facebookQueueStatus === 'queued' ? '#1877F2' : '#7A7A7A',
+                border: `1px solid ${r.facebookQueueStatus === 'queued' ? 'rgba(24,119,242,0.35)' : '#EDE9E0'}`,
+                opacity: fbQueueBusy ? 0.5 : 1, cursor: fbQueueBusy ? 'wait' : 'pointer',
+              }}>
+              <FacebookGlyph size={13} /> Queue
+            </button>
+          )}
+
+          <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+            {/* Kev, 2026-08-16: the label is the QUESTION we are about to ask,
+                not the topic — this is the primary action, styled to match. */}
+            <button
+              onClick={() => c.canAsk && onAct('request-availability', r)}
+              disabled={!c.canAsk}
+              title={c.reason || (r.isMine ? 'Message the owner' : `Ask ${c.reachesName || 'the listing agent'}`)}
+              style={{
+                ...pillBtn, flex: 2, border: 'none', fontWeight: 700,
+                background: c.canAsk ? NAVY : '#F1EFEA',
+                color: c.canAsk ? '#FFF' : '#B5AFA2',
+                cursor: c.canAsk ? 'pointer' : 'not-allowed',
+              }}>
+              Still on Market?
+            </button>
+
+            {/* WATag, one listing. Deliberately separate from the pick box on
+                the photo: this is "tag this one now", that is "add it to a
+                batch". Drawn even when it cannot fire, greyed with the reason
+                in the tooltip — a button that vanishes teaches nobody why. */}
+            <button
+              data-watag-one={r.ref}
+              onClick={() => canTag && !tagging && onTag()}
+              disabled={!canTag || tagging}
+              title={tagWhy}
+              style={{
+                ...pillBtn, flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                color: canTag ? NAVY : '#C9C4B8', cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
+              }}>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>+Tag</span>
+              <span style={{ fontFamily: FM, fontSize: 12, fontWeight: 700 }}>@</span>
+            </button>
+
+            {/* On Market / Off Market. Neither sends a message to anybody: they
+                record what this agent knows right now.
+                  On Market  → the card stays, the timestamp moves to now
+                  Off Market → the card leaves the active board immediately
+                Nothing is deleted either way — the listing keeps its row, its
+                photos and its history, and Inventory still has all of it. The
+                icon's colour still carries the freshness ladder that used to
+                be the whole button's background. */}
+            <button
+              onClick={onCheckIn}
+              disabled={busy}
+              title={`On Market — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} · click to confirm as of now`}
+              style={{
+                ...pillBtn, width: 40, flex: '0 0 auto', padding: 0,
+                display: 'grid', placeItems: 'center',
+                background: fresh.tier === 'unconfirmed' ? '#F0F8F4' : fresh.bg,
+                border: `1px solid ${fresh.tier === 'unconfirmed' ? 'rgba(47,111,87,0.25)' : 'transparent'}`,
+                opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
+              }}>
+              <CartGlyph color={fresh.tier === 'unconfirmed' ? 'rgb(47,111,87)' : fresh.fg} size={16} />
+            </button>
+            <button
+              onClick={() => onStatus('check-out')}
+              disabled={busy}
+              title="Off Market — asks for a reason, then takes it off the board"
+              style={{
+                ...pillBtn, width: 40, flex: '0 0 auto', padding: 0,
+                display: 'grid', placeItems: 'center',
+                background: '#FDF0EF', border: '1px solid rgba(185,28,28,0.18)',
+                opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
+              }}>
+              <CartGlyph color="#B91C1C" size={16} off />
+            </button>
+          </div>
 
           {!r.isMine && !r.hasViewingLocation && c.canAsk && (
             <button onClick={() => onAct('request-location', r)}
-              style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }}
+              style={{ ...pillBtn, flex: '0 1 auto', color: '#7A6534' }}
               title="Ask the listing agent where the viewing is">
               Location
             </button>
@@ -2351,27 +2502,21 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             </button>
           </div>
         )}
+      </div>
 
-        {/* One line of truth under the buttons: why they are off, or where a
-            working button actually sends. */}
-        {!c.canAsk && c.reason ? (
-          <div style={{ fontSize: 9.5, color: '#B08968', marginTop: 6, lineHeight: 1.35 }}>
-            {c.reason}
-          </div>
-        ) : c.canAsk && !c.canQuestion && c.questionReason ? (
-          <div style={{ fontSize: 9.5, color: '#B08968', marginTop: 6, lineHeight: 1.35 }}>
-            {c.questionReason}
-          </div>
-        ) : r.isMine ? (
-          <div style={{ fontSize: 9.5, color: GREEN, marginTop: 6, opacity: 0.8 }}>
-            Reaches the owner directly · {c.questionsPerDay - c.questionsUsed} question
-            {c.questionsPerDay - c.questionsUsed === 1 ? '' : 's'} left today
-          </div>
-        ) : (
-          <div style={{ fontSize: 9.5, color: '#B5AFA2', marginTop: 6 }}>
-            Goes to {c.reachesName || 'the listing agent'} — never to the owner
-          </div>
-        )}
+      {/* ── reference bar ─────────────────────────────────────────────────── */}
+      {/* The one authoritative reference (r.ref), straight from the listing —
+          nothing here is a second reference, just a readable restatement of
+          beds/baths/town that already exist on the card above. */}
+      <div style={{
+        background: '#0F0F0F', color: 'rgba(255,255,255,0.55)', fontFamily: FM, fontSize: 9.5,
+        letterSpacing: '0.04em', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}>REFERENCE {r.ref}</span>
+        <span style={{ opacity: 0.4 }}>—</span>
+        <span>
+          {[r.beds != null ? `${r.beds}B` : '', r.baths != null ? `${r.baths}B` : ''].join('')} {townLabel(r.town)?.toUpperCase()}
+        </span>
       </div>
     </div>
   )
@@ -2730,6 +2875,15 @@ function Toast({ kind, text, onClose }: { kind: 'ok' | 'err' | 'info'; text: str
 const btn: React.CSSProperties = {
   padding: '7px 11px', borderRadius: 7, fontSize: 11, fontFamily: F,
   fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 32,
+}
+// The redesigned card's action row. Same tap-floor discipline as `btn` (34px,
+// slightly taller — this generation of buttons carries more visual weight),
+// but a plain white pill by default so the per-button colour overrides read
+// clearly against it instead of fighting a tinted base.
+const pillBtn: React.CSSProperties = {
+  padding: '8px 12px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
+  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
+  background: '#FFF', border: '1px solid #EDE9E0', flex: 1,
 }
 // The two low-frequency card actions. Reads as a text link, sized as a button:
 // 30px is the same tap floor the buttons and village chips hold to.
