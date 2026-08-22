@@ -2148,12 +2148,15 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
       data-ref={r.ref}
       style={{
         background: CARD,
-        borderRadius: 18,
+        borderRadius: 14,
         overflow: 'hidden',
-        border: focused ? `2px solid ${A}` : (frame?.border || `1px solid ${r.isMine ? 'rgba(47,111,87,0.28)' : '#F0EDE5'}`),
-        // Kev's redesign brief (2026-08-22): lighter, further-thrown shadow —
-        // closer to how Airbnb/Sotheby's cards float rather than sit boxed.
-        boxShadow: focused ? '0 8px 24px rgba(212,137,26,0.20)' : (frame?.glow || '0 1px 2px rgba(0,0,0,0.03), 0 14px 28px rgba(15,15,15,0.06)'),
+        // Kev, 2026-08-22: "copy airbnb.de's own UI" — an Airbnb card has
+        // almost no shadow at all, just a hairline border; the card reads as
+        // "the photo plus some text", not a boxed panel. Dropped the 14/28px
+        // ambient shadow down to something you'd only notice on a focused
+        // card, same as Airbnb's own hover elevation.
+        border: focused ? `2px solid ${A}` : (frame?.border || `1px solid ${r.isMine ? 'rgba(47,111,87,0.28)' : '#EBEBEB'}`),
+        boxShadow: focused ? '0 6px 16px rgba(212,137,26,0.18)' : (frame?.glow || '0 1px 2px rgba(0,0,0,0.04)'),
         transition: 'box-shadow 0.18s, border-color 0.18s',
         display: 'flex', flexDirection: 'column',
       }}
@@ -2206,7 +2209,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           <StarGlyph
             filled={starStepOf(r) > 0}
             color={starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : '#FFF'}
-            size={20}
+            size={17}
           />
         </button>
         {r.isHotProperty && (
@@ -2250,18 +2253,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
             title={selected ? 'Picked for WATag — click to unpick' : 'Tag — pick for a batch WATag'}
             style={{
               position: 'absolute', bottom: 8, left: 8,
-              width: 30, height: 30, borderRadius: 9, padding: 0,
+              width: 26, height: 26, borderRadius: 999, padding: 0,
               display: 'grid', placeItems: 'center',
               background: selected ? NAVY : 'rgba(0,0,0,0.45)',
               border: `1px solid ${selected ? NAVY : 'rgba(255,255,255,0.45)'}`,
               color: '#FFF', cursor: 'pointer', lineHeight: 0,
             }}>
             {selected
-              ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path d="M5 12.5l4.5 4.5L19 7" stroke="#FFF" strokeWidth="2.6"
                     strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              : <PlusGlyph color="#FFF" size={16} />}
+              : <PlusGlyph color="#FFF" size={14} />}
           </button>
         )}
 
@@ -2405,8 +2408,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
               style={{
                 ...secondaryBtn, flex: '0 1 auto',
-                color: c.canQuestion ? NAVY : '#C9C4B8',
-                borderColor: c.canQuestion ? '#E4E0D6' : '#EDEAE2',
+                color: c.canQuestion ? '#222222' : '#C9C4B8',
+                borderColor: c.canQuestion ? '#DDDDDD' : '#EDEAE2',
                 cursor: c.canQuestion ? 'pointer' : 'not-allowed',
               }}>
               {r.isMine ? 'Ask Owner' : 'Ask Agent'}
@@ -2429,8 +2432,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
                 ? 'Coming soon — waiting on the automated group welcome message, not on this booking.'
                 : 'Coming soon — needs a confirmed booking and the automated group welcome message.'}
               style={{
-                ...secondaryBtn, flex: '0 1 auto', color: '#C4BEB0', background: '#FAF9F6',
-                border: '1px dashed #E4E0D6', cursor: 'not-allowed',
+                ...secondaryBtn, flex: '0 1 auto', color: '#C4BEB0', background: '#FAFAFA',
+                border: '1px dashed #DDDDDD', cursor: 'not-allowed',
               }}>
               Create Group
             </button>
@@ -2466,7 +2469,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               row above for a slot. */}
           {!r.isMine && !r.hasViewingLocation && c.canAsk && (
             <button onClick={() => onAct('request-location', r)}
-              style={{ ...secondaryBtn, flex: '0 1 auto', color: '#7A6534' }}
+              style={{ ...secondaryBtn, flex: '0 1 auto' }}
               title="Ask the listing agent where the viewing is">
               Location
             </button>
@@ -2504,7 +2507,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
               style={{
                 ...secondaryBtn, flex: '0 0 auto',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-                color: canTag ? NAVY : '#C9C4B8', cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
+                color: canTag ? '#222222' : '#C9C4B8', cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
               }}>
               <span>+Tag</span>
               <span style={{ fontFamily: FM }}>@</span>
@@ -2516,33 +2519,37 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
                   Off Market → the card leaves the active board immediately
                 Nothing is deleted either way — the listing keeps its row, its
                 photos and its history, and Inventory still has all of it.
-                Kev, 2026-08-22: the coloured-block background (light green /
-                light pink fill) was one accent colour too many on a card that
-                already has a HOT badge, a Yours badge and a gold-accented
-                tab — neutral button, coloured icon only, same convention as
-                the rest of the row now that "Still on Market?" is the one
-                thing on the card allowed to be a solid colour. */}
+                Kev, 2026-08-22: the coloured-BLOCK background (a full light
+                green / light pink fill) was one accent colour too many next
+                to a HOT badge, a Yours badge and a gold-accented tab — but a
+                plain grey-bordered pill turned out invisible instead: a pale
+                icon on white, easy to miss entirely as a button (that's the
+                "a button is buggy" report). Landing point: white pill, but
+                the BORDER carries the colour instead of the fill — visible
+                at a glance, still one clear step lighter than a solid block. */}
             <button
               onClick={onCheckIn}
               disabled={busy}
               title={`On Market — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} · click to confirm as of now`}
               style={{
-                ...secondaryBtn, width: 40, flex: '0 0 auto', padding: 0,
-                display: 'grid', placeItems: 'center',
+                ...secondaryBtn, width: 36, minHeight: 36, flex: '0 0 auto', padding: 0,
+                display: 'grid', placeItems: 'center', borderRadius: 999,
+                borderColor: fresh.tier === 'unconfirmed' ? 'rgba(47,111,87,0.35)' : 'rgba(27,42,74,0.2)',
                 opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
               }}>
-              <CartGlyph color={fresh.tier === 'unconfirmed' ? 'rgb(47,111,87)' : fresh.fg} size={17} />
+              <CartGlyph color={fresh.tier === 'unconfirmed' ? 'rgb(47,111,87)' : fresh.fg} size={15} />
             </button>
             <button
               onClick={() => onStatus('check-out')}
               disabled={busy}
               title="Off Market — asks for a reason, then takes it off the board"
               style={{
-                ...secondaryBtn, width: 40, flex: '0 0 auto', padding: 0,
-                display: 'grid', placeItems: 'center',
+                ...secondaryBtn, width: 36, minHeight: 36, flex: '0 0 auto', padding: 0,
+                display: 'grid', placeItems: 'center', borderRadius: 999,
+                borderColor: 'rgba(185,28,28,0.3)',
                 opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
               }}>
-              <CartGlyph color="#B91C1C" size={17} off />
+              <CartGlyph color="#B91C1C" size={15} off />
             </button>
           </div>
         </div>
@@ -2953,20 +2960,25 @@ const btn: React.CSSProperties = {
 // slightly taller — this generation of buttons carries more visual weight),
 // but a plain white pill by default so the per-button colour overrides read
 // clearly against it instead of fighting a tinted base.
+// Kev, 2026-08-22: "copy airbnb.de's own UI" — Airbnb's search-filter chips
+// are full pills (radius 999, not a rounded rect), a hairline neutral-grey
+// border, near-black text, no fill. That's the model for every button here
+// except "Still on Market?" (the one filled, brand-navy action — Airbnb's
+// own primary buttons are filled pills the same way).
 const pillBtn: React.CSSProperties = {
-  padding: '9px 12px', borderRadius: 12, fontSize: 12, fontFamily: F,
-  fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 38,
+  padding: '9px 14px', borderRadius: 999, fontSize: 12.5, fontFamily: F,
+  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 38,
   background: '#F3F1EC', border: 'none', flex: 1,
 }
 // The card's light, auto-width buttons (Ask Owner/Agent, Create Group, Queue,
 // +Tag@, Location). Outline rather than filled — "Still on Market?" is the
-// only filled-navy button on the card (Kev's mockup, 2026-08-22), so
-// everything here stays one clear step below it, sized to its own content
-// rather than stretched into an equal grid column.
+// only filled-navy button on the card, so everything here stays one clear
+// step below it, sized to its own content rather than stretched into an
+// equal grid column.
 const secondaryBtn: React.CSSProperties = {
-  padding: '9px 12px', borderRadius: 12, fontSize: 12, fontFamily: F,
-  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 38,
-  background: '#FFF', border: `1px solid #E4E0D6`, color: NAVY,
+  padding: '8px 14px', borderRadius: 999, fontSize: 12.5, fontFamily: F,
+  fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36,
+  background: '#FFF', border: `1px solid #DDDDDD`, color: '#222222',
 }
 // The two low-frequency card actions. Reads as a text link, sized as a button:
 // 30px is the same tap floor the buttons and village chips hold to.
