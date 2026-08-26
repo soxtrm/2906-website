@@ -1,17 +1,24 @@
 'use client'
 // ============================================================================
-// board-dialogs.tsx — the two things an agent can start from a board card.
+// board-dialogs.tsx — the things an agent can start from a board card.
 //
-//   BookDialog  → books a viewing and records who is coming. Sends nothing.
+//   BookDialog  → books a viewing and records who is coming. Sends nothing
+//                 itself; the backend opens the owner chat below if it can.
 //   AskDialog   → writes a question, Gemini rewrites it, the agent reads the
 //                 exact outgoing text and confirms. Only then does it send.
+//   ChatDialog  → the WhatsApp-style conversation Ask/Book open onto. The
+//                 agent types straight into it — the bot passes it to the
+//                 owner VERBATIM, no rewrite (services/bookRelay.js relayVerbatim,
+//                 same code the WhatsApp !r relay uses). The owner is shown
+//                 only as an anonymous "Owner ####" label; any phone number
+//                 in their replies is masked before it ever reaches here.
 //
 // Same visual language as components/property-filters.tsx (bg-off-white
 // inputs, gold focus ring, navy chips) so these do not read as a second
 // design system living inside the first.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Clock, ImagePlus, Loader2, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, Clock, ImagePlus, Loader2, MessageCircle, Send, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
@@ -413,6 +420,175 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
         )}
       </AnimatePresence>
     </Sheet>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CHAT — the WhatsApp-style window onto the same relay as Ask/Book. Polls
+// while open; no websocket in this codebase, and a 4s poll is imperceptible
+// next to how slowly a landlord actually replies. Renders as a two-column
+// conversation (agent messages right, owner messages left) rather than
+// reusing Sheet's centered layout — a chat wants full height, not a form.
+// ════════════════════════════════════════════════════════════════════════════
+type ChatMessage = { id: number; direction: 'agent_to_owner' | 'owner_to_agent'; text: string; at: string }
+type ChatState = { open: boolean; status?: string; ownerLabel?: string; messages: ChatMessage[] }
+
+const POLL_MS = 4000
+
+export function ChatDialog({ refId, town, onClose }: {
+  refId: string; town?: string | null
+  onClose: () => void
+}) {
+  const [state, setState] = useState<ChatState | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const stickToBottom = useRef(true)
+
+  async function load() {
+    try {
+      const d = await crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/relay`)
+      setState(d)
+      setErr(null)
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not load this conversation.')
+    }
+  }
+
+  useEffect(() => {
+    load()
+    const t = setInterval(load, POLL_MS)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refId])
+
+  useEffect(() => {
+    if (stickToBottom.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [state?.messages.length])
+
+  async function send() {
+    const text = draft.trim()
+    if (!text || sending) return
+    setSending(true)
+    setErr(null)
+    try {
+      await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/relay/message`, 'POST', { text })
+      setDraft('')
+      await load()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not send that.')
+    } finally { setSending(false) }
+  }
+
+  const closed = state?.open === false && state?.messages && state.messages.length > 0
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-[199] bg-navy/20 backdrop-blur-[3px]"
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
+        transition={{ duration: 0.16, ease: 'easeOut' }}
+        className="fixed z-[200] bg-[#EFEAE2] shadow-2xl flex flex-col
+                   inset-x-0 bottom-0 rounded-t-2xl h-[85vh]
+                   sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
+                   sm:w-[420px] sm:h-[640px] sm:rounded-xl sm:max-h-[86vh]"
+      >
+        <div className="sm:hidden flex justify-center pt-3 shrink-0 bg-white">
+          <div className="w-9 h-1 rounded-full bg-navy/15" />
+        </div>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-gray-200 shrink-0 bg-white rounded-t-2xl sm:rounded-t-xl">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-navy/10 flex items-center justify-center shrink-0">
+              <MessageCircle className="w-4 h-4 text-navy/50" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-navy tracking-tight truncate">
+                {state?.ownerLabel || 'Owner'}
+              </h2>
+              <p className="text-[11px] text-navy/40 truncate">
+                #{refId}{town ? ` · ${town}` : ''}{closed ? ' · conversation closed' : ''}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="Close"
+            className="w-8 h-8 rounded flex items-center justify-center bg-off-white text-navy/40 hover:text-navy shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div
+          ref={scrollRef}
+          onScroll={e => {
+            const el = e.currentTarget
+            stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+          }}
+          className="grow overflow-y-auto px-3 py-3 space-y-1.5"
+        >
+          {err && <ErrorLine text={err} />}
+
+          {!state && !err && (
+            <div className="flex items-center justify-center h-full text-navy/30 text-xs">Loading…</div>
+          )}
+
+          {state && state.messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6">
+              <MessageCircle className="w-8 h-8 text-navy/15 mb-2" />
+              <p className="text-xs text-navy/40 leading-relaxed">
+                No conversation yet. Use <span className="font-semibold">Ask</span> or{' '}
+                <span className="font-semibold">Book</span> on this listing to reach the owner —
+                their replies, and anything you type here, will show up in this window.
+              </p>
+            </div>
+          )}
+
+          {state?.messages.map(m => {
+            const mine = m.direction === 'agent_to_owner'
+            return (
+              <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+                <div className={cn(
+                  'max-w-[80%] rounded-lg px-3 py-2 text-[13px] leading-snug whitespace-pre-wrap break-words shadow-sm',
+                  mine ? 'bg-[#D9FDD3] text-navy rounded-tr-none' : 'bg-white text-navy rounded-tl-none',
+                )}>
+                  {m.text}
+                  <div className="text-[9px] text-navy/35 mt-1 text-right">
+                    {new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="px-3 py-3 border-t border-gray-200 bg-white shrink-0 flex items-end gap-2
+                        pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
+          <textarea
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+            rows={1}
+            disabled={closed}
+            placeholder={closed ? 'This conversation has closed' : 'Type a message — sent to the owner as-is…'}
+            className="flex-1 resize-none px-3 py-2 bg-off-white border-0 rounded-full text-sm text-navy
+                       placeholder:text-navy/35 focus:outline-none focus:ring-1 focus:ring-gold/50
+                       disabled:opacity-50 max-h-24"
+          />
+          <button
+            onClick={send}
+            disabled={!draft.trim() || sending || closed}
+            className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center shrink-0
+                       disabled:opacity-30 disabled:cursor-not-allowed hover:bg-navy-light transition-colors"
+            aria-label="Send"
+          >
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </button>
+        </div>
+      </motion.div>
+    </>
   )
 }
 

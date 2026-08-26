@@ -18,7 +18,7 @@ import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue } from '@/components/crm/board-filters'
-import { AskDialog, BookDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
+import { AskDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
 // that matters is whose listing it is, and navy is the brand's own way of
@@ -293,6 +293,7 @@ function Board() {
   const [detail, setDetail] = useState<string | null>(null)
   const [booking, setBooking] = useState<Listing | null>(null)
   const [asking, setAsking] = useState<Listing | null>(null)
+  const [chatting, setChatting] = useState<Listing | null>(null)
   const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -1134,6 +1135,7 @@ function Board() {
               onAct={act}
               onBook={() => setBooking(r)}
               onAsk={() => setAsking(r)}
+              onChat={() => setChatting(r)}
               onCheckIn={() => checkIn(r)}
               onStatus={action => setStatusing({ r, action })}
               onOptOut={next => optOut(r, next)}
@@ -1198,6 +1200,14 @@ function Board() {
             // A sent question spends one of the day's two slots, so the cards
             // have to be refetched or the counter lies until the next reload.
             onDone={msg => { showToast('ok', msg); reload() }}
+          />
+        )}
+        {chatting && (
+          <ChatDialog
+            key="chat"
+            refId={chatting.ref}
+            town={chatting.town}
+            onClose={() => setChatting(null)}
           />
         )}
         {statusing && (
@@ -2056,7 +2066,7 @@ function ReachoutSwitch() {
   )
 }
 
-function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, onStatus, onOptOut, busy,
+function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy }: {
   r: Listing
   focused: boolean
@@ -2065,6 +2075,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
   onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
   onBook: () => void
   onAsk: () => void
+  onChat: () => void
   onCheckIn: () => void
   onStatus: (action: StatusAction) => void
   onOptOut: (next: boolean) => void
@@ -2473,6 +2484,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onCheckIn, o
           {/* Booking is internal — never blocked by a contact rule. */}
           <button onClick={onBook} title="Book a viewing" style={{ ...secondaryBtn, flex: '0 1 auto' }}>
             Book
+          </button>
+
+          {/* Always available, not just after Ask/Book: the chat window reads
+              whatever relay thread already exists (or shows an empty state if
+              none does) — see routes/crmScheduleBoard.js GET .../relay. */}
+          <button onClick={onChat} title="Chat with the owner" style={{ ...secondaryBtn, flex: '0 1 auto' }}>
+            Chat
           </button>
 
           {/* Create Group — visible so the feature is known to exist, but hard
