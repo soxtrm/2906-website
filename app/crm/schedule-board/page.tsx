@@ -90,6 +90,12 @@ type Listing = {
   // separately, so the card and the click handler can never disagree about
   // which step it is on.
   starStep?: number
+  // When THIS agent last exchanged a message in the relay chat on this
+  // listing (any thread) — routes/crmScheduleBoard.js withCardFlags(). Lets
+  // the Chat button read "2h ago" instead of every card looking identical, so
+  // an agent can tell "soft open" from "there's already a live conversation"
+  // before they type a greeting.
+  lastChatAt?: string | null
   viewing?: { id: number; date: string; time: string | null; status: string } | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
@@ -2486,11 +2492,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCh
             Book
           </button>
 
-          {/* Always available, not just after Ask/Book: the chat window reads
-              whatever relay thread already exists (or shows an empty state if
-              none does) — see routes/crmScheduleBoard.js GET .../relay. */}
+          {/* Always available, not just after Ask/Book — typing straight in
+              starts the conversation itself (routes/crmScheduleBoard.js POST
+              .../relay/message auto-opens a thread). The "Xh ago" stamp is
+              lastChatAt: it's how an agent tells "nobody's talked to this
+              owner yet, greet properly" from "there's a live conversation,
+              just carry on" before they even open the window. */}
           <button onClick={onChat} title="Chat with the owner" style={{ ...secondaryBtn, flex: '0 1 auto' }}>
-            Chat
+            Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
           </button>
 
           {/* Create Group — visible so the feature is known to exist, but hard

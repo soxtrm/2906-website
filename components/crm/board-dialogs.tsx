@@ -18,8 +18,11 @@
 // design system living inside the first.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Clock, ImagePlus, Loader2, MessageCircle, Send, Sparkles, X } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
+import {
+  AlertTriangle, Calendar, Clock, EyeOff, HelpCircle, Home, ImagePlus,
+  Loader2, MessageCircle, Send, Sparkles, X,
+} from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
 
@@ -424,16 +427,59 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// CHAT — the WhatsApp-style window onto the same relay as Ask/Book. Polls
-// while open; no websocket in this codebase, and a 4s poll is imperceptible
-// next to how slowly a landlord actually replies. Renders as a two-column
-// conversation (agent messages right, owner messages left) rather than
-// reusing Sheet's centered layout — a chat wants full height, not a form.
+// CHAT — premium dark-mode window onto the same relay as Ask/Book (Phase 1,
+// Kev 2026-08-27). Polls while open; no websocket in this codebase, and a 4s
+// poll is imperceptible next to how slowly a landlord actually replies.
+//
+//   • Persona badge — which of Kev's accounts the agent IS right now
+//     (services/bookRelay.js personaLabel()). Critical for Cedric/Jasmine:
+//     an agent forgetting they're "a German" or "in Singapore" mid-chat is
+//     the one thing this badge exists to prevent.
+//   • Milchglas strip — other agents' activity with this SAME owner. Existence
+//     + rough time + kind only, rendered as frosted, unreadable ghost bubbles.
+//     The point is "2906 already spoke to them today, stay consistent" — not
+//     a window into a colleague's conversation.
+//   • Event chips — this agent's own !av / Ask / Book actions on this listing,
+//     interleaved into the timeline as system markers. Phase 2 turns the Book
+//     one into a live owner survey; Phase 1 just shows it happened.
+//   • 50h auto-archive is server-side (bookRelay.js closeIfExpired) — this
+//     component just reflects `status: 'closed'` when it gets it back.
 // ════════════════════════════════════════════════════════════════════════════
 type ChatMessage = { id: number; direction: 'agent_to_owner' | 'owner_to_agent'; text: string; at: string }
-type ChatState = { open: boolean; status?: string; ownerLabel?: string; messages: ChatMessage[] }
+type ChatEvent = { kind: 'av' | 'ask' | 'book'; at: string }
+type ChatState = {
+  open: boolean; status?: string; ownerLabel?: string; persona?: string
+  messages: ChatMessage[]; events: ChatEvent[]; otherActivity: ChatEvent[]
+  expiresHours?: number
+}
+type TimelineItem =
+  | { kind: 'message'; at: string; sortKey: number; message: ChatMessage }
+  | { kind: 'event'; at: string; sortKey: number; event: ChatEvent }
 
 const POLL_MS = 4000
+
+const EVENT_COPY: Record<ChatEvent['kind'], { icon: typeof Home; label: string }> = {
+  av:   { icon: Home,       label: 'Availability check sent' },
+  ask:  { icon: HelpCircle, label: 'You asked a question' },
+  book: { icon: Calendar,   label: 'You booked a viewing' },
+}
+
+function timeOnly(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+// Local, not imported from page.tsx — the milchglas strip only ever needs a
+// rough stamp ("3h ago"), never the calendar-aware "13 Aug" page.tsx's own
+// ago() falls back to for older items.
+function agoShort(iso: string): string {
+  const mins = Math.floor((Date.now() - Date.parse(iso)) / 60000)
+  if (!Number.isFinite(mins)) return ''
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h`
+  return `${Math.floor(hrs / 24)}d`
+}
 
 export function ChatDialog({ refId, town, onClose }: {
   refId: string; town?: string | null
@@ -445,6 +491,7 @@ export function ChatDialog({ refId, town, onClose }: {
   const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
+  const reduceMotion = useReducedMotion()
 
   async function load() {
     try {
@@ -463,9 +510,10 @@ export function ChatDialog({ refId, town, onClose }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refId])
 
+  const timelineLength = (state?.messages.length || 0) + (state?.events.length || 0)
   useEffect(() => {
     if (stickToBottom.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
-  }, [state?.messages.length])
+  }, [timelineLength])
 
   async function send() {
     const text = draft.trim()
@@ -483,80 +531,155 @@ export function ChatDialog({ refId, town, onClose }: {
 
   const closed = state?.open === false && state?.messages && state.messages.length > 0
 
+  // Messages + this agent's own events, one chronological timeline. The
+  // backend keeps them as two arrays (different tables, no shared shape) —
+  // merging is a client-side concern, not a SQL one.
+  const timeline: TimelineItem[] = [
+    ...(state?.messages || []).map(m => ({ kind: 'message' as const, at: m.at, sortKey: Date.parse(m.at), message: m })),
+    ...(state?.events || []).map(e => ({ kind: 'event' as const, at: e.at, sortKey: Date.parse(e.at), event: e })),
+  ].sort((a, b) => a.sortKey - b.sortKey)
+
+  const fade = reduceMotion
+    ? { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 }, transition: { duration: 0 } }
+    : { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
+  const rise = reduceMotion
+    ? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 1, y: 0 }, transition: { duration: 0 } }
+    : { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 24 }, transition: { duration: 0.18, ease: 'easeOut' as const } }
+
   return (
     <>
+      <motion.div {...fade} onClick={onClose} className="fixed inset-0 z-[199] bg-black/50 backdrop-blur-[3px]" />
       <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-[199] bg-navy/20 backdrop-blur-[3px]"
-      />
-      <motion.div
-        initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
-        transition={{ duration: 0.16, ease: 'easeOut' }}
-        className="fixed z-[200] bg-[#EFEAE2] shadow-2xl flex flex-col
-                   inset-x-0 bottom-0 rounded-t-2xl h-[85vh]
+        {...rise}
+        className="fixed z-[200] shadow-2xl flex flex-col overflow-hidden
+                   inset-x-0 bottom-0 rounded-t-2xl h-[88vh]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
-                   sm:w-[420px] sm:h-[640px] sm:rounded-xl sm:max-h-[86vh]"
+                   sm:w-[440px] sm:h-[680px] sm:rounded-2xl sm:max-h-[88vh]"
+        style={{ background: 'linear-gradient(180deg, #0C1120 0%, #10162A 55%, #0C1120 100%)' }}
       >
-        <div className="sm:hidden flex justify-center pt-3 shrink-0 bg-white">
-          <div className="w-9 h-1 rounded-full bg-navy/15" />
+        {/* ── 2906 signature watermark — dezent, own identity, never a stock chat look ── */}
+        <div
+          aria-hidden
+          className="pointer-events-none select-none absolute -right-8 -top-4 font-serif italic
+                     text-[128px] leading-none text-white/[0.035] tracking-tighter"
+        >
+          2906
         </div>
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-gray-200 shrink-0 bg-white rounded-t-2xl sm:rounded-t-xl">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-navy/10 flex items-center justify-center shrink-0">
-              <MessageCircle className="w-4 h-4 text-navy/50" />
+
+        <div className="sm:hidden flex justify-center pt-3 shrink-0 relative z-10">
+          <div className="w-9 h-1 rounded-full bg-white/15" />
+        </div>
+
+        {/* ── header: owner label + persona identity badge ─────────────────────── */}
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/[0.06] shrink-0 relative z-10">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-gold/15 border border-gold/25 flex items-center justify-center shrink-0">
+              <MessageCircle className="w-4 h-4 text-gold" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-navy tracking-tight truncate">
+              <h2 className="text-sm font-bold text-white tracking-tight truncate">
                 {state?.ownerLabel || 'Owner'}
               </h2>
-              <p className="text-[11px] text-navy/40 truncate">
-                #{refId}{town ? ` · ${town}` : ''}{closed ? ' · conversation closed' : ''}
+              <p className="text-[11px] text-white/40 truncate">
+                #{refId}{town ? ` · ${town}` : ''}{closed ? ' · closed' : ''}
               </p>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Close"
-            className="w-8 h-8 rounded flex items-center justify-center bg-off-white text-navy/40 hover:text-navy shrink-0">
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {state?.persona && (
+              <span
+                title="The account you're texting from — stay in character"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px]
+                           font-semibold tracking-wide bg-gold/10 border border-gold/30 text-gold-light whitespace-nowrap"
+              >
+                @{state.persona}
+              </span>
+            )}
+            <button onClick={onClose} aria-label="Close"
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
+        {/* ── milchglas: other agents' activity with this same owner ───────────── */}
+        {!!state?.otherActivity.length && (
+          <div className="px-4 sm:px-5 pt-3 pb-1 shrink-0 relative z-10">
+            <div className="flex items-center gap-1.5 mb-2 text-[9px] uppercase tracking-[0.14em] text-white/30 font-semibold">
+              <EyeOff className="w-3 h-3" /> Also in touch with this owner
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {state.otherActivity.slice(0, 8).map((a, i) => {
+                const Icon = EVENT_COPY[a.kind]?.icon || MessageCircle
+                return (
+                  <div key={i} className="relative shrink-0 w-[92px] h-[46px] rounded-xl overflow-hidden border border-white/10">
+                    {/* frosted "ghost bubble" — no content exists to show; the blur IS the message. */}
+                    <div className="absolute inset-0 backdrop-blur-md bg-white/[0.06]" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-white/50">
+                      <Icon className="w-3.5 h-3.5" />
+                      <span className="text-[8px] tracking-wide">{agoShort(a.at)}</span>
+                    </div>
+                    <div className="absolute inset-x-2 bottom-1.5 h-1 rounded-full bg-white/20 blur-[2px]" />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── timeline: messages + this agent's own av/ask/book events ─────────── */}
         <div
           ref={scrollRef}
           onScroll={e => {
             const el = e.currentTarget
             stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
           }}
-          className="grow overflow-y-auto px-3 py-3 space-y-1.5"
+          className="grow overflow-y-auto px-3.5 py-3 space-y-2 relative z-10"
         >
           {err && <ErrorLine text={err} />}
 
           {!state && !err && (
-            <div className="flex items-center justify-center h-full text-navy/30 text-xs">Loading…</div>
+            <div className="flex items-center justify-center h-full text-white/25 text-xs">Loading…</div>
           )}
 
-          {state && state.messages.length === 0 && (
+          {state && timeline.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <MessageCircle className="w-8 h-8 text-navy/15 mb-2" />
-              <p className="text-xs text-navy/40 leading-relaxed">
-                No conversation yet. Use <span className="font-semibold">Ask</span> or{' '}
-                <span className="font-semibold">Book</span> on this listing to reach the owner —
-                their replies, and anything you type here, will show up in this window.
+              <MessageCircle className="w-8 h-8 text-white/10 mb-2" />
+              <p className="text-xs text-white/35 leading-relaxed">
+                No conversation yet — just type below to start one, or use{' '}
+                <span className="font-semibold text-white/55">Ask</span> / <span className="font-semibold text-white/55">Book</span>{' '}
+                if you'd rather compose something first. Either way it goes straight to the owner.
               </p>
             </div>
           )}
 
-          {state?.messages.map(m => {
+          {timeline.map(item => {
+            if (item.kind === 'event') {
+              const copy = EVENT_COPY[item.event.kind]
+              const Icon = copy?.icon || MessageCircle
+              return (
+                <div key={`ev-${item.at}-${item.event.kind}`} className="flex justify-center py-1">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/45 text-[10.5px]">
+                    <Icon className="w-3 h-3" />
+                    <span>{copy?.label || item.event.kind}</span>
+                    <span className="text-white/25">· {timeOnly(item.at)}</span>
+                  </div>
+                </div>
+              )
+            }
+            const m = item.message
             const mine = m.direction === 'agent_to_owner'
             return (
               <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                 <div className={cn(
-                  'max-w-[80%] rounded-lg px-3 py-2 text-[13px] leading-snug whitespace-pre-wrap break-words shadow-sm',
-                  mine ? 'bg-[#D9FDD3] text-navy rounded-tr-none' : 'bg-white text-navy rounded-tl-none',
+                  'max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-snug whitespace-pre-wrap break-words',
+                  mine
+                    ? 'bg-gradient-to-br from-gold/25 to-gold/10 border border-gold/25 text-white rounded-br-sm'
+                    : 'bg-white/[0.06] border border-white/[0.08] text-white/90 rounded-bl-sm',
                 )}>
                   {m.text}
-                  <div className="text-[9px] text-navy/35 mt-1 text-right">
-                    {new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className={cn('text-[9px] mt-1 text-right', mine ? 'text-gold-light/50' : 'text-white/25')}>
+                    {timeOnly(m.at)}
                   </div>
                 </div>
               </div>
@@ -564,8 +687,9 @@ export function ChatDialog({ refId, town, onClose }: {
           })}
         </div>
 
-        <div className="px-3 py-3 border-t border-gray-200 bg-white shrink-0 flex items-end gap-2
-                        pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
+        {/* ── composer ───────────────────────────────────────────────────────── */}
+        <div className="px-3.5 py-3.5 border-t border-white/[0.06] shrink-0 flex items-end gap-2 relative z-10
+                        pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
           <textarea
             value={draft}
             onChange={e => setDraft(e.target.value)}
@@ -573,15 +697,15 @@ export function ChatDialog({ refId, town, onClose }: {
             rows={1}
             disabled={closed}
             placeholder={closed ? 'This conversation has closed' : 'Type a message — sent to the owner as-is…'}
-            className="flex-1 resize-none px-3 py-2 bg-off-white border-0 rounded-full text-sm text-navy
-                       placeholder:text-navy/35 focus:outline-none focus:ring-1 focus:ring-gold/50
-                       disabled:opacity-50 max-h-24"
+            className="flex-1 resize-none px-3.5 py-2.5 bg-white/[0.05] border border-white/[0.08] rounded-full text-sm text-white
+                       placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/40
+                       disabled:opacity-40 max-h-24"
           />
           <button
             onClick={send}
             disabled={!draft.trim() || sending || closed}
-            className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center shrink-0
-                       disabled:opacity-30 disabled:cursor-not-allowed hover:bg-navy-light transition-colors"
+            className="w-10 h-10 rounded-full bg-gold text-navy flex items-center justify-center shrink-0
+                       disabled:opacity-25 disabled:cursor-not-allowed hover:bg-gold-light transition-colors"
             aria-label="Send"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
