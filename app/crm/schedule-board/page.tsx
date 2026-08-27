@@ -96,7 +96,19 @@ type Listing = {
   // an agent can tell "soft open" from "there's already a live conversation"
   // before they type a greeting.
   lastChatAt?: string | null
-  viewing?: { id: number; date: string; time: string | null; status: string } | null
+  viewing?: {
+    id: number; date: string; time: string | null; status: string
+    // Phase 2 (Kev, 2026-08-27) — the owner's Yes/No/Suggest-time reply.
+    ownerSurveyStatus?: string | null
+    proposedDate?: string | null
+    proposedTime?: string | null
+    groupJid?: string | null
+    // true only once the owner has said yes AND no group exists yet for
+    // this booking — the actual server-side gate lives in
+    // routes/crmScheduleBoard.js POST .../create-group; this just drives
+    // the button's enabled state.
+    canCreateGroup?: boolean
+  } | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
@@ -631,6 +643,25 @@ function Board() {
     }
   }
 
+  // ── Create Group (Phase 2) ──────────────────────────────────────────────
+  // One-shot, not a toggle — no optimistic update, just disable the button
+  // via busyRef until the server confirms the real WhatsApp group exists.
+  async function createGroup(r: Listing) {
+    if (busyRef) return
+    setBusyRef(r.ref)
+    try {
+      const d = await crmJson(`schedule-board/listings/${encodeURIComponent(r.ref)}/create-group`, 'POST', {})
+      setRows(rs => rs.map(x => x.ref === r.ref && x.viewing
+        ? { ...x, viewing: { ...x.viewing, groupJid: d.groupId || 'created', canCreateGroup: false } }
+        : x))
+      showToast('ok', d.message || `Group created for #${r.ref}.`)
+    } catch (e: any) {
+      showToast('err', e?.data?.error || e?.message || 'Could not create the group.')
+    } finally {
+      setBusyRef(null)
+    }
+  }
+
   // ── WATag ─────────────────────────────────────────────────────────────────
   // Drops a "." into the listing's own category group as a reply to the listing
   // message. The dot is a handle, not a comment: an agent taps the quote above
@@ -1142,6 +1173,7 @@ function Board() {
               onBook={() => setBooking(r)}
               onAsk={() => setAsking(r)}
               onChat={() => setChatting(r)}
+              onCreateGroup={() => createGroup(r)}
               onCheckIn={() => checkIn(r)}
               onStatus={action => setStatusing({ r, action })}
               onOptOut={next => optOut(r, next)}
@@ -2072,7 +2104,7 @@ function ReachoutSwitch() {
   )
 }
 
-function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCheckIn, onStatus, onOptOut, busy,
+function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy }: {
   r: Listing
   focused: boolean
@@ -2082,6 +2114,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCh
   onBook: () => void
   onAsk: () => void
   onChat: () => void
+  // Phase 2 — only ever really actionable on the Favourites tab (that is
+  // where r.viewing carries real data, see routes/crmScheduleBoard.js
+  // GET /favourites); harmless no-op elsewhere since the button stays
+  // disabled without a confirmed viewing to key off.
+  onCreateGroup: () => void
   onCheckIn: () => void
   onStatus: (action: StatusAction) => void
   onOptOut: (next: boolean) => void
@@ -2502,24 +2539,38 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCh
             Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
           </button>
 
-          {/* Create Group — visible so the feature is known to exist, but hard
-              disabled until the automated group welcome-message flow ships
-              (Kev, 2026-08-22). It is NOT deleted, and once that flow lands
-              this becomes: isAdmin && r.viewing?.status === 'confirmed'.
-              Dashed border and NO white fill — on the tinted panel the other
-              buttons are the only white things, so "not white" now reads as
-              unavailable on its own, before anyone reads the grey text. */}
-          <button
-            disabled
-            title={r.viewing?.status === 'confirmed'
-              ? 'Coming soon — waiting on the automated group welcome message, not on this booking.'
-              : 'Coming soon — needs a confirmed booking and the automated group welcome message.'}
-            style={{
-              ...secondaryBtn, flex: '0 1 auto', color: '#B7B1A4', background: 'transparent',
-              border: '1px dashed #DAD5CB', cursor: 'not-allowed',
-            }}>
-            Create Group
-          </button>
+          {/* Create Group — Phase 2 (Kev, 2026-08-27) landed: the automated
+              group welcome-message flow this was waiting on is
+              handlers/upload.js createViewingGroup(), now reachable from the
+              board too. Unlocked only once the owner has said yes to a
+              booking (canCreateGroup, server-computed in
+              routes/crmScheduleBoard.js GET /favourites) and admin-gated —
+              same restriction this button was designed for before it had
+              anything to check. Dashed/grey styling kept for the disabled
+              state so "not available yet" still reads before anyone hovers. */}
+          {(() => {
+            const ready = isAdmin && !!r.viewing?.canCreateGroup
+            const already = !!r.viewing?.groupJid
+            const title = already
+              ? 'Group already created for this booking.'
+              : ready
+              ? 'Owner confirmed — create the WhatsApp group with the agent and owner.'
+              : r.viewing?.status === 'confirmed'
+              ? 'Admins only.'
+              : 'Needs a confirmed booking first — the owner has to say yes.'
+            return (
+              <button
+                onClick={ready ? onCreateGroup : undefined}
+                disabled={!ready || already}
+                title={title}
+                style={ready && !already ? { ...secondaryBtn, flex: '0 1 auto' } : {
+                  ...secondaryBtn, flex: '0 1 auto', color: '#B7B1A4', background: 'transparent',
+                  border: '1px dashed #DAD5CB', cursor: 'not-allowed',
+                }}>
+                {already ? 'Group created' : 'Create Group'}
+              </button>
+            )
+          })()}
 
           {/* Facebook posting-queue toggle. Admin only — hidden entirely for
               everyone else, same convention recheck/archive used to. Thin
