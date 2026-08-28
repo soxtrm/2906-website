@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import momentTZ from 'moment-timezone'
@@ -73,7 +74,24 @@ function countryFlag(code: string | null) {
   } catch { return '' }
 }
 
+// Embedding a specific agent's calendar (e.g. inside their Agent Workspace
+// dashboard) needs useSearchParams, which Next.js requires a Suspense
+// boundary around when the page is otherwise prerendered.
 export default function CalendarInternaPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-stone-50" />}>
+      <CalendarInternaInner />
+    </Suspense>
+  )
+}
+
+function CalendarInternaInner() {
+  const searchParams = useSearchParams()
+  // ?agent=<id> preselects and locks to that agent's calendar by ID — used
+  // when this page is embedded in a specific Agent Workspace dashboard, so
+  // the right profile is picked by id, never by name-matching.
+  const agentIdParam = searchParams.get('agent')
+  const embedMode = searchParams.get('embed') === '1'
   const [agents, setAgents] = useState<Agent[]>([])
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [events, setEvents] = useState<CalEvent[]>([])
@@ -86,6 +104,10 @@ export default function CalendarInternaPage() {
   const [clientPanelOpen, setClientPanelOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [calView, setCalView] = useState<string>('week')
+  const [addingClient, setAddingClient] = useState(false)
+  const [newClientName, setNewClientName] = useState('')
+  const [newClientPhone, setNewClientPhone] = useState('')
+  const [addClientBusy, setAddClientBusy] = useState(false)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -108,19 +130,26 @@ export default function CalendarInternaPage() {
     fetch(`${API_BASE}/api/agents`)
       .then(r => r.json())
       .then((data: Agent[]) => {
-        // Sort: Olga first, Kev second, rest by id
-        const rank = (name: string) => {
-          const l = name.toLowerCase()
+        // Sort: Olga first, Kev second, rest by id. Some agents (the board-only
+        // accounts added 2026-08-28) have no display_name at all — a bare
+        // .toLowerCase() on that crashed this whole handler, which is why the
+        // agent list (and therefore "New Event", which needs a selectedAgent)
+        // silently stopped working the same day.
+        const rank = (name: string | null | undefined) => {
+          const l = (name || '').toLowerCase()
           return l === 'olga' ? 0 : (l === 'kev' || l === 'kevin') ? 1 : 2
         }
+        const label = (a: Agent) => a.display_name || a.username || `Agent ${a.id}`
         const sorted = [...data].sort((a, b) =>
           rank(a.display_name) - rank(b.display_name) || a.id - b.id
         )
-        setAgents(sorted)
-        setSelectedAgent(sorted.find(a => a.display_name.toLowerCase() === 'olga') || sorted[0] || null)
+        const labeled = sorted.map(a => ({ ...a, display_name: label(a) }))
+        setAgents(labeled)
+        const byId = agentIdParam ? labeled.find(a => a.id === Number(agentIdParam)) : null
+        setSelectedAgent(byId || labeled.find(a => (a.display_name || '').toLowerCase() === 'olga') || labeled[0] || null)
       })
       .catch(console.error)
-  }, [])
+  }, [agentIdParam])
 
   const loadEvents = useCallback(() => {
     if (!selectedAgent) return
@@ -196,8 +225,8 @@ export default function CalendarInternaPage() {
     setEvents(prev => [...prev, {
       ...result,
       client_name: draggingClient.name,
-      client_nationality: draggingClient.nationality,
-      client_phone: draggingClient.contact_phone,
+      client_nationality: draggingClient.nationalities?.[0] || null,
+      client_phone: draggingClient.phone,
       agent_color: selectedAgent.color_hex,
       start: startDate,
       end: endDate
@@ -258,6 +287,31 @@ export default function CalendarInternaPage() {
       setEvents(prev => prev.map(e => e.id === editingEvent.id ? enriched : e))
     }
     setEditingEvent(null)
+  }
+
+  // Manual "+ Add client" — not every client is uploaded to the site ahead of
+  // time, so the drag-to-calendar panel needs its own quick way to create one
+  // (Kev, 2026-08-28). Minimal fields only; the full add-client form still
+  // exists for a proper intake.
+  const addClient = async () => {
+    const name = newClientName.trim()
+    if (!name || addClientBusy) return
+    setAddClientBusy(true)
+    try {
+      const created = await fetch(`${API_BASE}/api/clients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone: newClientPhone.trim() || null }),
+      }).then(r => r.json())
+      if (created?.id) {
+        setClients(prev => [{ id: created.id, name: created.name, nationalities: created.nationalities || null, phone: created.phone || null }, ...prev])
+        setNewClientName('')
+        setNewClientPhone('')
+        setAddingClient(false)
+      }
+    } finally {
+      setAddClientBusy(false)
+    }
   }
 
   const deleteEvent = async () => {
@@ -441,9 +495,10 @@ export default function CalendarInternaPage() {
 
         {clientPanelOpen && (
           <div className="bg-white">
-            {/* Search */}
-            <div className="px-3 pt-2.5 pb-2">
-              <div className="relative">
+            {/* Search + manual add — not every client is uploaded ahead of
+                time, so this panel needs its own way to create one. */}
+            <div className="px-3 pt-2.5 pb-2 flex gap-1.5">
+              <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
                 <input
                   value={search}
@@ -457,7 +512,46 @@ export default function CalendarInternaPage() {
                   </button>
                 )}
               </div>
+              <button
+                onClick={() => setAddingClient(o => !o)}
+                title="Add a client manually"
+                className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors flex-shrink-0 ${
+                  addingClient ? 'bg-stone-800 border-stone-800 text-white' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
             </div>
+
+            {addingClient && (
+              <div className="px-3 pb-2.5 flex flex-col gap-1.5">
+                <input
+                  value={newClientName}
+                  onChange={e => setNewClientName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addClient()}
+                  placeholder="Client name"
+                  autoFocus
+                  className="w-full px-2.5 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-400"
+                />
+                <div className="flex gap-1.5">
+                  <input
+                    value={newClientPhone}
+                    onChange={e => setNewClientPhone(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addClient()}
+                    placeholder="Phone (optional)"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-400"
+                  />
+                  <button
+                    onClick={addClient}
+                    disabled={!newClientName.trim() || addClientBusy}
+                    className="px-3 py-1.5 text-sm text-white rounded-lg disabled:opacity-40 flex-shrink-0"
+                    style={{ backgroundColor: selectedAgent?.color_hex || '#D4AF37' }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Client cards */}
             <div className="overflow-y-auto max-h-72 px-2 pb-2 flex flex-col gap-1">
@@ -492,7 +586,10 @@ export default function CalendarInternaPage() {
         )}
       </div>
 
-      {/* Agent tab switcher - fixed bottom */}
+      {/* Agent tab switcher - fixed bottom. Hidden in embed mode (a specific
+          agent's dashboard): that page is locked to its own profile by id,
+          not a general switcher between everyone's calendars. */}
+      {!embedMode && (
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 px-4 py-2 z-50">
         <div className="max-w-7xl mx-auto flex gap-1 overflow-x-auto">
           {agents.map(agent => (
@@ -509,6 +606,7 @@ export default function CalendarInternaPage() {
           ))}
         </div>
       </div>
+      )}
 
       {/* Event edit modal */}
       {editingEvent && (
