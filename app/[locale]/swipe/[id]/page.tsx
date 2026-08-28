@@ -233,15 +233,14 @@ function ActionButton({
 
 // ── the black info strip below the card ──────────────────────────────────────
 function BottomBar({
-  p, liked, favourited, onLike, onFavourite, descOpen, onToggleDesc, photoIndex, photoTotal, allPhotosSeen,
+  p, liked, favourited, onLike, onFavourite, onOpenDesc, photoIndex, photoTotal, allPhotosSeen,
 }: {
   p: SwipeProperty
   liked: boolean
   favourited: boolean
   onLike: () => void
   onFavourite: () => void
-  descOpen: boolean
-  onToggleDesc: () => void
+  onOpenDesc: () => void
   photoIndex: number
   photoTotal: number
   allPhotosSeen: boolean
@@ -277,18 +276,60 @@ function BottomBar({
         {p.description && (
           <button
             type="button"
-            onClick={onToggleDesc}
+            onClick={onOpenDesc}
             className="text-left mt-1 -ml-1 block w-full px-1 py-1.5 rounded-md active:bg-white/5 transition-colors"
           >
-            {descOpen ? (
-              <span className="text-white/60 text-[12px] leading-relaxed">{p.description}</span>
-            ) : (
-              <span className="text-white/40 text-[12px] tracking-[0.2em]">···· <span className="text-white/25 tracking-normal">tap for details</span></span>
-            )}
+            <span className="text-white/40 text-[12px] tracking-[0.2em]">···· <span className="text-white/25 tracking-normal">tap for details</span></span>
           </button>
         )}
       </div>
     </div>
+  )
+}
+
+// ── full description — a dark sheet OVER the screen, never inline (inline
+// growth used to crush the card's flex height on short mobile viewports) ──
+function DescriptionModal({ p, onClose }: { p: SwipeProperty | null; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {p && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+        >
+          <motion.div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={onClose}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          />
+          <motion.div
+            className="relative w-full lg:w-[480px] max-h-[80vh] rounded-t-3xl lg:rounded-3xl overflow-hidden flex flex-col"
+            style={{ background: '#111A2E' }}
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'tween', duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 flex-shrink-0 border-b border-white/8">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-white text-[15px] font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-white/50 flex-shrink-0" />
+                  <span className="truncate">{[p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'}</span>
+                </div>
+                <div className="text-white/50 text-[13px] mt-1">{fmtSpecs(p).join(' · ')} · {fmtPrice(p)}</div>
+              </div>
+              <button
+                type="button" onClick={onClose} aria-label="Close"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/8 hover:bg-white/14 transition-colors flex-shrink-0"
+              >
+                <X className="w-4 h-4 text-white/80" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-6 py-5">
+              <p className="text-white/75 text-[14px] leading-relaxed whitespace-pre-line">{p.description}</p>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -419,7 +460,7 @@ export default function SwipePage() {
   const [favourited, setFavourited] = useState<Set<string>>(new Set())
   const [photoIndex, setPhotoIndex] = useState(0)
   const [seenAllPhotos, setSeenAllPhotos] = useState<Set<string>>(new Set())
-  const [descOpenRef, setDescOpenRef] = useState<string | null>(null)
+  const [descModalOpen, setDescModalOpen] = useState(false)
   const [adIndex, setAdIndex] = useState(0)
   const [contactSending, setContactSending] = useState(false)
   const [contactSent, setContactSent] = useState(false)
@@ -464,7 +505,7 @@ export default function SwipePage() {
 
   const jump = useCallback((i: number) => {
     setPhotoIndex(0)
-    setDescOpenRef(null)
+    setDescModalOpen(false)
     setIndex(Math.max(0, Math.min((properties?.length || 0), i)))
   }, [properties])
 
@@ -472,7 +513,7 @@ export default function SwipePage() {
     setIndex(i => {
       const max = (properties?.length || 0)
       setPhotoIndex(0)
-      setDescOpenRef(null)
+      setDescModalOpen(false)
       return Math.max(0, Math.min(max, i + dir))
     })
   }, [properties])
@@ -628,8 +669,7 @@ export default function SwipePage() {
           favourited={favourited.has(current.ref)}
           onLike={() => like(current.ref)}
           onFavourite={() => favourite(current.ref)}
-          descOpen={descOpenRef === current.ref}
-          onToggleDesc={() => setDescOpenRef(o => o === current.ref ? null : current.ref)}
+          onOpenDesc={() => setDescModalOpen(true)}
           photoIndex={photoIndex}
           photoTotal={current.images.length}
           allPhotosSeen={seenAllPhotos.has(current.ref)}
@@ -653,6 +693,7 @@ export default function SwipePage() {
           <ThumbGrid properties={properties} index={index} favourited={favouredFlags} onJump={jump} />
         )}
       </div>
+      <DescriptionModal p={descModalOpen ? current : null} onClose={() => setDescModalOpen(false)} />
     </div>
   )
 }
