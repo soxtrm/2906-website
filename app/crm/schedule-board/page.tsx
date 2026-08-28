@@ -17,7 +17,7 @@ import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
-import { BoardFilters, type BoardFilterValue } from '@/components/crm/board-filters'
+import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { AskDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
@@ -147,7 +147,7 @@ type AvNotification = {
 type Filters = BoardFilterValue & { towns: string[] }
 const EMPTY: Filters = {
   q: '', beds: '', baths: '', min: '', max: '', type: '', towns: [],
-  pets: '', sharing: '', sublet: false,
+  pets: '', sharing: '', sublet: false, updated: '',
 }
 
 // Newest-first is the default because it is what the board is for: the listing
@@ -270,6 +270,8 @@ function Board() {
     sharing: (params.get('sharing') === 'yes' || params.get('sharing') === 'no'
       ? params.get('sharing') : '') as '' | 'yes' | 'no',
     sublet: params.get('sublet') === '1',
+    updated: (['24h', '48h', '5d', '10d', '3w'].includes(params.get('updated') || '')
+      ? params.get('updated') : '') as Filters['updated'],
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
   const [circ, setCirc] = useState<Circ | null>(() => parseCirc(params.get('circ')))
@@ -381,6 +383,7 @@ function Board() {
       if (f.pets) q.set('pets', f.pets)
       if (f.sharing) q.set('sharing', f.sharing)
       if (f.sublet) q.set('sublet', '1')
+      if (f.updated) q.set('updated', f.updated)
       if (rect) q.set('rect', rectToParam(rect))
       if (circ) q.set('circ', circToParam(circ))
       if (sort !== DEFAULT_SORT) q.set('sort', sort)
@@ -518,6 +521,16 @@ function Board() {
       if (f.sharing === 'yes' && r.sharing !== true) return false
       if (f.sharing === 'no' && r.sharing !== false) return false
       if (f.sublet && r.subletting !== true) return false
+      // Recency filter (Kev, 2026-08-28): createdAt is bumped by both a fresh
+      // !upload and a deliberate !price repost, so "updated in last N" reads
+      // as a cheap "still on the market" proxy. No createdAt on file is
+      // treated as failing the check, same as an unknown pets/sharing answer
+      // above — a filter promising "recently touched" must not include an
+      // unknown as if it qualified.
+      if (f.updated) {
+        if (!r.createdAt) return false
+        if (Date.now() - Date.parse(r.createdAt) > UPDATED_MAX_MS[f.updated]) return false
+      }
       if (rect) {
         if (r.lat == null || r.lng == null) return false
         if (r.lat > rect.north || r.lat < rect.south) return false
@@ -529,7 +542,7 @@ function Board() {
       }
       return true
     })
-  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, rect, circ])
+  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, rect, circ])
 
   const mineCount = visible.filter(r => r.isMine).length
 

@@ -39,6 +39,22 @@ export type BoardFilterValue = {
   // Subletting gets no card icon by design — a checkbox in the search only.
   // Checked = show only listings that actually say subletting is allowed.
   sublet: boolean
+  // '' = Any. Otherwise a key into UPDATED_MAX_MS below. createdAt is what
+  // this reads (routes/crmScheduleBoard.js:shapeCard) — !upload sets it on
+  // arrival AND !price bumps it back to NOW() on a deliberate repost (Kev,
+  // 2026-08-28: "so that's what actually moves the card to the top"), so it
+  // already doubles as "last touched", not just "first uploaded". Kev's ask
+  // (2026-08-28): a recency filter reads as a cheap proxy for "still
+  // available" — nobody has bumped a rented listing in weeks.
+  updated: '' | '24h' | '48h' | '5d' | '10d' | '3w'
+}
+
+export const UPDATED_OPTIONS: [BoardFilterValue['updated'], string][] = [
+  ['24h', '24h'], ['48h', '48h'], ['5d', '5 Days'], ['10d', '10 Days'], ['3w', '3 Weeks'],
+]
+export const UPDATED_MAX_MS: Record<Exclude<BoardFilterValue['updated'], ''>, number> = {
+  '24h': 24 * 3600_000, '48h': 48 * 3600_000,
+  '5d': 5 * 86_400_000, '10d': 10 * 86_400_000, '3w': 21 * 86_400_000,
 }
 
 const TYPES: [string, string][] = [
@@ -124,7 +140,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const activeCount =
     (value.q ? 1 : 0) + (value.beds ? 1 : 0) + (value.baths ? 1 : 0) +
     (value.type ? 1 : 0) + (value.min || value.max ? 1 : 0) +
-    (value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0)
+    (value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0) +
+    (value.updated ? 1 : 0)
 
   const typeLabel = value.type
     ? (TYPES.find(t => t[0] === value.type)?.[1] || value.type)
@@ -132,6 +149,9 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const priceLabel = value.min || value.max
     ? `€${value.min || '0'} – ${value.max ? `€${value.max}` : '∞'}`
     : 'Price'
+  const updatedLabel = value.updated
+    ? `Updated: ${UPDATED_OPTIONS.find(o => o[0] === value.updated)?.[1] || value.updated}`
+    : 'Updated'
 
   // One dropdown holds all three tenancy rules. Three separate triggers would
   // push the row past the width the map leaves it on a laptop, and these are
@@ -308,6 +328,27 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 Clear
               </button>
             )}
+          </div>
+        </Dropdown>
+
+        {/* "Any" clears it — nobody picks a recency window and means
+            "and also everything older", so there is no separate Clear row
+            here the way price/type get one. */}
+        <Dropdown id="updated" label={updatedLabel} active={!!value.updated}
+          open={open === 'updated'} onToggle={setOpen}>
+          <div className="flex flex-wrap gap-1 max-w-[220px]">
+            <button type="button"
+              onClick={() => { onChange({ updated: '' }); setOpen(null) }}
+              className={cn(CHIP, !value.updated ? CHIP_ON : CHIP_OFF)}>
+              Any
+            </button>
+            {UPDATED_OPTIONS.map(([v, l]) => (
+              <button key={v} type="button"
+                onClick={() => { onChange({ updated: value.updated === v ? '' : v }); setOpen(null) }}
+                className={cn(CHIP, value.updated === v ? CHIP_ON : CHIP_OFF)}>
+                {l}
+              </button>
+            ))}
           </div>
         </Dropdown>
 
