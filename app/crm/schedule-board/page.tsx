@@ -12,13 +12,14 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Link2 } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { AskDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
+import { SwipeLinkCreatedModal, SwipeLinksPanel } from '@/components/crm/swipe-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
 // that matters is whose listing it is, and navy is the brand's own way of
@@ -316,6 +317,11 @@ function Board() {
   const [chatting, setChatting] = useState<Listing | null>(null)
   const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null)
+  // Swipe Boards: reuses the SAME `selected` set WATag already fills via the
+  // card pick-boxes — one selection, two things you can do with it.
+  const [swipeCreating, setSwipeCreating] = useState(false)
+  const [swipeResult, setSwipeResult] = useState<{ url: string; count: number } | null>(null)
+  const [swipePanelOpen, setSwipePanelOpen] = useState(false)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   // Collapsible: the map was permanently taking ~420px above the cards, and a
   // plain scroll over it used to zoom instead of moving the page (fixed via
@@ -780,6 +786,22 @@ function Board() {
     }
   }
 
+  async function createSwipeLink() {
+    if (swipeCreating || !selected.size) return
+    setSwipeCreating(true)
+    const refs = [...selected]
+    try {
+      const d = await crmJson('schedule-board/swipe-links', 'POST', { refs })
+      setSwipeResult({ url: d.url, count: d.count })
+      setSelected(new Set())
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || e?.message || 'Could not create the swipe link.')
+    } finally {
+      setSwipeCreating(false)
+    }
+  }
+
   // ── the star ──────────────────────────────────────────────────────────────
   // Top-left of every card. Filled = on this agent's Favourites. Booking still
   // fills the list by itself; this is the manual half, for the flat you found
@@ -1113,6 +1135,16 @@ function Board() {
             Select for WATag
           </button>
 
+          <button
+            onClick={() => setSwipePanelOpen(true)}
+            title="See every swipe link you've made and what customers liked"
+            style={{
+              ...chip, borderRadius: 8, background: '#FFF', borderColor: '#E9E5DC',
+              color: '#666', display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+            <Link2 size={13} /> Swipe Links
+          </button>
+
           {selected.size > 0 && (
             <>
               <button
@@ -1128,6 +1160,20 @@ function Board() {
                 }}>
                 <PersonGlyph color="#FFF" />
                 {tagging ? 'Tagging…' : `WATag ${selected.size}`}
+              </button>
+              <button
+                data-swipe-create
+                onClick={createSwipeLink}
+                disabled={swipeCreating}
+                title={`Create a shareable swipe deck out of these ${selected.size} listings`}
+                style={{
+                  ...chip, borderRadius: 8, background: swipeCreating ? '#8A93A6' : '#FFF',
+                  borderColor: swipeCreating ? '#8A93A6' : AB, color: swipeCreating ? '#FFF' : A, fontWeight: 700,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  cursor: swipeCreating ? 'wait' : 'pointer',
+                }}>
+                <Link2 size={13} />
+                {swipeCreating ? 'Creating…' : `Swipe Link ${selected.size}`}
               </button>
               <button
                 onClick={() => setSelected(new Set())}
@@ -1308,6 +1354,10 @@ function Board() {
       {avNotifications.length > 0 && (
         <AvNotificationStack items={avNotifications} onDismiss={dismissAvNotification} />
       )}
+      {swipeResult && (
+        <SwipeLinkCreatedModal url={swipeResult.url} count={swipeResult.count} onClose={() => setSwipeResult(null)} />
+      )}
+      {swipePanelOpen && <SwipeLinksPanel onClose={() => setSwipePanelOpen(false)} />}
     </CrmShell>
   )
 }
