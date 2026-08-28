@@ -651,9 +651,14 @@ function Board() {
     setBusyRef(r.ref)
     try {
       const d = await crmJson(`schedule-board/listings/${encodeURIComponent(r.ref)}/create-group`, 'POST', {})
-      setRows(rs => rs.map(x => x.ref === r.ref && x.viewing
+      const patch = (x: Listing) => x.viewing
         ? { ...x, viewing: { ...x.viewing, groupJid: d.groupId || 'created', canCreateGroup: false } }
-        : x))
+        : x
+      setRows(rs => rs.map(x => x.ref === r.ref ? patch(x) : x))
+      // The Chat dialog holds its own snapshot (`chatting`), separate from
+      // `rows` — without this it kept showing "Create Group" as clickable
+      // after a successful create from inside the chat itself.
+      setChatting(c => (c && c.ref === r.ref) ? patch(c) : c)
       showToast('ok', d.message || `Group created for #${r.ref}.`)
     } catch (e: any) {
       showToast('err', e?.data?.error || e?.message || 'Could not create the group.')
@@ -1245,6 +1250,15 @@ function Board() {
             key="chat"
             refId={chatting.ref}
             town={chatting.town}
+            viewing={chatting.viewing}
+            // Same handlers the card's own Book / Create Group buttons use —
+            // Kev, 2026-08-28: "the Book button could also be in the chat,
+            // and + group too, whichever's easier" — this is that, not a
+            // second implementation. Book stays available unconditionally
+            // (never contact-gated, same as the card); Create Group keeps
+            // the card's own admin + canCreateGroup gate.
+            onBook={() => { setChatting(null); setBooking(chatting) }}
+            onCreateGroup={() => createGroup(chatting)}
             onClose={() => setChatting(null)}
           />
         )}

@@ -20,11 +20,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle, Calendar, Clock, EyeOff, HelpCircle, Home, ImagePlus,
-  Loader2, MessageCircle, Send, Sparkles, X,
+  Loader2, MessageCircle, Send, Sparkles, Users, X,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
+import { useCrm } from '@/lib/crm/ui'
 
 // ── shared shell ────────────────────────────────────────────────────────────
 const FIELD =
@@ -481,10 +482,21 @@ function agoShort(iso: string): string {
   return `${Math.floor(hrs / 24)}d`
 }
 
-export function ChatDialog({ refId, town, onClose }: {
+export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClose }: {
   refId: string; town?: string | null
+  // Kev, 2026-08-28: "the Book button could also be in the chat, and +
+  // group too" — same data + same handlers the board card's own Book /
+  // Create Group buttons use, just reachable from here too. viewing is the
+  // Listing's own snapshot (routes/crmScheduleBoard.js GET /listings, Phase 2
+  // canCreateGroup/groupJid) — optional because a caller that only wants the
+  // conversation (no Book/Group actions available) can omit all three.
+  viewing?: { canCreateGroup?: boolean; groupJid?: string | null } | null
+  onBook?: () => void
+  onCreateGroup?: () => void
   onClose: () => void
 }) {
+  const { me } = useCrm()
+  const isAdmin = me?.role === 'admin'
   const [state, setState] = useState<ChatState | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -601,6 +613,44 @@ export function ChatDialog({ refId, town, onClose }: {
             </button>
           </div>
         </div>
+
+        {/* ── quick actions: Book / Create Group, same as the board card ───────
+            Kev, 2026-08-28: reachable straight from the chat you're already
+            in, instead of having to close it and find the card. Same
+            handlers, same gate — Create Group only lights up once
+            viewing.canCreateGroup is true (owner said yes, no group yet) AND
+            the signed-in agent is an admin, exactly like the card. */}
+        {(onBook || onCreateGroup) && (
+          <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 border-b border-white/[0.06] shrink-0 relative z-10">
+            {onBook && (
+              <button onClick={onBook} title="Book a viewing"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium
+                           bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+                <Calendar className="w-3 h-3" /> Book
+              </button>
+            )}
+            {onCreateGroup && (() => {
+              const ready = isAdmin && !!viewing?.canCreateGroup
+              const already = !!viewing?.groupJid
+              const title = already
+                ? 'Group already created for this booking.'
+                : ready
+                ? 'Owner confirmed — create the WhatsApp group with the agent and owner.'
+                : 'Needs a confirmed booking first — the owner has to say yes.'
+              return (
+                <button onClick={ready ? onCreateGroup : undefined} disabled={!ready || already} title={title}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-colors',
+                    ready && !already
+                      ? 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
+                      : 'bg-transparent text-white/25 border border-dashed border-white/15 cursor-not-allowed',
+                  )}>
+                  <Users className="w-3 h-3" /> {already ? 'Group created' : 'Create Group'}
+                </button>
+              )
+            })()}
+          </div>
+        )}
 
         {/* ── milchglas: other agents' activity with this same owner ───────────── */}
         {!!state?.otherActivity.length && (

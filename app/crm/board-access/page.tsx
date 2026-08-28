@@ -34,6 +34,7 @@ function BoardAccess() {
   const [err, setErr] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
 
@@ -50,13 +51,20 @@ function BoardAccess() {
   async function add() {
     setBusy(true); setNote(null)
     try {
-      const d = await crmJson('board-access', 'POST', { email: email.trim(), name: name.trim() })
+      const d = await crmJson('board-access', 'POST', {
+        email: email.trim(), name: name.trim(),
+        // Optional — leave blank and the agent stays magic-link-only
+        // (routes/boardLogin.js). Set one and they can ALSO sign in at the
+        // full CRM login with it (agents.password_hash is checked there
+        // regardless of role).
+        password: password.trim() || undefined,
+      })
       setNote(d.reused
-        ? `${email.trim()} already had an account — board access granted.`
-        : `${email.trim()} can now request a sign-in link.`)
-      setEmail(''); setName('')
+        ? `${email.trim()} already had an account — board access granted${password.trim() ? ' and password set' : ''}.`
+        : `${email.trim()} can now request a sign-in link${password.trim() ? ', or sign in with the password you set' : ''}.`)
+      setEmail(''); setName(''); setPassword('')
       await load()
-    } catch (e: any) { setNote(e?.message || 'Could not add that address') }
+    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Could not add that address') }
     finally { setBusy(false) }
   }
 
@@ -81,6 +89,7 @@ function BoardAccess() {
   }
 
   const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())
+    && (password.trim() === '' || password.trim().length >= 8)
   const agents = rows.filter(r => r.role === 'board')
   const staff  = rows.filter(r => r.role !== 'board')
 
@@ -91,17 +100,23 @@ function BoardAccess() {
         <div style={{ background: '#FFFDFA', border: '1px solid #EDEBE5', borderRadius: 12, padding: 18 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Add an agent</div>
           <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, lineHeight: 1.5 }}>
-            They sign in at <strong>/board-login</strong> with this address — no password. They see the board and nothing else.
+            They sign in at <strong>/board-login</strong> with this address — no password needed.
+            Set one too and they can also sign in at the full CRM login with it.
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexDirection: isMobile ? 'column' : 'row' }}>
             <input value={email} onChange={e => setEmail(e.target.value)} placeholder="agent@agency.com"
               type="email" style={{ ...inp, flex: 2 }} onKeyDown={e => e.key === 'Enter' && valid && !busy && add()} />
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Name (optional)"
               style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && valid && !busy && add()} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexDirection: isMobile ? 'column' : 'row' }}>
+            <input value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="Password (optional, min 8 characters)" type="password" autoComplete="new-password"
+              style={{ ...inp, flex: 2 }} onKeyDown={e => e.key === 'Enter' && valid && !busy && add()} />
             <button onClick={add} disabled={!valid || busy}
               style={{ background: NAVY, color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px',
                        fontSize: 12.5, fontWeight: 700, fontFamily: F, cursor: valid && !busy ? 'pointer' : 'not-allowed',
-                       opacity: valid && !busy ? 1 : 0.5, whiteSpace: 'nowrap' }}>
+                       opacity: valid && !busy ? 1 : 0.5, whiteSpace: 'nowrap', flex: isMobile ? undefined : '0 0 auto' }}>
               {busy ? 'Adding…' : 'Add'}
             </button>
           </div>
