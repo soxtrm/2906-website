@@ -8,9 +8,14 @@
 // "Request Availability" button uses — nothing new to explain here, the
 // av_status column already says what happened.
 import { useState, useEffect } from 'react'
-import { X, Copy, Check, Link2, Heart } from 'lucide-react'
+import { X, Copy, Check, Link2, Heart, MessageCircle, CalendarPlus } from 'lucide-react'
 import { crmJson } from '@/lib/crm/api'
 import { A, AD, NAVY, F, FM } from '@/lib/crm/ui'
+
+// Green = "available to act on" everywhere else in the CRM (lib/crm/ui.tsx
+// AVAIL.available) — reused verbatim so this reads as the same system, not a
+// new one.
+const GREEN = '#15803D', GREEN_BG = '#DCFCE7'
 
 const overlay: React.CSSProperties = {
   position: 'fixed', inset: 0, background: 'rgba(27,42,74,0.45)',
@@ -86,7 +91,18 @@ function avLabel(status: string | null) {
   return AV_LABEL[status] || status.replace(/_/g, ' ')
 }
 
-export function SwipeLinksPanel({ onClose }: { onClose: () => void }) {
+export function SwipeLinksPanel({
+  onClose, onBook, onChat, isOnBoard,
+}: {
+  onClose: () => void
+  // Kev, 2026-08-29: these must produce EXACTLY what the board's own
+  // Chat/Book buttons produce — so this panel never opens a dialog itself,
+  // it just hands the ref to the page's real setBooking/setChatting (the
+  // same functions the board's cards and the ?ref=&action= deep link use).
+  onBook: (ref: string) => void
+  onChat: (ref: string) => void
+  isOnBoard: (ref: string) => boolean
+}) {
   const [links, setLinks] = useState<LinkRow[] | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
   const [detail, setDetail] = useState<LinkDetail | null>(null)
@@ -153,11 +169,14 @@ export function SwipeLinksPanel({ onClose }: { onClose: () => void }) {
               <div style={{ fontSize: 11, color: '#999', margin: '10px 0 14px', fontFamily: FM, wordBreak: 'break-all' }}>{detail.url}</div>
               {detail.likes.length === 0 ? (
                 <div style={{ padding: '30px 0', textAlign: 'center', color: '#BBB', fontSize: 12.5 }}>No likes yet.</div>
-              ) : detail.likes.map((lk, i) => (
+              ) : detail.likes.map((lk, i) => {
+                const ref = refOf(lk.property_id)?.ref
+                const onBoard = ref ? isOnBoard(ref) : false
+                return (
                 <div key={i} style={{ padding: '11px 0', borderBottom: i < detail.likes.length - 1 ? '1px solid #F2F0EA' : 'none' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontWeight: 700, fontSize: 13, color: '#1A1A1A' }}>
-                      #{refOf(lk.property_id)?.ref || lk.property_id} {refOf(lk.property_id)?.town ? `— ${refOf(lk.property_id)?.town}` : ''}
+                      #{ref || lk.property_id} {refOf(lk.property_id)?.town ? `— ${refOf(lk.property_id)?.town}` : ''}
                     </span>
                     <span style={{ fontSize: 10.5, color: '#999' }}>{new Date(lk.liked_at).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
@@ -167,8 +186,38 @@ export function SwipeLinksPanel({ onClose }: { onClose: () => void }) {
                       Left contact: {[lk.contact_name, lk.contact_phone].filter(Boolean).join(' · ')}
                     </div>
                   )}
+                  {ref && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <button
+                        type="button"
+                        disabled={!onBoard}
+                        onClick={() => onChat(ref)}
+                        title={onBoard ? undefined : 'Not currently on the board'}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6,
+                          border: `1px solid ${onBoard ? GREEN : '#E5E5E5'}`, background: onBoard ? GREEN_BG : '#F7F7F5',
+                          color: onBoard ? GREEN : '#BBB', fontWeight: 700, fontSize: 11.5, fontFamily: F,
+                          cursor: onBoard ? 'pointer' : 'not-allowed',
+                        }}>
+                        <MessageCircle size={12} /> Chat
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!onBoard}
+                        onClick={() => onBook(ref)}
+                        title={onBoard ? undefined : 'Not currently on the board'}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6,
+                          border: `1px solid ${onBoard ? GREEN : '#E5E5E5'}`, background: onBoard ? GREEN_BG : '#F7F7F5',
+                          color: onBoard ? GREEN : '#BBB', fontWeight: 700, fontSize: 11.5, fontFamily: F,
+                          cursor: onBoard ? 'pointer' : 'not-allowed',
+                        }}>
+                        <CalendarPlus size={12} /> Book
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

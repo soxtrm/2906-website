@@ -1357,7 +1357,14 @@ function Board() {
       {swipeResult && (
         <SwipeLinkCreatedModal url={swipeResult.url} count={swipeResult.count} onClose={() => setSwipeResult(null)} />
       )}
-      {swipePanelOpen && <SwipeLinksPanel onClose={() => setSwipePanelOpen(false)} />}
+      {swipePanelOpen && (
+        <SwipeLinksPanel
+          onClose={() => setSwipePanelOpen(false)}
+          isOnBoard={ref => rows.some(r => r.ref === ref)}
+          onChat={ref => { const row = rows.find(r => r.ref === ref); if (row) { setSwipePanelOpen(false); setFocusRef(ref); setChatting(row) } }}
+          onBook={ref => { const row = rows.find(r => r.ref === ref); if (row) { setSwipePanelOpen(false); setFocusRef(ref); setBooking(row) } }}
+        />
+      )}
     </CrmShell>
   )
 }
