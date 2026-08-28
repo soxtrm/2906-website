@@ -340,7 +340,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
             ⚠ You have used {reveals.used} of {reveals.limit} reveals today. Approaching daily limit.
           </div>
         )}
-        {reveals.used >= reveals.limit && (
+        {hasReveals && reveals.used >= reveals.limit && (
           <div style={{ background: '#FEE2E2', color: '#B91C1C', fontSize: 11, padding: '6px 26px', fontFamily: F, fontWeight: 700 }}>
             Reveal limit reached. Contact admin to raise your limit.
           </div>
