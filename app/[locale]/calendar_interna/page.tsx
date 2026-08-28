@@ -22,6 +22,7 @@ const API_BASE = ''
 interface Agent {
   id: number
   username: string
+  name?: string
   display_name: string
   color_hex: string
   whatsapp_phone: string
@@ -139,7 +140,7 @@ function CalendarInternaInner() {
           const l = (name || '').toLowerCase()
           return l === 'olga' ? 0 : (l === 'kev' || l === 'kevin') ? 1 : 2
         }
-        const label = (a: Agent) => a.display_name || a.username || `Agent ${a.id}`
+        const label = (a: Agent) => a.display_name || a.name || a.username || `Agent ${a.id}`
         const sorted = [...data].sort((a, b) =>
           rank(a.display_name) - rank(b.display_name) || a.id - b.id
         )

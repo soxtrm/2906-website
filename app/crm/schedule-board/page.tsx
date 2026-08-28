@@ -436,6 +436,23 @@ function Board() {
     return () => { alive = false }
   }, [f.beds, f.baths, f.min, f.max, f.type, sort, view, onlyConfirmed, avail, refreshTick])
 
+  // Deep link from the Agent Workspace dashboard's per-listing action buttons:
+  // ?ref=<ref>&action=chat|book opens the matching dialog directly instead of
+  // making the agent search for the card themselves. Runs once per ref (the
+  // guard prevents reopening a dialog the agent just closed on their own).
+  const deepLinkedRef = useRef<string | null>(null)
+  useEffect(() => {
+    const ref = params.get('ref')
+    const action = params.get('action')
+    if (!ref || deepLinkedRef.current === ref) return
+    const row = rows.find(r => r.ref === ref)
+    if (!row) return
+    deepLinkedRef.current = ref
+    setFocusRef(ref)
+    if (action === 'book') setBooking(row)
+    else if (action === 'chat') setChatting(row)
+  }, [rows, params])
+
   // The recheck tab's badge. Fetched separately so the count is visible while
   // the agent is on the board — an unread review queue that only announces
   // itself once you open it is a queue nobody empties.
