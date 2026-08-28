@@ -366,15 +366,15 @@ function EndScreen({
 function BrandPanel({ slideIndex }: { slideIndex: number }) {
   const slide = AD_SLIDES[slideIndex]
   return (
-    <div className="hidden lg:flex flex-col items-center justify-center w-[220px] xl:w-[280px] flex-shrink-0 text-center">
-      <BrandLogo vertical size={64} />
+    <div className="hidden lg:flex flex-col items-center justify-center w-[260px] xl:w-[340px] 2xl:w-[400px] flex-shrink-0 text-center">
+      <BrandLogo vertical size={76} />
       {slide.tagline && (
-        <p className="mt-8 text-white/70 text-[14px] leading-relaxed max-w-[220px]">{slide.tagline}</p>
+        <p className="mt-8 text-white/70 text-[15px] xl:text-[16px] leading-relaxed max-w-[260px]">{slide.tagline}</p>
       )}
       {slide.cta && (
         <div className="mt-8 flex flex-col items-center gap-2">
-          <span className="text-white text-[13px] font-medium tracking-wide">{slide.cta}</span>
-          <span className="text-[11px] text-[#0B1120] bg-white rounded-full px-3 py-1 font-medium tracking-wide">2906.ESTATE/CONTACT</span>
+          <span className="text-white text-[14px] font-medium tracking-wide">{slide.cta}</span>
+          <span className="text-[12px] text-[#0B1120] bg-white rounded-full px-3.5 py-1.5 font-medium tracking-wide">2906.ESTATE/CONTACT</span>
         </div>
       )}
     </div>
@@ -384,7 +384,7 @@ function BrandPanel({ slideIndex }: { slideIndex: number }) {
 // ── desktop-only right thumbnail grid — every OTHER listing, jump on click ───
 function ThumbGrid({ properties, index, favourited, onJump }: { properties: SwipeProperty[]; index: number; favourited: boolean[]; onJump: (i: number) => void }) {
   return (
-    <div className="hidden lg:grid flex-shrink-0 h-fit self-center grid-cols-2 gap-4 w-[220px] xl:w-[280px]">
+    <div className="hidden lg:grid flex-shrink-0 h-fit self-center grid-cols-2 gap-5 w-[260px] xl:w-[340px] 2xl:w-[400px]">
       {properties.map((p, i) => (
         <button
           key={p.ref}
@@ -642,11 +642,11 @@ export default function SwipePage() {
     <div className="fixed inset-0 overflow-hidden flex flex-col" style={{ background: BG }}>
       <div
         className="hidden lg:block absolute inset-0 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse 900px 700px at 50% 50%, rgba(184,149,63,0.07), transparent 70%)` }}
+        style={{ background: `radial-gradient(ellipse 1200px 800px at 50% 50%, rgba(184,149,63,0.08), transparent 70%)` }}
       />
-      <div className="flex-1 min-h-0 flex items-center justify-center gap-6 xl:gap-10 px-6 relative">
+      <div className="flex-1 min-h-0 flex items-center justify-center gap-10 xl:gap-16 2xl:gap-24 px-6 relative">
         <BrandPanel slideIndex={adIndex} />
-        <div className="w-full lg:w-[400px] lg:my-6 lg:rounded-[28px] lg:overflow-hidden flex-shrink-0 lg:h-[calc(100%-48px)]">
+        <div className="w-full lg:w-[440px] xl:w-[500px] 2xl:w-[560px] lg:my-6 lg:rounded-[28px] lg:overflow-hidden flex-shrink-0 lg:h-[calc(100%-48px)]">
           {Stage}
         </div>
         {total > 0 && (
