@@ -58,7 +58,17 @@ function Detail({ id }: { id: number }) {
     setSaving(true); setMsg('')
     try {
       const r = await crmJson(`properties/${id}`, 'PATCH', form)
-      setMsg(`Saved · ${r.activitiesLogged} activity entr${r.activitiesLogged === 1 ? 'y' : 'ies'} logged · completeness ${r.completeness}%`)
+      let webNote = ''
+      // website is only present when the published checkbox actually
+      // changed this save — see routes/crm.js PATCH /properties/:id.
+      if (r.website) {
+        webNote = r.website.ok
+          ? (r.website.action === 'inserted' ? ' · now live on the website' : ' · website updated')
+          : r.website.reason === 'not_ready'
+          ? ` · NOT published to the website yet — ${r.website.detail}`
+          : ' · website sync failed, check with Kev'
+      }
+      setMsg(`Saved · ${r.activitiesLogged} activity entr${r.activitiesLogged === 1 ? 'y' : 'ies'} logged · completeness ${r.completeness}%${webNote}`)
       await load()
     } catch (e: any) { setMsg(e?.message || 'Save failed') }
     finally { setSaving(false) }
