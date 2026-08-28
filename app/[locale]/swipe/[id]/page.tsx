@@ -33,7 +33,7 @@ const AD_SLIDES = [
   { top: 'LEADING THE WAY IN REAL ESTATE TECHNOLOGY IN MALTA.', link: null as string | null, tagline: null as string | null, cta: 'JOIN OUR TEAM!' },
   { top: 'SUGGEST US & PROFIT FROM IT', link: null as string | null, tagline: null as string | null, cta: 'JOIN OUR TEAM!' },
 ]
-const AD_ROTATE_MS = 5000
+const AD_ROTATE_MS = 9000
 
 function visitorKey(id: string) { return `swipe_visitor_${id}` }
 
@@ -68,11 +68,22 @@ function fmtSpecs(p: SwipeProperty) {
 function AdBar({ slideIndex }: { slideIndex: number }) {
   const slide = AD_SLIDES[slideIndex]
   return (
-    <div className="w-full flex items-center justify-center gap-2 py-2 px-3 text-center" style={{ background: BG }}>
-      <span className="text-[10px] font-semibold tracking-[0.14em] text-white uppercase">{slide.top}</span>
-      {slide.link && (
-        <span className="text-[10px] font-medium tracking-[0.1em] text-white/45">{slide.link}</span>
-      )}
+    <div className="w-full flex items-center justify-center gap-2 py-2 px-3 text-center overflow-hidden" style={{ background: BG }}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={slideIndex}
+          className="flex items-center justify-center gap-2"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        >
+          <span className="text-[10px] font-semibold tracking-[0.14em] text-white uppercase">{slide.top}</span>
+          {slide.link && (
+            <span className="text-[10px] font-medium tracking-[0.1em] text-white/45">{slide.link}</span>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }
@@ -193,12 +204,13 @@ function Card({
 
 // ── star (favourite) + heart (like) ──────────────────────────────────────────
 function ActionButton({
-  icon, active, activeColor, onPress,
+  icon, active, activeColor, onPress, size = 40,
 }: {
   icon: React.ReactNode
   active: boolean
   activeColor: string
   onPress: () => void
+  size?: number
 }) {
   const [burst, setBurst] = useState(0)
   return (
@@ -206,8 +218,8 @@ function ActionButton({
       type="button"
       onClick={() => { if (!active) { onPress(); setBurst(b => b + 1) } }}
       aria-pressed={active}
-      className="relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ background: active ? `${activeColor}22` : 'rgba(255,255,255,0.06)' }}
+      className="relative rounded-full flex items-center justify-center flex-shrink-0"
+      style={{ width: size, height: size, background: active ? `${activeColor}22` : 'rgba(255,255,255,0.06)' }}
     >
       <AnimatePresence>
         {burst > 0 && (
@@ -234,6 +246,7 @@ function ActionButton({
 // ── the black info strip below the card ──────────────────────────────────────
 function BottomBar({
   p, liked, favourited, onLike, onFavourite, onOpenDesc, photoIndex, photoTotal, allPhotosSeen,
+  properties, currentIndex, likedRefs, onJumpDot, onFinish,
 }: {
   p: SwipeProperty
   liked: boolean
@@ -244,16 +257,24 @@ function BottomBar({
   photoIndex: number
   photoTotal: number
   allPhotosSeen: boolean
+  properties: SwipeProperty[]
+  currentIndex: number
+  likedRefs: Set<string>
+  onJumpDot: (i: number) => void
+  onFinish: () => void
 }) {
   const specs = fmtSpecs(p).join(' · ')
   return (
-    <div className="flex items-start gap-3 px-1 pt-3 pb-1">
+    <>
+    <div className="flex items-center gap-3 px-1 pt-3 pb-1">
       <ActionButton
-        icon={<Star className="w-[18px] h-[18px]" style={{ color: favourited ? GOLD : '#F6F4EF' }} fill={favourited ? GOLD : 'none'} strokeWidth={favourited ? 0 : 1.75} />}
+        size={46}
+        icon={<Star className="w-[22px] h-[22px]" style={{ color: favourited ? GOLD : '#F6F4EF' }} fill={favourited ? GOLD : 'none'} strokeWidth={favourited ? 0 : 1.75} />}
         active={favourited} activeColor={GOLD} onPress={onFavourite}
       />
       <ActionButton
-        icon={<Heart className="w-[18px] h-[18px]" style={{ color: liked ? '#EF4444' : '#F6F4EF' }} fill={liked ? '#EF4444' : 'none'} strokeWidth={liked ? 0 : 1.75} />}
+        size={38}
+        icon={<Heart className="w-[16px] h-[16px]" style={{ color: liked ? '#EF4444' : '#F6F4EF' }} fill={liked ? '#EF4444' : 'none'} strokeWidth={liked ? 0 : 1.75} />}
         active={liked} activeColor="#EF4444" onPress={onLike}
       />
       <div className="flex-1 min-w-0">
@@ -284,6 +305,41 @@ function BottomBar({
         )}
       </div>
     </div>
+
+    {/* Kev, 2026-08-29: deck progress — one dot per property (gold once
+        liked), plus a "Done" pill once you have at least one like, so you
+        can wrap up and send your picks without swiping every remaining card. */}
+    {properties.length > 1 && (
+      <div className="flex items-center justify-between gap-3 px-1 pt-3 mt-1 border-t border-white/8">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {properties.map((pp, i) => (
+            <button
+              key={pp.ref}
+              type="button"
+              aria-label={`Go to listing ${i + 1}`}
+              onClick={() => onJumpDot(i)}
+              className="rounded-full flex-shrink-0 transition-all duration-150"
+              style={{
+                width: i === currentIndex ? 7 : 5, height: i === currentIndex ? 7 : 5,
+                background: likedRefs.has(pp.ref) ? GOLD : i === currentIndex ? '#FFFFFF' : 'rgba(255,255,255,0.25)',
+              }}
+            />
+          ))}
+        </div>
+        {likedRefs.size > 0 && (
+          <button
+            type="button"
+            onClick={onFinish}
+            className="flex items-center gap-1.5 text-[12px] font-medium rounded-full pl-2.5 pr-3 py-1.5 flex-shrink-0"
+            style={{ background: GOLD, color: BG }}
+          >
+            <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+            Done ({likedRefs.size})
+          </button>
+        )}
+      </div>
+    )}
+  </>
   )
 }
 
@@ -408,16 +464,26 @@ function BrandPanel({ slideIndex }: { slideIndex: number }) {
   const slide = AD_SLIDES[slideIndex]
   return (
     <div className="hidden lg:flex flex-col items-center justify-center w-[260px] xl:w-[340px] 2xl:w-[400px] flex-shrink-0 text-center">
-      <BrandLogo vertical size={76} />
-      {slide.tagline && (
-        <p className="mt-8 text-white/70 text-[15px] xl:text-[16px] leading-relaxed max-w-[260px]">{slide.tagline}</p>
-      )}
-      {slide.cta && (
-        <div className="mt-8 flex flex-col items-center gap-2">
-          <span className="text-white text-[14px] font-medium tracking-wide">{slide.cta}</span>
-          <span className="text-[12px] text-[#0B1120] bg-white rounded-full px-3.5 py-1.5 font-medium tracking-wide">2906.ESTATE/CONTACT</span>
-        </div>
-      )}
+      <BrandLogo vertical size={104} />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={slideIndex}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+        >
+          {slide.tagline && (
+            <p className="mt-8 text-white/70 text-[15px] xl:text-[16px] leading-relaxed max-w-[260px]">{slide.tagline}</p>
+          )}
+          {slide.cta && (
+            <div className="mt-8 flex flex-col items-center gap-2">
+              <span className="text-white text-[14px] font-medium tracking-wide">{slide.cta}</span>
+              <span className="text-[12px] text-[#0B1120] bg-white rounded-full px-3.5 py-1.5 font-medium tracking-wide">2906.ESTATE/CONTACT</span>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }
@@ -425,7 +491,7 @@ function BrandPanel({ slideIndex }: { slideIndex: number }) {
 // ── desktop-only right thumbnail grid — every OTHER listing, jump on click ───
 function ThumbGrid({ properties, index, favourited, onJump }: { properties: SwipeProperty[]; index: number; favourited: boolean[]; onJump: (i: number) => void }) {
   return (
-    <div className="hidden lg:grid flex-shrink-0 h-fit self-center grid-cols-2 gap-5 w-[260px] xl:w-[340px] 2xl:w-[400px]">
+    <div className="hidden lg:grid flex-shrink-0 h-fit self-center grid-cols-2 gap-3 w-[124px] xl:w-[144px]">
       {properties.map((p, i) => (
         <button
           key={p.ref}
@@ -673,6 +739,11 @@ export default function SwipePage() {
           photoIndex={photoIndex}
           photoTotal={current.images.length}
           allPhotosSeen={seenAllPhotos.has(current.ref)}
+          properties={properties}
+          currentIndex={index}
+          likedRefs={liked}
+          onJumpDot={jump}
+          onFinish={() => setIndex(total)}
         />
       )}
     </div>
@@ -684,7 +755,7 @@ export default function SwipePage() {
         className="hidden lg:block absolute inset-0 pointer-events-none"
         style={{ background: `radial-gradient(ellipse 1200px 800px at 50% 50%, rgba(184,149,63,0.08), transparent 70%)` }}
       />
-      <div className="flex-1 min-h-0 flex items-center justify-center gap-10 xl:gap-16 2xl:gap-24 px-6 relative">
+      <div className="flex-1 min-h-0 flex items-stretch justify-center gap-10 xl:gap-16 2xl:gap-24 px-6 relative">
         <BrandPanel slideIndex={adIndex} />
         <div className="w-full lg:w-[440px] xl:w-[500px] 2xl:w-[560px] lg:my-6 lg:rounded-[28px] lg:overflow-hidden flex-shrink-0 lg:h-[calc(100%-48px)]">
           {Stage}
