@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Heart, Star, ChevronUp, ChevronDown, BedDouble, Bath, Ruler, MapPin, X, Check } from 'lucide-react'
+import { Heart, Star, ChevronUp, ChevronDown, BedDouble, Bath, Ruler, MapPin, X, Check, CheckCircle2 } from 'lucide-react'
 
 const API_BASE = ''
 const GOLD = '#B8953F'
@@ -158,13 +158,14 @@ function Card({
           </>
         )}
 
-        {/* this listing's own photo position — right edge */}
+        {/* this listing's own photo position — right edge, tall + prominent so it reads as "more photos here" */}
         {photos.length > 1 && (
-          <div className="absolute right-3 top-12 bottom-24 flex flex-col items-center justify-center gap-[5px] z-10 pointer-events-none">
+          <div className="absolute right-3 top-14 bottom-16 flex flex-col items-center justify-center gap-[7px] z-10 pointer-events-none">
             {photos.map((_, i) => (
-              <span key={i} className="rounded-full" style={{
-                width: i === shown ? 5 : 4, height: i === shown ? 5 : 4,
-                background: i === shown ? '#FFFFFF' : 'rgba(255,255,255,0.32)',
+              <span key={i} className="rounded-full transition-all duration-150" style={{
+                width: i === shown ? 6 : 4, height: i === shown ? 6 : 4,
+                background: i === shown ? '#FFFFFF' : 'rgba(255,255,255,0.38)',
+                boxShadow: i === shown ? '0 0 0 3px rgba(255,255,255,0.18)' : undefined,
               }} />
             ))}
           </div>
@@ -232,7 +233,7 @@ function ActionButton({
 
 // ── the black info strip below the card ──────────────────────────────────────
 function BottomBar({
-  p, liked, favourited, onLike, onFavourite, descOpen, onToggleDesc,
+  p, liked, favourited, onLike, onFavourite, descOpen, onToggleDesc, photoIndex, photoTotal, allPhotosSeen,
 }: {
   p: SwipeProperty
   liked: boolean
@@ -241,6 +242,9 @@ function BottomBar({
   onFavourite: () => void
   descOpen: boolean
   onToggleDesc: () => void
+  photoIndex: number
+  photoTotal: number
+  allPhotosSeen: boolean
 }) {
   const specs = fmtSpecs(p).join(' · ')
   return (
@@ -258,13 +262,28 @@ function BottomBar({
           <MapPin className="w-3 h-3 text-white/50 flex-shrink-0" />
           <span className="truncate">{[p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'}</span>
         </div>
-        <div className="text-white/55 text-[12px] mt-0.5">{specs}</div>
+        <div className="flex items-center justify-between mt-0.5">
+          <span className="text-white/55 text-[12px]">{specs}</span>
+          {photoTotal > 1 && (
+            <div className="flex items-center gap-2 pl-3 flex-shrink-0">
+              <span className="w-px h-3 bg-white/15" />
+              <span className="flex items-center gap-1 text-[11px] font-medium tabular-nums" style={{ color: allPhotosSeen ? GOLD_LIGHT : 'rgba(255,255,255,0.5)' }}>
+                {photoIndex + 1}/{photoTotal}
+                <CheckCircle2 className="w-3.5 h-3.5" style={{ color: allPhotosSeen ? GOLD_LIGHT : 'rgba(255,255,255,0.3)' }} />
+              </span>
+            </div>
+          )}
+        </div>
         {p.description && (
-          <button type="button" onClick={onToggleDesc} className="text-left mt-1 block">
+          <button
+            type="button"
+            onClick={onToggleDesc}
+            className="text-left mt-1 -ml-1 block w-full px-1 py-1.5 rounded-md active:bg-white/5 transition-colors"
+          >
             {descOpen ? (
               <span className="text-white/60 text-[12px] leading-relaxed">{p.description}</span>
             ) : (
-              <span className="text-white/35 text-[12px] tracking-[0.2em]">····</span>
+              <span className="text-white/40 text-[12px] tracking-[0.2em]">···· <span className="text-white/25 tracking-normal">tap for details</span></span>
             )}
           </button>
         )}
@@ -347,7 +366,7 @@ function EndScreen({
 function BrandPanel({ slideIndex }: { slideIndex: number }) {
   const slide = AD_SLIDES[slideIndex]
   return (
-    <div className="hidden lg:flex flex-col items-center justify-center flex-1 h-full px-8 text-center">
+    <div className="hidden lg:flex flex-col items-center justify-center w-[220px] xl:w-[280px] flex-shrink-0 text-center">
       <BrandLogo vertical size={64} />
       {slide.tagline && (
         <p className="mt-8 text-white/70 text-[14px] leading-relaxed max-w-[220px]">{slide.tagline}</p>
@@ -365,14 +384,14 @@ function BrandPanel({ slideIndex }: { slideIndex: number }) {
 // ── desktop-only right thumbnail grid — every OTHER listing, jump on click ───
 function ThumbGrid({ properties, index, favourited, onJump }: { properties: SwipeProperty[]; index: number; favourited: boolean[]; onJump: (i: number) => void }) {
   return (
-    <div className="hidden lg:grid flex-shrink-0 h-fit self-center grid-cols-2 gap-3 px-8">
+    <div className="hidden lg:grid flex-shrink-0 h-fit self-center grid-cols-2 gap-4 w-[220px] xl:w-[280px]">
       {properties.map((p, i) => (
         <button
           key={p.ref}
           type="button"
           onClick={() => onJump(i)}
           aria-label={`Jump to #${p.ref}`}
-          className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 transition-transform hover:scale-105"
+          className="relative w-full aspect-square rounded-full overflow-hidden flex-shrink-0 transition-transform hover:scale-105"
           style={{
             outline: i === index ? '2px solid #FFFFFF' : 'none',
             outlineOffset: 2,
@@ -399,6 +418,7 @@ export default function SwipePage() {
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [favourited, setFavourited] = useState<Set<string>>(new Set())
   const [photoIndex, setPhotoIndex] = useState(0)
+  const [seenAllPhotos, setSeenAllPhotos] = useState<Set<string>>(new Set())
   const [descOpenRef, setDescOpenRef] = useState<string | null>(null)
   const [adIndex, setAdIndex] = useState(0)
   const [contactSending, setContactSending] = useState(false)
@@ -429,6 +449,18 @@ export default function SwipePage() {
     () => (properties || []).map(p => favourited.has(p.ref)),
     [properties, favourited],
   )
+
+  // Kev, 2026-08-29: the checkmark next to the photo counter confirms "you've
+  // paged through every photo on this listing" — it lights up once photoIndex
+  // reaches the last frame.
+  useEffect(() => {
+    const p = properties?.[index]
+    if (!p) return
+    const total = p.images.length
+    if (total > 1 && photoIndex >= total - 1) {
+      setSeenAllPhotos(prev => (prev.has(p.ref) ? prev : new Set(prev).add(p.ref)))
+    }
+  }, [photoIndex, properties, index])
 
   const jump = useCallback((i: number) => {
     setPhotoIndex(0)
@@ -598,6 +630,9 @@ export default function SwipePage() {
           onFavourite={() => favourite(current.ref)}
           descOpen={descOpenRef === current.ref}
           onToggleDesc={() => setDescOpenRef(o => o === current.ref ? null : current.ref)}
+          photoIndex={photoIndex}
+          photoTotal={current.images.length}
+          allPhotosSeen={seenAllPhotos.has(current.ref)}
         />
       )}
     </div>
@@ -605,10 +640,13 @@ export default function SwipePage() {
 
   return (
     <div className="fixed inset-0 overflow-hidden flex flex-col" style={{ background: BG }}>
-      <div className="hidden lg:block"><AdBar slideIndex={adIndex} /></div>
-      <div className="flex-1 min-h-0 flex items-stretch justify-center">
+      <div
+        className="hidden lg:block absolute inset-0 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse 900px 700px at 50% 50%, rgba(184,149,63,0.07), transparent 70%)` }}
+      />
+      <div className="flex-1 min-h-0 flex items-center justify-center gap-6 xl:gap-10 px-6 relative">
         <BrandPanel slideIndex={adIndex} />
-        <div className="w-full lg:w-[400px] lg:my-6 lg:rounded-[28px] lg:overflow-hidden flex-shrink-0">
+        <div className="w-full lg:w-[400px] lg:my-6 lg:rounded-[28px] lg:overflow-hidden flex-shrink-0 lg:h-[calc(100%-48px)]">
           {Stage}
         </div>
         {total > 0 && (
