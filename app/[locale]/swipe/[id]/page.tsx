@@ -220,7 +220,9 @@ function ActionButton({
   return (
     <button
       type="button"
-      onClick={() => { if (!active) { onPress(); setBurst(b => b + 1) } }}
+      // Kev, 2026-08-29: tapping the already-active one now un-picks it —
+      // heart and star are a real toggle, not a one-way flag.
+      onClick={() => { onPress(); if (!active) setBurst(b => b + 1) }}
       aria-pressed={active}
       className="relative rounded-full flex items-center justify-center flex-shrink-0"
       style={{
@@ -254,7 +256,7 @@ function ActionButton({
 // ── the black info strip below the card ──────────────────────────────────────
 function BottomBar({
   p, liked, favourited, onLike, onFavourite, onOpenDesc, photoIndex, photoTotal, allPhotosSeen,
-  properties, currentIndex, likedRefs, onJumpDot, onFinish,
+  properties, currentIndex, pickedRefs, onJumpDot, onFinish,
 }: {
   p: SwipeProperty
   liked: boolean
@@ -267,7 +269,9 @@ function BottomBar({
   allPhotosSeen: boolean
   properties: SwipeProperty[]
   currentIndex: number
-  likedRefs: Set<string>
+  // both kinds — heart and star are mutually exclusive per property now, so
+  // this is "every property with a pick", not just likes.
+  pickedRefs: Set<string>
   onJumpDot: (i: number) => void
   onFinish: () => void
 }) {
@@ -330,12 +334,12 @@ function BottomBar({
               className="rounded-full flex-shrink-0 transition-all duration-150"
               style={{
                 width: i === currentIndex ? 7 : 5, height: i === currentIndex ? 7 : 5,
-                background: likedRefs.has(pp.ref) ? GOLD : i === currentIndex ? '#FFFFFF' : 'rgba(255,255,255,0.25)',
+                background: pickedRefs.has(pp.ref) ? GOLD : i === currentIndex ? '#FFFFFF' : 'rgba(255,255,255,0.25)',
               }}
             />
           ))}
         </div>
-        {likedRefs.size > 0 && (
+        {pickedRefs.size > 0 && (
           <button
             type="button"
             onClick={onFinish}
@@ -343,7 +347,7 @@ function BottomBar({
             style={{ background: GOLD, color: BG }}
           >
             <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-            Done ({likedRefs.size})
+            Done ({pickedRefs.size})
           </button>
         )}
       </div>
@@ -403,7 +407,7 @@ function DescriptionModal({ p, onClose }: { p: SwipeProperty | null; onClose: ()
 // link to a known recipient himself, so nothing to collect here. The picks
 // already reach the agent through the CRM's swipe-links panel (Chat/Book
 // buttons on each liked listing); this screen is just the customer's recap.
-function EndScreen({ likedList }: { likedList: SwipeProperty[] }) {
+function EndScreen({ pickedList }: { pickedList: SwipeProperty[] }) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center px-7 text-center">
       <div className="w-11 h-11 rounded-full flex items-center justify-center mb-5" style={{ background: 'rgba(184,149,63,0.14)' }}>
@@ -413,14 +417,14 @@ function EndScreen({ likedList }: { likedList: SwipeProperty[] }) {
         That's everything for you
       </h1>
       <p className="text-white/55 text-[13px] mb-7 max-w-xs">
-        {likedList.length > 0
-          ? `You liked ${likedList.length} place${likedList.length === 1 ? '' : 's'} — we're checking availability and will follow up if it's still on.`
+        {pickedList.length > 0
+          ? `You picked ${pickedList.length} place${pickedList.length === 1 ? '' : 's'} — your agent has the list and will follow up.`
           : 'You made it through the whole set. Swipe back any time to look again.'}
       </p>
 
-      {likedList.length > 0 && (
+      {pickedList.length > 0 && (
         <div className="flex gap-2 mb-8 overflow-x-auto max-w-full pb-1 px-1">
-          {likedList.map(p => (
+          {pickedList.map(p => (
             <div key={p.ref} className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-white/10">
               {p.images[0]
                 ? <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
@@ -521,9 +525,15 @@ export default function SwipePage() {
     return () => clearInterval(t)
   }, [])
 
-  const likedList = useMemo(
-    () => (properties || []).filter(p => liked.has(p.ref)),
-    [properties, liked],
+  // Recap counts BOTH kinds — heart and star are mutually exclusive per
+  // property now, so this is just "every property with a pick".
+  const pickedList = useMemo(
+    () => (properties || []).filter(p => liked.has(p.ref) || favourited.has(p.ref)),
+    [properties, liked, favourited],
+  )
+  const pickedRefs = useMemo(
+    () => new Set<string>([...liked, ...favourited]),
+    [liked, favourited],
   )
   const favouredFlags = useMemo(
     () => (properties || []).map(p => favourited.has(p.ref)),
@@ -557,11 +567,18 @@ export default function SwipePage() {
     })
   }, [properties])
 
+  // Kev, 2026-08-29: heart and star are mutually exclusive per property, and
+  // tapping the active one again un-picks it — one pick per property, kind
+  // says which. Neither one contacts the owner; both just record the pick
+  // for the agent's overview (star ranks above like there — the stronger
+  // signal).
   const like = useCallback((ref: string) => {
     setLiked(prev => {
-      if (prev.has(ref)) return prev
-      const next = new Set(prev); next.add(ref); return next
+      const next = new Set(prev)
+      if (next.has(ref)) next.delete(ref); else next.add(ref)
+      return next
     })
+    setFavourited(prev => { if (!prev.has(ref)) return prev; const next = new Set(prev); next.delete(ref); return next })
     fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}/like`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -569,15 +586,13 @@ export default function SwipePage() {
     }).catch(() => {})
   }, [id])
 
-  // Kev, 2026-08-29: favourite (star) now persists too, same shape as like -
-  // it ranks ABOVE like in the agent's list (star = the stronger signal).
-  // Neither one contacts the owner; both just record the pick for the
-  // agent's overview.
   const favourite = useCallback((ref: string) => {
     setFavourited(prev => {
-      if (prev.has(ref)) return prev
-      const next = new Set(prev); next.add(ref); return next
+      const next = new Set(prev)
+      if (next.has(ref)) next.delete(ref); else next.add(ref)
+      return next
     })
+    setLiked(prev => { if (!prev.has(ref)) return prev; const next = new Set(prev); next.delete(ref); return next })
     fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}/favourite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -654,7 +669,7 @@ export default function SwipePage() {
       <div className="lg:hidden"><AdBar slideIndex={adIndex} /></div>
       <div className="relative flex-1 p-3">
         {atEnd ? (
-          <EndScreen likedList={likedList} />
+          <EndScreen pickedList={pickedList} />
         ) : (
           <>
             {total > 0 && (
@@ -706,7 +721,7 @@ export default function SwipePage() {
           allPhotosSeen={seenAllPhotos.has(current.ref)}
           properties={properties}
           currentIndex={index}
-          likedRefs={liked}
+          pickedRefs={pickedRefs}
           onJumpDot={jump}
           onFinish={() => setIndex(total)}
         />
