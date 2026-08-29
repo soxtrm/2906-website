@@ -2721,14 +2721,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           ))}
         </div>
 
-        {/* ── utility icon row + 2906 wordmark ───────────────────────────────
+        {/* ── utility icon row ────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: replaces the thumbnail strip + flag +
             pause icons — "cleaner and nicer... die eh nicht funktioniert
             haben raus" (the ones that never worked, out). Four tools
-            (download / copy link / facebook queue / price), the wordmark
-            centred over the row regardless of how many icons are shown. */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginTop: 10, minHeight: 20 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 12, zIndex: 1 }}>
+            (download / copy link / facebook queue / price).
+            2026-08-30 follow-up: dropped the centred wordmark and tightened
+            marginTop so the bar sits shorter — "logo in der mitte wieder
+            entfernen ... icons links ... weniger space nach oben". */}
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 4 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <PhotoDownload r={r} />
             {/* Copy — the persistent share link for THIS listing (Prompt A).
                 Kev may still rethink single-listing sharing later; the real
@@ -2751,7 +2753,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               <Euro size={13} />
             </button>
           </span>
-          <img src="/logo-wide.png" alt="2906" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', height: 12, opacity: 0.55 }} />
         </div>
         {rowMsg && <div style={{ fontSize: 10.5, color: A, marginTop: 4 }}>{rowMsg}</div>}
 
