@@ -204,13 +204,17 @@ function Card({
 
 // ── star (favourite) + heart (like) ──────────────────────────────────────────
 function ActionButton({
-  icon, active, activeColor, onPress, size = 40,
+  icon, active, activeColor, onPress, size = 40, alwaysRing = false,
 }: {
   icon: React.ReactNode
   active: boolean
   activeColor: string
   onPress: () => void
   size?: number
+  // Kev, 2026-08-29: the star outranks the heart — it gets a permanent gold
+  // ring even before it's tapped, so it reads as the primary action, not an
+  // equal pair.
+  alwaysRing?: boolean
 }) {
   const [burst, setBurst] = useState(0)
   return (
@@ -219,7 +223,11 @@ function ActionButton({
       onClick={() => { if (!active) { onPress(); setBurst(b => b + 1) } }}
       aria-pressed={active}
       className="relative rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ width: size, height: size, background: active ? `${activeColor}22` : 'rgba(255,255,255,0.06)' }}
+      style={{
+        width: size, height: size,
+        background: active ? `${activeColor}22` : 'rgba(255,255,255,0.06)',
+        border: alwaysRing && !active ? `1.5px solid ${activeColor}55` : undefined,
+      }}
     >
       <AnimatePresence>
         {burst > 0 && (
@@ -268,13 +276,14 @@ function BottomBar({
     <>
     <div className="flex items-center gap-3 px-1 pt-3 pb-1">
       <ActionButton
-        size={46}
-        icon={<Star className="w-[22px] h-[22px]" style={{ color: favourited ? GOLD : '#F6F4EF' }} fill={favourited ? GOLD : 'none'} strokeWidth={favourited ? 0 : 1.75} />}
+        size={54}
+        alwaysRing
+        icon={<Star className="w-[26px] h-[26px]" style={{ color: favourited ? GOLD : '#F6F4EF' }} fill={favourited ? GOLD : 'none'} strokeWidth={favourited ? 0 : 1.75} />}
         active={favourited} activeColor={GOLD} onPress={onFavourite}
       />
       <ActionButton
-        size={38}
-        icon={<Heart className="w-[16px] h-[16px]" style={{ color: liked ? '#EF4444' : '#F6F4EF' }} fill={liked ? '#EF4444' : 'none'} strokeWidth={liked ? 0 : 1.75} />}
+        size={34}
+        icon={<Heart className="w-[14px] h-[14px]" style={{ color: liked ? '#EF4444' : '#F6F4EF' }} fill={liked ? '#EF4444' : 'none'} strokeWidth={liked ? 0 : 1.75} />}
         active={liked} activeColor="#EF4444" onPress={onLike}
       />
       <div className="flex-1 min-w-0">
@@ -560,18 +569,21 @@ export default function SwipePage() {
     }).catch(() => {})
   }, [id])
 
-  // Favourite is a lighter, visual-only signal for now (colours the top dot
-  // green) — it does not call the availability-check backend the way a like
-  // does; only "like" (the heart) is the customer's real "yes, check this
-  // one" per the original spec. Easy to wire to its own endpoint later if
-  // Kev wants favourites to do more than mark the deck.
+  // Kev, 2026-08-29: favourite (star) now persists too, same shape as like -
+  // it ranks ABOVE like in the agent's list (star = the stronger signal).
+  // Neither one contacts the owner; both just record the pick for the
+  // agent's overview.
   const favourite = useCallback((ref: string) => {
     setFavourited(prev => {
-      const next = new Set(prev)
-      if (next.has(ref)) next.delete(ref); else next.add(ref)
-      return next
+      if (prev.has(ref)) return prev
+      const next = new Set(prev); next.add(ref); return next
     })
-  }, [])
+    fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}/favourite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref, visitorId: visitorId.current }),
+    }).catch(() => {})
+  }, [id])
 
   // Kev, 2026-08-29: LEFT/RIGHT = apartment to apartment (right = like +
   // next, left = back only, never a dislike). UP/DOWN = this listing's OWN
@@ -713,7 +725,7 @@ export default function SwipePage() {
         <div className="w-full lg:w-[440px] xl:w-[500px] 2xl:w-[560px] lg:my-6 lg:rounded-[28px] lg:overflow-hidden flex-shrink-0 lg:h-[calc(100%-48px)]">
           {Stage}
         </div>
-        {total > 0 && (
+        {total > 0 && !atEnd && (
           <ThumbGrid properties={properties} index={index} favourited={favouredFlags} onJump={jump} />
         )}
       </div>

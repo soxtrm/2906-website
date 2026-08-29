@@ -1,14 +1,13 @@
 'use client'
 // components/crm/swipe-dialogs.tsx — Swipe Boards, agent-authenticated half.
 // Two pieces: the "here's your link" confirmation after creating one, and
-// the results panel (every link this agent made, who liked what, and the
-// availability-check outcome each like triggered). The public swipe/like
-// page itself is app/[locale]/swipe/[id]/page.tsx; a like there calls the
-// same requestOwnerAvailability/listingAgentNotify path the board's own
-// "Request Availability" button uses — nothing new to explain here, the
-// av_status column already says what happened.
+// the results panel (every link this agent made, who liked/favourited
+// what). The public swipe page (app/[locale]/swipe/[id]/page.tsx) never
+// contacts the owner by itself — a like or favourite there just records the
+// pick (routes/swipe.js). This panel is the agent's overview of those
+// picks; Chat/Book below act on them deliberately, same as the board.
 import { useState, useEffect } from 'react'
-import { X, Copy, Check, Link2, Heart, MessageCircle, CalendarPlus } from 'lucide-react'
+import { X, Copy, Check, Link2, Heart, Star, MessageCircle, CalendarPlus } from 'lucide-react'
 import { crmJson } from '@/lib/crm/api'
 import { A, AD, NAVY, F, FM } from '@/lib/crm/ui'
 
@@ -16,6 +15,7 @@ import { A, AD, NAVY, F, FM } from '@/lib/crm/ui'
 // AVAIL.available) — reused verbatim so this reads as the same system, not a
 // new one.
 const GREEN = '#15803D', GREEN_BG = '#DCFCE7'
+const GOLD = '#B8953F'
 
 const overlay: React.CSSProperties = {
   position: 'fixed', inset: 0, background: 'rgba(27,42,74,0.45)',
@@ -72,23 +72,14 @@ export function SwipeLinkCreatedModal({ url, count, onClose }: { url: string; co
   )
 }
 
-// ── results: every link + who liked what ─────────────────────────────────
-type LinkRow = { id: string; title: string | null; created_at: string; active: boolean; property_count: number; like_count: number; visitor_count: number }
+// ── results: every link + who liked/favourited what ───────────────────────
+type LinkRow = { id: string; title: string | null; created_at: string; active: boolean; property_count: number; like_count: number; favourite_count: number; visitor_count: number }
 type LinkDetail = {
   id: string; title: string | null; url: string
   properties: { id: number; ref: string; town: string | null; bedrooms: number | null }[]
-  likes: { property_id: number; visitor_id: string; liked_at: string; av_status: string | null; av_message: string | null; contact_name: string | null; contact_phone: string | null }[]
-}
-
-const AV_LABEL: Record<string, string> = {
-  sent: 'Owner asked', dry_run: 'Owner would be asked (test mode)', sent_shortcut: 'Answered instantly (already confirmed)',
-  already_checked_today: 'Owner already asked today', no_owner: 'No owner on file', no_owner_phone: 'No owner phone on file',
-  no_account: 'No account free to send from', relayed: 'Sent to listing agent', no_creator_agent: 'Link owner inactive',
-  listing_agent_unavailable: 'Listing agent unavailable', error: 'Something went wrong', not_found: 'Listing not found',
-}
-function avLabel(status: string | null) {
-  if (!status) return '—'
-  return AV_LABEL[status] || status.replace(/_/g, ' ')
+  // kind: 'favourite' (star) ranks above 'like' (heart) — the backend already
+  // sorts favourites first; this panel just renders that order.
+  likes: { property_id: number; visitor_id: string; liked_at: string; kind: 'like' | 'favourite'; contact_name: string | null; contact_phone: string | null }[]
 }
 
 export function SwipeLinksPanel({
@@ -155,9 +146,14 @@ export function SwipeLinksPanel({
                   {new Date(l.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })} · {l.property_count} listings
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: l.like_count ? A : '#CCC', fontWeight: 700, fontSize: 13 }}>
-                <Heart size={14} fill={l.like_count ? A : 'none'} /> {l.like_count}
-                <span style={{ fontSize: 10, color: '#BBB', fontWeight: 400, marginLeft: 2 }}>({l.visitor_count} visitor{l.visitor_count === 1 ? '' : 's'})</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: l.favourite_count ? GOLD : '#CCC' }}>
+                  <Star size={13} fill={l.favourite_count ? GOLD : 'none'} /> {l.favourite_count}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: l.like_count ? '#EF4444' : '#CCC' }}>
+                  <Heart size={13} fill={l.like_count ? '#EF4444' : 'none'} /> {l.like_count}
+                </span>
+                <span style={{ fontSize: 10, color: '#BBB', fontWeight: 400 }}>({l.visitor_count} visitor{l.visitor_count === 1 ? '' : 's'})</span>
               </div>
             </button>
           ))}
@@ -175,12 +171,14 @@ export function SwipeLinksPanel({
                 return (
                 <div key={i} style={{ padding: '11px 0', borderBottom: i < detail.likes.length - 1 ? '1px solid #F2F0EA' : 'none' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: '#1A1A1A' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#1A1A1A' }}>
+                      {lk.kind === 'favourite'
+                        ? <Star size={13} fill={GOLD} color={GOLD} />
+                        : <Heart size={13} fill="#EF4444" color="#EF4444" />}
                       #{ref || lk.property_id} {refOf(lk.property_id)?.town ? `— ${refOf(lk.property_id)?.town}` : ''}
                     </span>
                     <span style={{ fontSize: 10.5, color: '#999' }}>{new Date(lk.liked_at).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <div style={{ fontSize: 11.5, color: A, marginTop: 3, fontWeight: 600 }}>{avLabel(lk.av_status)}</div>
                   {(lk.contact_name || lk.contact_phone) && (
                     <div style={{ fontSize: 11.5, color: '#666', marginTop: 3 }}>
                       Left contact: {[lk.contact_name, lk.contact_phone].filter(Boolean).join(' · ')}
