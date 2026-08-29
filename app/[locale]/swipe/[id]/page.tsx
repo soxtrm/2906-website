@@ -389,17 +389,12 @@ function DescriptionModal({ p, onClose }: { p: SwipeProperty | null; onClose: ()
   )
 }
 
-// ── recap + optional contact, shown after the last card ──────────────────
-function EndScreen({
-  likedList, onSendContact, sending, sent,
-}: {
-  likedList: SwipeProperty[]
-  onSendContact: (name: string, phone: string) => void
-  sending: boolean
-  sent: boolean
-}) {
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
+// ── recap, shown once done / after the last card ──────────────────────────
+// Kev, 2026-08-29: dropped the "leave your contact" form — he's sending the
+// link to a known recipient himself, so nothing to collect here. The picks
+// already reach the agent through the CRM's swipe-links panel (Chat/Book
+// buttons on each liked listing); this screen is just the customer's recap.
+function EndScreen({ likedList }: { likedList: SwipeProperty[] }) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center px-7 text-center">
       <div className="w-11 h-11 rounded-full flex items-center justify-center mb-5" style={{ background: 'rgba(184,149,63,0.14)' }}>
@@ -426,35 +421,6 @@ function EndScreen({
         </div>
       )}
 
-      {!sent ? (
-        <div className="w-full max-w-xs">
-          <p className="text-white/40 text-[11px] uppercase tracking-wider mb-3">Want us to reach out first? (optional)</p>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Your name"
-            className="w-full mb-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 outline-none focus:border-[#B8953F]/60"
-          />
-          <input
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder="Phone number"
-            inputMode="tel"
-            className="w-full mb-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 outline-none focus:border-[#B8953F]/60"
-          />
-          <button
-            type="button"
-            disabled={sending || (!name.trim() && !phone.trim())}
-            onClick={() => onSendContact(name.trim(), phone.trim())}
-            className="w-full py-3 rounded-xl text-sm font-medium text-[#0B1120] disabled:opacity-30 transition-opacity"
-            style={{ background: GOLD }}
-          >
-            {sending ? 'Sending…' : 'Leave my details'}
-          </button>
-        </div>
-      ) : (
-        <p className="text-[13px]" style={{ color: GOLD_LIGHT }}>Thanks — we'll be in touch.</p>
-      )}
     </div>
   )
 }
@@ -528,8 +494,6 @@ export default function SwipePage() {
   const [seenAllPhotos, setSeenAllPhotos] = useState<Set<string>>(new Set())
   const [descModalOpen, setDescModalOpen] = useState(false)
   const [adIndex, setAdIndex] = useState(0)
-  const [contactSending, setContactSending] = useState(false)
-  const [contactSent, setContactSent] = useState(false)
   const visitorId = useRef<string>('')
   const x = useMotionValue(0)
   const y = useMotionValue(0)
@@ -647,17 +611,6 @@ export default function SwipePage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [advance, like, properties, index, onTapPhoto])
 
-  const sendContact = useCallback((name: string, phone: string) => {
-    setContactSending(true)
-    fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}/contact`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visitorId: visitorId.current, name: name || undefined, phone: phone || undefined }),
-    })
-      .then(() => setContactSent(true))
-      .finally(() => setContactSending(false))
-  }, [id])
-
   if (notFound) {
     return (
       <div className="min-h-screen flex items-center justify-center px-6" style={{ background: BG }}>
@@ -689,7 +642,7 @@ export default function SwipePage() {
       <div className="lg:hidden"><AdBar slideIndex={adIndex} /></div>
       <div className="relative flex-1 p-3">
         {atEnd ? (
-          <EndScreen likedList={likedList} onSendContact={sendContact} sending={contactSending} sent={contactSent} />
+          <EndScreen likedList={likedList} />
         ) : (
           <>
             {total > 0 && (
