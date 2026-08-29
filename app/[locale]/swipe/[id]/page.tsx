@@ -407,7 +407,9 @@ function DescriptionModal({ p, onClose }: { p: SwipeProperty | null; onClose: ()
 // link to a known recipient himself, so nothing to collect here. The picks
 // already reach the agent through the CRM's swipe-links panel (Chat/Book
 // buttons on each liked listing); this screen is just the customer's recap.
-function EndScreen({ pickedList }: { pickedList: SwipeProperty[] }) {
+type Picked = { p: SwipeProperty; kind: 'like' | 'favourite'; at: number }
+
+function EndScreen({ pickedList }: { pickedList: Picked[] }) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center px-7 text-center">
       <div className="w-11 h-11 rounded-full flex items-center justify-center mb-5" style={{ background: 'rgba(184,149,63,0.14)' }}>
@@ -423,17 +425,33 @@ function EndScreen({ pickedList }: { pickedList: SwipeProperty[] }) {
       </p>
 
       {pickedList.length > 0 && (
-        <div className="flex gap-2 mb-8 overflow-x-auto max-w-full pb-1 px-1">
-          {pickedList.map(p => (
-            <div key={p.ref} className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-white/10">
-              {p.images[0]
-                ? <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-navy" />}
+        <div className="w-full max-w-xs mb-2 flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
+          {pickedList.map(({ p, kind, at }) => (
+            <div key={p.ref} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-left">
+              <div className="relative w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
+                {p.images[0]
+                  ? <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-navy" />}
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{ background: kind === 'favourite' ? GOLD : '#EF4444' }}>
+                  {kind === 'favourite'
+                    ? <Star className="w-[11px] h-[11px]" fill={BG} color={BG} />
+                    : <Heart className="w-[10px] h-[10px]" fill={BG} color={BG} />}
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-white text-[12.5px] font-medium truncate">
+                  {[p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'}
+                </div>
+                <div className="text-white/40 text-[11px]">
+                  {kind === 'favourite' ? 'Favourited' : 'Liked'}
+                  {at > 0 && ` · ${new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                </div>
+              </div>
             </div>
           ))}
         </div>
       )}
-
     </div>
   )
 }
@@ -503,6 +521,9 @@ export default function SwipePage() {
   const [index, setIndex] = useState(0)
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [favourited, setFavourited] = useState<Set<string>>(new Set())
+  // Kev, 2026-08-29: the end-screen recap needs a timestamp per pick, not
+  // just the image — when it happened, not only what.
+  const [pickedAt, setPickedAt] = useState<Map<string, number>>(new Map())
   const [photoIndex, setPhotoIndex] = useState(0)
   const [seenAllPhotos, setSeenAllPhotos] = useState<Set<string>>(new Set())
   const [descModalOpen, setDescModalOpen] = useState(false)
@@ -526,11 +547,14 @@ export default function SwipePage() {
   }, [])
 
   // Recap counts BOTH kinds — heart and star are mutually exclusive per
-  // property now, so this is just "every property with a pick".
-  const pickedList = useMemo(
-    () => (properties || []).filter(p => liked.has(p.ref) || favourited.has(p.ref)),
-    [properties, liked, favourited],
-  )
+  // property now, so this is just "every property with a pick", newest
+  // first, each carrying which kind and when.
+  const pickedList = useMemo(() => {
+    const list = (properties || [])
+      .filter(p => liked.has(p.ref) || favourited.has(p.ref))
+      .map(p => ({ p, kind: favourited.has(p.ref) ? 'favourite' as const : 'like' as const, at: pickedAt.get(p.ref) || 0 }))
+    return list.sort((a, b) => b.at - a.at)
+  }, [properties, liked, favourited, pickedAt])
   const pickedRefs = useMemo(
     () => new Set<string>([...liked, ...favourited]),
     [liked, favourited],
@@ -575,7 +599,13 @@ export default function SwipePage() {
   const like = useCallback((ref: string) => {
     setLiked(prev => {
       const next = new Set(prev)
-      if (next.has(ref)) next.delete(ref); else next.add(ref)
+      const turningOn = !next.has(ref)
+      if (turningOn) next.add(ref); else next.delete(ref)
+      setPickedAt(m => {
+        const nm = new Map(m)
+        if (turningOn) nm.set(ref, Date.now()); else nm.delete(ref)
+        return nm
+      })
       return next
     })
     setFavourited(prev => { if (!prev.has(ref)) return prev; const next = new Set(prev); next.delete(ref); return next })
@@ -589,7 +619,13 @@ export default function SwipePage() {
   const favourite = useCallback((ref: string) => {
     setFavourited(prev => {
       const next = new Set(prev)
-      if (next.has(ref)) next.delete(ref); else next.add(ref)
+      const turningOn = !next.has(ref)
+      if (turningOn) next.add(ref); else next.delete(ref)
+      setPickedAt(m => {
+        const nm = new Map(m)
+        if (turningOn) nm.set(ref, Date.now()); else nm.delete(ref)
+        return nm
+      })
       return next
     })
     setLiked(prev => { if (!prev.has(ref)) return prev; const next = new Set(prev); next.delete(ref); return next })
