@@ -223,3 +223,119 @@ export function SwipeLinksPanel({
     </div>
   )
 }
+
+// ── MATCH — Property -> Clients (Kev's Prompt B, 2026-08-29) ────────────────
+// Same engine as Client -> Properties (services/matchEngine.js), reached
+// here from a property card's own MATCH button. Score + a plain-language
+// reason list per client, so the agent can see AT A GLANCE whether the
+// recommendation makes sense rather than trusting a bare percentage.
+type MatchReason = { key: string; ok: boolean | null; label: string }
+type MatchRow = { clientId: string; clientName: string; clientPhone: string | null; leadAgent: string | null; score: number; reasons: MatchReason[] }
+
+function reasonGlyph(ok: boolean | null) {
+  if (ok === true) return { sym: '✓', color: GREEN }
+  if (ok === false) return { sym: '✗', color: '#B91C1C' }
+  return { sym: '~', color: '#B8953F' }
+}
+
+export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: string; onClose: () => void }) {
+  const [matches, setMatches] = useState<MatchRow[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [shareBusy, setShareBusy] = useState<string | null>(null)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    crmJson(`schedule-board/property-matches/${encodeURIComponent(propertyRef)}`, 'GET')
+      .then(d => setMatches(d.matches || []))
+      .catch(e => setErr(e?.message || 'Could not load matches'))
+  }, [propertyRef])
+
+  // Reuses the SAME persistent, tokenised property link every time (Kev's
+  // Prompt A) — nothing new is generated per click, per client, or per share.
+  const share = async () => {
+    setShareBusy(propertyRef)
+    try {
+      const d = await crmJson(`schedule-board/property-link/${encodeURIComponent(propertyRef)}`, 'GET')
+      setShareUrl(d.url)
+    } catch (e: any) {
+      setErr(e?.message || 'Could not create the share link')
+    } finally {
+      setShareBusy(null)
+    }
+  }
+  const copy = async () => {
+    if (!shareUrl) return
+    try { await navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 1800) }
+    catch { /* clipboard blocked — the field itself is still selectable */ }
+  }
+
+  return (
+    <div style={overlay} onClick={onClose}>
+      <div style={sheet} onClick={e => e.stopPropagation()}>
+        <div style={head}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
+            🎯 Matching clients for #{propertyRef}
+          </div>
+          <button onClick={onClose} style={{ border: 0, background: 'none', cursor: 'pointer', color: '#999' }}><X size={18} /></button>
+        </div>
+
+        <div style={{ padding: '10px 18px 6px' }}>
+          {!shareUrl ? (
+            <button onClick={share} disabled={!!shareBusy} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8,
+              border: `1px solid ${A}`, background: '#FFF', color: A, fontWeight: 700, fontSize: 12, fontFamily: F,
+              cursor: shareBusy ? 'wait' : 'pointer',
+            }}>
+              <Link2 size={13} /> {shareBusy ? 'Getting link…' : 'Get share link for this listing'}
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input readOnly value={shareUrl} onFocus={e => e.currentTarget.select()}
+                style={{ flex: 1, minWidth: 0, padding: '8px 10px', borderRadius: 8, border: '1px solid #E9E5DC', fontFamily: FM, fontSize: 11.5, color: '#333', background: '#FAFAF7' }} />
+              <button onClick={copy} style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8, border: 'none',
+                background: copied ? GREEN_BG : NAVY, color: copied ? GREEN : '#FFF', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0,
+              }}>
+                {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          )}
+          <p style={{ fontSize: 11, color: '#999', margin: '6px 0 0' }}>
+            One link for this listing — paste it to whichever client you pick below, or reuse it anywhere.
+          </p>
+        </div>
+
+        <div style={{ overflowY: 'auto', padding: '4px 18px 18px' }}>
+          {err && <div style={{ padding: '16px 0', color: '#B91C1C', fontSize: 12.5 }}>{err}</div>}
+          {!err && matches === null && <div style={{ padding: '40px 0', textAlign: 'center', color: '#BBB', fontSize: 12.5 }}>Matching…</div>}
+          {!err && matches && matches.length === 0 && (
+            <div style={{ padding: '40px 0', textAlign: 'center', color: '#BBB', fontSize: 12.5 }}>
+              No active clients score high enough against this listing right now.
+            </div>
+          )}
+          {!err && matches && matches.map((m, i) => (
+            <div key={m.clientId} style={{ padding: '12px 0', borderBottom: i < matches.length - 1 ? '1px solid #F2F0EA' : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontWeight: 700, fontSize: 13.5, color: '#1A1A1A' }}>
+                  {m.score}% — {m.clientName}
+                </span>
+                {m.leadAgent && <span style={{ fontSize: 10.5, color: '#999' }}>Lead: {m.leadAgent}</span>}
+              </div>
+              <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {m.reasons.map(r => {
+                  const g = reasonGlyph(r.ok)
+                  return (
+                    <span key={r.key} style={{ fontSize: 11.5, color: '#555' }}>
+                      <span style={{ color: g.color, fontWeight: 700, marginRight: 5 }}>{g.sym}</span>{r.label}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

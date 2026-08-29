@@ -518,6 +518,7 @@ export default function SwipePage() {
   const id = String(params.id || '')
   const [properties, setProperties] = useState<SwipeProperty[] | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [expiredMessage, setExpiredMessage] = useState<string | null>(null)
   const [index, setIndex] = useState(0)
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [favourited, setFavourited] = useState<Set<string>>(new Set())
@@ -537,7 +538,14 @@ export default function SwipePage() {
     visitorId.current = getVisitorId(id)
     fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}`)
       .then(r => { if (!r.ok) throw new Error('not found'); return r.json() })
-      .then(d => setProperties(Array.isArray(d.properties) ? d.properties : []))
+      .then(d => {
+        // Kev's Prompt A (2026-08-29): a live link (client TTL, or property
+        // TTL/rented/off-market) comes back 200 with expired:true, distinct
+        // from a paused/nonexistent link (non-200, notFound below) — the
+        // record persists server-side, only public access ends.
+        if (d.expired) { setExpiredMessage(d.message || 'This link has expired.'); return }
+        setProperties(Array.isArray(d.properties) ? d.properties : [])
+      })
       .catch(() => setNotFound(true))
   }, [id])
 
@@ -673,6 +681,20 @@ export default function SwipePage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [advance, like, properties, index, onTapPhoto])
+
+  if (expiredMessage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ background: BG }}>
+        <div className="text-center max-w-xs">
+          <div className="w-11 h-11 rounded-full flex items-center justify-center mb-5 mx-auto" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <X className="w-5 h-5 text-white/50" />
+          </div>
+          <h1 className="text-white text-lg mb-2" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>This link has expired</h1>
+          <p className="text-white/50 text-[13px]">{expiredMessage}</p>
+        </div>
+      </div>
+    )
+  }
 
   if (notFound) {
     return (

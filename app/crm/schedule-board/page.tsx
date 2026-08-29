@@ -12,14 +12,14 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2 } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { AskDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
-import { SwipeLinkCreatedModal, SwipeLinksPanel } from '@/components/crm/swipe-dialogs'
+import { SwipeLinkCreatedModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
 // that matters is whose listing it is, and navy is the brand's own way of
@@ -143,6 +143,12 @@ type Listing = {
 type AvNotification = {
   id: number; ref: string; town: string | null; beds: number | null
   price: number | null; image: string | null; status: string; statusLabel: string
+}
+
+type AgentRequestGroup = {
+  agentId: number
+  agentName: string
+  requests: Array<{ id: number; ref: string; note: string | null; createdAt: string }>
 }
 
 type Filters = BoardFilterValue & { towns: string[] }
@@ -308,6 +314,9 @@ function Board() {
   // receives.
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [tagging, setTagging] = useState(false)
+  // @Agenttag: send a photo+description card into MY OWN workspace group,
+  // no message to Kev at all. Reuses the same `selected` set as WATag.
+  const [agentTagging, setAgentTagging] = useState(false)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [focusRef, setFocusRef] = useState<string | null>(null)
@@ -322,6 +331,15 @@ function Board() {
   const [swipeCreating, setSwipeCreating] = useState(false)
   const [swipeResult, setSwipeResult] = useState<{ url: string; count: number } | null>(null)
   const [swipePanelOpen, setSwipePanelOpen] = useState(false)
+  // MATCH — Property -> Clients (Kev's Prompt B, 2026-08-29). Which ref's
+  // panel is open, or null. The panel itself fetches its own data by ref.
+  const [matchRef, setMatchRef] = useState<string | null>(null)
+  // Admin-only: every open @Agenttag request, grouped by the agent who sent
+  // it — "unser Dashboard" for the refs agents ask about via their own group
+  // instead of writing to Kev directly.
+  const [agentRequestsOpen, setAgentRequestsOpen] = useState(false)
+  const [agentRequestGroups, setAgentRequestGroups] = useState<AgentRequestGroup[]>([])
+  const [agentRequestsLoading, setAgentRequestsLoading] = useState(false)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   // Collapsible: the map was permanently taking ~420px above the cards, and a
   // plain scroll over it used to zoom instead of moving the page (fixed via
@@ -786,6 +804,57 @@ function Board() {
     }
   }
 
+  // ── @Agenttag ─────────────────────────────────────────────────────────────
+  // Sends ONE photo + description into MY OWN workspace group (the same "rented"
+  // style card) instead of writing to Kev directly. Kev sees it because he's a
+  // member of every one of these groups, and it also lands on his own dashboard.
+  async function requestSelected() {
+    if (agentTagging || !selected.size) return
+    setAgentTagging(true)
+    const refs = [...selected]
+    showToast('info', `Sending ${refs.length} listing${refs.length === 1 ? '' : 's'} to your group…`)
+    try {
+      const d = await crmJson('schedule-board/agenttag', 'POST', { refs })
+      showToast(d.sent ? 'ok' : 'err', d.message || `${d.sent} sent.`)
+      const failed = new Set<string>([
+        ...(d.skipped || []),
+        ...((d.results || []) as Array<{ ref: string; status: string }>)
+          .filter(x => x.status !== 'ok')
+          .map(x => x.ref),
+      ])
+      setSelected(new Set(refs.filter(x => failed.has(x))))
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || e?.message || '@Agenttag failed')
+    } finally {
+      setAgentTagging(false)
+    }
+  }
+
+  async function openAgentRequests() {
+    setAgentRequestsOpen(true)
+    setAgentRequestsLoading(true)
+    try {
+      const d = await crmFetch('schedule-board/agent-requests')
+      setAgentRequestGroups(Array.isArray(d?.groups) ? d.groups : [])
+    } catch (e: any) {
+      showToast('err', e?.data?.error || e?.message || 'Could not load agent requests.')
+    } finally {
+      setAgentRequestsLoading(false)
+    }
+  }
+
+  async function markAgentRequestDone(id: number) {
+    // Optimistic: drop it locally, then confirm with the server.
+    setAgentRequestGroups(groups =>
+      groups.map(g => ({ ...g, requests: g.requests.filter(r => r.id !== id) })).filter(g => g.requests.length))
+    try {
+      await crmJson(`schedule-board/agent-requests/${id}/done`, 'POST', {})
+    } catch (e: any) {
+      showToast('err', e?.data?.error || e?.message || 'Could not mark it done — reload to see the real state.')
+    }
+  }
+
   async function createSwipeLink() {
     if (swipeCreating || !selected.size) return
     setSwipeCreating(true)
@@ -1145,6 +1214,21 @@ function Board() {
             <Link2 size={13} /> Swipe Links
           </button>
 
+          {/* Admin only: every open @Agenttag request, grouped by agent — the
+              refs agents asked about via their own group instead of writing
+              to Kev directly. */}
+          {isAdmin && (
+            <button
+              onClick={openAgentRequests}
+              title="Open apartment requests agents sent via @Agenttag"
+              style={{
+                ...chip, borderRadius: 8, background: '#FFF', borderColor: '#E9E5DC',
+                color: '#666', display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}>
+              @Agenttag Requests
+            </button>
+          )}
+
           {selected.size > 0 && (
             <>
               <button
@@ -1161,6 +1245,25 @@ function Board() {
                 <PersonGlyph color="#FFF" />
                 {tagging ? 'Tagging…' : `WATag ${selected.size}`}
               </button>
+              {/* @Agenttag: agent-only. Sends the card to MY OWN group instead
+                  of writing to Kev — some agents don't want it visible that
+                  they're asking. Not shown to admin: there's no "own group"
+                  reason for Kev to request from himself. */}
+              {!isAdmin && (
+                <button
+                  data-agenttag-send
+                  onClick={requestSelected}
+                  disabled={agentTagging}
+                  title={`Send these ${selected.size} listings — one photo + description each — to your own WhatsApp group. Kev never sees your name on it.`}
+                  style={{
+                    ...chip, borderRadius: 8, background: agentTagging ? '#8A93A6' : '#3E6B5C',
+                    borderColor: agentTagging ? '#8A93A6' : '#3E6B5C', color: '#FFF', fontWeight: 700,
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    cursor: agentTagging ? 'wait' : 'pointer',
+                  }}>
+                  {agentTagging ? 'Sending…' : `@Agenttag ${selected.size}`}
+                </button>
+              )}
               <button
                 data-swipe-create
                 onClick={createSwipeLink}
@@ -1268,6 +1371,7 @@ function Board() {
               onReport={() => reportListing(r)}
               onFbQueue={() => toggleFbQueue(r)}
               fbQueueBusy={fbBusyRef === r.ref}
+              onMatch={() => setMatchRef(r.ref)}
             />
           ))}
         </div>
@@ -1363,6 +1467,17 @@ function Board() {
           isOnBoard={ref => rows.some(r => r.ref === ref)}
           onChat={ref => { const row = rows.find(r => r.ref === ref); if (row) { setSwipePanelOpen(false); setFocusRef(ref); setChatting(row) } }}
           onBook={ref => { const row = rows.find(r => r.ref === ref); if (row) { setSwipePanelOpen(false); setFocusRef(ref); setBooking(row) } }}
+        />
+      )}
+      {matchRef && (
+        <MatchResultsPanel propertyRef={matchRef} onClose={() => setMatchRef(null)} />
+      )}
+      {agentRequestsOpen && (
+        <AgentRequestsPanel
+          groups={agentRequestGroups}
+          loading={agentRequestsLoading}
+          onClose={() => setAgentRequestsOpen(false)}
+          onDone={markAgentRequestDone}
         />
       )}
     </CrmShell>
@@ -2206,7 +2321,7 @@ function ReachoutSwitch() {
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
-                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy }: {
+                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -2243,6 +2358,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // itself for everyone else, and the backend route re-checks the role.
   onFbQueue: () => void
   fbQueueBusy: boolean
+  // MATCH — Property -> Clients (Kev's Prompt B, 2026-08-29). Every agent
+  // can see it, same as Chat/Book — finding the right client for a listing
+  // is everyday agent work, not an admin-only tool.
+  onMatch: () => void
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
@@ -2250,6 +2369,68 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const { me } = useCrm()
   const isAdmin = me?.role === 'admin'
   const confirmed = r.availableStatus === 'available_confirmed'
+
+  // ── Kev's card redesign, 2026-08-30 — new icon-row actions ────────────────
+  // Small, local, self-contained: each shows its own one-line feedback right
+  // under the icon row rather than reaching for the board's toast plumbing,
+  // so these stay a pure visual add-on with zero new props.
+  const [rowMsg, setRowMsg] = useState<string | null>(null)
+  const flash = (text: string) => { setRowMsg(text); setTimeout(() => setRowMsg(null), 2400) }
+
+  // Copy — the ONE persistent link for this property (services/shareLinks.js,
+  // Kev's Prompt A). Get-or-create: same link every time, nothing new spun up
+  // per click. Kev may still redesign how a single listing shares later — see
+  // his own note — this wires the real interface now regardless.
+  const [copyBusy, setCopyBusy] = useState(false)
+  async function handleCopyLink() {
+    if (copyBusy) return
+    setCopyBusy(true)
+    try {
+      const d = await crmJson(`schedule-board/property-link/${encodeURIComponent(r.ref)}`, 'GET')
+      await navigator.clipboard.writeText(d.url)
+      flash('Link copied')
+    } catch (e: any) {
+      flash(e?.message || 'Could not get the link')
+    } finally {
+      setCopyBusy(false)
+    }
+  }
+
+  // € — quick price edit. Same field the CRM's own property page already
+  // edits (routes/crm.js PATCH /properties/:id, EDITABLE includes
+  // longlet_price/sale_price) — no new backend, just a fast path from the
+  // board instead of opening the full property editor for one number.
+  async function handlePriceEdit() {
+    const current = r.price ?? r.salePrice ?? ''
+    const next = window.prompt(`New price for #${r.ref} (€${r.price != null ? 'month' : r.salePrice != null ? 'one-off' : ''}):`, String(current))
+    if (next == null || next.trim() === '' || Number(next) === current) return
+    const n = Number(next)
+    if (!Number.isFinite(n) || n <= 0) { flash('Enter a valid number'); return }
+    try {
+      const field = r.salePrice != null && r.price == null ? 'sale_price' : 'longlet_price'
+      await crmFetch(`properties/${r.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ [field]: n }) })
+      flash(`Price updated to €${n.toLocaleString()}`)
+    } catch (e: any) {
+      flash(e?.message || 'Could not update the price')
+    }
+  }
+
+  // Location reveal — town + sub-area only, same firewall every other surface
+  // on this board already holds to (never street/apt to a non-owner; own
+  // listings already show r.streetName, no number, elsewhere on this card).
+  // Kev: a richer version is coming via the outreach flow — this is today's
+  // honest answer with the data the board already has.
+  function handleLocationReveal() {
+    const parts = [r.subLocation, townLabel(r.town)].filter(Boolean)
+    flash(parts.length ? parts.join(', ') : 'No location on file yet')
+  }
+
+  // Agent Inquiry — a quick note to the LISTING agent (not the owner, not
+  // gated by the daily question limit that protects owners from spam) — a
+  // colleague-to-colleague ping. Wires to the existing, already-built
+  // POST /listings/:ref/comment (routes/crmScheduleBoard.js), never used
+  // from the board UI until now.
+  const [inquiryOpen, setInquiryOpen] = useState(false)
   // Can this listing be anchored at all? Two independent reasons it cannot:
   // there is no stored group message to quote (85 of 215 listings), or it is
   // off the market and must not be offered for forwarding. The server refuses
@@ -2462,41 +2643,40 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       {/* The white body. flex:1 so the tinted action tray and the reference
           bar below it stay pinned to the bottom of every card in a row, no
           matter how long this one's description runs. */}
-      <div style={{ padding: '14px 16px 13px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* ── location + price ─────────────────────────────────────────────── */}
+      <div style={{ padding: '13px 15px 11px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* ── town + price ──────────────────────────────────────────────────
+            Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
+            status colour still lives on the star and the ✅/😠 actions below,
+            so nothing is lost, this row just reads cleaner ("wie Apple"). */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <div onClick={onOpen} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: status.c, flexShrink: 0 }} title={status.t} />
-            <PinGlyph color="#B5AFA2" size={12} />
-            {/* 16→18 semibold (Kev's mockup, 2026-08-22). Truncates rather
-                than wrapping: the price beside it must keep its line. */}
-            <span style={{
-              fontSize: 18, fontWeight: 600, color: '#222222', letterSpacing: '-0.02em',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{townLabel(r.town)}</span>
-          </div>
-          {/* Kev's redesign brief (2026-08-22): 17→19→21, tighter tracking —
-              the price is the number an agent scans for first; it should read
-              with a touch more authority than the town name next to it. */}
-          <div style={{ fontFamily: FM, fontSize: 21, fontWeight: 500, color: '#222222', letterSpacing: '-0.03em', flexShrink: 0, lineHeight: 1.1 }}>
+          <span onClick={onOpen} title={status.t} style={{
+            cursor: 'pointer', fontSize: 17, fontWeight: 600, color: '#222222', letterSpacing: '-0.02em',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+          }}>{townLabel(r.town)}</span>
+          <div style={{ fontFamily: FM, fontSize: 19, fontWeight: 500, color: '#222222', letterSpacing: '-0.03em', flexShrink: 0, lineHeight: 1.1 }}>
             {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 3 }}>
-          <span style={{ fontSize: 11.5, color: '#999' }}>
+        {/* Beds/baths/type on the left; "Available" + date stacked on the
+            right, Kev's mockup — a plain fact, not a coloured status pill
+            (the pill's own information — now/soon/dated — still lives in
+            the date value itself). */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+          <span style={{ fontSize: 11.5, color: '#999', paddingTop: 2 }}>
             {[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type]
               .filter(Boolean).join(' - ')}
           </span>
-          {/* Free-from, on the right. 'soon' is the default whenever the
-              listing is not clearly free now or carrying a real date — the
-              server decides, so this pill and the filter cannot disagree. */}
-          <span title={avail.title} style={{
-            flexShrink: 0, fontFamily: FM, fontSize: 9.5, fontWeight: 700,
-            padding: '2px 8px', borderRadius: 999, background: avail.bg, color: avail.fg,
-          }}>
-            {r.availableDate ? fmtDateDots(r.availableDate) : avail.text}
-          </span>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: 9.5, color: '#B5AFA2', letterSpacing: '0.04em' }}>
+              {r.availableDate ? 'Available' : (avail.text || 'Soon')}
+            </div>
+            {r.availableDate && (
+              <div style={{ fontSize: 12, color: '#5F5A50', fontFamily: FM, fontWeight: 500, marginTop: 1 }}>
+                {fmtDateDots(r.availableDate)}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* The street, where we have one. Number never shown, and only on your
@@ -2512,72 +2692,68 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         )}
 
-        {/* ── uploaded / confirmed / viewable ──────────────────────────────── */}
-        {/* Three fixed columns rather than a gap-16 flex row (Kev's mockup,
-            2026-08-22): with flex the three facts started at a different x on
-            every card, so a column of cards had nothing to scan down. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 11 }}>
+        {/* ── description preview ──────────────────────────────────────────── */}
+        {r.description && (
+          <div onClick={onOpen} title="Click to read the full listing" style={{ marginTop: 9, cursor: 'pointer' }}>
+            <p style={{
+              fontSize: 11.5, color: '#9A9488', lineHeight: 1.5, margin: 0,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {r.description}
+            </p>
+            <span style={{ fontSize: 11.5, color: '#C9C4B8', letterSpacing: '0.08em' }}>···</span>
+          </div>
+        )}
+
+        {/* ── confirmed / viewable ──────────────────────────────────────────
+            Two facts, not three — "uploaded" already lives on the photo's
+            own freshness badge (top right), so this stays two clean columns
+            instead of a three-way squeeze (Kev's redesign, 2026-08-30). */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 18, marginTop: 9 }}>
           {([
-            ['uploaded', daysAgoCaps(r.createdAt)],
-            ['confirmed', r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt).toUpperCase() : 'NEVER'],
-            ['viewable', r.availableDate ? fmtDateDots(r.availableDate) : (avail.text || 'soon').toUpperCase()],
+            ['Confirmed', r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'],
+            ['Viewable', r.availableDate ? fmtDateDots(r.availableDate) : (avail.text || 'soon')],
           ] as const).map(([label, value]) => (
-            <div key={label} style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 9.5, color: '#B5AFA2', letterSpacing: '0.04em', fontFamily: F }}>{label}</div>
-              <div style={{ fontSize: 10, color: '#5F5A50', fontFamily: FM, fontWeight: 500, marginTop: 2, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+            <div key={label} style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 9.5, color: '#B5AFA2', letterSpacing: '0.02em' }}>{label}</div>
+              <div style={{ fontSize: 10.5, color: '#5F5A50', fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>{value}</div>
             </div>
           ))}
         </div>
 
-        {/* ── description preview ──────────────────────────────────────────── */}
-        {r.description && (
-          <p onClick={onOpen} title="Click to read the full listing" style={{
-            fontSize: 11.5, color: '#9A9488', lineHeight: 1.5, marginTop: 10, marginBottom: 0, cursor: 'pointer',
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}>
-            {r.description}
-          </p>
-        )}
-
-        {/* ── thumbnails + utility icons ────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 11 }}>
-          {thumbs.map((src, i) => (
-            <img key={i} src={src} onClick={onOpen} alt="" style={{ width: 34, height: 34, borderRadius: 7, objectFit: 'cover', cursor: 'pointer', flexShrink: 0 }} />
-          ))}
-          {moreCount > 0 && (
-            <span onClick={onOpen} style={{ fontSize: 10, color: '#B5AFA2', fontFamily: FM, cursor: 'pointer', marginLeft: 2 }}>+{moreCount}</span>
-          )}
-          {/* Flag / pause / download live at the far right of the strip. Kev,
-              2026-08-22 ("kleinere icons"): one step smaller and one step
-              greyer than the buttons below — these are the card's rarest
-              actions and should not compete with the action panel. */}
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            {/* "Leave this owner alone" — the per-listing exception to the
-                robot's reachout schedule. Shown to an admin and to the agent
-                the listing belongs to; the backend enforces the same rule.
-                Deliberately not a status: it changes nothing about the
-                listing, only whether the scheduler may message this owner. */}
-            {(isAdmin || r.isMine) && (
-              <button
-                onClick={() => onOptOut(!r.autoReachoutOptOut)}
-                disabled={busy}
-                title={r.autoReachoutOptOut
-                  ? 'The robot is not asking this owner. Click to allow it again.'
-                  : 'Stop the automatic owner check for this listing. You can still ask by hand.'}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: r.autoReachoutOptOut ? A : '#D8D3C6', fontSize: 12, lineHeight: 0 }}>
-                {r.autoReachoutOptOut ? '⏸' : '▸'}
+        {/* ── utility icon row + 2906 wordmark ───────────────────────────────
+            Kev's redesign, 2026-08-30: replaces the thumbnail strip + flag +
+            pause icons — "cleaner and nicer... die eh nicht funktioniert
+            haben raus" (the ones that never worked, out). Four tools
+            (download / copy link / facebook queue / price), the wordmark
+            centred over the row regardless of how many icons are shown. */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginTop: 10, minHeight: 20 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12, zIndex: 1 }}>
+            <PhotoDownload r={r} />
+            {/* Copy — the persistent share link for THIS listing (Prompt A).
+                Kev may still rethink single-listing sharing later; the real
+                interface is wired now regardless. */}
+            <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn, cursor: copyBusy ? 'wait' : 'pointer' }}>
+              <Copy size={13} />
+            </button>
+            {/* Facebook queue toggle — same services/facebookCampaign.js
+                control as before, now an icon (Kev: "machen wir bald" — the
+                fuller FB queue redesign is a separate, later pass). */}
+            {isAdmin && (
+              <button onClick={onFbQueue} disabled={fbQueueBusy} title={r.facebookQueueStatus === 'queued' ? 'In the Facebook posting queue — click to pause' : 'Not in the Facebook posting queue — click to enqueue'}
+                style={{ ...iconRowBtn, color: r.facebookQueueStatus === 'queued' ? '#1877F2' : '#B5AFA2', cursor: fbQueueBusy ? 'wait' : 'pointer' }}>
+                <FacebookGlyph size={13} />
               </button>
             )}
-            {/* Report = something is wrong with this listing, not a status.
-                See Board():reportListing — it records the reason and pings
-                admin, it is not a shortcut for On/Off Market. */}
-            <button onClick={onReport} title="Report a problem with this listing — notifies admin"
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#C9C4B8', lineHeight: 0 }}>
-              <FlagGlyph size={13} />
+            {/* € — quick price edit, same field the full property editor
+                already writes (routes/crm.js PATCH /properties/:id). */}
+            <button onClick={handlePriceEdit} title="Update the price" style={iconRowBtn}>
+              <Euro size={13} />
             </button>
-            <PhotoDownload r={r} />
           </span>
+          <img src="/logo-wide.png" alt="2906" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', height: 12, opacity: 0.55 }} />
         </div>
+        {rowMsg && <div style={{ fontSize: 10.5, color: A, marginTop: 4 }}>{rowMsg}</div>}
 
         {/* Why it last moved — the review queue is unusable without it. */}
         {r.statusChangeReason && (
@@ -2601,54 +2777,72 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           (2) The body is flex:1, so with the panel as a sibling the trays of
           every card in a grid row line up at the same height even when their
           descriptions differ. ──────────────────────────────────────────── */}
+      {/* Kev's card redesign, 2026-08-30 — three even rows of four, "super
+          clean, wie Apple": every onClick/disabled condition below is the
+          SAME one the previous layout used — this pass only repositions and
+          restyles, plus the genuinely new buttons (More Info, Location as an
+          always-on reveal, Agent Inquiry). compactBtn instead of secondaryBtn/
+          pillBtn: smaller, four-across, "kleiner... mehr overview". */}
       <div style={{
         background: '#F7F6F3', borderTop: '1px solid #EFEDE8',
-        padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
+        padding: '9px 11px', display: 'flex', flexDirection: 'column', gap: 6,
       }}>
-        {/* Row 1 — communication + meta actions, natural width, flex-wrap so
-            a narrow card reflows instead of squeezing text. */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {/* Kev asked for "Ask Owner" (2026-08-16). It says Owner only where
-              that is TRUE: routes/crmScheduleBoard.js ask/send resolves the
-              owner with `isMine ? ownerFor(...) : null`, so on a colleague's
-              listing this question reaches the listing AGENT. */}
+        {/* Row 1 — More Info · Ask Owner/Agent · Book · Chat */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={onOpen} title="Photos + full description" style={compactBtn}>
+            More Info
+          </button>
           <button
             onClick={() => c.canQuestion && onAsk()}
             disabled={!c.canQuestion}
             title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
             style={{
-              ...secondaryBtn, flex: '0 1 auto',
+              ...compactBtn,
               color: c.canQuestion ? '#222222' : '#C9C4B8',
               borderColor: c.canQuestion ? '#DFDCD5' : '#EDEAE2',
               cursor: c.canQuestion ? 'pointer' : 'not-allowed',
             }}>
             {r.isMine ? 'Ask Owner' : 'Ask Agent'}
           </button>
-
-          {/* Booking is internal — never blocked by a contact rule. */}
-          <button onClick={onBook} title="Book a viewing" style={{ ...secondaryBtn, flex: '0 1 auto' }}>
+          <button onClick={onBook} title="Book a viewing" style={compactBtn}>
             Book
           </button>
-
-          {/* Always available, not just after Ask/Book — typing straight in
-              starts the conversation itself (routes/crmScheduleBoard.js POST
-              .../relay/message auto-opens a thread). The "Xh ago" stamp is
-              lastChatAt: it's how an agent tells "nobody's talked to this
-              owner yet, greet properly" from "there's a live conversation,
-              just carry on" before they even open the window. */}
-          <button onClick={onChat} title="Chat with the owner" style={{ ...secondaryBtn, flex: '0 1 auto' }}>
+          <button onClick={onChat} title="Chat with the owner" style={compactBtn}>
             Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
           </button>
+        </div>
 
-          {/* Create Group — Phase 2 (Kev, 2026-08-27) landed: the automated
-              group welcome-message flow this was waiting on is
-              handlers/upload.js createViewingGroup(), now reachable from the
-              board too. Unlocked only once the owner has said yes to a
-              booking (canCreateGroup, server-computed in
-              routes/crmScheduleBoard.js GET /favourites) and admin-gated —
-              same restriction this button was designed for before it had
-              anything to check. Dashed/grey styling kept for the disabled
-              state so "not available yet" still reads before anyone hovers. */}
+        {/* Row 2 — Location · Match · @Tag · Create Group. Location merges
+            the two real things this button has always done: on a colleague's
+            listing with nothing on file yet, it still ASKS them (the old,
+            valuable behaviour); otherwise it REVEALS what the board already
+            knows (town + sub-area — never street/apt to a non-owner). */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(() => {
+            const canAskLocation = !r.isMine && !r.hasViewingLocation && c.canAsk
+            return (
+              <button
+                onClick={() => canAskLocation ? onAct('request-location', r) : handleLocationReveal()}
+                title={canAskLocation ? 'Ask the listing agent where the viewing is' : "Show this listing's town / area"}
+                style={compactBtn}>
+                Location
+              </button>
+            )
+          })()}
+          <button data-match-btn={r.ref} onClick={onMatch} title="Find active clients this listing fits" style={compactBtn}>
+            Match
+          </button>
+          <button
+            data-watag-one={r.ref}
+            onClick={() => canTag && !tagging && onTag()}
+            disabled={!canTag || tagging}
+            title={tagWhy}
+            style={{
+              ...compactBtn,
+              color: canTag ? '#222222' : '#C9C4B8', cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
+            }}>
+            @Tag
+          </button>
           {(() => {
             const ready = isAdmin && !!r.viewing?.canCreateGroup
             const already = !!r.viewing?.groupJid
@@ -2664,140 +2858,75 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 onClick={ready ? onCreateGroup : undefined}
                 disabled={!ready || already}
                 title={title}
-                style={ready && !already ? { ...secondaryBtn, flex: '0 1 auto' } : {
-                  ...secondaryBtn, flex: '0 1 auto', color: '#B7B1A4', background: 'transparent',
+                style={ready && !already ? compactBtn : {
+                  ...compactBtn, color: '#B7B1A4', background: 'transparent',
                   border: '1px dashed #DAD5CB', cursor: 'not-allowed',
                 }}>
-                {already ? 'Group created' : 'Create Group'}
+                {already ? 'Grouped' : 'Create Group'}
               </button>
             )
           })()}
-
-          {/* Facebook posting-queue toggle. Admin only — hidden entirely for
-              everyone else, same convention recheck/archive used to. Thin
-              control over the existing per-property campaign
-              (services/facebookCampaign.js); this button starts/pauses it.
-              Kev, 2026-08-22: text stays navy either way now — the
-              Facebook glyph itself already carries its own brand blue, so
-              colouring the label blue too was a second colour saying the
-              same thing. "Queued" reads from bold weight, not a new hue. */}
-          {isAdmin && (
-            <button
-              onClick={onFbQueue}
-              disabled={fbQueueBusy}
-              title={r.facebookQueueStatus === 'queued'
-                ? 'In the Facebook posting queue — click to pause'
-                : 'Not in the Facebook posting queue — click to enqueue'}
-              style={{
-                ...secondaryBtn, flex: '0 1 auto',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                fontWeight: r.facebookQueueStatus === 'queued' ? 700 : 500,
-                opacity: fbQueueBusy ? 0.5 : 1, cursor: fbQueueBusy ? 'wait' : 'pointer',
-              }}>
-              <FacebookGlyph size={12} /> Queue
-            </button>
-          )}
         </div>
 
-        {/* Rare: only when this is a colleague's listing with no viewing
-            location on file yet. Its own line so it never competes with the
-            row above for a slot. */}
-        {!r.isMine && !r.hasViewingLocation && c.canAsk && (
-          <button onClick={() => onAct('request-location', r)}
-            style={{ ...secondaryBtn, flex: '0 1 auto', alignSelf: 'flex-start' }}
-            title="Ask the listing agent where the viewing is">
-            Location
-          </button>
-        )}
-
-        {/* Row 2 — the one dark button on the card (Still on Market?, the
-            most-asked question), then +Tag@, then the on/off-market pair
-            at the end. Still-on-Market takes the leftover width; everything
-            else stays exactly as wide as its own content.
-            flexWrap + a flex-basis (not a bare flex:1) on the dark button is
-            what stops the pair at the end being clipped off a narrow card:
-            below ~300px of row the dark button drops to its own line instead
-            of squeezing its three neighbours past the right edge. */}
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-          {/* Kev, 2026-08-16: the label is the QUESTION we are about to ask,
-              not the topic — this is the primary action, styled to match. */}
+        {/* Row 3 — On Market? (outline, not filled — Kev's mockup) ·
+            Agent Inquiry (new — colleague-to-colleague, see
+            AgentInquiryModal) · ✅ confirm-available · 😠 mark-rented. The
+            ✅/😠 icon squares keep the EXACT SAME onClick as the previous
+            green/red CartGlyph pair (onCheckIn / onStatus('check-out')) —
+            only the glyph changed, per Kev's mockup. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             onClick={() => c.canAsk && onAct('request-availability', r)}
             disabled={!c.canAsk}
             title={c.reason || (r.isMine ? 'Message the owner' : `Ask ${c.reachesName || 'the listing agent'}`)}
             style={{
-              ...pillBtn, flex: '1 1 148px', minWidth: 0, fontWeight: 600,
-              background: c.canAsk ? NAVY : '#EDEAE3',
-              color: c.canAsk ? '#FFF' : '#B5AFA2',
+              ...compactBtn, flex: '1 1 0', fontWeight: 600,
+              background: '#FFF', border: `1.5px solid ${c.canAsk ? A : '#E5E1D8'}`,
+              color: c.canAsk ? A : '#C9C4B8',
               cursor: c.canAsk ? 'pointer' : 'not-allowed',
             }}>
-            Still on Market?
+            On Market?
           </button>
 
-          {/* WATag, one listing. Deliberately separate from the pick box on
-              the photo: this is "tag this one now", that is "add it to a
-              batch". Drawn even when it cannot fire, greyed with the reason
-              in the tooltip — a button that vanishes teaches nobody why. */}
           <button
-            data-watag-one={r.ref}
-            onClick={() => canTag && !tagging && onTag()}
-            disabled={!canTag || tagging}
-            title={tagWhy}
-            style={{
-              ...secondaryBtn, flex: '0 0 auto',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-              color: canTag ? '#222222' : '#C9C4B8', cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
-            }}>
-            <span>+Tag</span>
-            <span style={{ fontFamily: FM }}>@</span>
+            onClick={() => !r.isMine && setInquiryOpen(true)}
+            disabled={r.isMine}
+            title={r.isMine ? 'This is your own listing.' : `Send a quick note to ${r.listedBy.displayName || 'the listing agent'}`}
+            style={{ ...compactBtn, color: r.isMine ? '#C9C4B8' : '#222222', cursor: r.isMine ? 'not-allowed' : 'pointer' }}>
+            Agent Inquiry
           </button>
 
-          {/* On Market / Off Market. Neither sends a message to anybody: they
-              record what this agent knows right now.
-                On Market  → the card stays, the timestamp moves to now
-                Off Market → the card leaves the active board immediately
-              Nothing is deleted either way — the listing keeps its row, its
-              photos and its history, and Inventory still has all of it.
-              Kev, 2026-08-22, third pass. First they were solid coloured
-              BLOCKS — one accent too many beside a HOT badge, a Yours badge
-              and a gold tab. Then a plain grey-bordered white pill, which
-              went the other way and turned invisible — literally, not
-              loosely: the glyph took freshness().fg, and fg is '#FFF' for
-              both the fresh and the ageing tier, so on a white pill the cart
-              drew white-on-white and the button looked empty. That is the
-              "a button is buggy" report, and it was fair. The glyph now
-              carries the hue itself and only its OPACITY moves with the
-              tier, so it can never disappear.
-              Landing point (his mockup): a small tinted SQUARE — a ~10% wash
-              of its own colour with a hairline border of the same hue. Reads
-              unmistakably as a button, still nowhere near a solid block.
-              Both are flex '0 0 auto' in a wrapping row and sit AFTER a
-              button that can wrap away from them, so the pair can no longer
-              be clipped off the right edge of a narrow card. */}
           <button
             onClick={onCheckIn}
             disabled={busy}
-            title={`On Market — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''} · click to confirm as of now`}
+            title={`Confirm still available — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
             style={{
-              ...iconSquareBtn,
-              background: 'rgba(47,111,87,0.10)', borderColor: 'rgba(47,111,87,0.22)',
+              ...iconSquareBtn, width: 30, height: 30, minHeight: 30,
+              background: 'rgba(47,111,87,0.10)', border: '1px solid rgba(47,111,87,0.22)',
               opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
             }}>
-            <CartGlyph color={fresh.tier === 'unconfirmed' ? 'rgba(47,111,87,0.72)' : 'rgb(47,111,87)'} size={14} />
+            <Check size={15} color="rgb(47,111,87)" strokeWidth={3} />
           </button>
           <button
             onClick={() => onStatus('check-out')}
             disabled={busy}
-            title="Off Market — asks for a reason, then takes it off the board"
+            title="Mark rented / off market — asks for a reason, then takes it off the board"
             style={{
-              ...iconSquareBtn,
-              background: 'rgba(185,28,28,0.09)', borderColor: 'rgba(185,28,28,0.20)',
+              ...iconSquareBtn, width: 30, height: 30, minHeight: 30, fontSize: 15,
+              background: 'rgba(185,28,28,0.09)', border: '1px solid rgba(185,28,28,0.20)',
               opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
             }}>
-            <CartGlyph color="#B91C1C" size={14} off />
+            😠
           </button>
         </div>
       </div>
+      {inquiryOpen && (
+        <AgentInquiryModal
+          propertyRef={r.ref}
+          agentName={r.listedBy.displayName}
+          onClose={(sent) => { setInquiryOpen(false); if (sent) flash('Sent to ' + (r.listedBy.displayName || 'the agent')) }}
+        />
+      )}
 
       {/* Favourites only: the viewing this card is here for, and a way off the
           list. Reads under the buttons so the card's shape does not change
@@ -2841,6 +2970,65 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         <span>
           {[r.beds != null ? `${r.beds}B` : '', r.baths != null ? `${r.baths}B` : ''].join('')} {townLabel(r.town)?.toUpperCase()}
         </span>
+      </div>
+    </div>
+  )
+}
+
+// ── Agent Inquiry — a quick note to the listing agent ───────────────────────
+// Kev's card redesign, 2026-08-30: "einfache Anfrage an den Agent, der darauf
+// reagieren kann" — colleague-to-colleague, not owner-facing, so none of the
+// daily-question-limit/contact-window machinery that protects owners from
+// spam applies here. Wires to the existing POST /listings/:ref/comment
+// (routes/crmScheduleBoard.js) — built, never used from the board UI before
+// this. Defined as its own top-level component (not inline in Card) so its
+// text input keeps focus across the parent board's own re-renders.
+function AgentInquiryModal({ propertyRef, agentName, onClose }: { propertyRef: string; agentName: string | null; onClose: (sent: boolean) => void }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function send() {
+    const note = text.trim()
+    if (!note) return
+    setBusy(true)
+    setErr(null)
+    try {
+      await crmJson(`schedule-board/listings/${encodeURIComponent(propertyRef)}/comment`, 'POST', { note })
+      onClose(true)
+    } catch (e: any) {
+      setErr(e?.message || e?.data?.error || 'Could not send.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(27,42,74,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }} onClick={() => onClose(false)}>
+      <div style={{ background: '#FFF', borderRadius: 16, width: '100%', maxWidth: 400, fontFamily: F, boxShadow: '0 24px 60px rgba(27,42,74,0.25)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '16px 18px', borderBottom: '1px solid #EDEBE5', fontWeight: 700, fontSize: 14, color: '#1A1A1A' }}>
+          Agent Inquiry — #{propertyRef}
+        </div>
+        <div style={{ padding: 18 }}>
+          <p style={{ fontSize: 12, color: '#888', margin: '0 0 10px' }}>
+            {agentName ? `Sent straight to ${agentName}.` : 'Sent to the listing agent.'} They see it and can reply directly.
+          </p>
+          <textarea
+            autoFocus value={text} onChange={e => setText(e.target.value)}
+            placeholder="e.g. Can I bring a client Saturday morning?"
+            rows={3}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '1px solid #E9E5DC', fontFamily: F, fontSize: 13, resize: 'vertical', color: '#222' }}
+          />
+          {err && <div style={{ color: '#B91C1C', fontSize: 11.5, marginTop: 6 }}>{err}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+            <button onClick={() => onClose(false)} style={{ ...secondaryBtn, flex: '0 0 auto' }}>Cancel</button>
+            <button onClick={send} disabled={busy || !text.trim()} style={{
+              ...secondaryBtn, flex: '0 0 auto', background: NAVY, color: '#FFF', border: 'none',
+              opacity: busy || !text.trim() ? 0.5 : 1, cursor: busy || !text.trim() ? 'not-allowed' : 'pointer',
+            }}>
+              {busy ? 'Sending…' : 'Send'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -3179,6 +3367,62 @@ function AvNotificationStack({ items, onDismiss }: {
   )
 }
 
+// Admin-only dashboard for @Agenttag: every open request, grouped by the
+// agent who sent it, so Kev can work the ref numbers without opening
+// WhatsApp — the agent's identity never has to appear in a chat with him.
+function AgentRequestsPanel({ groups, loading, onClose, onDone }: {
+  groups: AgentRequestGroup[]
+  loading: boolean
+  onClose: () => void
+  onDone: (id: number) => void
+}) {
+  const total = groups.reduce((n, g) => n + g.requests.length, 0)
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 320,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }}>
+      <div onClick={ev => ev.stopPropagation()} style={{
+        background: CARD, borderRadius: 14, padding: 20, maxWidth: 480, width: '100%',
+        maxHeight: '80vh', overflowY: 'auto', fontFamily: F, boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontFamily: FM, fontSize: 15, fontWeight: 700, color: '#222' }}>
+            @Agenttag Requests {total ? `(${total})` : ''}
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', color: '#B5AFA2', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>×</button>
+        </div>
+        {loading && <div style={{ fontSize: 12.5, color: '#666' }}>Loading…</div>}
+        {!loading && !groups.length && (
+          <div style={{ fontSize: 12.5, color: '#666' }}>No open requests right now.</div>
+        )}
+        {!loading && groups.map(g => (
+          <div key={g.agentId} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: A, marginBottom: 6 }}>{g.agentName}</div>
+            {g.requests.map(r => (
+              <div key={r.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0',
+                borderTop: '1px solid #F0EDE5',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: FM, fontSize: 12.5, color: '#222' }}>#{r.ref}</div>
+                  {r.note && <div style={{ fontSize: 11.5, color: '#666' }}>{r.note}</div>}
+                  <div style={{ fontSize: 10.5, color: '#B5AFA2' }}>{new Date(r.createdAt).toLocaleString()}</div>
+                </div>
+                <button onClick={() => onDone(r.id)} style={{
+                  ...btn, background: '#FFF', border: `1px solid ${AB}`, color: A, minHeight: 26, padding: '5px 9px',
+                }}>
+                  Done
+                </button>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Toast({ kind, text, onClose }: { kind: 'ok' | 'err' | 'info'; text: string; onClose: () => void }) {
   const bg = kind === 'ok' ? GREEN : kind === 'err' ? '#B91C1C' : '#131313'
   return (
@@ -3238,6 +3482,25 @@ const iconSquareBtn: React.CSSProperties = {
   width: 34, height: 34, minHeight: 34, flex: '0 0 auto', padding: 0,
   borderRadius: 9, border: '1px solid transparent', display: 'grid',
   placeItems: 'center', cursor: 'pointer', fontFamily: F,
+}
+// Kev's card redesign (2026-08-30): "kleiner, mehr overview, cleaner" — the
+// same 4-across action tray as secondaryBtn, just tighter, so four buttons
+// sit comfortably in one row on a normal card width instead of three.
+// Scoped to the redesigned tray only — secondaryBtn/pillBtn stay as they are
+// everywhere else in the CRM that already relies on their sizing.
+const compactBtn: React.CSSProperties = {
+  padding: '6px 8px', borderRadius: 999, fontSize: 11, fontFamily: F,
+  fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 30,
+  background: '#FFF', border: `1px solid #DFDCD5`, color: '#222222',
+  flex: '1 1 0', minWidth: 0, textAlign: 'center',
+}
+// The four small utility icons on the redesigned card (download / copy /
+// facebook / price) — one visual language, one size, one hover, so they read
+// as a single row of tools rather than four different button styles.
+const iconRowBtn: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 22, height: 22, padding: 0, background: 'none', border: 'none',
+  color: '#B5AFA2', cursor: 'pointer', lineHeight: 0, flexShrink: 0,
 }
 // The two low-frequency card actions. Reads as a text link, sized as a button:
 // 30px is the same tap floor the buttons and village chips hold to.
