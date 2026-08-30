@@ -9,6 +9,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        // short, wide viewport = a phone rotated into landscape — used by the
+        // swipe/property pages to switch to the more immersive desktop-like
+        // image treatment instead of just stretching the portrait layout.
+        'mobile-landscape': { raw: '(orientation: landscape) and (max-height: 560px)' },
+      },
       fontFamily: {
         sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
         serif: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],

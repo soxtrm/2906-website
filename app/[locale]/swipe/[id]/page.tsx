@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Heart, Star, ChevronUp, ChevronDown, BedDouble, Bath, Ruler, MapPin, X, Check, CheckCircle2 } from 'lucide-react'
+import { Heart, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, BedDouble, Bath, Ruler, MapPin, X, Check, CheckCircle2 } from 'lucide-react'
 
 const API_BASE = ''
 const GOLD = '#B8953F'
@@ -542,12 +542,24 @@ function fmtSinglePrice(p: SwipeProperty) {
 // until it's nearly indistinguishable from the page background. Count
 // adapts to how many photos are actually left (fewer photos = shorter fan).
 const FAN_MAX = 8
-function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number; onSelect: (i: number) => void }) {
+// Kev's responsive pass (2026-08-30): mobile only wants 2-3 layers peeking —
+// rather than branch the whole component on viewport width (and risk a
+// hydration mismatch from a JS media-query check), every card past this
+// index is simply hidden below the `lg`/`mobile-landscape` breakpoints via
+// CSS, so the same fan markup serves both layouts.
+const MOBILE_FAN_VISIBLE = 3
+function PhotoFan({ photos, index, onSelect, dragX }: { photos: string[]; index: number; onSelect: (i: number) => void; dragX?: any }) {
+  const fallbackX = useMotionValue(0)
+  const activeX = dragX ?? fallbackX
+  // the nearest (soonest-up) card visibly grows as you drag toward it, so it
+  // reads as "about to become the active image" rather than a static prop.
+  const nearestScale = useTransform(activeX, [-160, 0], [1.08, 1])
   const upcoming = photos.slice(index + 1, index + 1 + FAN_MAX)
-  if (!upcoming.length) return <div className="flex-1 h-full" style={{ background: OFFWHITE }} />
+  const fanBoxClass = 'flex-1 h-full lg:h-[min(60vh,640px)] mobile-landscape:h-[min(76vh,420px)]'
+  if (!upcoming.length) return <div className={fanBoxClass} style={{ background: OFFWHITE }} />
   const n = upcoming.length
   return (
-    <div className="relative flex-1 h-full overflow-hidden">
+    <div className={`relative overflow-hidden ${fanBoxClass}`}>
       {upcoming.map((src, i) => {
         const t = i / Math.max(n - 1, 1) // 0 (nearest) .. 1 (furthest)
         // Kev, 2026-08-30 (round 3): cards further back must shrink too, not
@@ -564,19 +576,22 @@ function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number
         const brightness = 1.05 + t * 1.3
         const opacity = 1 - t * 0.3
         return (
-          <button
+          <motion.button
             key={index + 1 + i}
             type="button"
             onClick={() => onSelect(index + 1 + i)}
             aria-label={`Photo ${index + 2 + i}`}
-            className="absolute"
-            style={{ left: `${leftPct}%`, width: `${widthPct}%`, top: `${insetPct}%`, bottom: `${insetPct}%`, opacity, zIndex: n - i }}
+            className={`absolute ${i >= MOBILE_FAN_VISIBLE ? 'hidden lg:block mobile-landscape:block' : ''}`}
+            style={{
+              left: `${leftPct}%`, width: `${widthPct}%`, top: `${insetPct}%`, bottom: `${insetPct}%`, opacity, zIndex: n - i,
+              scale: i === 0 ? nearestScale : 1,
+            }}
           >
             <img
               src={src} alt="" className="w-full h-full object-cover" draggable={false}
               style={{ filter: `grayscale(${grayscale}) brightness(${brightness})` }}
             />
-          </button>
+          </motion.button>
         )
       })}
       {/* fade the far edge of the fan into the page background rather than a hard clip */}
@@ -585,11 +600,115 @@ function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number
   )
 }
 
+// ── fullscreen lightbox — shared by the single-property page and (via the
+// same component) works identically on desktop and mobile. Tap opens it from
+// the main photo; here, drag/swipe moves between photos, arrows do the same
+// on desktop, Escape or the backdrop closes it. Always object-contain — this
+// is the one place a photo is never cropped. ─────────────────────────────
+function Lightbox({ photos, index, onClose, onIndexChange }: {
+  photos: string[] | null
+  index: number
+  onClose: () => void
+  onIndexChange: (i: number) => void
+}) {
+  const total = photos?.length || 0
+  const x = useMotionValue(0)
+
+  const advance = useCallback((dir: 1 | -1) => {
+    onIndexChange(Math.max(0, Math.min(Math.max(total - 1, 0), index + dir)))
+  }, [index, total, onIndexChange])
+
+  useEffect(() => {
+    if (!photos) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowRight') advance(1)
+      else if (e.key === 'ArrowLeft') advance(-1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [photos, advance, onClose])
+
+  const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const THRESH = 60
+    if (info.offset.x < -THRESH || info.velocity.x < -400) { advance(1); x.set(0) }
+    else if (info.offset.x > THRESH || info.velocity.x > 400) { advance(-1); x.set(0) }
+    // small/aborted drags: let dragConstraints spring the image back on its own
+  }, [advance, x])
+
+  return (
+    <AnimatePresence>
+      {photos && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+          onClick={onClose}
+        >
+          <button
+            type="button" onClick={(e) => { e.stopPropagation(); onClose() }} aria-label="Close"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors z-10"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+
+          {total > 1 && (
+            <>
+              <button
+                type="button" onClick={(e) => { e.stopPropagation(); advance(-1) }} disabled={index === 0} aria-label="Previous photo"
+                className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full items-center justify-center bg-white/10 hover:bg-white/20 disabled:opacity-25 transition-colors z-10"
+              >
+                <ChevronLeft className="w-5 h-5 text-white" />
+              </button>
+              <button
+                type="button" onClick={(e) => { e.stopPropagation(); advance(1) }} disabled={index === total - 1} aria-label="Next photo"
+                className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full items-center justify-center bg-white/10 hover:bg-white/20 disabled:opacity-25 transition-colors z-10"
+              >
+                <ChevronRight className="w-5 h-5 text-white" />
+              </button>
+            </>
+          )}
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={index}
+              className="relative w-full h-full flex items-center justify-center px-4 py-14 sm:px-20"
+              style={{ x }}
+              drag={total > 1 ? 'x' : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.7}
+              onDragEnd={onDragEnd}
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {photos[index] && (
+                <img src={photos[index]} alt="" className="max-w-full max-h-full object-contain select-none" draggable={false} />
+              )}
+            </motion.div>
+          </AnimatePresence>
+
+          {total > 1 && (
+            <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 text-white/55 text-[12px] tabular-nums tracking-wide pointer-events-none">
+              {index + 1} / {total}
+            </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 function SinglePropertyPage({ p }: { p: SwipeProperty }) {
   const [index, setIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [descOpen, setDescOpen] = useState(false)
   const photos = p.images
   const total = photos.length
   const x = useMotionValue(0)
+  // Kev's redesign (2026-08-30): the active image dips slightly as it's
+  // dragged toward the next/previous one, instead of just translating flat —
+  // reads as a card lifting off the stack rather than a slide.
+  const dragOpacity = useTransform(x, [-200, 0, 200], [0.82, 1, 0.82])
 
   const advance = useCallback((dir: 1 | -1) => {
     setIndex(i => Math.max(0, Math.min(Math.max(total - 1, 0), i + dir)))
@@ -599,19 +718,22 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
   // a light, quick flick should register, not require a deliberate drag.
   const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
     const THRESH = 36
-    if (info.offset.x < -THRESH || info.velocity.x < -220) advance(1)
-    else if (info.offset.x > THRESH || info.velocity.x > 220) advance(-1)
-    x.set(0)
+    if (info.offset.x < -THRESH || info.velocity.x < -220) { advance(1); x.set(0) }
+    else if (info.offset.x > THRESH || info.velocity.x > 220) { advance(-1); x.set(0) }
+    // below threshold: don't force-reset x — dragConstraints springs the
+    // image back to 0 on its own, which is what actually looks like "return
+    // to original position" instead of an abrupt snap.
   }, [advance, x])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (lightboxOpen) return // the lightbox has its own arrow-key handling
       if (e.key === 'ArrowRight') advance(1)
       if (e.key === 'ArrowLeft') advance(-1)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [advance])
+  }, [advance, lightboxOpen])
 
   // Mouse wheel (PC): scroll through photos. Throttled — a single scroll
   // gesture fires many wheel events, and each one should only ever move
@@ -619,6 +741,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
   const wheelCooldown = useRef(false)
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      if (lightboxOpen) return
       const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
       if (Math.abs(delta) < 12 || wheelCooldown.current) return
       e.preventDefault()
@@ -628,7 +751,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
     }
     window.addEventListener('wheel', onWheel, { passive: false })
     return () => window.removeEventListener('wheel', onWheel)
-  }, [advance])
+  }, [advance, lightboxOpen])
 
   const eyebrow = fmtSpecs(p).slice(0, 2).join(' / ')
   const location = p.town || [p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'
@@ -640,65 +763,87 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: OFFWHITE }}>
       {/* fixed header — eyebrow (+ ref) + hairline rule to the right edge */}
-      <div className="flex items-center gap-4 pl-8 pr-5 sm:pl-14 pt-6 pb-4 flex-shrink-0">
+      <div className="flex items-center gap-4 pl-8 pr-5 sm:pl-14 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
         <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
           {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
         </span>
         <div className="flex-1 h-px" style={{ background: HAIRLINE }} />
       </div>
 
-      {/* the photo stage — main image + fan of what's coming next. The
-          "2906" watermark lives HERE (not the full page height) — Kev's
-          reference centres it on the photo area specifically, close to the
-          edge, not the header/footer band. */}
-      <div className="relative flex-1 min-h-0 flex pl-8 pr-5 sm:pl-14 pb-5">
-        <div className="flex sm:hidden absolute left-1.5 top-0 bottom-0 items-center z-20 pointer-events-none" style={{ width: 24 }}>
-          <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 17, letterSpacing: '0.08em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
-        </div>
+      {/* the photo stage — main image + fan of what's coming next. Desktop
+          (and landscape phones) get a wide, ~16:9 image sized off a shared
+          height so the fan strip lines up beside it; mobile portrait keeps
+          the original full-height, wide-as-practical treatment. */}
+      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1200px] lg:mx-auto mobile-landscape:max-w-[900px] mobile-landscape:mx-auto">
+        {/* desktop / landscape reference — left edge, vertical read */}
         <div className="hidden sm:flex absolute left-3 top-0 bottom-0 items-center z-20 pointer-events-none" style={{ width: 32 }}>
           <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
         </div>
+        {/* mobile portrait reference — top-right watermark, never fights the image for space and never gets clipped by the edge */}
+        <div className="sm:hidden absolute top-2 right-2 z-20 pointer-events-none">
+          <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 13, letterSpacing: '0.1em', opacity: 0.9 }}>2906</span>
+        </div>
         <motion.div
-          className="relative h-full flex-shrink-0 overflow-hidden"
-          style={{ width: '70%', x }}
+          className="relative flex-shrink-0 overflow-hidden w-[86%] h-full lg:w-auto lg:h-[min(60vh,640px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
+          style={{ x, opacity: dragOpacity }}
           drag={total > 1 ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.5}
           onDragEnd={onDragEnd}
+          onTap={() => setLightboxOpen(true)}
         >
           {photos[index] ? (
             <img src={photos[index]} alt="" className="w-full h-full object-cover" draggable={false} />
           ) : (
             <div className="w-full h-full" style={{ background: PHOTO_BG }} />
           )}
-          {total > 1 && (
-            <>
-              <button aria-label="Previous photo" className="absolute inset-y-0 left-0 w-1/3" onClick={() => advance(-1)} />
-              <button aria-label="Next photo" className="absolute inset-y-0 right-0 w-1/3" onClick={() => advance(1)} />
-            </>
-          )}
         </motion.div>
-        <PhotoFan photos={photos} index={index} onSelect={setIndex} />
+        <PhotoFan photos={photos} index={index} onSelect={setIndex} dragX={x} />
       </div>
 
-      {/* fixed footer — gold mark, name/price bold on one baseline, then the description */}
-      <div className="flex-shrink-0 pl-8 pr-5 sm:pl-14 pb-7 pt-1 flex gap-3.5">
+      {/* fixed footer — gold mark, name/price as one wrapping block (stays
+          close together on desktop, wraps to its own line under a long
+          locality on narrow phones instead of truncating), then the
+          description, single line until tapped open. */}
+      <div className="flex-shrink-0 pl-8 pr-5 sm:pl-14 pb-7 pt-1 mobile-landscape:pb-3 flex gap-3.5">
         <div className="flex-shrink-0 rounded-full" style={{ width: 4, height: 46, background: GOLD }} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <h1 className="truncate flex-1 min-w-0" style={{ color: INK, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <h1 className="min-w-0" style={{ color: INK, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
             <span className="flex-shrink-0" style={{ color: INK, fontSize: 22, fontWeight: 700 }}>{fmtSinglePrice(p)}</span>
           </div>
           {desc && (
-            <p
-              className="mt-2 text-[12.5px] leading-relaxed"
-              style={{ color: MUTED, fontWeight: 400, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            <button
+              type="button"
+              onClick={() => setDescOpen(o => !o)}
+              aria-expanded={descOpen}
+              className="relative block mt-2 text-left w-full"
             >
-              {desc}
-            </p>
+              <div
+                className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                style={{ maxHeight: descOpen ? 320 : 18, overflowY: descOpen ? 'auto' : 'hidden' }}
+              >
+                <p className="text-[12.5px] leading-relaxed" style={{ color: MUTED, fontWeight: 400 }}>{desc}</p>
+              </div>
+              {!descOpen && (
+                <span
+                  className="absolute right-0 bottom-0 text-[12.5px] pl-1"
+                  style={{ color: MUTED, background: OFFWHITE }}
+                >
+                  …
+                </span>
+              )}
+            </button>
           )}
         </div>
       </div>
+
+      <Lightbox
+        photos={lightboxOpen ? photos : null}
+        index={index}
+        onClose={() => setLightboxOpen(false)}
+        onIndexChange={setIndex}
+      />
     </div>
   )
 }
