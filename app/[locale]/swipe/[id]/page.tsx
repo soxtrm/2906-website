@@ -556,9 +556,12 @@ function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number
         const widthPct = 26 - i * 2
         const leftPct = i * (74 / Math.max(n - 1, 1))
         const insetPct = t * 16 // 0% at front, up to 16% top+bottom by the last card
-        // Bleached from the very first card, going fully washed-out by the last.
-        const grayscale = Math.min(1, 0.5 + t * 0.6)
-        const brightness = 1.25 + t * 1.05
+        // Kev, 2026-08-30 (round 4): "schwarzweiß... alle Bilder die nach dem
+        // ersten kommen" — EVERY fan card is fully black & white, no
+        // exceptions, starting with the very first one. Only brightness
+        // ramps with distance, carrying the "fades toward white" depth cue.
+        const grayscale = 1
+        const brightness = 1.05 + t * 1.3
         const opacity = 1 - t * 0.3
         return (
           <button
