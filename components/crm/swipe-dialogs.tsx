@@ -270,6 +270,34 @@ export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: strin
     catch { /* clipboard blocked — the field itself is still selectable */ }
   }
 
+  // Prompt B: "direkt handeln... kein manuelles Kopieren zwischen Systemen" —
+  // get-or-create the SAME persistent link (never a new one per client), then
+  // hand the agent a pre-filled WhatsApp draft to THAT client's number via
+  // the standard wa.me deep link. The agent still reviews and hits send on
+  // their own device — this never sends anything on its own, same as every
+  // other WhatsApp action already on the board (Chat/Book).
+  const shareWithClient = async (m: MatchRow) => {
+    let url = shareUrl
+    if (!url) {
+      setShareBusy(m.clientId)
+      try {
+        const d = await crmJson(`schedule-board/property-link/${encodeURIComponent(propertyRef)}`, 'GET')
+        url = d.url
+        setShareUrl(d.url)
+      } catch (e: any) {
+        setErr(e?.message || 'Could not create the share link')
+        setShareBusy(null)
+        return
+      }
+      setShareBusy(null)
+    }
+    const firstName = (m.clientName || '').trim().split(/\s+/)[0] || ''
+    const greeting = firstName ? `Hi ${firstName}, ` : 'Hi, '
+    const text = `${greeting}thought this one might be a good fit for you: ${url}`
+    const phone = (m.clientPhone || '').replace(/\D/g, '')
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div style={overlay} onClick={onClose}>
       <div style={sheet} onClick={e => e.stopPropagation()}>
@@ -302,7 +330,7 @@ export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: strin
             </div>
           )}
           <p style={{ fontSize: 11, color: '#999', margin: '6px 0 0' }}>
-            One link for this listing — paste it to whichever client you pick below, or reuse it anywhere.
+            One link for this listing, reused everywhere — copy it above, or use "Share with this client" on a match below to open WhatsApp pre-filled.
           </p>
         </div>
 
@@ -332,6 +360,20 @@ export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: strin
                   )
                 })}
               </div>
+              {m.clientPhone && (
+                <button
+                  onClick={() => shareWithClient(m)}
+                  disabled={shareBusy === m.clientId}
+                  title="Open WhatsApp with this listing's link pre-filled for this client"
+                  style={{
+                    marginTop: 7, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7,
+                    border: '1px solid #DCEEDF', background: '#F3FBF5', color: GREEN, fontWeight: 700, fontSize: 11, fontFamily: F,
+                    cursor: shareBusy === m.clientId ? 'wait' : 'pointer',
+                  }}
+                >
+                  <MessageCircle size={12} /> {shareBusy === m.clientId ? 'Getting link…' : 'Share with this client'}
+                </button>
+              )}
             </div>
           ))}
         </div>
