@@ -768,32 +768,37 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: OFFWHITE }}>
-      {/* fixed header — eyebrow (+ ref) + hairline rule to the right edge */}
+      {/* fixed header — eyebrow (+ ref) + hairline rule to the right edge.
+          Kev, 2026-08-30 (round 4): on mobile the "2906" mark now lives
+          IN this strip (Sotheby's-style — a name in the header rule, not a
+          watermark sitting on the photo) instead of overlaying the image,
+          so the whole photo is free of any text. */}
       <div className="flex items-center gap-4 pl-8 pr-5 sm:pl-14 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
         <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
           {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
         </span>
         <div className="flex-1 h-px" style={{ background: HAIRLINE }} />
+        <span
+          className="sm:hidden flex-shrink-0 text-[12px]"
+          style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, letterSpacing: '0.12em' }}
+        >
+          2906
+        </span>
       </div>
 
       {/* the photo stage — main image + fan of what's coming next. Desktop
           (and landscape phones) get a wide, ~16:9 image sized off a shared
           height so the fan strip lines up beside it; mobile portrait keeps
           the original full-height, wide-as-practical treatment. */}
-      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1680px] mobile-landscape:max-w-[900px]">
-        {/* desktop / landscape reference — left edge, vertical read. Anchored
-            to this row's own left padding (not centered/mx-auto — a wide
-            monitor keeps this flush with the true left edge, matching Kev's
-            original reference, instead of drifting inward with the row). */}
-        <div className="hidden sm:flex absolute left-3 top-0 bottom-0 items-center z-20 pointer-events-none" style={{ width: 32 }}>
+      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1680px] lg:mx-auto mobile-landscape:max-w-[900px] mobile-landscape:mx-auto">
+        {/* desktop / landscape reference — pinned to the true viewport edge
+            (fixed, not tied to the row) so the centered row can stay
+            centered without dragging the watermark inward with it. */}
+        <div className="hidden sm:flex fixed left-3 top-1/2 -translate-y-1/2 z-20 pointer-events-none" style={{ width: 32 }}>
           <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
         </div>
-        {/* mobile portrait reference — top-right watermark, never fights the image for space and never gets clipped by the edge */}
-        <div className="sm:hidden absolute top-2 right-2 z-20 pointer-events-none">
-          <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 13, letterSpacing: '0.1em', opacity: 0.9 }}>2906</span>
-        </div>
         <motion.div
-          className="relative flex-shrink-0 overflow-hidden w-[86%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
+          className="relative flex-shrink-0 overflow-hidden w-[92%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
           style={{ x, opacity: dragOpacity }}
           drag={total > 1 ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
