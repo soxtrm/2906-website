@@ -550,15 +550,15 @@ function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number
     <div className="relative flex-1 h-full overflow-hidden">
       {upcoming.map((src, i) => {
         const t = i / Math.max(n - 1, 1) // 0 (nearest) .. 1 (furthest)
-        // Kev, 2026-08-30 (round 2): cards were reading as one flat row of
-        // near-equal panels, not a fan — narrower from the first card, and
-        // tapering faster, so the depth/overlap is unmistakable at a glance.
+        // Kev, 2026-08-30 (round 3): cards further back must shrink too, not
+        // just narrow — vertical inset grows with distance so each card
+        // visibly gets smaller as it recedes, on top of the width taper.
         const widthPct = 26 - i * 2
         const leftPct = i * (74 / Math.max(n - 1, 1))
-        // Even the nearest card reads as muted, not full colour — the whole
-        // fan should look bleached, ramping to fully white by the last card.
-        const grayscale = Math.min(1, 0.35 + t * 0.75)
-        const brightness = 1.15 + t * 0.95
+        const insetPct = t * 16 // 0% at front, up to 16% top+bottom by the last card
+        // Bleached from the very first card, going fully washed-out by the last.
+        const grayscale = Math.min(1, 0.5 + t * 0.6)
+        const brightness = 1.25 + t * 1.05
         const opacity = 1 - t * 0.3
         return (
           <button
@@ -566,8 +566,8 @@ function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number
             type="button"
             onClick={() => onSelect(index + 1 + i)}
             aria-label={`Photo ${index + 2 + i}`}
-            className="absolute top-0 bottom-0"
-            style={{ left: `${leftPct}%`, width: `${widthPct}%`, opacity, zIndex: n - i }}
+            className="absolute"
+            style={{ left: `${leftPct}%`, width: `${widthPct}%`, top: `${insetPct}%`, bottom: `${insetPct}%`, opacity, zIndex: n - i }}
           >
             <img
               src={src} alt="" className="w-full h-full object-cover" draggable={false}
@@ -636,10 +636,10 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: OFFWHITE }}>
-      {/* fixed header — eyebrow + hairline rule to the right edge */}
+      {/* fixed header — eyebrow (+ ref) + hairline rule to the right edge */}
       <div className="flex items-center gap-4 pl-8 pr-5 sm:pl-14 pt-6 pb-4 flex-shrink-0">
         <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
-          {eyebrow || 'Property'}
+          {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
         </span>
         <div className="flex-1 h-px" style={{ background: HAIRLINE }} />
       </div>
@@ -683,8 +683,8 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
         <div className="flex-shrink-0 rounded-full" style={{ width: 4, height: 46, background: GOLD }} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
-            <h1 className="truncate flex-1 min-w-0" style={{ color: INK, fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
-            <span className="flex-shrink-0" style={{ color: INK, fontSize: 18, fontWeight: 700 }}>{fmtSinglePrice(p)}</span>
+            <h1 className="truncate flex-1 min-w-0" style={{ color: INK, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
+            <span className="flex-shrink-0" style={{ color: INK, fontSize: 22, fontWeight: 700 }}>{fmtSinglePrice(p)}</span>
           </div>
           {desc && (
             <p
