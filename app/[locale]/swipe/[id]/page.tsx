@@ -555,7 +555,7 @@ function PhotoFan({ photos, index, onSelect, dragX }: { photos: string[]; index:
   // reads as "about to become the active image" rather than a static prop.
   const nearestScale = useTransform(activeX, [-160, 0], [1.08, 1])
   const upcoming = photos.slice(index + 1, index + 1 + FAN_MAX)
-  const fanBoxClass = 'flex-1 h-full lg:h-[min(60vh,640px)] mobile-landscape:h-[min(76vh,420px)]'
+  const fanBoxClass = 'flex-1 h-full lg:h-[min(80vh,850px)] mobile-landscape:h-[min(76vh,420px)]'
   if (!upcoming.length) return <div className={fanBoxClass} style={{ background: OFFWHITE }} />
   const n = upcoming.length
   return (
@@ -675,7 +675,7 @@ function Lightbox({ photos, index, onClose, onIndexChange }: {
               style={{ x }}
               drag={total > 1 ? 'x' : false}
               dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.7}
+              dragElastic={1}
               onDragEnd={onDragEnd}
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -774,7 +774,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           (and landscape phones) get a wide, ~16:9 image sized off a shared
           height so the fan strip lines up beside it; mobile portrait keeps
           the original full-height, wide-as-practical treatment. */}
-      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1200px] lg:mx-auto mobile-landscape:max-w-[900px] mobile-landscape:mx-auto">
+      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1600px] lg:mx-auto mobile-landscape:max-w-[900px] mobile-landscape:mx-auto">
         {/* desktop / landscape reference — left edge, vertical read */}
         <div className="hidden sm:flex absolute left-3 top-0 bottom-0 items-center z-20 pointer-events-none" style={{ width: 32 }}>
           <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
@@ -784,11 +784,11 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 13, letterSpacing: '0.1em', opacity: 0.9 }}>2906</span>
         </div>
         <motion.div
-          className="relative flex-shrink-0 overflow-hidden w-[86%] h-full lg:w-auto lg:h-[min(60vh,640px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
+          className="relative flex-shrink-0 overflow-hidden w-[86%] h-full lg:w-auto lg:h-[min(80vh,850px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
           style={{ x, opacity: dragOpacity }}
           drag={total > 1 ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.5}
+          dragElastic={1}
           onDragEnd={onDragEnd}
           onTap={() => setLightboxOpen(true)}
         >
