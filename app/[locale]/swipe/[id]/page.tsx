@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Heart, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, BedDouble, Bath, Ruler, MapPin, X, Check, CheckCircle2 } from 'lucide-react'
+import { Heart, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Maximize2, BedDouble, Bath, Ruler, MapPin, X, Check, CheckCircle2 } from 'lucide-react'
 
 const API_BASE = ''
 const GOLD = '#B8953F'
@@ -555,7 +555,7 @@ function PhotoFan({ photos, index, onSelect, dragX }: { photos: string[]; index:
   // reads as "about to become the active image" rather than a static prop.
   const nearestScale = useTransform(activeX, [-160, 0], [1.08, 1])
   const upcoming = photos.slice(index + 1, index + 1 + FAN_MAX)
-  const fanBoxClass = 'flex-1 h-full lg:h-[min(80vh,850px)] mobile-landscape:h-[min(76vh,420px)]'
+  const fanBoxClass = 'flex-1 h-full lg:h-[min(84vh,893px)] mobile-landscape:h-[min(76vh,420px)]'
   if (!upcoming.length) return <div className={fanBoxClass} style={{ background: OFFWHITE }} />
   const n = upcoming.length
   return (
@@ -710,7 +710,13 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
   // reads as a card lifting off the stack rather than a slide.
   const dragOpacity = useTransform(x, [-200, 0, 200], [0.82, 1, 0.82])
 
+  // Kev's redesign (2026-08-30, round 3): direction of the last advance, so
+  // the photo swap can slide the new image in from the correct side instead
+  // of a hard cut — a ref because it doesn't need to trigger its own render,
+  // just be current by the time `index` changes cause one.
+  const dirRef = useRef<1 | -1>(1)
   const advance = useCallback((dir: 1 | -1) => {
+    dirRef.current = dir
     setIndex(i => Math.max(0, Math.min(Math.max(total - 1, 0), i + dir)))
   }, [total])
 
@@ -774,8 +780,11 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           (and landscape phones) get a wide, ~16:9 image sized off a shared
           height so the fan strip lines up beside it; mobile portrait keeps
           the original full-height, wide-as-practical treatment. */}
-      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1600px] lg:mx-auto mobile-landscape:max-w-[900px] mobile-landscape:mx-auto">
-        {/* desktop / landscape reference — left edge, vertical read */}
+      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1680px] mobile-landscape:max-w-[900px]">
+        {/* desktop / landscape reference — left edge, vertical read. Anchored
+            to this row's own left padding (not centered/mx-auto — a wide
+            monitor keeps this flush with the true left edge, matching Kev's
+            original reference, instead of drifting inward with the row). */}
         <div className="hidden sm:flex absolute left-3 top-0 bottom-0 items-center z-20 pointer-events-none" style={{ width: 32 }}>
           <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
         </div>
@@ -784,19 +793,47 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 13, letterSpacing: '0.1em', opacity: 0.9 }}>2906</span>
         </div>
         <motion.div
-          className="relative flex-shrink-0 overflow-hidden w-[86%] h-full lg:w-auto lg:h-[min(80vh,850px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
+          className="relative flex-shrink-0 overflow-hidden w-[86%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
           style={{ x, opacity: dragOpacity }}
           drag={total > 1 ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={1}
           onDragEnd={onDragEnd}
-          onTap={() => setLightboxOpen(true)}
         >
-          {photos[index] ? (
-            <img src={photos[index]} alt="" className="w-full h-full object-cover" draggable={false} />
-          ) : (
-            <div className="w-full h-full" style={{ background: PHOTO_BG }} />
-          )}
+          {/* Kev, 2026-08-30 (round 3): on real phones, tap-to-open-fullscreen
+              on the whole image kept firing on ordinary swipe/scroll touches —
+              onTap and axis-locked drag don't disambiguate reliably enough on
+              touch hardware. Fullscreen is now its own explicit control, never
+              a side effect of touching the image. */}
+          <AnimatePresence initial={false} custom={dirRef.current}>
+            {photos[index] ? (
+              <motion.img
+                key={index}
+                src={photos[index]} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false}
+                custom={dirRef.current}
+                variants={{
+                  enter: (dir: 1 | -1) => ({ opacity: 0, x: dir * 36 }),
+                  center: { opacity: 1, x: 0 },
+                  exit: (dir: 1 | -1) => ({ opacity: 0, x: dir * -36 }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              />
+            ) : (
+              <div key="empty" className="absolute inset-0" style={{ background: PHOTO_BG }} />
+            )}
+          </AnimatePresence>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setLightboxOpen(true) }}
+            aria-label="View fullscreen"
+            className="absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm"
+            style={{ background: 'rgba(0,0,0,0.4)' }}
+          >
+            <Maximize2 className="w-4 h-4 text-white" />
+          </button>
         </motion.div>
         <PhotoFan photos={photos} index={index} onSelect={setIndex} dragX={x} />
       </div>
