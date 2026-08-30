@@ -24,6 +24,7 @@ interface SwipeProperty {
   availableNow: boolean
   images: string[]
   description: string
+  fullDescription: string
 }
 
 // ── rotating ad slides — top bar + the desktop brand panel share one index ──
@@ -513,12 +514,196 @@ function ThumbGrid({ properties, index, favourited, onJump }: { properties: Swip
   )
 }
 
+// ── single-property share page (Kev's Prompt A follow-up, 2026-08-30) ───────
+// The visual destination for a property-kind link (Board "Copy" button) —
+// editorial/boutique layout, deliberately NOT the dark Tinder-style deck
+// above: one property, one photo strip to browse, no like/favourite (that
+// mechanic is a multi-property/client-link concept — this page never
+// contacts anyone, has nothing to "pick" out of, so it isn't offered here).
+// Firewall is inherited for free: `p` is already a SwipeProperty, the same
+// shape SWIPE_PROPERTY_COLS/shapeSwipeCard produce for the deck above —
+// never owner data, never the exact street address.
+const OFFWHITE = '#FAFAF8'
+const INK = '#3A3935'
+const MUTED = '#9C9A93'
+const HAIRLINE = '#E7E5DF'
+const PHOTO_BG = '#EDEBE5'
+
+function fmtSinglePrice(p: SwipeProperty) {
+  if (p.price == null) return 'Price on request'
+  const n = `€${Number(p.price).toLocaleString()}`
+  return p.forSale ? n : `${n} /monthly`
+}
+
+// The fanned card-stack of UPCOMING photos to the right of the main image —
+// real crops (object-cover on a narrowing window), not placeholders. Kev's
+// reference: many overlapping slivers, each one narrower AND progressively
+// desaturated/bleached (grayscale + brightened, not just faded via opacity)
+// until it's nearly indistinguishable from the page background. Count
+// adapts to how many photos are actually left (fewer photos = shorter fan).
+const FAN_MAX = 8
+function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number; onSelect: (i: number) => void }) {
+  const upcoming = photos.slice(index + 1, index + 1 + FAN_MAX)
+  if (!upcoming.length) return <div className="flex-1 h-full" style={{ background: OFFWHITE }} />
+  const n = upcoming.length
+  return (
+    <div className="relative flex-1 h-full overflow-hidden">
+      {upcoming.map((src, i) => {
+        const t = i / Math.max(n - 1, 1) // 0 (nearest) .. 1 (furthest)
+        // Narrow ribbons, evenly spread across the fan's width rather than
+        // wide overlapping panels — left edges span 0%..70% regardless of
+        // n (fewer photos = wider gaps between fewer, wider-feeling
+        // ribbons; more photos = a tighter, denser stack), width tapers
+        // gently so the furthest cards genuinely read as narrower.
+        const widthPct = 40 - i * 2.5
+        const leftPct = i * (70 / Math.max(n - 1, 1))
+        // Even the nearest card reads as muted, not full colour — the whole
+        // fan should look bleached, ramping to fully white by the last card.
+        const grayscale = Math.min(1, 0.35 + t * 0.75)
+        const brightness = 1.15 + t * 0.95
+        const opacity = 1 - t * 0.3
+        return (
+          <button
+            key={index + 1 + i}
+            type="button"
+            onClick={() => onSelect(index + 1 + i)}
+            aria-label={`Photo ${index + 2 + i}`}
+            className="absolute top-0 bottom-0"
+            style={{ left: `${leftPct}%`, width: `${widthPct}%`, opacity, zIndex: n - i }}
+          >
+            <img
+              src={src} alt="" className="w-full h-full object-cover" draggable={false}
+              style={{ filter: `grayscale(${grayscale}) brightness(${brightness})` }}
+            />
+          </button>
+        )
+      })}
+      {/* fade the far edge of the fan into the page background rather than a hard clip */}
+      <div className="absolute inset-y-0 right-0 w-1/3 pointer-events-none" style={{ background: `linear-gradient(to right, transparent, ${OFFWHITE})` }} />
+    </div>
+  )
+}
+
+function SinglePropertyPage({ p }: { p: SwipeProperty }) {
+  const [index, setIndex] = useState(0)
+  const photos = p.images
+  const total = photos.length
+  const x = useMotionValue(0)
+
+  const advance = useCallback((dir: 1 | -1) => {
+    setIndex(i => Math.max(0, Math.min(Math.max(total - 1, 0), i + dir)))
+  }, [total])
+
+  const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const THRESH = 60
+    if (info.offset.x < -THRESH || info.velocity.x < -400) advance(1)
+    else if (info.offset.x > THRESH || info.velocity.x > 400) advance(-1)
+    x.set(0)
+  }, [advance, x])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') advance(1)
+      if (e.key === 'ArrowLeft') advance(-1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [advance])
+
+  const eyebrow = fmtSpecs(p).slice(0, 2).join(' / ')
+  const location = p.town || [p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'
+
+  // Prefer the clean editorial website copy over the punchy social/FB text
+  // the swipe deck above uses — this page is the boutique/editorial one.
+  const desc = p.fullDescription || p.description
+
+  return (
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: OFFWHITE }}>
+      {/* fixed header — eyebrow + hairline rule to the right edge */}
+      <div className="flex items-center gap-4 pl-8 pr-5 sm:pl-14 pt-6 pb-4 flex-shrink-0">
+        <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
+          {eyebrow || 'Property'}
+        </span>
+        <div className="flex-1 h-px" style={{ background: HAIRLINE }} />
+      </div>
+
+      {/* the photo stage — main image + fan of what's coming next. The
+          "2906" watermark lives HERE (not the full page height) — Kev's
+          reference centres it on the photo area specifically, close to the
+          edge, not the header/footer band. */}
+      <div className="relative flex-1 min-h-0 flex pl-8 pr-5 sm:pl-14 pb-5">
+        <div className="flex sm:hidden absolute left-1.5 top-0 bottom-0 items-center z-20 pointer-events-none" style={{ width: 24 }}>
+          <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 17, letterSpacing: '0.08em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
+        </div>
+        <div className="hidden sm:flex absolute left-3 top-0 bottom-0 items-center z-20 pointer-events-none" style={{ width: 32 }}>
+          <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
+        </div>
+        <motion.div
+          className="relative h-full flex-shrink-0 overflow-hidden"
+          style={{ width: '62%', x }}
+          drag={total > 1 ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.5}
+          onDragEnd={onDragEnd}
+        >
+          {photos[index] ? (
+            <img src={photos[index]} alt="" className="w-full h-full object-cover" draggable={false} />
+          ) : (
+            <div className="w-full h-full" style={{ background: PHOTO_BG }} />
+          )}
+          {total > 1 && (
+            <>
+              <button aria-label="Previous photo" className="absolute inset-y-0 left-0 w-1/3" onClick={() => advance(-1)} />
+              <button aria-label="Next photo" className="absolute inset-y-0 right-0 w-1/3" onClick={() => advance(1)} />
+            </>
+          )}
+        </motion.div>
+        <PhotoFan photos={photos} index={index} onSelect={setIndex} />
+      </div>
+
+      {/* fixed footer — gold mark, name/price bold on one baseline, then the description */}
+      <div className="flex-shrink-0 pl-8 pr-5 sm:pl-14 pb-7 pt-1 flex gap-3.5">
+        <div className="flex-shrink-0 rounded-full" style={{ width: 4, height: 46, background: GOLD }} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <h1 className="truncate flex-1 min-w-0" style={{ color: INK, fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
+            <span className="flex-shrink-0" style={{ color: INK, fontSize: 18, fontWeight: 700 }}>{fmtSinglePrice(p)}</span>
+          </div>
+          {desc && (
+            <p
+              className="mt-2 text-[12.5px] leading-relaxed"
+              style={{ color: MUTED, fontWeight: 400, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            >
+              {desc}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SinglePropertyMessage({ text }: { text: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: OFFWHITE }}>
+      <div className="text-center max-w-xs">
+        <div className="w-11 h-11 rounded-full flex items-center justify-center mb-5 mx-auto" style={{ background: '#F0EEE7' }}>
+          <X className="w-5 h-5" style={{ color: MUTED }} />
+        </div>
+        <h1 className="text-lg mb-2" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: INK }}>This link has expired</h1>
+        <p className="text-[13px]" style={{ color: MUTED }}>{text}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function SwipePage() {
   const params = useParams()
   const id = String(params.id || '')
   const [properties, setProperties] = useState<SwipeProperty[] | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [expiredMessage, setExpiredMessage] = useState<string | null>(null)
+  const [linkKind, setLinkKind] = useState<'property' | 'client' | null>(null)
   const [index, setIndex] = useState(0)
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [favourited, setFavourited] = useState<Set<string>>(new Set())
@@ -543,6 +728,7 @@ export default function SwipePage() {
         // TTL/rented/off-market) comes back 200 with expired:true, distinct
         // from a paused/nonexistent link (non-200, notFound below) — the
         // record persists server-side, only public access ends.
+        setLinkKind(d.kind === 'property' ? 'property' : 'client')
         if (d.expired) { setExpiredMessage(d.message || 'This link has expired.'); return }
         setProperties(Array.isArray(d.properties) ? d.properties : [])
       })
@@ -683,6 +869,7 @@ export default function SwipePage() {
   }, [advance, like, properties, index, onTapPhoto])
 
   if (expiredMessage) {
+    if (linkKind === 'property') return <SinglePropertyMessage text={expiredMessage} />
     return (
       <div className="min-h-screen flex items-center justify-center px-6" style={{ background: BG }}>
         <div className="text-center max-w-xs">
@@ -716,6 +903,10 @@ export default function SwipePage() {
         <div className="w-8 h-8 rounded-full border-2 border-white/15 animate-spin" style={{ borderTopColor: GOLD }} />
       </div>
     )
+  }
+
+  if (linkKind === 'property') {
+    return properties[0] ? <SinglePropertyPage p={properties[0]} /> : <SinglePropertyMessage text="This listing is no longer available." />
   }
 
   const total = properties.length
