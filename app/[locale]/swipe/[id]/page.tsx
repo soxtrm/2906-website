@@ -550,13 +550,11 @@ function PhotoFan({ photos, index, onSelect }: { photos: string[]; index: number
     <div className="relative flex-1 h-full overflow-hidden">
       {upcoming.map((src, i) => {
         const t = i / Math.max(n - 1, 1) // 0 (nearest) .. 1 (furthest)
-        // Narrow ribbons, evenly spread across the fan's width rather than
-        // wide overlapping panels — left edges span 0%..70% regardless of
-        // n (fewer photos = wider gaps between fewer, wider-feeling
-        // ribbons; more photos = a tighter, denser stack), width tapers
-        // gently so the furthest cards genuinely read as narrower.
-        const widthPct = 40 - i * 2.5
-        const leftPct = i * (70 / Math.max(n - 1, 1))
+        // Kev, 2026-08-30 (round 2): cards were reading as one flat row of
+        // near-equal panels, not a fan — narrower from the first card, and
+        // tapering faster, so the depth/overlap is unmistakable at a glance.
+        const widthPct = 26 - i * 2
+        const leftPct = i * (74 / Math.max(n - 1, 1))
         // Even the nearest card reads as muted, not full colour — the whole
         // fan should look bleached, ramping to fully white by the last card.
         const grayscale = Math.min(1, 0.35 + t * 0.75)
@@ -594,10 +592,12 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
     setIndex(i => Math.max(0, Math.min(Math.max(total - 1, 0), i + dir)))
   }, [total])
 
+  // Kev, 2026-08-30 (round 2): "richtig schnell durchblättern" on mobile —
+  // a light, quick flick should register, not require a deliberate drag.
   const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const THRESH = 60
-    if (info.offset.x < -THRESH || info.velocity.x < -400) advance(1)
-    else if (info.offset.x > THRESH || info.velocity.x > 400) advance(-1)
+    const THRESH = 36
+    if (info.offset.x < -THRESH || info.velocity.x < -220) advance(1)
+    else if (info.offset.x > THRESH || info.velocity.x > 220) advance(-1)
     x.set(0)
   }, [advance, x])
 
@@ -608,6 +608,23 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [advance])
+
+  // Mouse wheel (PC): scroll through photos. Throttled — a single scroll
+  // gesture fires many wheel events, and each one should only ever move
+  // one photo, not cascade through several.
+  const wheelCooldown = useRef(false)
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
+      if (Math.abs(delta) < 12 || wheelCooldown.current) return
+      e.preventDefault()
+      wheelCooldown.current = true
+      advance(delta > 0 ? 1 : -1)
+      setTimeout(() => { wheelCooldown.current = false }, 260)
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
   }, [advance])
 
   const eyebrow = fmtSpecs(p).slice(0, 2).join(' / ')
@@ -640,7 +657,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
         </div>
         <motion.div
           className="relative h-full flex-shrink-0 overflow-hidden"
-          style={{ width: '62%', x }}
+          style={{ width: '70%', x }}
           drag={total > 1 ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.5}
