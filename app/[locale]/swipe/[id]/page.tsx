@@ -3,11 +3,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Heart, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Maximize2, BedDouble, Bath, Ruler, MapPin, X, Check, CheckCircle2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 
 const API_BASE = ''
 const GOLD = '#B8953F'
-const GOLD_LIGHT = '#D4B15A'
 const BG = '#0B1120'
 
 interface SwipeProperty {
@@ -27,15 +26,6 @@ interface SwipeProperty {
   fullDescription: string
 }
 
-// ── rotating ad slides — top bar + the desktop brand panel share one index ──
-const AD_SLIDES = [
-  { top: 'JOIN US AS AFFILIATE PARTNER', link: '2906.ESTATE/CONTACT', tagline: 'Leading the way in real estate technology in Malta.', cta: null as string | null },
-  { top: 'JOIN US AS AGENT', link: '2906.ESTATE/CONTACT', tagline: null as string | null, cta: null as string | null },
-  { top: 'LEADING THE WAY IN REAL ESTATE TECHNOLOGY IN MALTA.', link: null as string | null, tagline: null as string | null, cta: 'JOIN OUR TEAM!' },
-  { top: 'SUGGEST US & PROFIT FROM IT', link: null as string | null, tagline: null as string | null, cta: 'JOIN OUR TEAM!' },
-]
-const AD_ROTATE_MS = 9000
-
 function visitorKey(id: string) { return `swipe_visitor_${id}` }
 
 function getVisitorId(id: string) {
@@ -51,467 +41,12 @@ function getVisitorId(id: string) {
   }
 }
 
-function fmtPrice(p: SwipeProperty) {
-  if (p.price == null) return 'Price on request'
-  const n = `€${Number(p.price).toLocaleString()}`
-  return p.forSale ? n : `${n}/mo`
-}
-
 function fmtSpecs(p: SwipeProperty) {
   const parts: string[] = []
   if (p.bedrooms != null) parts.push(p.bedrooms === 0 ? 'Studio' : `${p.bedrooms} bed`)
   if (p.bathrooms != null) parts.push(`${p.bathrooms} bath`)
   if (p.sizeSqm != null) parts.push(`${p.sizeSqm} m²`)
   return parts
-}
-
-// ── the top ad ticker — shared by mobile top bar and (echoed) the desktop panel ──
-function AdBar({ slideIndex }: { slideIndex: number }) {
-  const slide = AD_SLIDES[slideIndex]
-  return (
-    <div className="w-full flex items-center justify-center gap-2 py-2 px-3 text-center overflow-hidden" style={{ background: BG }}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={slideIndex}
-          className="flex items-center justify-center gap-2"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-        >
-          <span className="text-[10px] font-semibold tracking-[0.14em] text-white uppercase">{slide.top}</span>
-          {slide.link && (
-            <span className="text-[10px] font-medium tracking-[0.1em] text-white/45">{slide.link}</span>
-          )}
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  )
-}
-
-// ── logo: the real wordmark, rotated for the desktop panel's vertical read ──
-function BrandLogo({ vertical, size = 46 }: { vertical?: boolean; size?: number }) {
-  return (
-    <img
-      src="/logo-transparent.png"
-      alt="2906"
-      style={{
-        height: size, width: 'auto',
-        transform: vertical ? 'rotate(-90deg)' : undefined,
-      }}
-    />
-  )
-}
-
-// ── apartment position dots — one per listing, current enlarged, green = favourited ──
-function ApartmentDots({ total, index, favourited, onJump }: { total: number; index: number; favourited: boolean[]; onJump: (i: number) => void }) {
-  return (
-    <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-center gap-[5px]">
-      {Array.from({ length: total }).map((_, i) => {
-        const active = i === index
-        const fav = favourited[i]
-        return (
-          <button
-            key={i}
-            type="button"
-            aria-label={`Go to listing ${i + 1}`}
-            onClick={() => onJump(i)}
-            className="rounded-full transition-all duration-200"
-            style={{
-              width: active ? 8 : 5, height: active ? 8 : 5,
-              background: fav ? '#22C55E' : active ? '#FFFFFF' : 'rgba(255,255,255,0.35)',
-              flexShrink: 0,
-            }}
-          />
-        )
-      })}
-    </div>
-  )
-}
-
-// ── one card: photo carousel (tap zones) + price overlay ────────────────────
-function Card({
-  p, active, dragProps, photoIndex, onTapPhoto,
-}: {
-  p: SwipeProperty
-  active: boolean
-  dragProps?: { x: any; y: any; onDragEnd: (e: any, info: any) => void }
-  photoIndex: number
-  onTapPhoto: (dir: 1 | -1) => void
-}) {
-  const opacity = dragProps ? useTransform(dragProps.x, [-220, 0, 220], [0.5, 1, 0.5]) : undefined
-  const rotate = dragProps ? useTransform(dragProps.x, [-220, 220], [-6, 6]) : undefined
-  const photos = p.images.length ? p.images : [null]
-  const shown = Math.min(photoIndex, photos.length - 1)
-
-  return (
-    <motion.div
-      className="absolute inset-0 select-none"
-      style={active && dragProps ? { x: dragProps.x, y: dragProps.y, opacity, rotate } : undefined}
-      drag={active && dragProps ? true : false}
-      dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
-      dragElastic={0.6}
-      onDragEnd={active && dragProps ? dragProps.onDragEnd : undefined}
-    >
-      <div className="relative w-full h-full overflow-hidden rounded-3xl bg-navy">
-        {photos[shown] ? (
-          <img src={photos[shown]!} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-navy to-[#0B1120]" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] via-[#0B1120]/5 to-transparent" style={{ height: '45%', top: '55%' }} />
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/35 to-transparent" />
-
-        {/* tap zones — this listing's OWN photos, separate from the card-to-card swipe */}
-        {photos.length > 1 && (
-          <>
-            <button aria-label="Previous photo" className="absolute inset-y-0 left-0 w-1/2 z-10" onClick={() => onTapPhoto(-1)} />
-            <button aria-label="Next photo" className="absolute inset-y-0 right-0 w-1/2 z-10" onClick={() => onTapPhoto(1)} />
-          </>
-        )}
-
-        {/* this listing's own photo position — right edge, tall + prominent so it reads as "more photos here" */}
-        {photos.length > 1 && (
-          <div className="absolute right-3 top-14 bottom-16 flex flex-col items-center justify-center gap-[7px] z-10 pointer-events-none">
-            {photos.map((_, i) => (
-              <span key={i} className="rounded-full transition-all duration-150" style={{
-                width: i === shown ? 6 : 4, height: i === shown ? 6 : 4,
-                background: i === shown ? '#FFFFFF' : 'rgba(255,255,255,0.38)',
-                boxShadow: i === shown ? '0 0 0 3px rgba(255,255,255,0.18)' : undefined,
-              }} />
-            ))}
-          </div>
-        )}
-
-        {p.availableNow && (
-          <div className="absolute top-4 left-4 flex items-center gap-1.5 rounded-full bg-[#0B1120]/60 backdrop-blur-sm px-3 py-1.5 text-[11px] font-medium tracking-wide text-white/90 z-10">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            Available now
-          </div>
-        )}
-
-        <div className="absolute inset-x-0 bottom-0 p-5 pb-6 pointer-events-none">
-          <div
-            className="text-white leading-none"
-            style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 'clamp(28px, 7vw, 38px)', fontWeight: 600 }}
-          >
-            {fmtPrice(p)}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-// ── star (favourite) + heart (like) ──────────────────────────────────────────
-function ActionButton({
-  icon, active, activeColor, onPress, size = 40, alwaysRing = false,
-}: {
-  icon: React.ReactNode
-  active: boolean
-  activeColor: string
-  onPress: () => void
-  size?: number
-  // Kev, 2026-08-29: the star outranks the heart — it gets a permanent gold
-  // ring even before it's tapped, so it reads as the primary action, not an
-  // equal pair.
-  alwaysRing?: boolean
-}) {
-  const [burst, setBurst] = useState(0)
-  return (
-    <button
-      type="button"
-      // Kev, 2026-08-29: tapping the already-active one now un-picks it —
-      // heart and star are a real toggle, not a one-way flag.
-      onClick={() => { onPress(); if (!active) setBurst(b => b + 1) }}
-      aria-pressed={active}
-      className="relative rounded-full flex items-center justify-center flex-shrink-0"
-      style={{
-        width: size, height: size,
-        background: active ? `${activeColor}22` : 'rgba(255,255,255,0.06)',
-        border: alwaysRing && !active ? `1.5px solid ${activeColor}55` : undefined,
-      }}
-    >
-      <AnimatePresence>
-        {burst > 0 && (
-          <motion.span
-            key={burst}
-            initial={{ scale: 0.6, opacity: 0.9 }}
-            animate={{ scale: 2.1, opacity: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="absolute inset-0 rounded-full border-2"
-            style={{ borderColor: activeColor }}
-          />
-        )}
-      </AnimatePresence>
-      <motion.span
-        animate={active ? { scale: [1, 1.35, 1] } : { scale: 1 }}
-        transition={active ? { type: 'tween', duration: 0.36, times: [0, 0.5, 1], ease: 'easeOut' } : { duration: 0.15 }}
-      >
-        {icon}
-      </motion.span>
-    </button>
-  )
-}
-
-// ── the black info strip below the card ──────────────────────────────────────
-function BottomBar({
-  p, liked, favourited, onLike, onFavourite, onOpenDesc, photoIndex, photoTotal, allPhotosSeen,
-  properties, currentIndex, pickedRefs, onJumpDot, onFinish,
-}: {
-  p: SwipeProperty
-  liked: boolean
-  favourited: boolean
-  onLike: () => void
-  onFavourite: () => void
-  onOpenDesc: () => void
-  photoIndex: number
-  photoTotal: number
-  allPhotosSeen: boolean
-  properties: SwipeProperty[]
-  currentIndex: number
-  // both kinds — heart and star are mutually exclusive per property now, so
-  // this is "every property with a pick", not just likes.
-  pickedRefs: Set<string>
-  onJumpDot: (i: number) => void
-  onFinish: () => void
-}) {
-  const specs = fmtSpecs(p).join(' · ')
-  return (
-    <>
-    <div className="flex items-center gap-3 px-1 pt-3 pb-1">
-      <ActionButton
-        size={54}
-        alwaysRing
-        icon={<Star className="w-[26px] h-[26px]" style={{ color: favourited ? GOLD : '#F6F4EF' }} fill={favourited ? GOLD : 'none'} strokeWidth={favourited ? 0 : 1.75} />}
-        active={favourited} activeColor={GOLD} onPress={onFavourite}
-      />
-      <ActionButton
-        size={34}
-        icon={<Heart className="w-[14px] h-[14px]" style={{ color: liked ? '#EF4444' : '#F6F4EF' }} fill={liked ? '#EF4444' : 'none'} strokeWidth={liked ? 0 : 1.75} />}
-        active={liked} activeColor="#EF4444" onPress={onLike}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 text-white text-[13px] font-medium">
-          <MapPin className="w-3 h-3 text-white/50 flex-shrink-0" />
-          <span className="truncate">{[p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'}</span>
-        </div>
-        <div className="flex items-center justify-between mt-0.5">
-          <span className="text-white/55 text-[12px]">{specs}</span>
-          {photoTotal > 1 && (
-            <div className="flex items-center gap-2 pl-3 flex-shrink-0">
-              <span className="w-px h-3 bg-white/15" />
-              <span className="flex items-center gap-1 text-[11px] font-medium tabular-nums" style={{ color: allPhotosSeen ? GOLD_LIGHT : 'rgba(255,255,255,0.5)' }}>
-                {photoIndex + 1}/{photoTotal}
-                <CheckCircle2 className="w-3.5 h-3.5" style={{ color: allPhotosSeen ? GOLD_LIGHT : 'rgba(255,255,255,0.3)' }} />
-              </span>
-            </div>
-          )}
-        </div>
-        {p.description && (
-          <button
-            type="button"
-            onClick={onOpenDesc}
-            className="text-left mt-1 -ml-1 block w-full px-1 py-1.5 rounded-md active:bg-white/5 transition-colors"
-          >
-            <span className="text-white/40 text-[12px] tracking-[0.2em]">···· <span className="text-white/25 tracking-normal">tap for details</span></span>
-          </button>
-        )}
-      </div>
-    </div>
-
-    {/* Kev, 2026-08-29: deck progress — one dot per property (gold once
-        liked), plus a "Done" pill once you have at least one like, so you
-        can wrap up and send your picks without swiping every remaining card. */}
-    {properties.length > 1 && (
-      <div className="flex items-center justify-between gap-3 px-1 pt-3 mt-1 border-t border-white/8">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {properties.map((pp, i) => (
-            <button
-              key={pp.ref}
-              type="button"
-              aria-label={`Go to listing ${i + 1}`}
-              onClick={() => onJumpDot(i)}
-              className="rounded-full flex-shrink-0 transition-all duration-150"
-              style={{
-                width: i === currentIndex ? 7 : 5, height: i === currentIndex ? 7 : 5,
-                background: pickedRefs.has(pp.ref) ? GOLD : i === currentIndex ? '#FFFFFF' : 'rgba(255,255,255,0.25)',
-              }}
-            />
-          ))}
-        </div>
-        {pickedRefs.size > 0 && (
-          <button
-            type="button"
-            onClick={onFinish}
-            className="flex items-center gap-1.5 text-[12px] font-medium rounded-full pl-2.5 pr-3 py-1.5 flex-shrink-0"
-            style={{ background: GOLD, color: BG }}
-          >
-            <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-            Done ({pickedRefs.size})
-          </button>
-        )}
-      </div>
-    )}
-  </>
-  )
-}
-
-// ── full description — a dark sheet OVER the screen, never inline (inline
-// growth used to crush the card's flex height on short mobile viewports) ──
-function DescriptionModal({ p, onClose }: { p: SwipeProperty | null; onClose: () => void }) {
-  return (
-    <AnimatePresence>
-      {p && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-        >
-          <motion.div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={onClose}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          />
-          <motion.div
-            className="relative w-full lg:w-[480px] max-h-[80vh] rounded-t-3xl lg:rounded-3xl overflow-hidden flex flex-col"
-            style={{ background: '#111A2E' }}
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'tween', duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 flex-shrink-0 border-b border-white/8">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-white text-[15px] font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-white/50 flex-shrink-0" />
-                  <span className="truncate">{[p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'}</span>
-                </div>
-                <div className="text-white/50 text-[13px] mt-1">{fmtSpecs(p).join(' · ')} · {fmtPrice(p)}</div>
-              </div>
-              <button
-                type="button" onClick={onClose} aria-label="Close"
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/8 hover:bg-white/14 transition-colors flex-shrink-0"
-              >
-                <X className="w-4 h-4 text-white/80" />
-              </button>
-            </div>
-            <div className="overflow-y-auto px-6 py-5">
-              <p className="text-white/75 text-[14px] leading-relaxed whitespace-pre-line">{p.description}</p>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
-}
-
-// ── recap, shown once done / after the last card ──────────────────────────
-// Kev, 2026-08-29: dropped the "leave your contact" form — he's sending the
-// link to a known recipient himself, so nothing to collect here. The picks
-// already reach the agent through the CRM's swipe-links panel (Chat/Book
-// buttons on each liked listing); this screen is just the customer's recap.
-type Picked = { p: SwipeProperty; kind: 'like' | 'favourite'; at: number }
-
-function EndScreen({ pickedList }: { pickedList: Picked[] }) {
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center px-7 text-center">
-      <div className="w-11 h-11 rounded-full flex items-center justify-center mb-5" style={{ background: 'rgba(184,149,63,0.14)' }}>
-        <Check className="w-5 h-5" style={{ color: GOLD }} />
-      </div>
-      <h1 className="text-white text-2xl mb-2" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>
-        That's everything for you
-      </h1>
-      <p className="text-white/55 text-[13px] mb-7 max-w-xs">
-        {pickedList.length > 0
-          ? `You picked ${pickedList.length} place${pickedList.length === 1 ? '' : 's'} — your agent has the list and will follow up.`
-          : 'You made it through the whole set. Swipe back any time to look again.'}
-      </p>
-
-      {pickedList.length > 0 && (
-        <div className="w-full max-w-xs mb-2 flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
-          {pickedList.map(({ p, kind, at }) => (
-            <div key={p.ref} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-left">
-              <div className="relative w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
-                {p.images[0]
-                  ? <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-navy" />}
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ background: kind === 'favourite' ? GOLD : '#EF4444' }}>
-                  {kind === 'favourite'
-                    ? <Star className="w-[11px] h-[11px]" fill={BG} color={BG} />
-                    : <Heart className="w-[10px] h-[10px]" fill={BG} color={BG} />}
-                </div>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-white text-[12.5px] font-medium truncate">
-                  {[p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'}
-                </div>
-                <div className="text-white/40 text-[11px]">
-                  {kind === 'favourite' ? 'Favourited' : 'Liked'}
-                  {at > 0 && ` · ${new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── desktop-only left brand panel, echoes the same rotating slide ────────────
-function BrandPanel({ slideIndex }: { slideIndex: number }) {
-  const slide = AD_SLIDES[slideIndex]
-  return (
-    <div className="hidden lg:flex flex-col items-center justify-center w-[260px] xl:w-[340px] 2xl:w-[400px] flex-shrink-0 text-center">
-      <BrandLogo vertical size={104} />
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={slideIndex}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        >
-          {slide.tagline && (
-            <p className="mt-8 text-white/70 text-[15px] xl:text-[16px] leading-relaxed max-w-[260px]">{slide.tagline}</p>
-          )}
-          {slide.cta && (
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <span className="text-white text-[14px] font-medium tracking-wide">{slide.cta}</span>
-              <span className="text-[12px] text-[#0B1120] bg-white rounded-full px-3.5 py-1.5 font-medium tracking-wide">2906.ESTATE/CONTACT</span>
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  )
-}
-
-// ── desktop-only right thumbnail grid — every OTHER listing, jump on click ───
-function ThumbGrid({ properties, index, favourited, onJump }: { properties: SwipeProperty[]; index: number; favourited: boolean[]; onJump: (i: number) => void }) {
-  return (
-    <div className="hidden lg:grid flex-shrink-0 h-fit self-center grid-cols-2 gap-3 w-[124px] xl:w-[144px]">
-      {properties.map((p, i) => (
-        <button
-          key={p.ref}
-          type="button"
-          onClick={() => onJump(i)}
-          aria-label={`Jump to #${p.ref}`}
-          className="relative w-full aspect-square rounded-full overflow-hidden flex-shrink-0 transition-transform hover:scale-105"
-          style={{
-            outline: i === index ? '2px solid #FFFFFF' : 'none',
-            outlineOffset: 2,
-            boxShadow: favourited[i] ? '0 0 0 2px #22C55E' : undefined,
-          }}
-        >
-          {p.images[0] ? (
-            <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-white" />
-          )}
-        </button>
-      ))}
-    </div>
-  )
 }
 
 // ── single-property share page (Kev's Prompt A follow-up, 2026-08-30) ───────
@@ -698,6 +233,11 @@ function Lightbox({ photos, index, onClose, onIndexChange }: {
   )
 }
 
+// Kev, 2026-08-31: one flat, unchanging pace for every gallery — no
+// adaptive slowdown after the visitor navigates. 3s reads as "pleasant",
+// not a slideshow.
+const AUTOPLAY_MS = 3000
+
 function SinglePropertyPage({ p }: { p: SwipeProperty }) {
   const [index, setIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -719,6 +259,21 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
     dirRef.current = dir
     setIndex(i => Math.max(0, Math.min(Math.max(total - 1, 0), i + dir)))
   }, [total])
+
+  // Kev, 2026-08-31: auto-advance every AUTOPLAY_MS, wrapping past the last
+  // photo back to the first — the deck "isn't endless" so looping reads
+  // better than stalling at the end or auto-reversing. Keyed on `index`, so
+  // ANY navigation (auto or manual) simply restarts the same fixed-length
+  // wait — there is no separate "the visitor went back" state to slow down
+  // from, by construction. Paused while the lightbox is open.
+  useEffect(() => {
+    if (total <= 1 || lightboxOpen) return
+    const t = setTimeout(() => {
+      dirRef.current = 1
+      setIndex(i => (i + 1) % total)
+    }, AUTOPLAY_MS)
+    return () => clearTimeout(t)
+  }, [index, total, lightboxOpen])
 
   // Kev, 2026-08-30 (round 2): "richtig schnell durchblättern" on mobile —
   // a light, quick flick should register, not require a deliberate drag.
@@ -890,6 +445,307 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
   )
 }
 
+// ── the single pick icon for multi-property links — Kev, 2026-08-31: drawn
+// the same way as StarGlyph on the CRM Schedule Board (a plain SVG path,
+// solid fill on activation, no lucide, no burst/scale animation) so the
+// two match visually across the brand's tools. ────────────────────────────
+const HeartGlyph = ({ filled, size = 18, color = GOLD }: { filled: boolean; size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false"
+    fill={filled ? color : 'none'} style={{ flexShrink: 0 }}>
+    <path
+      d="M12 20.3s-7.6-4.5-10.2-9C.3 8.4 1 5.2 3.9 3.9c2.2-1 4.7-.3 6.1 1.6l2 2.7 2-2.7c1.4-1.9 3.9-2.6 6.1-1.6 2.9 1.3 3.6 4.5 2.1 7.4-2.6 4.5-10.2 9-10.2 9z"
+      stroke={color} strokeWidth="1.6" strokeLinejoin="round"
+    />
+  </svg>
+)
+
+// ── desktop-only right column for the multi-property page — a clean,
+// click-through list (not the old circular ThumbGrid): rectangular
+// thumbnail, location/price, its own heart toggle. Kev, 2026-08-31: "eine
+// cleane Darstellung der Properties in der du dich durchklicken kannst". ──
+function PropertiesList({
+  properties, index, liked, onSelect, onToggleLike,
+}: {
+  properties: SwipeProperty[]
+  index: number
+  liked: Set<string>
+  onSelect: (i: number) => void
+  onToggleLike: (ref: string) => void
+}) {
+  return (
+    <div className="hidden lg:flex flex-col w-[260px] xl:w-[300px] flex-shrink-0 py-6 pr-8 gap-1 overflow-y-auto">
+      <span className="text-[11px] uppercase mb-3 flex-shrink-0" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
+        Properties
+      </span>
+      {properties.map((p, i) => {
+        const active = i === index
+        const loc = p.town || [p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'
+        return (
+          <div
+            key={p.ref}
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelect(i)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(i) }}
+            className="flex items-center gap-3 py-2 pr-1 rounded-lg cursor-pointer transition-colors"
+            style={{ background: active ? 'rgba(184,149,63,0.08)' : 'transparent' }}
+          >
+            <div className="flex-shrink-0 rounded-full self-stretch" style={{ width: 3, background: active ? GOLD : 'transparent' }} />
+            <div className="relative w-14 h-14 rounded-md overflow-hidden flex-shrink-0" style={{ background: PHOTO_BG }}>
+              {p.images[0] && <img src={p.images[0]} alt="" className="w-full h-full object-cover" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12.5px] font-medium truncate" style={{ color: INK }}>{loc}</div>
+              <div className="text-[12px]" style={{ color: MUTED }}>{fmtSinglePrice(p)}</div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleLike(p.ref) }}
+              aria-pressed={liked.has(p.ref)}
+              aria-label={liked.has(p.ref) ? 'Remove from picks' : 'Add to picks'}
+              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+            >
+              <HeartGlyph filled={liked.has(p.ref)} size={16} color={GOLD} />
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── multi-property share page — the editorial sibling of SinglePropertyPage
+// above, for a client-kind link holding several listings. Kev, 2026-08-31:
+// replaces the old dark Tinder-style deck ("zu tinderlastig") with the same
+// visual language as the single-property page: full-bleed photo + fan,
+// clean typography, gold accents. Browsing is click-through (properties
+// list on desktop, touchpoint dots on mobile), not a linear swipe deck, so
+// there is no forced "end of deck" screen — a pick is just a heart toggle
+// that persists across however the visitor gets to that property. ─────────
+function MultiPropertyPage({ properties, id }: { properties: SwipeProperty[]; id: string }) {
+  const [index, setIndex] = useState(0)
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [descOpen, setDescOpen] = useState(false)
+  const [liked, setLiked] = useState<Set<string>>(new Set())
+  const visitorId = useRef<string>('')
+  useEffect(() => { visitorId.current = getVisitorId(id) }, [id])
+
+  const p = properties[index]
+  const photos = p?.images || []
+  const total = photos.length
+  const x = useMotionValue(0)
+  const dragOpacity = useTransform(x, [-200, 0, 200], [0.82, 1, 0.82])
+  const dirRef = useRef<1 | -1>(1)
+
+  const advance = useCallback((dir: 1 | -1) => {
+    dirRef.current = dir
+    setPhotoIndex(i => Math.max(0, Math.min(Math.max(total - 1, 0), i + dir)))
+  }, [total])
+
+  const gotoProperty = useCallback((i: number) => {
+    setIndex(Math.max(0, Math.min(properties.length - 1, i)))
+    setPhotoIndex(0)
+    setDescOpen(false)
+  }, [properties.length])
+
+  // "richtig schnell durchblättern" — same light-flick threshold as the
+  // single-property page.
+  const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const THRESH = 36
+    if (info.offset.x < -THRESH || info.velocity.x < -220) { advance(1); x.set(0) }
+    else if (info.offset.x > THRESH || info.velocity.x > 220) { advance(-1); x.set(0) }
+  }, [advance, x])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (lightboxOpen) return
+      if (e.key === 'ArrowRight') advance(1)
+      if (e.key === 'ArrowLeft') advance(-1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [advance, lightboxOpen])
+
+  const wheelCooldown = useRef(false)
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (lightboxOpen) return
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
+      if (Math.abs(delta) < 12 || wheelCooldown.current) return
+      e.preventDefault()
+      wheelCooldown.current = true
+      advance(delta > 0 ? 1 : -1)
+      setTimeout(() => { wheelCooldown.current = false }, 260)
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [advance, lightboxOpen])
+
+  // Same flat 3s auto-advance as SinglePropertyPage, scoped to whichever
+  // property is currently active — switching property resets the wait
+  // naturally since this effect is keyed on both index values below.
+  useEffect(() => {
+    if (total <= 1 || lightboxOpen) return
+    const t = setTimeout(() => {
+      dirRef.current = 1
+      setPhotoIndex(i => (i + 1) % total)
+    }, AUTOPLAY_MS)
+    return () => clearTimeout(t)
+  }, [index, photoIndex, total, lightboxOpen])
+
+  const toggleLike = useCallback((ref: string) => {
+    setLiked(prev => {
+      const next = new Set(prev)
+      if (next.has(ref)) next.delete(ref); else next.add(ref)
+      return next
+    })
+    fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref, visitorId: visitorId.current }),
+    }).catch(() => {})
+  }, [id])
+
+  if (!p) return <SinglePropertyMessage text="This selection is empty." />
+
+  const eyebrow = fmtSpecs(p).slice(0, 2).join(' / ')
+  const location = p.town || [p.subLocation, p.town].filter(Boolean).join(', ') || 'Malta'
+  const desc = p.fullDescription || p.description
+  const showDots = properties.length > 1
+
+  return (
+    <div className="fixed inset-0 flex overflow-hidden" style={{ background: OFFWHITE }}>
+      <div className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
+        {/* header — hairline shortens to make room for one touchpoint dot
+            per property once there's more than one to browse. */}
+        <div className="flex items-center gap-3 pl-8 pr-5 sm:pl-14 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
+          <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
+            {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
+          </span>
+          <div className="h-px" style={{ background: HAIRLINE, flex: showDots ? '0 1 28px' : '1 1 auto' }} />
+          {showDots && (
+            <div className="flex items-center gap-[5px] flex-shrink-0 flex-1 justify-end">
+              {properties.map((pp, i) => (
+                <button
+                  key={pp.ref}
+                  type="button"
+                  aria-label={`Go to listing ${i + 1}`}
+                  onClick={() => gotoProperty(i)}
+                  className="rounded-full transition-all duration-200"
+                  style={{
+                    width: i === index ? 7 : 5, height: i === index ? 7 : 5,
+                    background: liked.has(pp.ref) ? GOLD : i === index ? INK : HAIRLINE,
+                    flexShrink: 0,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* photo stage — same fan treatment as the single page, just no
+            longer centered across the full viewport now that the
+            properties list shares the row on desktop, which is what
+            actually produces the "shifted slightly left" look. */}
+        <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2">
+          <div className="hidden sm:flex fixed left-3 top-1/2 -translate-y-1/2 z-20 pointer-events-none" style={{ width: 32 }}>
+            <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
+          </div>
+          <motion.div
+            className="relative flex-shrink-0 overflow-hidden w-[92%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
+            style={{ x, opacity: dragOpacity }}
+            drag={total > 1 ? 'x' : false}
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={1}
+            onDragEnd={onDragEnd}
+          >
+            <AnimatePresence initial={false} custom={dirRef.current}>
+              {photos[photoIndex] ? (
+                <motion.img
+                  key={`${p.ref}-${photoIndex}`}
+                  src={photos[photoIndex]} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false}
+                  custom={dirRef.current}
+                  variants={{
+                    enter: (dir: 1 | -1) => ({ opacity: 0, x: dir * 36 }),
+                    center: { opacity: 1, x: 0 },
+                    exit: (dir: 1 | -1) => ({ opacity: 0, x: dir * -36 }),
+                  }}
+                  initial="enter" animate="center" exit="exit"
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                />
+              ) : (
+                <div key="empty" className="absolute inset-0" style={{ background: PHOTO_BG }} />
+              )}
+            </AnimatePresence>
+
+            {/* the pick — mobile only (desktop uses the list's own heart) */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); toggleLike(p.ref) }}
+              aria-pressed={liked.has(p.ref)}
+              aria-label={liked.has(p.ref) ? 'Remove from picks' : 'Add to picks'}
+              className="lg:hidden absolute top-3 left-3 z-20 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(0,0,0,0.35)' }}
+            >
+              <HeartGlyph filled={liked.has(p.ref)} size={18} color={liked.has(p.ref) ? GOLD : '#FFFFFF'} />
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setLightboxOpen(true) }}
+              aria-label="View fullscreen"
+              className="absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(0,0,0,0.4)' }}
+            >
+              <Maximize2 className="w-4 h-4 text-white" />
+            </button>
+          </motion.div>
+          <PhotoFan photos={photos} index={photoIndex} onSelect={setPhotoIndex} dragX={x} />
+        </div>
+
+        {/* footer — same shape as the single page's */}
+        <div className="flex-shrink-0 pl-8 pr-5 sm:pl-14 pb-7 pt-1 mobile-landscape:pb-3 flex gap-3.5">
+          <div className="flex-shrink-0 rounded-full" style={{ width: 4, height: 46, background: GOLD }} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+              <h1 className="min-w-0" style={{ color: INK, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
+              <span className="flex-shrink-0" style={{ color: INK, fontSize: 22, fontWeight: 700 }}>{fmtSinglePrice(p)}</span>
+            </div>
+            {desc && (
+              <button
+                type="button"
+                onClick={() => setDescOpen(o => !o)}
+                aria-expanded={descOpen}
+                className="relative block mt-2 text-left w-full"
+              >
+                <div
+                  className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                  style={{ maxHeight: descOpen ? 320 : 18, overflowY: descOpen ? 'auto' : 'hidden' }}
+                >
+                  <p className="text-[12.5px] leading-relaxed" style={{ color: MUTED, fontWeight: 400 }}>{desc}</p>
+                </div>
+                {!descOpen && (
+                  <span className="absolute right-0 bottom-0 text-[12.5px] pl-1" style={{ color: MUTED, background: OFFWHITE }}>…</span>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <PropertiesList properties={properties} index={index} liked={liked} onSelect={gotoProperty} onToggleLike={toggleLike} />
+
+      <Lightbox
+        photos={lightboxOpen ? photos : null}
+        index={photoIndex}
+        onClose={() => setLightboxOpen(false)}
+        onIndexChange={setPhotoIndex}
+      />
+    </div>
+  )
+}
+
 function SinglePropertyMessage({ text }: { text: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-6" style={{ background: OFFWHITE }}>
@@ -911,23 +767,9 @@ export default function SwipePage() {
   const [notFound, setNotFound] = useState(false)
   const [expiredMessage, setExpiredMessage] = useState<string | null>(null)
   const [linkKind, setLinkKind] = useState<'property' | 'client' | null>(null)
-  const [index, setIndex] = useState(0)
-  const [liked, setLiked] = useState<Set<string>>(new Set())
-  const [favourited, setFavourited] = useState<Set<string>>(new Set())
-  // Kev, 2026-08-29: the end-screen recap needs a timestamp per pick, not
-  // just the image — when it happened, not only what.
-  const [pickedAt, setPickedAt] = useState<Map<string, number>>(new Map())
-  const [photoIndex, setPhotoIndex] = useState(0)
-  const [seenAllPhotos, setSeenAllPhotos] = useState<Set<string>>(new Set())
-  const [descModalOpen, setDescModalOpen] = useState(false)
-  const [adIndex, setAdIndex] = useState(0)
-  const visitorId = useRef<string>('')
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
 
   useEffect(() => {
     if (!id) return
-    visitorId.current = getVisitorId(id)
     fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}`)
       .then(r => { if (!r.ok) throw new Error('not found'); return r.json() })
       .then(d => {
@@ -941,139 +783,6 @@ export default function SwipePage() {
       })
       .catch(() => setNotFound(true))
   }, [id])
-
-  useEffect(() => {
-    const t = setInterval(() => setAdIndex(i => (i + 1) % AD_SLIDES.length), AD_ROTATE_MS)
-    return () => clearInterval(t)
-  }, [])
-
-  // Recap counts BOTH kinds — heart and star are mutually exclusive per
-  // property now, so this is just "every property with a pick", newest
-  // first, each carrying which kind and when.
-  const pickedList = useMemo(() => {
-    const list = (properties || [])
-      .filter(p => liked.has(p.ref) || favourited.has(p.ref))
-      .map(p => ({ p, kind: favourited.has(p.ref) ? 'favourite' as const : 'like' as const, at: pickedAt.get(p.ref) || 0 }))
-    return list.sort((a, b) => b.at - a.at)
-  }, [properties, liked, favourited, pickedAt])
-  const pickedRefs = useMemo(
-    () => new Set<string>([...liked, ...favourited]),
-    [liked, favourited],
-  )
-  const favouredFlags = useMemo(
-    () => (properties || []).map(p => favourited.has(p.ref)),
-    [properties, favourited],
-  )
-
-  // Kev, 2026-08-29: the checkmark next to the photo counter confirms "you've
-  // paged through every photo on this listing" — it lights up once photoIndex
-  // reaches the last frame.
-  useEffect(() => {
-    const p = properties?.[index]
-    if (!p) return
-    const total = p.images.length
-    if (total > 1 && photoIndex >= total - 1) {
-      setSeenAllPhotos(prev => (prev.has(p.ref) ? prev : new Set(prev).add(p.ref)))
-    }
-  }, [photoIndex, properties, index])
-
-  const jump = useCallback((i: number) => {
-    setPhotoIndex(0)
-    setDescModalOpen(false)
-    setIndex(Math.max(0, Math.min((properties?.length || 0), i)))
-  }, [properties])
-
-  const advance = useCallback((dir: 1 | -1) => {
-    setIndex(i => {
-      const max = (properties?.length || 0)
-      setPhotoIndex(0)
-      setDescModalOpen(false)
-      return Math.max(0, Math.min(max, i + dir))
-    })
-  }, [properties])
-
-  // Kev, 2026-08-29: heart and star are mutually exclusive per property, and
-  // tapping the active one again un-picks it — one pick per property, kind
-  // says which. Neither one contacts the owner; both just record the pick
-  // for the agent's overview (star ranks above like there — the stronger
-  // signal).
-  const like = useCallback((ref: string) => {
-    setLiked(prev => {
-      const next = new Set(prev)
-      const turningOn = !next.has(ref)
-      if (turningOn) next.add(ref); else next.delete(ref)
-      setPickedAt(m => {
-        const nm = new Map(m)
-        if (turningOn) nm.set(ref, Date.now()); else nm.delete(ref)
-        return nm
-      })
-      return next
-    })
-    setFavourited(prev => { if (!prev.has(ref)) return prev; const next = new Set(prev); next.delete(ref); return next })
-    fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}/like`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref, visitorId: visitorId.current }),
-    }).catch(() => {})
-  }, [id])
-
-  const favourite = useCallback((ref: string) => {
-    setFavourited(prev => {
-      const next = new Set(prev)
-      const turningOn = !next.has(ref)
-      if (turningOn) next.add(ref); else next.delete(ref)
-      setPickedAt(m => {
-        const nm = new Map(m)
-        if (turningOn) nm.set(ref, Date.now()); else nm.delete(ref)
-        return nm
-      })
-      return next
-    })
-    setLiked(prev => { if (!prev.has(ref)) return prev; const next = new Set(prev); next.delete(ref); return next })
-    fetch(`${API_BASE}/api/swipe/${encodeURIComponent(id)}/favourite`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref, visitorId: visitorId.current }),
-    }).catch(() => {})
-  }, [id])
-
-  // Kev, 2026-08-29: LEFT/RIGHT = apartment to apartment (right = like +
-  // next, left = back only, never a dislike). UP/DOWN = this listing's OWN
-  // photo gallery, not the next apartment — the same thing the right-edge
-  // dots and the tap zones on the card already do, just as a swipe too.
-  const onTapPhoto = useCallback((dir: 1 | -1) => {
-    const total = properties?.[index]?.images.length || 1
-    setPhotoIndex(p => Math.max(0, Math.min(total - 1, p + dir)))
-  }, [properties, index])
-
-  const onDragEnd = useCallback((_: any, info: { offset: { x: number; y: number }; velocity: { x: number; y: number } }) => {
-    const THRESH = 90
-    const horizontal = Math.abs(info.offset.x) > Math.abs(info.offset.y)
-    if (horizontal) {
-      if (info.offset.x > THRESH || info.velocity.x > 500) {
-        const ref = properties?.[index]?.ref
-        if (ref) like(ref)
-        advance(1)
-      } else if (info.offset.x < -THRESH || info.velocity.x < -500) {
-        advance(-1)
-      }
-    } else {
-      if (info.offset.y < -THRESH || info.velocity.y < -500) onTapPhoto(1)
-      else if (info.offset.y > THRESH || info.velocity.y > 500) onTapPhoto(-1)
-    }
-    x.set(0); y.set(0)
-  }, [advance, like, properties, index, x, y, onTapPhoto])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') onTapPhoto(1)
-      if (e.key === 'ArrowDown') onTapPhoto(-1)
-      if (e.key === 'ArrowRight') { const ref = properties?.[index]?.ref; if (ref) like(ref); advance(1) }
-      if (e.key === 'ArrowLeft') advance(-1)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [advance, like, properties, index, onTapPhoto])
 
   if (expiredMessage) {
     if (linkKind === 'property') return <SinglePropertyMessage text={expiredMessage} />
@@ -1116,91 +825,7 @@ export default function SwipePage() {
     return properties[0] ? <SinglePropertyPage p={properties[0]} /> : <SinglePropertyMessage text="This listing is no longer available." />
   }
 
-  const total = properties.length
-  const atEnd = index >= total
-  const current = !atEnd ? properties[index] : null
-
-  const Stage = (
-    <div className="relative w-full h-full flex flex-col">
-      <div className="lg:hidden"><AdBar slideIndex={adIndex} /></div>
-      <div className="relative flex-1 p-3">
-        {atEnd ? (
-          <EndScreen pickedList={pickedList} />
-        ) : (
-          <>
-            {total > 0 && (
-              <ApartmentDots total={total} index={index} favourited={favouredFlags} onJump={jump} />
-            )}
-            {properties[index + 1] && (
-              <div className="absolute inset-3 pointer-events-none" style={{ transform: 'scale(0.96) translateY(10px)', opacity: 0.5 }}>
-                <div className="relative w-full h-full rounded-3xl overflow-hidden bg-navy">
-                  {properties[index + 1].images[0] && (
-                    <img src={properties[index + 1].images[0]} alt="" className="w-full h-full object-cover" />
-                  )}
-                </div>
-              </div>
-            )}
-            <AnimatePresence initial={false}>
-              <Card
-                key={current!.ref}
-                p={current!}
-                active
-                dragProps={{ x, y, onDragEnd }}
-                photoIndex={photoIndex}
-                onTapPhoto={onTapPhoto}
-              />
-            </AnimatePresence>
-
-            <div className="hidden md:flex lg:hidden flex-col gap-2 absolute right-4 top-1/2 -translate-y-1/2 z-10">
-              <button type="button" onClick={() => advance(-1)} disabled={index === 0}
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 disabled:opacity-20 hover:bg-white/10 transition-colors">
-                <ChevronUp className="w-4 h-4 text-white/70" />
-              </button>
-              <button type="button" onClick={() => advance(1)}
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors">
-                <ChevronDown className="w-4 h-4 text-white/70" />
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-      {current && (
-        <BottomBar
-          p={current}
-          liked={liked.has(current.ref)}
-          favourited={favourited.has(current.ref)}
-          onLike={() => like(current.ref)}
-          onFavourite={() => favourite(current.ref)}
-          onOpenDesc={() => setDescModalOpen(true)}
-          photoIndex={photoIndex}
-          photoTotal={current.images.length}
-          allPhotosSeen={seenAllPhotos.has(current.ref)}
-          properties={properties}
-          currentIndex={index}
-          pickedRefs={pickedRefs}
-          onJumpDot={jump}
-          onFinish={() => setIndex(total)}
-        />
-      )}
-    </div>
-  )
-
-  return (
-    <div className="fixed inset-0 overflow-hidden flex flex-col" style={{ background: BG }}>
-      <div
-        className="hidden lg:block absolute inset-0 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse 1200px 800px at 50% 50%, rgba(184,149,63,0.08), transparent 70%)` }}
-      />
-      <div className="flex-1 min-h-0 flex items-stretch justify-center gap-10 xl:gap-16 2xl:gap-24 px-6 relative">
-        <BrandPanel slideIndex={adIndex} />
-        <div className="w-full lg:w-[440px] xl:w-[500px] 2xl:w-[560px] lg:my-6 lg:rounded-[28px] lg:overflow-hidden flex-shrink-0 lg:h-[calc(100%-48px)]">
-          {Stage}
-        </div>
-        {total > 0 && !atEnd && (
-          <ThumbGrid properties={properties} index={index} favourited={favouredFlags} onJump={jump} />
-        )}
-      </div>
-      <DescriptionModal p={descModalOpen ? current : null} onClose={() => setDescModalOpen(false)} />
-    </div>
-  )
+  return properties.length
+    ? <MultiPropertyPage properties={properties} id={id} />
+    : <SinglePropertyMessage text="This selection is empty." />
 }

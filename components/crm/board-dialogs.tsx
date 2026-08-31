@@ -909,3 +909,102 @@ export function StatusDialog({ refId, town, action, onClose, onDone }: {
     </Sheet>
   )
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// AV DATE CONFIRM — the board's small calendar icon next to the € price
+// (Kev, 2026-08-31). Available-date / viewable-date drift sometimes (bot
+// misreads, !upload inaccuracies) and this is the fast manual fix: edit
+// both dates, save, and the listing reposts to its category group with a
+// short "still on market" confirmation underneath — the same distribution
+// !price already triggers on a price change, just retriggered by a date
+// correction instead. Admin only (no board/agent access), same bar as the
+// € price edit.
+// ════════════════════════════════════════════════════════════════════════════
+export function AvDateDialog({ refId, propertyId, town, currentAvailable, currentViewing, onClose, onDone }: {
+  refId: string
+  propertyId: number
+  town?: string | null
+  currentAvailable?: string | null
+  currentViewing?: string | null
+  onClose: () => void
+  onDone: (msg: string, ref: string) => void
+}) {
+  const toInputDate = (v?: string | null) => (v ? String(v).slice(0, 10) : '')
+  const [availableDate, setAvailableDate] = useState(toInputDate(currentAvailable))
+  const [viewingDate, setViewingDate] = useState(toInputDate(currentViewing))
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const changed = availableDate !== toInputDate(currentAvailable) || viewingDate !== toInputDate(currentViewing)
+  const canSend = !busy && changed
+
+  async function submit() {
+    if (!canSend) return
+    setErr(null)
+    setBusy(true)
+    try {
+      // 1. Save both dates — same field the full property editor and the €
+      // price-edit button already write (routes/crm.js PATCH
+      // /properties/:id, EDITABLE includes available_date/viewing_date).
+      // No new save path.
+      await crmFetch(`properties/${propertyId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          available_date: availableDate || null,
+          viewing_date: viewingDate || null,
+        }),
+      })
+      // 2. Repost + "still on market" confirmation into the property's
+      // category group — same distribution pipeline !upload/!price use
+      // (routes/crmScheduleBoard.js POST .../av-date-confirm).
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(refId)}/av-date-confirm`, 'POST', {})
+      onDone(d?.message || `#${refId} dates updated — reposting to its group now.`, refId)
+      onClose()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not update the dates.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Sheet
+      title="Update availability"
+      sub={`#${refId}${town ? ` · ${town}` : ''} — confirms + reposts to its group`}
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} className={GHOST}>Cancel</button>
+          <button onClick={submit} disabled={!canSend} className={PRIMARY}>
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Save &amp; repost
+          </button>
+        </>
+      }
+    >
+      {err && <ErrorLine text={err} />}
+
+      <label className={LABEL}>Available from</label>
+      <input
+        type="date"
+        value={availableDate}
+        onChange={e => setAvailableDate(e.target.value)}
+        className={cn(FIELD, 'mb-4')}
+      />
+
+      <label className={LABEL}>Viewings from</label>
+      <input
+        type="date"
+        value={viewingDate}
+        onChange={e => setViewingDate(e.target.value)}
+        className={FIELD}
+      />
+
+      <p className="mt-3 text-[11px] text-navy/40 leading-relaxed">
+        Saving reposts this listing to its category group with the updated
+        date and a short &quot;still on market&quot; note underneath.
+      </p>
+    </Sheet>
+  )
+}

@@ -12,13 +12,13 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
-import { AskDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
+import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { SwipeLinkCreatedModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
@@ -42,6 +42,9 @@ type Listing = {
   type: string | null; beds: number | null; baths: number | null
   sizeSqm: number | null; price: number | null; salePrice: number | null
   shortlet: boolean; availableStatus: string | null; availableDate: string | null
+  // Kev, 2026-08-31 (AV-date-confirm button) — "from when can this be
+  // viewed", a separate fact from availableDate.
+  viewingDate: string | null
   viewingStatus: string | null; hasViewingLocation: boolean; exclusive: boolean
   // The upload timestamp. Sorted server-side, but carried here because the
   // client re-groups cards by town to place the pins and would otherwise lose
@@ -325,6 +328,9 @@ function Board() {
   const [asking, setAsking] = useState<Listing | null>(null)
   const [chatting, setChatting] = useState<Listing | null>(null)
   const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
+  // AV-date-confirm dialog (Kev, 2026-08-31) — the small calendar icon next
+  // to the € price, holds the row being edited or null when closed.
+  const [avDateEditing, setAvDateEditing] = useState<Listing | null>(null)
   const [toast, setToast] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null)
   // Swipe Boards: reuses the SAME `selected` set WATag already fills via the
   // card pick-boxes — one selection, two things you can do with it.
@@ -1372,6 +1378,7 @@ function Board() {
               onFbQueue={() => toggleFbQueue(r)}
               fbQueueBusy={fbBusyRef === r.ref}
               onMatch={() => setMatchRef(r.ref)}
+              onAvDate={() => setAvDateEditing(r)}
             />
           ))}
         </div>
@@ -1450,6 +1457,18 @@ function Board() {
             action={statusing.action}
             onClose={() => setStatusing(null)}
             onDone={onStatusDone}
+          />
+        )}
+        {avDateEditing && (
+          <AvDateDialog
+            key="av-date"
+            refId={avDateEditing.ref}
+            propertyId={avDateEditing.id}
+            town={avDateEditing.town}
+            currentAvailable={avDateEditing.availableDate}
+            currentViewing={avDateEditing.viewingDate}
+            onClose={() => setAvDateEditing(null)}
+            onDone={msg => { showToast('ok', msg); reload() }}
           />
         )}
       </AnimatePresence>
@@ -2321,7 +2340,7 @@ function ReachoutSwitch() {
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
-                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch }: {
+                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -2358,6 +2377,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // itself for everyone else, and the backend route re-checks the role.
   onFbQueue: () => void
   fbQueueBusy: boolean
+  // AV-date correction dialog (Kev, 2026-08-31). Opens in the parent, which
+  // owns the dialog state, same reason onBook/onAsk/onChat are props too.
+  onAvDate: () => void
   // MATCH — Property -> Clients (Kev's Prompt B, 2026-08-29). Every agent
   // can see it, same as Chat/Book — finding the right client for a listing
   // is everyday agent work, not an admin-only tool.
@@ -2752,6 +2774,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             <button onClick={handlePriceEdit} title="Update the price" style={iconRowBtn}>
               <Euro size={13} />
             </button>
+            {/* 📅 — AV-date correction (Kev, 2026-08-31): available-date /
+                viewable-date drift sometimes (bot misreads, !upload
+                inaccuracies) — this is the fast manual fix, reposting to
+                the category group same as a !price change would. Admin
+                only, same bar as the € edit. */}
+            {isAdmin && (
+              <button onClick={onAvDate} title="Correct the available / viewing dates" style={iconRowBtn}>
+                <CalendarClock size={13} />
+              </button>
+            )}
           </span>
         </div>
         {rowMsg && <div style={{ fontSize: 10.5, color: A, marginTop: 4 }}>{rowMsg}</div>}
