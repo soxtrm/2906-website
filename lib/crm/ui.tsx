@@ -288,7 +288,13 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
               was a navy-on-navy border, nearly invisible; this is the first
               accent a user sees, so it should actually read as one. */}
           <div style={{ padding: '26px 22px 19px', borderBottom: `1px solid rgba(184,149,63,0.35)` }}>
-            <img src="/logo-wide.png" alt="2906" style={{ width: 108, display: 'block' }} />
+            {/* Kev, 2026-09-02: the logo had no click behaviour at all —
+                "wenn man drauf klickt, dass es geht". router.push, not a
+                plain <a href>, so it's an in-app navigation (no full
+                reload) straight to the dashboard, same target and same
+                mechanism the sidebar's own nav items below already use. */}
+            <img src="/logo-wide.png" alt="2906" onClick={() => router.push('/')}
+              style={{ width: 108, display: 'block', cursor: 'pointer' }} />
             <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 8, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ESTATE · CRM</div>
           </div>
           <nav style={{ padding: '12px 0', flex: 1 }}>
