@@ -756,9 +756,12 @@ function Board() {
 
   // "Select all" over a filtered board is how the map and the search become the
   // selection tool: draw a circle round Sliema, search 2-bed, hit select.
-  // Only listings that CAN be tagged, and only up to the ceiling.
+  // Kev, 2026-09-02: was also excluding canTag===false listings (the 85/215
+  // with no WATag anchor) — same over-coupling as the "+" button itself (see
+  // canSelect above). Off-market is the only real exclusion for a pick meant
+  // for swipe-link creation.
   function selectVisible() {
-    const eligible = visible.filter(r => r.canTag !== false && !lockedStatus(r.availableStatus))
+    const eligible = visible.filter(r => !lockedStatus(r.availableStatus))
     const take = eligible.slice(0, MAX_TAGS).map(r => r.ref)
     setSelected(new Set(take))
     if (eligible.length > MAX_TAGS) {
@@ -2460,6 +2463,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const offMarket = lockedStatus(r.availableStatus)
   const noAnchor  = r.canTag === false
   const canTag    = !offMarket && !noAnchor
+  // Kev, 2026-09-02: the "+" (batch-pick, used for BOTH WATag AND swipe-link
+  // creation — see createSwipeLink) was gated on canTag, so the 85/215
+  // listings with no saved WhatsApp anchor lost the button entirely even
+  // though a swipe link needs no anchor at all. Off-market is still a real
+  // exclusion (nothing off-market should be offered for forwarding OR for a
+  // client swipe deck); missing-anchor only disables the separate @Tag
+  // button below, never the pick control itself.
+  const canSelect = !offMarket
   const tagWhy    = offMarket
     ? 'Off the market — tagging it would invite somebody to forward it.'
     : noAnchor
@@ -2631,7 +2642,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         {/* Tag — batch pick, bottom-left. Same action as before
             (Board():toggleSelect); a "+" glyph now instead of the person icon,
             per the mockup — picking still turns it into a check. */}
-        {canTag && (
+        {canSelect && (
           <button
             data-watag-pick={r.ref}
             aria-pressed={selected}
