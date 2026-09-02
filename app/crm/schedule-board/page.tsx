@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
@@ -995,6 +995,32 @@ function Board() {
     }
   }
 
+  // Kev, 2026-09-02: backend already existed (services/crmScheduleBoard.js
+  // POST /listings/:ref/images, "dashboard uploader", 2026-08-29) but no
+  // button ever called it. FormData through crmFetch, not crmJson -- letting
+  // the browser set its own multipart boundary rather than forcing
+  // application/json. Server-side now also checks own-listing-or-admin (same
+  // instruction that asked for this button also asked for that check).
+  const [photoBusyRef, setPhotoBusyRef] = useState<string | null>(null)
+  async function addPhotos(r: Listing, files: FileList | null) {
+    if (photoBusyRef || !files || !files.length) return
+    const form = new FormData()
+    for (const f of Array.from(files)) form.append('images', f)
+    setPhotoBusyRef(r.ref)
+    try {
+      const d = await crmFetch(`schedule-board/listings/${encodeURIComponent(r.ref)}/images`, {
+        method: 'POST', body: form,
+      })
+      setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, images: d.images.map((i: any) => i.url || i), imageCount: d.totalImages } : x))
+      showToast('ok', `#${r.ref}: ${d.added} photo${d.added === 1 ? '' : 's'} added${d.failed ? ` (${d.failed} failed)` : ''}.`)
+    } catch (e: any) {
+      const d = e?.data || {}
+      showToast('err', d.error || e?.message || 'Could not upload photos.')
+    } finally {
+      setPhotoBusyRef(null)
+    }
+  }
+
   // The three removals all go through StatusDialog, which owns the POST so it
   // can show a refusal in place rather than as a toast over an empty gap. The
   // card is pulled the moment the server confirms — nothing is deleted, it has
@@ -1382,6 +1408,8 @@ function Board() {
               fbQueueBusy={fbBusyRef === r.ref}
               onMatch={() => setMatchRef(r.ref)}
               onAvDate={() => setAvDateEditing(r)}
+              onAddPhotos={(files) => addPhotos(r, files)}
+              photoUploadBusy={photoBusyRef === r.ref}
             />
           ))}
         </div>
@@ -2343,7 +2371,8 @@ function ReachoutSwitch() {
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
-                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate }: {
+                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
+                onAddPhotos, photoUploadBusy }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -2387,6 +2416,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // can see it, same as Chat/Book — finding the right client for a listing
   // is everyday agent work, not an admin-only tool.
   onMatch: () => void
+  // Dashboard photo upload (Kev, 2026-09-02). Own-listing-or-admin, same as
+  // the backend route now checks — the card hides the control for anyone
+  // else's listing rather than let a click 403 uselessly.
+  onAddPhotos: (files: FileList | null) => void
+  photoUploadBusy: boolean
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
@@ -2394,6 +2428,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const { me } = useCrm()
   const isAdmin = me?.role === 'admin'
   const confirmed = r.availableStatus === 'available_confirmed'
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // ── Kev's card redesign, 2026-08-30 — new icon-row actions ────────────────
   // Small, local, self-contained: each shows its own one-line feedback right
@@ -2670,6 +2705,33 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           <span style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '3px 7px', borderRadius: 999 }}>
             {r.imageCount}
           </span>
+        )}
+
+        {/* Dashboard photo upload (Kev, 2026-09-02) — own listing or admin
+            only, same rule the backend route enforces; hidden rather than
+            shown-disabled so a click can never 403. */}
+        {(r.isMine || isAdmin) && (
+          <>
+            <input
+              ref={photoInputRef} type="file" accept="image/*" multiple
+              style={{ display: 'none' }}
+              onChange={e => { onAddPhotos(e.target.files); e.target.value = '' }}
+            />
+            <button
+              onClick={e => { e.stopPropagation(); photoInputRef.current?.click() }}
+              disabled={photoUploadBusy}
+              title="Add photos to this listing"
+              style={{
+                position: 'absolute', bottom: 8, right: r.imageCount > 0 ? 44 : 8,
+                width: 26, height: 26, borderRadius: 999, padding: 0,
+                display: 'grid', placeItems: 'center',
+                background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.45)',
+                color: '#FFF', cursor: photoUploadBusy ? 'wait' : 'pointer', lineHeight: 0,
+                opacity: photoUploadBusy ? 0.6 : 1,
+              }}>
+              <Camera size={13} />
+            </button>
+          </>
         )}
       </div>
 
