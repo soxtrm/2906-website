@@ -271,6 +271,9 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         daily_target: d.state?.daily_target || 'dynamic',
         trigger_min_hours: d.state?.trigger_min_hours ?? 18,
         trigger_max_hours: d.state?.trigger_max_hours ?? 22,
+        daily_property_limit: d.state?.daily_property_limit ?? 3,
+        gallery_daily_limit: d.state?.gallery_daily_limit ?? 2,
+        link_daily_limit: d.state?.link_daily_limit ?? 3,
       })
     }).catch(e => setErr(e?.data?.error || e?.message || 'Failed to load'))
   }, [id])
@@ -306,6 +309,9 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         daily_target: settingsDraft.daily_target,
         trigger_min_hours: Number(settingsDraft.trigger_min_hours),
         trigger_max_hours: Number(settingsDraft.trigger_max_hours),
+        daily_property_limit: Number(settingsDraft.daily_property_limit),
+        gallery_daily_limit: Number(settingsDraft.gallery_daily_limit),
+        link_daily_limit: Number(settingsDraft.link_daily_limit),
       })
       load(); onChanged()
     } catch (e: any) {
@@ -345,7 +351,9 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
       const r = await crmJson(`clientgroups/${id}/matches/${propertyId}/${kind}`, 'POST', {})
       if (r.ok === false) {
         setErr(r.reason === 'daily_cap_reached' || r.reason === 'daily_cap_would_exceed'
-          ? `Daily limit of 10 properties for this clientgroup already reached today.`
+          ? `This clientgroup's daily property limit (${data?.state?.daily_property_limit ?? 3}) is already reached today.`
+          : r.reason === 'format_cap_reached'
+          ? `This clientgroup's ${r.format || ''} limit for today is already reached.`
           : (r.reason || 'Send failed'))
         setMatchBusyId(null)
         load(); onChanged()
@@ -586,7 +594,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 </select>
               </div>
               <div>
-                <label className={LABEL}>Daily target (soft, max 10/day)</label>
+                <label className={LABEL}>Daily target (soft description)</label>
                 <select className={FIELD} value={settingsDraft.daily_target || 'dynamic'}
                   onChange={e => setSettingsDraft((p: any) => ({ ...p, daily_target: e.target.value }))}>
                   <option value="dynamic">Dynamic</option>
@@ -606,8 +614,28 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 <input type="number" min={1} max={72} className={FIELD} value={settingsDraft.trigger_max_hours ?? ''}
                   onChange={e => setSettingsDraft((p: any) => ({ ...p, trigger_max_hours: e.target.value }))} />
               </div>
+              <div>
+                <label className={LABEL}>Daily property limit (hard, max 10)</label>
+                <input type="number" min={1} max={10} className={FIELD} value={settingsDraft.daily_property_limit ?? ''}
+                  onChange={e => setSettingsDraft((p: any) => ({ ...p, daily_property_limit: e.target.value }))} />
+              </div>
+              <div>
+                <label className={LABEL}>Gallery limit (hard, max 10)</label>
+                <input type="number" min={1} max={10} className={FIELD} value={settingsDraft.gallery_daily_limit ?? ''}
+                  onChange={e => setSettingsDraft((p: any) => ({ ...p, gallery_daily_limit: e.target.value }))} />
+              </div>
+              <div>
+                <label className={LABEL}>Link limit (hard, max 10)</label>
+                <input type="number" min={1} max={10} className={FIELD} value={settingsDraft.link_daily_limit ?? ''}
+                  onChange={e => setSettingsDraft((p: any) => ({ ...p, link_daily_limit: e.target.value }))} />
+              </div>
             </div>
-            <p className="text-[10px] text-navy/40 mt-2">A range, not a fixed schedule — the assistant picks a natural point inside it based on engagement and available matches, always inside 08:00–20:00 Malta time.</p>
+            <p className="text-[10px] text-navy/40 mt-2">A range, not a fixed schedule — the assistant picks a natural point inside it based on engagement and available matches, always inside 08:00–20:00 Malta time. The three limits below are hard ceilings shared by manual and automatic sends alike — raise them for an urgent 1–2 day search, lower them for a relaxed one.</p>
+            {data.usageToday && (
+              <p className="text-[11px] font-semibold text-navy/70 mt-2">
+                Today: {data.usageToday.total}/{data.usageToday.dailyLimit} · Gallery: {data.usageToday.gallery}/{data.usageToday.galleryLimit} · Links: {data.usageToday.link}/{data.usageToday.linkLimit}
+              </p>
+            )}
             <button className={PRIMARY + ' mt-2'} disabled={settingsBusy} onClick={saveSettings}>Save delivery settings</button>
           </div>
 
