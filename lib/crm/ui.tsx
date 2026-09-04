@@ -154,7 +154,7 @@ export const useCrm = () => {
   return c
 }
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'earnings', 'admin']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -175,14 +175,14 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(async (e: any) => {
         if (!alive) return
-        if (e?.status !== 403) { router.replace('/login'); return }
+        if (e?.status !== 403) { router.replace('/crm/login'); return }
         try {
           const d = await crmFetch('schedule-board/me')
           if (!alive) return
           setMe(d.agent); setReveals(d.reveals || { used: 0, limit: 0 })
           setNav((d.nav as NavKey[]) || ['board'])
           setReady(true)
-        } catch { router.replace('/login') }
+        } catch { router.replace('/crm/login') }
       })
     return () => { alive = false }
   }, [router])
@@ -195,7 +195,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await crmFetch('logout', { method: 'POST' }).catch(() => {})
-    router.replace('/login')
+    router.replace('/crm/login')
   }, [router])
 
   if (!ready) {
@@ -269,6 +269,11 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'owners',    icon: '◎', label: 'Owners',    href: '/owners' },
   // CLIENTGROUPS 3/7 (2026-09-04) — the WA CLIENT ASSISTANT dashboard.
   { key: 'clientgroups', icon: '☍', label: 'Clientgroups', href: '/clientgroups' },
+  // OWNERGROUPS 5/5 (2026-09-04) — the `!o` Owner Assistant dashboard.
+  // Admin-only server-side (routes/crmOwnergroups.js); shown in the nav to
+  // everyone like Clientgroups is, the page itself shows "Admins only" for
+  // a non-admin rather than filtering the sidebar item away.
+  { key: 'ownergroups', icon: '⌂', label: 'Ownergroups', href: '/ownergroups' },
   { key: 'earnings',  icon: '€', label: 'Earnings',  href: '/earnings', disabled: true },
   { key: 'admin',     icon: '⚙', label: 'Admin',     href: '/admin', disabled: true },
 ]

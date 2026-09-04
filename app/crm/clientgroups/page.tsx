@@ -12,8 +12,35 @@
 // Pill, NAVY/gold) rather than inventing a second visual language.
 // ============================================================================
 import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useRouter as useNavRouter, usePathname } from 'next/navigation'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { crmFetch, crmJson, crmGet } from '@/lib/crm/api'
+
+// Shared with /ownergroups (OG-5, 2026-09-04) — lets an agent jump between
+// the two "managed conversation" dashboards without hunting the sidebar.
+function DashboardTabs() {
+  const pathname = usePathname() || ''
+  const router = useNavRouter()
+  const tabs = [
+    { href: '/clientgroups', label: 'Clientgroups' },
+    { href: '/ownergroups', label: 'Ownergroups' },
+  ]
+  return (
+    <div className="flex gap-1 mb-4 border-b border-navy/10">
+      {tabs.map(t => {
+        const active = pathname.startsWith(t.href)
+        return (
+          <button key={t.href} onClick={() => router.push(t.href)}
+            className={`px-4 py-2 text-xs font-semibold transition-colors border-b-2 -mb-px ${
+              active ? 'border-gold text-navy' : 'border-transparent text-navy/40 hover:text-navy'
+            }`}>
+            {t.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 import { LocationSelector, type LocationSelectorValue } from '@/components/location-selector'
 import { NextIntlClientProvider } from 'next-intl'
 
@@ -879,6 +906,7 @@ function ClientgroupsInner() {
 
   return (
     <CrmShell title="Clientgroups" subtitle={`${rows.length} managed conversation${rows.length === 1 ? '' : 's'}`}>
+      <DashboardTabs />
       <div className="mb-4">
         <input className={FIELD + ' max-w-xs'} placeholder="Search by label or agent…" value={q} onChange={e => setQ(e.target.value)} />
       </div>
