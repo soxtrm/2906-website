@@ -15,7 +15,7 @@ import { useSearchParams } from 'next/navigation'
 import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
@@ -50,6 +50,9 @@ type Listing = {
   // client re-groups cards by town to place the pins and would otherwise lose
   // the server's newest-first ordering.
   createdAt: string | null
+  // Bumped by any edit (crm.js PATCH /properties/:id). Drives the "freshly
+  // updated" glow + sort nudge, first 48h only — see Card()'s isFreshlyUpdated.
+  updatedAt?: string | null
   // When somebody last pressed "Available" on this card, and why it last moved.
   lastConfirmedAvailableAt: string | null
   statusChangeReason: string | null
@@ -470,17 +473,35 @@ function Board() {
   // ?ref=<ref>&action=chat|book opens the matching dialog directly instead of
   // making the agent search for the card themselves. Runs once per ref (the
   // guard prevents reopening a dialog the agent just closed on their own).
+  //
+  // Kev, 2026-09-04: this used to silently no-op whenever the ref wasn't in
+  // the currently-loaded `rows` (wrong tab, filtered out, off the first
+  // page) — from the workspace dashboard the Chat/Book buttons just looked
+  // dead. Falls back to fetching the single listing directly (the same
+  // GET /listings/:ref the detail modal already uses, same shape) instead
+  // of requiring it to already be on screen.
   const deepLinkedRef = useRef<string | null>(null)
   useEffect(() => {
     const ref = params.get('ref')
     const action = params.get('action')
     if (!ref || deepLinkedRef.current === ref) return
     const row = rows.find(r => r.ref === ref)
-    if (!row) return
+    if (row) {
+      deepLinkedRef.current = ref
+      setFocusRef(ref)
+      if (action === 'book') setBooking(row)
+      else if (action === 'chat') setChatting(row)
+      return
+    }
     deepLinkedRef.current = ref
-    setFocusRef(ref)
-    if (action === 'book') setBooking(row)
-    else if (action === 'chat') setChatting(row)
+    crmFetch(`schedule-board/listings/${encodeURIComponent(ref)}`)
+      .then((d: Listing) => {
+        setRows(rs => rs.some(r => r.ref === d.ref) ? rs : [d, ...rs])
+        setFocusRef(ref)
+        if (action === 'book') setBooking(d)
+        else if (action === 'chat') setChatting(d)
+      })
+      .catch(() => { deepLinkedRef.current = null })
   }, [rows, params])
 
   // The recheck tab's badge. Fetched separately so the count is visible while
@@ -877,6 +898,41 @@ function Board() {
       showToast('err', d.error || e?.message || 'Could not create the swipe link.')
     } finally {
       setSwipeCreating(false)
+    }
+  }
+
+  // Kev, 2026-09-04: ~50 empty/ref-less listings went out again — admins need
+  // to clear bad inventory straight from the board, single or in bulk, not by
+  // opening each one on the Dashboard's property-detail page. Reuses the SAME
+  // DELETE /properties/:id the Dashboard's property page already has
+  // (routes/crm.js) — no new backend endpoint, just resolving ref -> id off
+  // the already-loaded `rows`.
+  const [deletingListings, setDeletingListings] = useState(false)
+  async function deleteOneListing(r: Listing) {
+    if (!window.confirm(`Delete #${r.ref} permanently? This cannot be undone.`)) return
+    try {
+      await crmFetch(`properties/${r.id}`, { method: 'DELETE' })
+      setRows(rs => rs.filter(x => x.ref !== r.ref))
+      setSelected(s => { const n = new Set(s); n.delete(r.ref); return n })
+    } catch (e: any) {
+      showToast('err', e?.data?.error || e?.message || `Could not delete #${r.ref}.`)
+    }
+  }
+  async function deleteSelectedListings() {
+    if (deletingListings || !selected.size) return
+    if (!window.confirm(`Delete ${selected.size} selected listing${selected.size === 1 ? '' : 's'} permanently? This cannot be undone.`)) return
+    setDeletingListings(true)
+    const refs = [...selected]
+    try {
+      for (const ref of refs) {
+        const row = rows.find(x => x.ref === ref)
+        if (!row) continue
+        try { await crmFetch(`properties/${row.id}`, { method: 'DELETE' }) } catch (e) { /* keep going */ }
+      }
+      setRows(rs => rs.filter(x => !refs.includes(x.ref)))
+      setSelected(new Set())
+    } finally {
+      setDeletingListings(false)
     }
   }
 
@@ -1313,6 +1369,20 @@ function Board() {
                 <Link2 size={13} />
                 {swipeCreating ? 'Creating…' : `Swipe Link ${selected.size}`}
               </button>
+              {isAdmin && (
+                <button
+                  onClick={deleteSelectedListings}
+                  disabled={deletingListings}
+                  title={`Delete these ${selected.size} listings permanently`}
+                  style={{
+                    ...chip, borderRadius: 8, background: deletingListings ? '#D6A9A3' : '#EF4444',
+                    borderColor: deletingListings ? '#D6A9A3' : '#EF4444', color: '#FFF', fontWeight: 700,
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    cursor: deletingListings ? 'wait' : 'pointer',
+                  }}>
+                  🗑 {deletingListings ? 'Deleting…' : `Delete ${selected.size}`}
+                </button>
+              )}
               <button
                 onClick={() => setSelected(new Set())}
                 style={{ ...subtleLink, fontSize: 11 }}>
@@ -1410,6 +1480,7 @@ function Board() {
               onAvDate={() => setAvDateEditing(r)}
               onAddPhotos={(files) => addPhotos(r, files)}
               photoUploadBusy={photoBusyRef === r.ref}
+              onDelete={() => deleteOneListing(r)}
             />
           ))}
         </div>
@@ -2372,7 +2443,7 @@ function ReachoutSwitch() {
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
-                onAddPhotos, photoUploadBusy }: {
+                onAddPhotos, photoUploadBusy, onDelete }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -2421,12 +2492,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // else's listing rather than let a click 403 uselessly.
   onAddPhotos: (files: FileList | null) => void
   photoUploadBusy: boolean
+  // Kev, 2026-09-04: bad/empty listings need a direct delete from the board.
+  // Admin-only — the card hides the control for everyone else.
+  onDelete: () => void
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
   // threading it through the list would be one more prop to forget.
   const { me } = useCrm()
   const isAdmin = me?.role === 'admin'
+  // Olga/Katya: trusted for Create Group specifically, not admin generally.
+  const canCreateGroupBtn = canCreateGroup(me)
   const confirmed = r.availableStatus === 'available_confirmed'
   const photoInputRef = useRef<HTMLInputElement>(null)
 
@@ -2537,6 +2613,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // is ready for it the day a real field exists, but nothing sets it today.
   const isLuxury = r.category === 'aesthetics'
   const isTopDeal = false
+  // Kev, 2026-09-04: "freshly updated" glow, first 48h — same fact
+  // (routes/crmScheduleBoard.js's updatedAt, bumped by crm.js's PATCH
+  // /properties/:id on every edit) already used to nudge these listings
+  // higher in the default 'newest' sort; this is the visual half, in the
+  // exact top-right spot the "Uploaded/Updated X ago" pill already lives.
+  const isFreshlyUpdated = !!r.updatedAt && (Date.now() - Date.parse(r.updatedAt) < 48 * 3600_000)
   const frame = isTopDeal
     ? { border: '1px solid rgba(199,57,26,0.45)', glow: '0 0 0 1px rgba(199,57,26,0.16), 0 6px 22px rgba(199,57,26,0.16)' }
     : isLuxury
@@ -2658,11 +2740,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         {/* Upload age (or last-confirmed age, whichever is the more recent
             fact — see freshBadgeLabel) + responsible agent, top right. */}
         <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <span title={r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB') : 'no upload date'} style={{
+          <span title={
+            (isFreshlyUpdated ? 'Edited within the last 48h. ' : '') +
+            (r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB') : 'no upload date')
+          } style={isFreshlyUpdated ? {
+            background: 'rgba(184,149,63,0.92)', color: '#FFF', fontSize: 9, fontWeight: 700, fontFamily: FM,
+            padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap',
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.5), 0 0 10px 2px rgba(184,149,63,0.85)',
+          } : {
             background: 'rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.9)', fontSize: 9, fontFamily: FM,
             padding: '3px 7px', borderRadius: 999, whiteSpace: 'nowrap',
           }}>
-            {freshBadgeLabel(r)}
+            {isFreshlyUpdated && '✦ '}{freshBadgeLabel(r)}
           </span>
           {r.listedBy.displayName && (
             <span style={{
@@ -2950,7 +3039,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             @Tag
           </button>
           {(() => {
-            const ready = isAdmin && !!r.viewing?.canCreateGroup
+            const ready = canCreateGroupBtn && !!r.viewing?.canCreateGroup
             const already = !!r.viewing?.groupJid
             const title = already
               ? 'Group already created for this booking.'
@@ -2972,6 +3061,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               </button>
             )
           })()}
+          {isAdmin && (
+            <button
+              onClick={onDelete}
+              title={`Delete #${r.ref} permanently`}
+              style={{ ...compactBtn, color: '#EF4444', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              🗑
+            </button>
+          )}
         </div>
 
         {/* Row 3 — On Market? (outline, not filled — Kev's mockup) ·

@@ -25,7 +25,7 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
-import { useCrm } from '@/lib/crm/ui'
+import { useCrm, canCreateGroup } from '@/lib/crm/ui'
 
 // ── shared shell ────────────────────────────────────────────────────────────
 const FIELD =
@@ -497,6 +497,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
 }) {
   const { me } = useCrm()
   const isAdmin = me?.role === 'admin'
+  const canCreateGroupBtn = canCreateGroup(me)
   const [state, setState] = useState<ChatState | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -630,7 +631,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               </button>
             )}
             {onCreateGroup && (() => {
-              const ready = isAdmin && !!viewing?.canCreateGroup
+              const ready = canCreateGroupBtn && !!viewing?.canCreateGroup
               const already = !!viewing?.groupJid
               const title = already
                 ? 'Group already created for this booking.'

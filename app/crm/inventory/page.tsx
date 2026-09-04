@@ -17,12 +17,44 @@ function Inventory() {
   const router = useRouter()
   const isMobile = useIsMobile()
   const { me } = useCrm()
+  const isAdmin = me?.role === 'admin'
   const [rows, setRows] = useState<any[]>([])
   const [total, setTotal] = useState(0)
   const [agents, setAgents] = useState<any[]>([])
   const [locations, setLocations] = useState<string[]>([])
   const [ownerPanel, setOwnerPanel] = useState<number | null>(null)
   const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false })
+  // Kev, 2026-09-04: ~50 empty/ref-less listings went out again -- admins
+  // need to clear bad inventory in bulk, not one property-detail-page at a
+  // time. Reuses the SAME DELETE /properties/:id the single-property page
+  // already had (routes/crm.js) -- no new backend endpoint, just a loop.
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const toggleSelect = (id: number) => setSelected(s => {
+    const next = new Set(s)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+  async function deleteOne(id: number) {
+    if (!window.confirm('Delete this listing permanently? This cannot be undone.')) return
+    try { await crmFetch(`properties/${id}`, { method: 'DELETE' }) } catch (e) { /* surfaced via reload */ }
+    setSelected(s => { const n = new Set(s); n.delete(id); return n })
+    load()
+  }
+  async function deleteSelected() {
+    if (!selected.size) return
+    if (!window.confirm(`Delete ${selected.size} selected listing${selected.size === 1 ? '' : 's'} permanently? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      for (const id of selected) {
+        try { await crmFetch(`properties/${id}`, { method: 'DELETE' }) } catch (e) { /* keep going */ }
+      }
+    } finally {
+      setSelected(new Set())
+      setDeleting(false)
+      load()
+    }
+  }
 
   useEffect(() => { crmFetch('agents').then(d => setAgents(d.agents || [])).catch(() => {}); crmFetch('locations').then(d => setLocations(d.locations || [])).catch(() => {}) }, [])
 
@@ -68,9 +100,19 @@ function Inventory() {
   return (
     <CrmShell title="Property Inventory" subtitle={`${rows.length} shown · ${total} total`} onAdd={() => router.push('/property/new')} filterBar={filterBar}>
       {ownerPanel != null && <OwnerPanel ownerId={ownerPanel} onClose={() => setOwnerPanel(null)} />}
+      {isAdmin && selected.size > 0 && (
+        <div style={{ position: 'sticky', top: 0, zIndex: 6, display: 'flex', alignItems: 'center', gap: 10, background: '#1B2A4A', color: '#FFF', padding: '9px 16px', fontFamily: F, fontSize: 12 }}>
+          <span style={{ fontWeight: 700 }}>{selected.size} selected</span>
+          <button onClick={deleteSelected} disabled={deleting}
+            style={{ background: '#EF4444', color: '#FFF', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
+            {deleting ? 'Deleting…' : `🗑 Delete Selected`}
+          </button>
+          <button onClick={() => setSelected(new Set())} style={{ background: 'transparent', color: '#FFF', border: 'none', fontSize: 11, cursor: 'pointer', opacity: 0.7 }}>Clear</button>
+        </div>
+      )}
       {isMobile
-        ? <div style={{ padding: '12px 14px' }}>{rows.map(p => <MobileCard key={p.id} p={p} onOwner={setOwnerPanel} onOpen={() => router.push(`/property/${p.id}`)} />)}{!rows.length && <Empty />}</div>
-        : <DesktopTable rows={rows} onOwner={setOwnerPanel} onOpen={(id) => router.push(`/property/${id}`)} />}
+        ? <div style={{ padding: '12px 14px' }}>{rows.map(p => <MobileCard key={p.id} p={p} isAdmin={isAdmin} selected={selected.has(p.id)} onToggleSelect={() => toggleSelect(p.id)} onDelete={() => deleteOne(p.id)} onOwner={setOwnerPanel} onOpen={() => router.push(`/property/${p.id}`)} />)}{!rows.length && <Empty />}</div>
+        : <DesktopTable rows={rows} isAdmin={isAdmin} selected={selected} onToggleSelect={toggleSelect} onDelete={deleteOne} onOwner={setOwnerPanel} onOpen={(id) => router.push(`/property/${id}`)} />}
     </CrmShell>
   )
 }
@@ -79,19 +121,21 @@ const chk: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 5
 const Empty = () => <div style={{ padding: 40, textAlign: 'center', color: '#BBB', fontSize: 13, fontFamily: F }}>No properties match these filters.</div>
 
 // ── desktop table ─────────────────────────────────────────────────────────────
-function DesktopTable({ rows, onOwner, onOpen }: { rows: any[]; onOwner: (id: number) => void; onOpen: (id: number) => void }) {
+function DesktopTable({ rows, isAdmin, selected, onToggleSelect, onDelete, onOwner, onOpen }: { rows: any[]; isAdmin?: boolean; selected?: Set<number>; onToggleSelect?: (id: number) => void; onDelete?: (id: number) => void; onOwner: (id: number) => void; onOpen: (id: number) => void }) {
   const [open, setOpen] = useState<number | null>(null)
   const thS: React.CSSProperties = { padding: '9px 16px', textAlign: 'left', fontSize: 9, fontWeight: 700, color: '#AAA', letterSpacing: '0.12em', textTransform: 'uppercase', borderBottom: '1px solid #EDEBE5', background: '#FAFAF7', position: 'sticky', top: 0, zIndex: 5, whiteSpace: 'nowrap', fontFamily: F }
   const tdS: React.CSSProperties = { padding: '13px 16px', verticalAlign: 'middle', borderBottom: '1px solid #F6F4EF' }
   if (!rows.length) return <Empty />
+  const headers = isAdmin ? ['', 'Ref · Gallery', '', 'Owner', 'Location', 'Price', 'Bd/Ba', 'Available', 'Viewing', 'Profile', ''] : ['Ref · Gallery', '', 'Owner', 'Location', 'Price', 'Bd/Ba', 'Available', 'Viewing', 'Profile', '']
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1050 }}>
-      <thead><tr>{['Ref · Gallery', '', 'Owner', 'Location', 'Price', 'Bd/Ba', 'Available', 'Viewing', 'Profile', ''].map((h, i) => <th key={i} style={thS}>{h}</th>)}</tr></thead>
+      <thead><tr>{headers.map((h, i) => <th key={i} style={thS}>{h}</th>)}</tr></thead>
       <tbody>
         {rows.map(p => {
           const isOpen = open === p.id, incomplete = p.completeness < 60
           return (
             <RowFragment key={p.id} p={p} isOpen={isOpen} incomplete={incomplete} tdS={tdS}
+              isAdmin={isAdmin} checked={!!selected?.has(p.id)} onToggleSelect={onToggleSelect} onDelete={onDelete}
               onToggle={() => setOpen(isOpen ? null : p.id)} onOwner={onOwner} onOpen={onOpen} />
           )
         })}
@@ -100,12 +144,17 @@ function DesktopTable({ rows, onOwner, onOpen }: { rows: any[]; onOwner: (id: nu
   )
 }
 
-function RowFragment({ p, isOpen, incomplete, tdS, onToggle, onOwner, onOpen }: any) {
+function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSelect, onDelete, onToggle, onOwner, onOpen }: any) {
   const [acts, setActs] = useState<any[] | null>(null)
   useEffect(() => { if (isOpen && !acts) crmFetch(`properties/${p.id}`).then(d => setActs(d.activities || [])).catch(() => setActs([])) }, [isOpen])
   return (
     <>
       <tr style={{ background: '#FFF', borderLeft: p.exclusive ? `3px solid ${A}` : incomplete ? '3px solid #EF4444' : '3px solid transparent' }}>
+        {isAdmin && (
+          <td style={{ ...tdS, width: 30 }}>
+            <input type="checkbox" checked={checked} onChange={onToggleSelect} style={{ accentColor: A, width: 15, height: 15, cursor: 'pointer' }} />
+          </td>
+        )}
         <td style={tdS}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} />
@@ -159,13 +208,17 @@ function RowFragment({ p, isOpen, incomplete, tdS, onToggle, onOwner, onOpen }: 
                 <button key={ico} title={tip} onClick={() => ico === '⏱' ? onToggle() : null}
                   style={{ background: ico === '⏱' && isOpen ? AD : '#F6F4EF', border: `1px solid ${ico === '⏱' && isOpen ? AB : '#E8E4DA'}`, borderRadius: 6, padding: '5px 8px', fontSize: 11, cursor: 'pointer', color: ico === '⏱' && isOpen ? A : '#AAA' }}>{ico}</button>
               ))}
+              {isAdmin && (
+                <button title="Delete this listing" onClick={onDelete}
+                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '5px 8px', fontSize: 11, cursor: 'pointer', color: '#EF4444' }}>🗑</button>
+              )}
             </div>
           </div>
         </td>
       </tr>
       {isOpen && (
         <tr style={{ background: '#FAFAF7' }}>
-          <td colSpan={10} style={{ padding: '12px 28px 14px' }}>
+          <td colSpan={isAdmin ? 11 : 10} style={{ padding: '12px 28px 14px' }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: '#BBB', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: F, marginBottom: 10 }}>Activity History</div>
             {acts == null && <div style={{ fontSize: 12, color: '#BBB' }}>Loading…</div>}
             {acts && acts.length === 0 && <div style={{ fontSize: 12, color: '#BBB' }}>No activity yet.</div>}
@@ -185,12 +238,17 @@ function RowFragment({ p, isOpen, incomplete, tdS, onToggle, onOwner, onOpen }: 
 }
 
 // ── mobile card ───────────────────────────────────────────────────────────────
-function MobileCard({ p, onOwner, onOpen }: any) {
+function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, onOpen }: any) {
   const [open, setOpen] = useState(false)
   const incomplete = p.completeness < 60
   return (
     <div style={{ background: '#FFF', borderRadius: 14, marginBottom: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05),0 4px 12px rgba(0,0,0,0.04)', borderLeft: p.exclusive ? `4px solid ${A}` : incomplete ? '4px solid #EF4444' : '4px solid transparent' }}>
       <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
+        {isAdmin && (
+          <div onClick={e => { e.stopPropagation(); onToggleSelect?.() }} style={{ paddingTop: 4 }}>
+            <input type="checkbox" checked={!!selected} onChange={() => {}} style={{ accentColor: A, width: 16, height: 16, cursor: 'pointer' }} />
+          </div>
+        )}
         <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} w={76} h={52} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -235,6 +293,9 @@ function MobileCard({ p, onOwner, onOpen }: any) {
           <div style={{ marginTop: 12, marginBottom: 14 }}><Bar pct={p.completeness} /></div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={onOpen} style={{ flex: 1, background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: '11px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>Open / Edit</button>
+            {isAdmin && (
+              <button onClick={onDelete} style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 9, padding: '11px 14px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>🗑</button>
+            )}
           </div>
         </div>
       )}

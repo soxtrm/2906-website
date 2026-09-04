@@ -370,6 +370,20 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
     } finally { setMatchBusyId(null) }
   }
 
+  // Kev, 2026-09-04: a fresh clientgroup used to sit at MATCHES (0) until the
+  // next scheduled proactive check, which can be almost a day out. This is
+  // the manual escape hatch — pure compute, never sends anything.
+  const [matchNowBusy, setMatchNowBusy] = useState(false)
+  async function matchNow() {
+    setMatchNowBusy(true); setErr(null)
+    try {
+      await crmJson(`clientgroups/${id}/match-now`, 'POST', {})
+      load(); onChanged()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not find matches')
+    } finally { setMatchNowBusy(false) }
+  }
+
   async function openOrCopyLink(propertyId: number, mode: 'open' | 'copy') {
     setMatchBusyId(propertyId); setErr(null)
     try {
@@ -608,7 +622,13 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50">Matches ({data.matches?.length || 0})</h3>
-              <div className="flex gap-1">
+              <div className="flex items-center gap-2">
+                <button disabled={matchNowBusy} onClick={matchNow}
+                  title="Run the matching engine right now instead of waiting for the next scheduled check"
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20 disabled:opacity-40 transition-colors">
+                  {matchNowBusy ? 'Searching…' : 'Find Matches Now'}
+                </button>
+                <div className="flex gap-1">
                 {(['all', 'unsent', 'sent', 'liked', 'rejected'] as const).map(f => (
                   <button
                     key={f}
@@ -618,6 +638,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     }`}
                   >{f}</button>
                 ))}
+                </div>
               </div>
             </div>
             <div className="space-y-1.5 max-h-[520px] overflow-y-auto">
