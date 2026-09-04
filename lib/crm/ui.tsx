@@ -144,7 +144,7 @@ export const useCrm = () => {
   return c
 }
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'earnings', 'admin']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'earnings', 'admin']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -257,6 +257,8 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // their nav comes from the backend and contains 'board' and nothing else.
   { key: 'access',    icon: '◔', label: 'Board access', href: '/board-access' },
   { key: 'owners',    icon: '◎', label: 'Owners',    href: '/owners' },
+  // CLIENTGROUPS 3/7 (2026-09-04) — the WA CLIENT ASSISTANT dashboard.
+  { key: 'clientgroups', icon: '☍', label: 'Clientgroups', href: '/clientgroups' },
   { key: 'earnings',  icon: '€', label: 'Earnings',  href: '/earnings', disabled: true },
   { key: 'admin',     icon: '⚙', label: 'Admin',     href: '/admin', disabled: true },
 ]

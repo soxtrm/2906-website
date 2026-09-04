@@ -823,6 +823,27 @@ export function StatusDialog({ refId, town, action, onClose, onDone }: {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // Kev, 2026-09-04 (explicit request): "duplicate listing, delete just
+  // this one" — the one genuinely destructive action on this board, so it
+  // gets its own two-step confirm rather than sharing the reason/preset
+  // flow above (which this file's own header deliberately keeps soft-only).
+  const { me } = useCrm()
+  const [deleteConfirming, setDeleteConfirming] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+
+  async function deleteDuplicate() {
+    setErr(null)
+    setDeleteBusy(true)
+    try {
+      const d = await crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/duplicate`, { method: 'DELETE' })
+      onDone(d.message || `#${refId} permanently deleted.`, refId)
+      onClose()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not delete this listing.')
+      setDeleteBusy(false)
+      setDeleteConfirming(false)
+    }
+  }
 
   // A preset plus an optional detail, joined — "Rented out — owner said the
   // tenant moved in on Monday" is worth more than either half alone.
@@ -905,6 +926,42 @@ export function StatusDialog({ refId, town, action, onClose, onDone }: {
           Pick a reason or write one. It is stored with the listing so the next
           person can see why it left the board.
         </p>
+      )}
+
+      {/* Kev, 2026-09-04: duplicate listing — permanently deletes just THIS
+          card, unlike every button above. Admin-only, separate confirm. */}
+      {action === 'check-out' && me?.role === 'admin' && (
+        <div className="mt-4 pt-4 border-t border-red-100">
+          {!deleteConfirming ? (
+            <button
+              type="button"
+              onClick={() => setDeleteConfirming(true)}
+              className="text-[11px] text-red-500/70 hover:text-red-700 underline decoration-dotted"
+            >
+              Duplicate listing? Delete this one permanently
+            </button>
+          ) : (
+            <div className="rounded bg-red-50 px-3 py-2.5">
+              <p className="text-[11px] text-red-700 leading-relaxed">
+                This permanently deletes #{refId} — not archived, gone. Only do this for a genuine duplicate posting.
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={() => setDeleteConfirming(false)} className={GHOST} disabled={deleteBusy}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteDuplicate}
+                  disabled={deleteBusy}
+                  className="px-4 py-2.5 rounded bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition-colors disabled:opacity-40 inline-flex items-center gap-2"
+                >
+                  {deleteBusy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Yes, permanently delete
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </Sheet>
   )
