@@ -250,8 +250,6 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         budget_min: d.client?.budget_min ?? '', budget_max: d.client?.budget_max ?? '',
         bedrooms_wanted: (d.client?.bedrooms_wanted || []).join(','),
         property_types: (d.client?.property_types || []).join(', '),
-        locations: (d.client?.locations || []).join(', '),
-        preferred_locations: (d.client?.preferred_locations || []).join(', '),
         // CLIENTGROUPS -- structured, canonical values (village/area codes),
         // not free text -- kept as real arrays, driven by <LocationSelector>
         // below, never hand-typed (avoids "Sliema"/"sliema"/typo duplicates).
@@ -332,6 +330,15 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
   // ── CLIENTGROUPS -- DASHBOARD MATCH ACTIONS: Gallery / Send Link / Mark
   // Sent / Copy Link, all through the same backend primitive automatic sends
   // use (shared dedup + shared daily cap) ────────────────────────────────
+  // The backend now answers IMMEDIATELY ({ok:true, queued:true}) and does the
+  // actual WhatsApp send (image downloads + WAHA upload) in the background —
+  // it used to await the whole thing inline, which for a multi-photo gallery
+  // routinely outran the dashboard proxy's own request timeout and left the
+  // button spinning forever with no result ever coming back (2026-09-04 fix).
+  // A fast, honest rejection (gate/daily-cap) still comes back synchronously
+  // and is shown right away; a queued send instead gets a short delayed
+  // refresh so the card flips to SENT once it actually lands, without the
+  // agent having to manually reload.
   async function sendMatch(propertyId: number, kind: 'send-gallery' | 'send-link') {
     setMatchBusyId(propertyId); setErr(null)
     try {
@@ -340,11 +347,17 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         setErr(r.reason === 'daily_cap_reached' || r.reason === 'daily_cap_would_exceed'
           ? `Daily limit of 10 properties for this clientgroup already reached today.`
           : (r.reason || 'Send failed'))
+        setMatchBusyId(null)
+        load(); onChanged()
+        return
       }
-      load(); onChanged()
+      // queued — keep the SENDING… indicator up and poll shortly after.
+      setTimeout(() => { load(); onChanged() }, 4000)
+      setTimeout(() => { setMatchBusyId(curr => curr === propertyId ? null : curr); load(); onChanged() }, 9000)
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Send failed')
-    } finally { setMatchBusyId(null) }
+      setMatchBusyId(null)
+    }
   }
 
   async function markSent(propertyId: number) {
@@ -382,8 +395,10 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
           ? profileDraft.bedrooms_wanted.split(',').map((s: string) => parseInt(s.trim())).filter((n: number) => !isNaN(n))
           : [],
         property_types: arr(profileDraft.property_types),
-        locations: arr(profileDraft.locations),
-        preferred_locations: arr(profileDraft.preferred_locations),
+        // locations/preferred_locations have no editable UI any more (see
+        // the removed free-text inputs above) — deliberately omitted here so
+        // saving the profile can never silently blank out a value that may
+        // have been set some other way (e.g. Gemini extraction via !cadd).
         selected_areas: profileDraft.selected_areas || [],
         preferred_villages: profileDraft.preferred_villages || [],
         top_priority_villages: profileDraft.top_priority_villages || [],
@@ -582,11 +597,101 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
             <button className={PRIMARY + ' mt-2'} disabled={settingsBusy} onClick={saveSettings}>Save delivery settings</button>
           </div>
 
+          {/* matches — CLIENTGROUPS DASHBOARD MATCH ACTIONS: Gallery/Send
+              Link/Open/Copy Link/Mark Sent, all going through the SAME
+              backend delivery primitive automatic sends use (shared dedup +
+              shared 10/day ceiling with the assistant's own proactive
+              sends). Moved to the TOP of the sheet and given more vertical
+              room (2026-09-04, Kev's explicit ask) — steering/profile/events
+              below are collapsed by default so Matches is what you actually
+              see when a clientgroup opens. */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50">Matches ({data.matches?.length || 0})</h3>
+              <div className="flex gap-1">
+                {(['all', 'unsent', 'sent', 'liked', 'rejected'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setMatchFilter(f)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                      matchFilter === f ? 'bg-navy text-white' : 'bg-off-white text-navy/40 hover:text-navy'
+                    }`}
+                  >{f}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5 max-h-[520px] overflow-y-auto">
+              {(data.matches || [])
+                .filter((m: any) => {
+                  if (matchFilter === 'all') return true
+                  if (matchFilter === 'unsent') return !m.sent_to_client
+                  if (matchFilter === 'sent') return !!m.sent_to_client
+                  if (matchFilter === 'liked') return m.client_reaction === 'liked'
+                  if (matchFilter === 'rejected') return m.client_reaction === 'rejected'
+                  return true
+                })
+                .map((m: any) => {
+                  const isBusy = matchBusyId === m.property_id
+                  return (
+                    <div key={m.id} className="bg-off-white rounded px-3 py-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-navy">#{m.ref} · {m.town || '?'} · {m.bedrooms ?? '?'}bed · €{m.price ?? '?'}</span>
+                        <span className="text-navy/40 shrink-0">{m.match_score}pt</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-1.5">
+                        <div className="text-[10px] uppercase tracking-wide">
+                          {m.sent_to_client ? (
+                            <span className="text-green-600 font-semibold">
+                              SENT{m.sent_via ? ` · ${m.sent_via}` : ''}
+                              {m.sent_at && <span className="text-navy/30 font-normal normal-case ml-1">{fmtDateTime(m.sent_at)}</span>}
+                              {m.client_reaction && <span className="text-navy/40 font-normal normal-case ml-1">· {m.client_reaction}</span>}
+                            </span>
+                          ) : isBusy ? (
+                            <span className="text-blue-500 font-semibold">SENDING…</span>
+                          ) : (
+                            <span className="text-navy/40 font-semibold">UNSENT</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <button disabled={isBusy} onClick={() => sendMatch(m.property_id, 'send-gallery')}
+                            className="px-2 py-1 rounded bg-navy text-white text-[10px] font-semibold hover:bg-navy-light disabled:opacity-40">
+                            {isBusy ? '…' : 'Gallery'}
+                          </button>
+                          <button disabled={isBusy} onClick={() => sendMatch(m.property_id, 'send-link')}
+                            className="px-2 py-1 rounded border border-navy/20 text-navy text-[10px] font-semibold hover:bg-white disabled:opacity-40">
+                            Send Link
+                          </button>
+                          <button disabled={isBusy} onClick={() => openOrCopyLink(m.property_id, 'open')}
+                            title="Open listing" className="px-2 py-1 rounded text-navy/50 text-[10px] hover:text-navy">
+                            Open
+                          </button>
+                          <button disabled={isBusy} onClick={() => openOrCopyLink(m.property_id, 'copy')}
+                            title="Copy link" className="px-2 py-1 rounded text-navy/50 text-[10px] hover:text-navy">
+                            ⧉
+                          </button>
+                          {!m.sent_to_client && (
+                            <button disabled={isBusy} onClick={() => markSent(m.property_id)}
+                              title="Already shared this manually outside the tool" className="px-2 py-1 rounded text-navy/30 text-[10px] hover:text-navy/60">
+                              Mark Sent
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              {(!data.matches || data.matches.length === 0) && <p className="text-xs text-navy/30">No matches yet.</p>}
+            </div>
+          </div>
+
           {/* CG-4: ASSISTANT STEERING — internal instruction channel, never
               sent verbatim to the client. Overrides normal human-silence:
-              an explicit instruction here is a conscious delegation. */}
-          <div className="rounded-lg border border-navy/10 p-4 bg-off-white/50">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-1">Assistant steering</h3>
+              an explicit instruction here is a conscious delegation.
+              Collapsed by default (2026-09-04, Kev's explicit ask — Matches
+              above is what this sheet should lead with). */}
+          <details className="rounded-lg border border-navy/10 bg-off-white/50">
+            <summary className="cursor-pointer select-none px-4 py-3 text-xs font-bold uppercase tracking-wide text-navy/50">Assistant steering</summary>
+            <div className="px-4 pb-4">
             <p className="text-[10px] text-navy/40 mb-2 leading-relaxed">
               Internal instruction only — never sent to the client as-is. The assistant translates it into a natural message when appropriate, and will act even if you recently wrote in this chat yourself (explicit delegation overrides normal human-silence).
             </p>
@@ -617,15 +722,18 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 )}
               </div>
             )}
-          </div>
+            </div>
+          </details>
 
-          {/* profile — full existing filter set, edits hit the match engine immediately */}
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Client search profile</h3>
+          {/* profile — full existing filter set, edits hit the match engine
+              immediately. Collapsed by default, same reasoning as steering
+              above. */}
+          <details>
+            <summary className="cursor-pointer select-none text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Client search profile</summary>
             {!s.client_id ? (
               <p className="text-xs text-navy/40">No linked client yet — configure via reply-in-control-channel or !cadd C{s.id} first.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <div><label className={LABEL}>Name</label><input className={FIELD} value={profileDraft.name} onChange={e => setProfileDraft((p: any) => ({ ...p, name: e.target.value }))} /></div>
                 <div><label className={LABEL}>Phone</label><input className={FIELD} value={profileDraft.phone} onChange={e => setProfileDraft((p: any) => ({ ...p, phone: e.target.value }))} /></div>
                 <div><label className={LABEL}>Budget min</label><input className={FIELD} value={profileDraft.budget_min} onChange={e => setProfileDraft((p: any) => ({ ...p, budget_min: e.target.value }))} /></div>
@@ -636,10 +744,13 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 <div><label className={LABEL}>Property types (comma-sep)</label><input className={FIELD} value={profileDraft.property_types} onChange={e => setProfileDraft((p: any) => ({ ...p, property_types: e.target.value }))} /></div>
 
                 <div className="col-span-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-navy/30">Location</div>
-                <div className="col-span-2 grid grid-cols-2 gap-3">
-                  <div><label className={LABEL}>Locations, free text (comma-sep)</label><input className={FIELD} value={profileDraft.locations} onChange={e => setProfileDraft((p: any) => ({ ...p, locations: e.target.value }))} /></div>
-                  <div><label className={LABEL}>Preferred locations, free text (comma-sep)</label><input className={FIELD} value={profileDraft.preferred_locations} onChange={e => setProfileDraft((p: any) => ({ ...p, preferred_locations: e.target.value }))} /></div>
-                </div>
+                {/* CLIENTGROUPS fix (2026-09-04): dropped the free-text
+                    "Locations"/"Preferred locations" comma-sep inputs Kev
+                    called out as still impractical — the canonical selector
+                    below is the one real source of truth now; matchEngine.js
+                    already merges locations/preferred_locations into the
+                    same scoring tier as preferred_villages, so an empty pair
+                    here changes nothing about match quality. */}
                 {/* CLIENTGROUPS -- canonical, searchable multi-select (Kev's
                     explicit ask): reuses the SAME areas/villages dataset and
                     component the public add-client form already uses, so
@@ -678,101 +789,19 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 <div className="col-span-2"><button className={PRIMARY} disabled={busy} onClick={saveProfile}>Save profile</button></div>
               </div>
             )}
-          </div>
+          </details>
 
-          {/* matches — CLIENTGROUPS DASHBOARD MATCH ACTIONS: Gallery/Send
-              Link/Open/Copy Link/Mark Sent, all going through the SAME
-              backend delivery primitive automatic sends use (shared dedup +
-              shared 10/day ceiling with the assistant's own proactive
-              sends). */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50">Matches ({data.matches?.length || 0})</h3>
-              <div className="flex gap-1">
-                {(['all', 'unsent', 'sent', 'liked', 'rejected'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setMatchFilter(f)}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-                      matchFilter === f ? 'bg-navy text-white' : 'bg-off-white text-navy/40 hover:text-navy'
-                    }`}
-                  >{f}</button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5 max-h-[340px] overflow-y-auto">
-              {(data.matches || [])
-                .filter((m: any) => {
-                  if (matchFilter === 'all') return true
-                  if (matchFilter === 'unsent') return !m.sent_to_client
-                  if (matchFilter === 'sent') return !!m.sent_to_client
-                  if (matchFilter === 'liked') return m.client_reaction === 'liked'
-                  if (matchFilter === 'rejected') return m.client_reaction === 'rejected'
-                  return true
-                })
-                .map((m: any) => {
-                  const isBusy = matchBusyId === m.property_id
-                  return (
-                    <div key={m.id} className="bg-off-white rounded px-3 py-2 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-navy">#{m.ref} · {m.town || '?'} · {m.bedrooms ?? '?'}bed · €{m.price ?? '?'}</span>
-                        <span className="text-navy/40 shrink-0">{m.match_score}pt</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 mt-1.5">
-                        <div className="text-[10px] uppercase tracking-wide">
-                          {m.sent_to_client ? (
-                            <span className="text-green-600 font-semibold">
-                              SENT{m.sent_via ? ` · ${m.sent_via}` : ''}
-                              {m.sent_at && <span className="text-navy/30 font-normal normal-case ml-1">{fmtDateTime(m.sent_at)}</span>}
-                              {m.client_reaction && <span className="text-navy/40 font-normal normal-case ml-1">· {m.client_reaction}</span>}
-                            </span>
-                          ) : (
-                            <span className="text-navy/40 font-semibold">UNSENT</span>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          <button disabled={isBusy} onClick={() => sendMatch(m.property_id, 'send-gallery')}
-                            className="px-2 py-1 rounded bg-navy text-white text-[10px] font-semibold hover:bg-navy-light disabled:opacity-40">
-                            {isBusy ? '…' : 'Gallery'}
-                          </button>
-                          <button disabled={isBusy} onClick={() => sendMatch(m.property_id, 'send-link')}
-                            className="px-2 py-1 rounded border border-navy/20 text-navy text-[10px] font-semibold hover:bg-white disabled:opacity-40">
-                            Send Link
-                          </button>
-                          <button disabled={isBusy} onClick={() => openOrCopyLink(m.property_id, 'open')}
-                            title="Open listing" className="px-2 py-1 rounded text-navy/50 text-[10px] hover:text-navy">
-                            Open
-                          </button>
-                          <button disabled={isBusy} onClick={() => openOrCopyLink(m.property_id, 'copy')}
-                            title="Copy link" className="px-2 py-1 rounded text-navy/50 text-[10px] hover:text-navy">
-                            ⧉
-                          </button>
-                          {!m.sent_to_client && (
-                            <button disabled={isBusy} onClick={() => markSent(m.property_id)}
-                              title="Already shared this manually outside the tool" className="px-2 py-1 rounded text-navy/30 text-[10px] hover:text-navy/60">
-                              Mark Sent
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              {(!data.matches || data.matches.length === 0) && <p className="text-xs text-navy/30">No matches yet.</p>}
-            </div>
-          </div>
-
-          {/* recent events */}
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Recent activity</h3>
-            <div className="space-y-1 max-h-[160px] overflow-y-auto">
+          {/* recent events — collapsed by default, same reasoning as above. */}
+          <details>
+            <summary className="cursor-pointer select-none text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Recent activity</summary>
+            <div className="space-y-1 max-h-[160px] overflow-y-auto pt-2">
               {(data.events || []).map((ev: any, i: number) => (
                 <div key={i} className="text-[11px] text-navy/50">
                   <span className="font-mono text-navy/30">{fmtTimeAgo(ev.created_at)}</span> — {ev.kind}{ev.reason ? ` (${ev.reason})` : ''}
                 </div>
               ))}
             </div>
-          </div>
+          </details>
         </div>
       </div>
     </>
