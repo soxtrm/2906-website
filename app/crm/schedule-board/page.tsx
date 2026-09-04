@@ -303,6 +303,14 @@ function Board() {
   const [view, setView] = useState<BoardView>(
     params.get('view') === 'recheck' ? 'recheck'
       : params.get('view') === 'favourites' ? 'favourites' : 'board')
+  // Kev, 2026-09-04: "Needs recheck" is admin-only now. `me` loads async
+  // (useCrm() context), so this can't be decided in the useState initializer
+  // above without wrongly bouncing an admin whose `me` just hasn't arrived
+  // yet on a deep-linked ?view=recheck URL -- this only acts once `me` is
+  // actually known and turns out NOT admin.
+  useEffect(() => {
+    if (me && me.role !== 'admin' && view === 'recheck') setView('board')
+  }, [me, view])
   const [onlyConfirmed, setOnlyConfirmed] = useState(params.get('only_confirmed') === '1')
   // '' | 'now' | 'soon' | 'dated' | 'YYYY-MM'. The server owns what each means
   // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
@@ -508,12 +516,13 @@ function Board() {
   // the agent is on the board — an unread review queue that only announces
   // itself once you open it is a queue nobody empties.
   useEffect(() => {
+    if (!isAdmin) { setRecheckCount(0); return }
     let alive = true
     crmFetch('schedule-board/review-queue')
       .then(d => { if (alive) setRecheckCount((d.listings || []).length) })
       .catch(() => { if (alive) setRecheckCount(0) })
     return () => { alive = false }
-  }, [refreshTick])
+  }, [refreshTick, isAdmin])
 
   // Same idea for the Favourites badge: a booking that silently added a card to
   // a tab nobody is looking at is a card nobody finds again.
@@ -1205,8 +1214,11 @@ function Board() {
             offer today; the queue holds the listings where the classifier could
             not read an owner's reply and refused to guess. */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Kev, 2026-09-04: "Needs recheck" is an admin-only view now -- the
+              queue is triage for cases the classifier refused to guess, not
+              everyday agent worklist noise. */}
           {([['board', 'Active board'], ['recheck', 'Needs recheck'],
-             ['favourites', 'Favourites']] as const).map(([v, label]) => {
+             ['favourites', 'Favourites']] as const).filter(([v]) => v !== 'recheck' || isAdmin).map(([v, label]) => {
             const on = view === v
             const badge = v === 'recheck' ? recheckCount : v === 'favourites' ? favCount : 0
             return (
