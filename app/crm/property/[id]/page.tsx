@@ -23,6 +23,7 @@ function Detail({ id }: { id: number }) {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [agents, setAgents] = useState<any[]>([])
+  const [notifying, setNotifying] = useState(false)
   const isAdmin = me?.role === 'admin'
 
   const load = () => crmFetch(`properties/${id}`).then((r) => {
@@ -77,6 +78,27 @@ function Detail({ id }: { id: number }) {
     if (!confirm('Delete this property? This cannot be undone.')) return
     try { await crmFetch(`properties/${id}`, { method: 'DELETE' }); router.replace('/inventory') }
     catch (e: any) { setMsg(e?.message || 'Delete failed') }
+  }
+
+  // Push this property straight out to every matching client with an
+  // active WhatsApp thread -- the per-property counterpart to the
+  // Clientgroups dashboard's per-clientgroup "Find Matches Now"/Send
+  // buttons. Dry-run first so the agent sees the real count before
+  // anything actually sends.
+  async function notifyClients() {
+    setNotifying(true); setMsg('')
+    try {
+      const preview = await crmJson(`properties/${id}/notify-clients?dryRun=1`, 'POST', {})
+      const willSend = preview.results.filter((r: any) => r.wouldSend).length
+      if (!willSend) {
+        setMsg(`No clients to notify right now (${preview.matched} matched, ${preview.skipped} already sent or have no active thread)`)
+        return
+      }
+      if (!confirm(`Send this property to ${willSend} matching client${willSend === 1 ? '' : 's'} now?`)) return
+      const r = await crmJson(`properties/${id}/notify-clients`, 'POST', {})
+      setMsg(`Sent to ${r.sent} client${r.sent === 1 ? '' : 's'} (${r.skipped} skipped: already sent or no active thread)`)
+    } catch (e: any) { setMsg(e?.message || 'Notify failed') }
+    finally { setNotifying(false) }
   }
 
   return (
@@ -151,6 +173,7 @@ function Detail({ id }: { id: number }) {
                 </div>
                 <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
                   <button onClick={save} disabled={saving} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: saving ? 'wait' : 'pointer' }}>{saving ? 'Saving…' : 'Save changes'}</button>
+                  <button onClick={notifyClients} disabled={notifying} style={{ background: AD, color: A, border: `1px solid ${AB}`, borderRadius: 9, padding: '11px 16px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: notifying ? 'wait' : 'pointer' }}>{notifying ? 'Checking…' : '📤 Notify matching clients'}</button>
                   {(me?.role === 'admin' || p.listingAgents?.includes(me?.name)) && <button onClick={del} style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: 9, padding: '11px 16px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>Delete</button>}
                 </div>
               </div>
