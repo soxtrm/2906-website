@@ -32,15 +32,161 @@ const PRIMARY =
 const GHOST = 'px-3 py-2 rounded text-xs text-navy/50 hover:text-navy transition-colors border border-navy/10'
 
 type Tab = 'properties' | 'contacts' | 'map' | 'flows' | 'credentials' | 'sale' | 'rent'
-const TABS: { key: Tab; label: string; placeholder?: string }[] = [
+const TABS: { key: Tab; label: string }[] = [
   { key: 'properties', label: 'Properties' },
   { key: 'contacts', label: 'Kontakte' },
   { key: 'map', label: 'Property Maps' },
-  { key: 'flows', label: 'Owner Flows', placeholder: 'Coming in OGX-2 — configurable check-in rhythms, price-flexibility follow-up, and an activity log will live here.' },
-  { key: 'credentials', label: 'Owner Credentials', placeholder: 'Coming in OGX-3 — document upload/download and the owner self-upload link will live here.' },
+  { key: 'flows', label: 'Owner Flows' },
+  { key: 'credentials', label: 'Owner Credentials' },
   { key: 'sale', label: 'Sale Inventory' },
   { key: 'rent', label: 'Rent Inventory' },
 ]
+
+function fmtDate(iso: string | null | undefined) { return iso ? new Date(iso).toLocaleString() : '—' }
+
+// ── Owner Flows tab (OGX-2) — status + kill-switch, configurable check-in
+// rhythm override, manual price-flexibility follow-up, activity log. All
+// data/actions hang off the SAME owner_assistant_state row OGX-1 already
+// reads (`data.state`) and owner_assistant_events (`data.events`) — no
+// parallel model. ───────────────────────────────────────────────────────
+function OwnerFlowsTab({ id, state, events, onChanged }: { id: number; state: any; events: any[]; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [minDays, setMinDays] = useState(state?.checkin_min_days ?? '')
+  const [maxDays, setMaxDays] = useState(state?.checkin_max_days ?? '')
+
+  async function run(action: () => Promise<any>) {
+    setBusy(true); setErr(null)
+    try { await action(); onChanged() }
+    catch (e: any) { setErr(e?.data?.error || e?.message || 'Action failed') }
+    finally { setBusy(false) }
+  }
+
+  const toggle = () => run(() => crmJson(`ownergroups/${id}/${state.enabled ? 'disable' : 'enable'}`, 'POST', {}))
+  const saveRhythm = () => run(() => crmJson(`ownergroups/${id}/rhythm`, 'POST', {
+    minDays: minDays === '' ? null : Number(minDays), maxDays: maxDays === '' ? null : Number(maxDays),
+  }))
+  const clearRhythm = () => { setMinDays(''); setMaxDays(''); run(() => crmJson(`ownergroups/${id}/rhythm`, 'POST', {})) }
+  const sendPriceFlex = () => run(() => crmJson(`ownergroups/${id}/price-flex-followup`, 'POST', {}))
+
+  return (
+    <div className="rounded-lg border border-navy/10 p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-1">Status</h3>
+          <div className="text-sm">
+            <span className={`font-semibold ${state?.enabled ? 'text-green-700' : 'text-red-600'}`}>
+              {state?.enabled ? 'ENABLED' : 'DISABLED'}
+            </span>
+            <span className="text-navy/40"> · {state?.status}</span>
+            {state?.disabled_reason && <span className="text-navy/40"> · {state.disabled_reason}</span>}
+          </div>
+          <div className="text-[11px] text-navy/40 mt-1">
+            Last action: {state?.last_action ? `"${state.last_action}"` : '—'} ({fmtDate(state?.last_action_at)})
+          </div>
+        </div>
+        <button className={state?.enabled ? GHOST : PRIMARY} disabled={busy} onClick={toggle}>
+          {state?.enabled ? 'Disable' : 'Enable'}
+        </button>
+      </div>
+
+      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Check-in rhythm</h3>
+      <p className="text-xs text-navy/40 mb-2">Leave blank to use the global default (2–3 days while listed, 21–28 days while unlisted).</p>
+      <div className="flex items-center gap-2 mb-3">
+        <input className={FIELD} style={{ maxWidth: 100 }} type="number" min={1} max={365} placeholder="min days"
+          value={minDays} onChange={e => setMinDays(e.target.value === '' ? '' : Number(e.target.value))} />
+        <span className="text-navy/40 text-xs">to</span>
+        <input className={FIELD} style={{ maxWidth: 100 }} type="number" min={1} max={365} placeholder="max days"
+          value={maxDays} onChange={e => setMaxDays(e.target.value === '' ? '' : Number(e.target.value))} />
+        <button className={PRIMARY} disabled={busy || minDays === '' || maxDays === ''} onClick={saveRhythm}>Save</button>
+        <button className={GHOST} disabled={busy} onClick={clearRhythm}>Reset to default</button>
+      </div>
+
+      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Price-flexibility follow-up</h3>
+      <p className="text-xs text-navy/40 mb-2">Sends a one-off message asking whether the owner is open to price flexibility.</p>
+      <button className={PRIMARY + ' mb-4'} disabled={busy || !state?.enabled} onClick={sendPriceFlex}>Send now</button>
+
+      {err && <p className="text-xs text-red-600 mb-3">{err}</p>}
+
+      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-3">Activity log</h3>
+      <div className="max-h-96 overflow-y-auto">
+        {events.map((e, i) => (
+          <div key={i} className="flex justify-between text-xs py-1.5 border-b border-off-white last:border-0">
+            <span><strong className="text-navy">{e.kind}</strong>{e.reason ? ` (${e.reason})` : ''}</span>
+            <span className="text-navy/40">{fmtDate(e.created_at)}</span>
+          </div>
+        ))}
+        {!events.length && <p className="text-xs text-navy/30">No activity logged yet.</p>}
+      </div>
+    </div>
+  )
+}
+
+// ── Owner Credentials tab (OGX-3) — document upload/download + self-upload
+// link. Real files (contracts, id scans, ...), stored in Cloudinary via
+// routes/crmOwnergroups.js's own upload endpoint. ────────────────────────
+function OwnerCredentialsTab({ id, documents, onChanged }: { id: number; documents: any[]; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [link, setLink] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function upload(files: FileList | null) {
+    if (!files || !files.length) return
+    const form = new FormData()
+    for (const f of Array.from(files)) form.append('files', f)
+    setBusy(true); setErr(null)
+    try { await crmFetch(`ownergroups/${id}/documents`, { method: 'POST', body: form }); onChanged() }
+    catch (e: any) { setErr(e?.data?.error || e?.message || 'Upload failed') }
+    finally { setBusy(false); if (fileRef.current) fileRef.current.value = '' }
+  }
+
+  async function remove(docId: number) {
+    setBusy(true); setErr(null)
+    try { await crmFetch(`ownergroups/${id}/documents/${docId}`, { method: 'DELETE' }); onChanged() }
+    catch (e: any) { setErr(e?.data?.error || e?.message || 'Delete failed') }
+    finally { setBusy(false) }
+  }
+
+  async function getLink() {
+    setBusy(true); setErr(null)
+    try {
+      const d = await crmFetch(`ownergroups/${id}/upload-link`)
+      const full = `${window.location.origin}${d.path}`
+      setLink(full)
+      await navigator.clipboard.writeText(full).catch(() => {})
+    } catch (e: any) { setErr(e?.data?.error || e?.message || 'Could not generate link') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <div className="rounded-lg border border-navy/10 p-4">
+      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-3">Documents ({documents.length})</h3>
+      {documents.map(d => (
+        <div key={d.id} className="flex items-center justify-between py-2 border-b border-off-white last:border-0 text-sm">
+          <a href={d.url} target="_blank" rel="noreferrer" className="text-navy hover:text-gold truncate max-w-xs">{d.filename}</a>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-navy/40">{d.uploaded_by} · {fmtDate(d.created_at)}</span>
+            <button className="text-xs text-red-600/70 hover:text-red-600" disabled={busy} onClick={() => remove(d.id)}>Remove</button>
+          </div>
+        </div>
+      ))}
+      {!documents.length && <p className="text-sm text-navy/30 mb-2">No documents uploaded yet.</p>}
+
+      <div className="flex items-center gap-2 mt-4">
+        <input ref={fileRef} type="file" multiple onChange={e => upload(e.target.files)} disabled={busy}
+          className="text-xs text-navy/60" />
+      </div>
+
+      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mt-6 mb-2">Owner self-upload link</h3>
+      <p className="text-xs text-navy/40 mb-2">Lets the owner upload documents themselves, no CRM login required.</p>
+      <button className={PRIMARY} disabled={busy} onClick={getLink}>{link ? 'Copy again' : 'Generate & copy link'}</button>
+      {link && <p className="text-[11px] text-navy/40 mt-2 break-all">{link} (copied to clipboard)</p>}
+
+      {err && <p className="text-xs text-red-600 mt-3">{err}</p>}
+    </div>
+  )
+}
 
 function fmtMoney(n: number | null | undefined) { return n == null ? null : `€${Number(n).toLocaleString()}` }
 
@@ -266,10 +412,12 @@ function DetailContent({ id }: { id: number }) {
         </div>
       )}
 
-      {(tab === 'flows' || tab === 'credentials') && (
-        <div className="rounded-lg border border-dashed border-navy/15 p-6 text-center">
-          <p className="text-sm text-navy/40">{TABS.find(t => t.key === tab)?.placeholder}</p>
-        </div>
+      {tab === 'flows' && (
+        <OwnerFlowsTab id={id} state={data.state} events={data.events || []} onChanged={load} />
+      )}
+
+      {tab === 'credentials' && (
+        <OwnerCredentialsTab id={id} documents={data.documents || []} onChanged={load} />
       )}
 
       {tab === 'sale' && (
