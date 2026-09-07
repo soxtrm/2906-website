@@ -328,7 +328,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           IN this strip (Sotheby's-style — a name in the header rule, not a
           watermark sitting on the photo) instead of overlaying the image,
           so the whole photo is free of any text. */}
-      <div className="flex items-center gap-4 pl-8 pr-5 sm:pl-14 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
+      <div className="flex items-center gap-4 pl-3 pr-3 sm:pl-14 sm:pr-5 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
         <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
           {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
         </span>
@@ -345,7 +345,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           (and landscape phones) get a wide, ~16:9 image sized off a shared
           height so the fan strip lines up beside it; mobile portrait keeps
           the original full-height, wide-as-practical treatment. */}
-      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2 lg:max-w-[1680px] lg:mx-auto mobile-landscape:max-w-[900px] mobile-landscape:mx-auto">
+      <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-3 pr-3 sm:pl-14 sm:pr-5 pb-5 mobile-landscape:pb-2 lg:max-w-[1680px] lg:mx-auto mobile-landscape:max-w-[900px] mobile-landscape:mx-auto">
         {/* desktop / landscape reference — pinned to the true viewport edge
             (fixed, not tied to the row) so the centered row can stay
             centered without dragging the watermark inward with it. */}
@@ -353,7 +353,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
         </div>
         <motion.div
-          className="relative flex-shrink-0 overflow-hidden w-[92%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
+          className="relative flex-shrink-0 overflow-hidden w-[94%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
           style={{ x, opacity: dragOpacity }}
           drag={total > 1 ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
@@ -402,7 +402,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           close together on desktop, wraps to its own line under a long
           locality on narrow phones instead of truncating), then the
           description, single line until tapped open. */}
-      <div className="flex-shrink-0 pl-8 pr-5 sm:pl-14 pb-7 pt-1 mobile-landscape:pb-3 flex gap-3.5">
+      <div className="flex-shrink-0 pl-3 pr-3 sm:pl-14 sm:pr-5 pb-7 pt-1 mobile-landscape:pb-3 flex gap-3.5">
         <div className="flex-shrink-0 rounded-full" style={{ width: 4, height: 46, background: GOLD }} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
@@ -619,7 +619,7 @@ function MultiPropertyPage({ properties, id }: { properties: SwipeProperty[]; id
       <div className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* header — hairline shortens to make room for one touchpoint dot
             per property once there's more than one to browse. */}
-        <div className="flex items-center gap-3 pl-8 pr-5 sm:pl-14 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
+        <div className="flex items-center gap-3 pl-3 pr-3 sm:pl-14 sm:pr-5 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
           <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
             {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
           </span>
@@ -648,12 +648,12 @@ function MultiPropertyPage({ properties, id }: { properties: SwipeProperty[]; id
             longer centered across the full viewport now that the
             properties list shares the row on desktop, which is what
             actually produces the "shifted slightly left" look. */}
-        <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-8 pr-5 sm:pl-14 pb-5 mobile-landscape:pb-2">
+        <div className="relative flex-1 min-h-0 flex items-stretch lg:items-center mobile-landscape:items-center pl-3 pr-3 sm:pl-14 sm:pr-5 pb-5 mobile-landscape:pb-2">
           <div className="hidden sm:flex fixed left-3 top-1/2 -translate-y-1/2 z-20 pointer-events-none" style={{ width: 32 }}>
             <span style={{ fontFamily: 'var(--font-playfair), Georgia, serif', color: GOLD, fontSize: 22, letterSpacing: '0.1em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>2906</span>
           </div>
           <motion.div
-            className="relative flex-shrink-0 overflow-hidden w-[92%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
+            className="relative flex-shrink-0 overflow-hidden w-[94%] h-full lg:w-auto lg:h-[min(84vh,893px)] lg:max-w-[68%] lg:aspect-video mobile-landscape:w-auto mobile-landscape:h-[min(76vh,420px)] mobile-landscape:max-w-[68%] mobile-landscape:aspect-video"
             style={{ x, opacity: dragOpacity }}
             drag={total > 1 ? 'x' : false}
             dragConstraints={{ left: 0, right: 0 }}
@@ -705,7 +705,7 @@ function MultiPropertyPage({ properties, id }: { properties: SwipeProperty[]; id
         </div>
 
         {/* footer — same shape as the single page's */}
-        <div className="flex-shrink-0 pl-8 pr-5 sm:pl-14 pb-7 pt-1 mobile-landscape:pb-3 flex gap-3.5">
+        <div className="flex-shrink-0 pl-3 pr-3 sm:pl-14 sm:pr-5 pb-7 pt-1 mobile-landscape:pb-3 flex gap-3.5">
           <div className="flex-shrink-0 rounded-full" style={{ width: 4, height: 46, background: GOLD }} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
