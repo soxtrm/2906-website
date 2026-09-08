@@ -111,6 +111,40 @@ export function Pill({ status, map, small }: { status: string; map: Record<strin
   )
 }
 
+// ── compact control kit (Kev, 2026-09-08: "grafiken in clientgroups und
+// ownergroups müssen einfacher werden und kopiert aus den schaltungen bei
+// owner dashboards") — lifted verbatim from app/crm/owner/[id]/page.tsx's
+// own local CARD/HEAD/MiniFact/MiniBtn (Owner Profile V2, 2026-09-08), the
+// page whose action-row Kev pointed at as the reference. Promoted here so
+// clientgroups/ownergroups (which previously had their own, heavier,
+// full-width Tailwind PRIMARY/GHOST/DANGER buttons) can match it exactly
+// instead of drifting into a second visual language for the same kind of
+// "start/stop/pause this automation" control.
+export const Card: React.CSSProperties = { background: '#FFF', borderRadius: 16, padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }
+export const SectionHead: React.CSSProperties = { fontSize: 9, fontWeight: 700, color: '#B0AA9C', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }
+export function MiniFact({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5 }}>
+      <span style={{ color: '#B0AA9C' }}>{label}</span>
+      <span style={{ color: warn ? '#A16207' : '#555', fontWeight: 600 }}>{value}</span>
+    </div>
+  )
+}
+export function MiniBtn({ children, onClick, disabled, busy, tone }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; busy?: boolean; tone?: 'muted' | 'danger' }) {
+  const palette = tone === 'danger'
+    ? { bg: '#FEE2E2', color: '#B91C1C', border: '#FCA5A5' }
+    : tone === 'muted'
+    ? { bg: '#F6F4EF', color: '#888', border: '#E8E4DA' }
+    : { bg: AD, color: A, border: AB }
+  return (
+    <button onClick={onClick} disabled={disabled || busy} style={{
+      background: palette.bg, color: palette.color, border: `1px solid ${palette.border}`, borderRadius: 7,
+      padding: '5px 9px', fontSize: 10.5, fontWeight: 700, fontFamily: F,
+      cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
+    }}>{busy ? '…' : children}</button>
+  )
+}
+
 export function Thumbs({ images = [], count, exclusive, w = 68, h = 44 }: { images?: any[]; count?: number; exclusive?: boolean; w?: number; h?: number }) {
   const n = count ?? images.length
   return (

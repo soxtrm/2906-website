@@ -13,7 +13,7 @@
 // ============================================================================
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useRouter as useNavRouter, usePathname } from 'next/navigation'
-import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, useCrm, MiniBtn, MiniFact, Card, SectionHead, Pill } from '@/lib/crm/ui'
 import { crmFetch, crmJson, crmGet } from '@/lib/crm/api'
 
 // Shared with /ownergroups (OG-5, 2026-09-04) — lets an agent jump between
@@ -508,54 +508,52 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         <div className="px-5 sm:px-6 py-5 overflow-y-auto grow space-y-5">
           {err && <div className="rounded bg-red-50 text-red-700 text-xs px-3 py-2">{err}</div>}
 
-          {/* controls — Start / Pause / Pause Until / Resume / Stop
-              (Kev's exact vocabulary) over the existing enabled/status/
-              auto_mode/pause_until state (no lifecycle change, just the
-              dashboard vocabulary + the auto-resume Pause Until adds). */}
-          <div className="flex flex-wrap gap-2">
-            {s.enabled ? (
-              <button className={DANGER} disabled={busy} onClick={() => action(`${id}/stop`, 'POST')}>Stop</button>
-            ) : (
-              <button className={PRIMARY} disabled={busy} onClick={() => action(`${id}/start`, 'POST')}>Start automation</button>
-            )}
-            {s.status === 'PAUSED' ? (
-              <button className={GHOST} disabled={busy} onClick={() => action(`${id}/resume`, 'POST')}>Resume</button>
-            ) : (
-              <button className={GHOST} disabled={busy || !s.enabled} onClick={() => action(`${id}/pause`, 'POST')}>Pause</button>
-            )}
-            <button className={GHOST} disabled={busy} onClick={() => action(`${id}/auto-mode`, 'PATCH', { value: !s.auto_mode })}>
-              Auto mode: {s.auto_mode ? 'ON' : 'OFF'}
-            </button>
-            {s.pending_job_id && (
-              <button className={DANGER} disabled={busy} onClick={() => action(`${id}/queue`, 'DELETE')}>Cancel queued action</button>
-            )}
-          </div>
-
-          {/* Pause Until — auto-returns to RUNNING/ARMED once the clock
-              passes (evaluateProactiveOpportunity's own expiry check), no
-              separate "resume reminder" needed. */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <input
-              type="datetime-local"
-              className={FIELD + ' max-w-[220px]'}
-              value={pauseUntilInput}
-              onChange={e => setPauseUntilInput(e.target.value)}
-              disabled={busy}
-            />
-            <button className={GHOST} disabled={busy || !pauseUntilInput} onClick={pauseUntil}>Pause until…</button>
-            {s.status === 'PAUSED' && s.pause_until && (
-              <span className="text-[11px] text-navy/40">Currently paused until {fmtDateTime(s.pause_until)} (auto-resumes)</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {statusPill(s.status)}
-            {s.engagement_state && (
-              <span className="text-[10px] text-navy/40 uppercase tracking-wide">Engagement: {s.engagement_state}</span>
-            )}
+          {/* controls — Start / Pause / Pause Until / Resume / Stop (Kev's
+              exact vocabulary) over the existing enabled/status/auto_mode/
+              pause_until state (no lifecycle change). Restyled 2026-09-08
+              to the same compact MiniBtn kit as the Owner Profile page's
+              own FlowStateRow controls — one visual language for "start/
+              stop/pause this automation" everywhere it appears. */}
+          <div style={Card}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+              <Pill status={s.status} map={STATUS_MAP} />
+              {s.engagement_state && <MiniFact label="Engagement" value={s.engagement_state} />}
+            </div>
             {s.enabled && s.status !== 'PAUSED' && fmtEvalWindow(s.next_eval_window_start, s.next_eval_window_end) && (
-              <span className="text-[10px] text-navy/40">Next evaluation: {fmtEvalWindow(s.next_eval_window_start, s.next_eval_window_end)}</span>
+              <MiniFact label="Next evaluation" value={fmtEvalWindow(s.next_eval_window_start, s.next_eval_window_end)!} />
             )}
+            {s.status === 'PAUSED' && s.pause_until && (
+              <MiniFact label="Paused until" value={`${fmtDateTime(s.pause_until)} (auto-resumes)`} />
+            )}
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 11 }}>
+              {s.enabled
+                ? <MiniBtn onClick={() => action(`${id}/stop`, 'POST')} busy={busy} tone="danger">■ Stop</MiniBtn>
+                : <MiniBtn onClick={() => action(`${id}/start`, 'POST')} busy={busy}>▶ Start automation</MiniBtn>}
+              {s.status === 'PAUSED'
+                ? <MiniBtn onClick={() => action(`${id}/resume`, 'POST')} busy={busy}>⏭ Resume</MiniBtn>
+                : <MiniBtn onClick={() => action(`${id}/pause`, 'POST')} busy={busy} disabled={!s.enabled} tone="muted">⏸ Pause</MiniBtn>}
+              <MiniBtn onClick={() => action(`${id}/auto-mode`, 'PATCH', { value: !s.auto_mode })} busy={busy} tone="muted">
+                Auto mode: {s.auto_mode ? 'ON' : 'OFF'}
+              </MiniBtn>
+              {s.pending_job_id && (
+                <MiniBtn onClick={() => action(`${id}/queue`, 'DELETE')} busy={busy} tone="danger">✕ Cancel queued action</MiniBtn>
+              )}
+            </div>
+
+            {/* Pause Until — auto-returns to RUNNING/ARMED once the clock
+                passes (evaluateProactiveOpportunity's own expiry check). */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 9 }}>
+              <span style={{ fontSize: 10, color: '#9C978A' }}>Pause until</span>
+              <input
+                type="datetime-local"
+                value={pauseUntilInput}
+                onChange={e => setPauseUntilInput(e.target.value)}
+                disabled={busy}
+                style={{ background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '5px 8px', fontSize: 11, fontFamily: 'inherit', outline: 'none' }}
+              />
+              <MiniBtn onClick={pauseUntil} disabled={busy || !pauseUntilInput}>Save</MiniBtn>
+            </div>
           </div>
 
           {/* Assign agent (primary) + Collaborators (additional agents who

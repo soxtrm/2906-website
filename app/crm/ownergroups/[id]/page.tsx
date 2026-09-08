@@ -19,7 +19,7 @@
 // ============================================================================
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, useCrm, MiniBtn, MiniFact, Card, SectionHead } from '@/lib/crm/ui'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { TOWNS, townKey, spread } from '@/lib/crm/towns'
 
@@ -69,54 +69,63 @@ function OwnerFlowsTab({ id, state, events, onChanged }: { id: number; state: an
   const clearRhythm = () => { setMinDays(''); setMaxDays(''); run(() => crmJson(`ownergroups/${id}/rhythm`, 'POST', {})) }
   const sendPriceFlex = () => run(() => crmJson(`ownergroups/${id}/price-flex-followup`, 'POST', {}))
 
+  // Restyled 2026-09-08 to the same compact CARD/MiniBtn kit as the Owner
+  // Profile page's own FlowStateRow — see lib/crm/ui.tsx's header comment
+  // on why these primitives were promoted there. Same three actions, same
+  // owner_assistant_state/events data, only the visual weight changed.
   return (
-    <div className="rounded-lg border border-navy/10 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-1">Status</h3>
-          <div className="text-sm">
-            <span className={`font-semibold ${state?.enabled ? 'text-green-700' : 'text-red-600'}`}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={Card}>
+        <div style={SectionHead}>Status</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+          <div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: state?.enabled ? '#15803D' : '#B91C1C', letterSpacing: '0.04em' }}>
               {state?.enabled ? 'ENABLED' : 'DISABLED'}
             </span>
-            <span className="text-navy/40"> · {state?.status}</span>
-            {state?.disabled_reason && <span className="text-navy/40"> · {state.disabled_reason}</span>}
+            {state?.status && <span style={{ fontSize: 10, color: '#B0AA9C' }}> · {state.status}</span>}
+            {state?.disabled_reason && <span style={{ fontSize: 10, color: '#B0AA9C' }}> · {state.disabled_reason}</span>}
           </div>
-          <div className="text-[11px] text-navy/40 mt-1">
-            Last action: {state?.last_action ? `"${state.last_action}"` : '—'} ({fmtDate(state?.last_action_at)})
-          </div>
+          <MiniBtn onClick={toggle} busy={busy} tone={state?.enabled ? 'muted' : undefined}>
+            {state?.enabled ? '■ Disable' : '▶ Enable'}
+          </MiniBtn>
         </div>
-        <button className={state?.enabled ? GHOST : PRIMARY} disabled={busy} onClick={toggle}>
-          {state?.enabled ? 'Disable' : 'Enable'}
-        </button>
+        {state?.last_action && <div style={{ marginTop: 9 }}><MiniFact label="Last action" value={`"${state.last_action}" (${fmtDate(state?.last_action_at)})`} /></div>}
+        {err && <div style={{ marginTop: 9, fontSize: 11, color: '#B91C1C' }}>{err}</div>}
       </div>
 
-      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Check-in rhythm</h3>
-      <p className="text-xs text-navy/40 mb-2">Leave blank to use the global default (2–3 days while listed, 21–28 days while unlisted).</p>
-      <div className="flex items-center gap-2 mb-3">
-        <input className={FIELD} style={{ maxWidth: 100 }} type="number" min={1} max={365} placeholder="min days"
-          value={minDays} onChange={e => setMinDays(e.target.value === '' ? '' : Number(e.target.value))} />
-        <span className="text-navy/40 text-xs">to</span>
-        <input className={FIELD} style={{ maxWidth: 100 }} type="number" min={1} max={365} placeholder="max days"
-          value={maxDays} onChange={e => setMaxDays(e.target.value === '' ? '' : Number(e.target.value))} />
-        <button className={PRIMARY} disabled={busy || minDays === '' || maxDays === ''} onClick={saveRhythm}>Save</button>
-        <button className={GHOST} disabled={busy} onClick={clearRhythm}>Reset to default</button>
+      <div style={Card}>
+        <div style={SectionHead}>Check-in rhythm</div>
+        <p style={{ fontSize: 10.5, color: '#9C978A', margin: '0 0 10px' }}>Leave blank to use the global default (2–3 days while listed, 21–28 days while unlisted).</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <input type="number" min={1} max={365} placeholder="min" value={minDays}
+            onChange={e => setMinDays(e.target.value === '' ? '' : Number(e.target.value))}
+            style={{ background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '5px 8px', fontSize: 11, width: 62, outline: 'none' }} />
+          <span style={{ fontSize: 10, color: '#9C978A' }}>to</span>
+          <input type="number" min={1} max={365} placeholder="max" value={maxDays}
+            onChange={e => setMaxDays(e.target.value === '' ? '' : Number(e.target.value))}
+            style={{ background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '5px 8px', fontSize: 11, width: 62, outline: 'none' }} />
+          <MiniBtn onClick={saveRhythm} busy={busy} disabled={minDays === '' || maxDays === ''}>Save</MiniBtn>
+          <MiniBtn onClick={clearRhythm} busy={busy} tone="muted">Reset to default</MiniBtn>
+        </div>
       </div>
 
-      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Price-flexibility follow-up</h3>
-      <p className="text-xs text-navy/40 mb-2">Sends a one-off message asking whether the owner is open to price flexibility.</p>
-      <button className={PRIMARY + ' mb-4'} disabled={busy || !state?.enabled} onClick={sendPriceFlex}>Send now</button>
+      <div style={Card}>
+        <div style={SectionHead}>Price-flexibility follow-up</div>
+        <p style={{ fontSize: 10.5, color: '#9C978A', margin: '0 0 10px' }}>Sends a one-off message asking whether the owner is open to price flexibility.</p>
+        <MiniBtn onClick={sendPriceFlex} busy={busy} disabled={!state?.enabled}>💬 Send now</MiniBtn>
+      </div>
 
-      {err && <p className="text-xs text-red-600 mb-3">{err}</p>}
-
-      <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-3">Activity log</h3>
-      <div className="max-h-96 overflow-y-auto">
-        {events.map((e, i) => (
-          <div key={i} className="flex justify-between text-xs py-1.5 border-b border-off-white last:border-0">
-            <span><strong className="text-navy">{e.kind}</strong>{e.reason ? ` (${e.reason})` : ''}</span>
-            <span className="text-navy/40">{fmtDate(e.created_at)}</span>
-          </div>
-        ))}
-        {!events.length && <p className="text-xs text-navy/30">No activity logged yet.</p>}
+      <div style={Card}>
+        <div style={SectionHead}>Activity log</div>
+        <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+          {events.map((e, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '7px 0', borderBottom: i < events.length - 1 ? '1px solid #EDEBE5' : 'none' }}>
+              <span><strong style={{ color: '#1A1A1A' }}>{e.kind}</strong>{e.reason ? ` (${e.reason})` : ''}</span>
+              <span style={{ color: '#B0AA9C' }}>{fmtDate(e.created_at)}</span>
+            </div>
+          ))}
+          {!events.length && <div style={{ fontSize: 11, color: '#C4BFB2' }}>No activity logged yet.</div>}
+        </div>
       </div>
     </div>
   )
