@@ -2908,7 +2908,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 18, marginTop: 9 }}>
           {([
             ['Confirmed', r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'],
-            ['Viewable', r.availableDate ? fmtDateDots(r.availableDate) : (avail.text || 'soon')],
+            // Kev, 2026-09-08 (real bug, live on #2906-9193): this read
+            // r.availableDate — the SAME field the "Available" column above
+            // already shows — so editing Viewing date/time separately on
+            // the property page never visibly changed anything here; both
+            // columns always mirrored the Available date. Now reads the
+            // actual viewing_date field.
+            ['Viewable', r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'],
           ] as const).map(([label, value]) => (
             <div key={label} style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 9.5, color: '#B5AFA2', letterSpacing: '0.02em' }}>{label}</div>
