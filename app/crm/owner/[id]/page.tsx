@@ -230,7 +230,7 @@ function OwnerDetail({ id }: { id: number }) {
           {tab === 'overview' && <OverviewPanel d={d} onGoto={setTab} />}
           {tab === 'properties' && <PropertiesPanel props={props} incompleteCount={d.incompleteCount} owner={o} router={router} />}
           {tab === 'insights' && <InsightsPanel d={d} owner={o} onSaved={load} setMsg={setMsg} />}
-          {tab === 'flows' && <FlowsPanel d={d} ownerId={id} onSaved={load} setMsg={setMsg} />}
+          {tab === 'flows' && <FlowsPanel d={d} ownerId={id} onSaved={load} setMsg={setMsg} onGoto={setTab} />}
           {tab === 'documents' && <DocumentsPanel ownerId={id} documents={d.documents || []} properties={props} onSaved={load} me={me} />}
           {tab === 'history' && <HistoryPanel history={d.history || []} />}
         </div>
@@ -686,11 +686,13 @@ function humanStatus(s: any, owner: any) {
   return { text: 'Active', tone: '#15803D', bg: '#DCFCE7' }
 }
 
-function FlowsPanel({ d, ownerId, onSaved, setMsg }: { d: any; ownerId: number; onSaved: () => void; setMsg: (s: string) => void }) {
+function FlowsPanel({ d, ownerId, onSaved, setMsg, onGoto }: { d: any; ownerId: number; onSaved: () => void; setMsg: (s: string) => void; onGoto: (t: TabKey) => void }) {
   const states = d.automation?.states || []
   const campaigns = d.automation?.campaigns || []
   const hasActiveListing = (d.properties || []).some((p: any) => propertyStatus(p).key === 'available')
   const [starting, setStarting] = useState(false)
+  const primaryState = states[0] || null
+  const humanActiveState = states.find((s: any) => s.status === 'HUMAN_ACTIVE') || null
 
   async function startAutomation() {
     setStarting(true)
@@ -702,18 +704,64 @@ function FlowsPanel({ d, ownerId, onSaved, setMsg }: { d: any; ownerId: number; 
     } catch (e: any) { setMsg(e?.message || 'Could not start automation') }
     finally { setStarting(false) }
   }
+  async function toggleDnc() {
+    try {
+      const reason = d.owner.doNotContact ? null : (prompt('Reason (optional):') || 'agent request')
+      await crmJson(`owners/${ownerId}`, 'PATCH', { do_not_contact: !d.owner.doNotContact, do_not_contact_reason: reason })
+      setMsg(d.owner.doNotContact ? 'Contact re-enabled' : 'Marked do-not-contact')
+      onSaved()
+    } catch (e: any) { setMsg(e?.message || 'Update failed') }
+  }
+  async function resumeNow() {
+    if (!humanActiveState) return
+    try {
+      await crmJson(`ownergroups/${humanActiveState.id}/resume`, 'POST', {})
+      setMsg('Resumed')
+      onSaved()
+    } catch (e: any) { setMsg(e?.message || 'Resume failed') }
+  }
+  async function setFutureContact() {
+    const current = d.owner.nextReachAt ? String(d.owner.nextReachAt).slice(0, 10) : ''
+    const input = prompt('Next planned contact date (YYYY-MM-DD), blank to clear:', current)
+    if (input === null) return
+    try {
+      await crmJson(`owners/${ownerId}`, 'PATCH', { next_reach_at: input.trim() || null })
+      setMsg(input.trim() ? 'Future contact date set' : 'Future contact cleared')
+      onSaved()
+    } catch (e: any) { setMsg(e?.message || 'Update failed') }
+  }
+  async function askPriceFlex() {
+    if (!primaryState) { setMsg('Start automation first'); return }
+    try {
+      await crmJson(`ownergroups/${primaryState.id}/price-flex-followup`, 'POST', {})
+      setMsg('Price-flex follow-up sent')
+      onSaved()
+    } catch (e: any) { setMsg(e?.message || 'Send failed') }
+  }
+  function onCardClick(key: string) {
+    if (key === 'blocked') return toggleDnc()
+    if (key === 'human') return humanActiveState ? resumeNow() : undefined
+    if (key === 'future') return setFutureContact()
+    if (key === 'priceflex') return askPriceFlex()
+    if (key === 'available' || key === 'upcoming') return onGoto('properties')
+  }
 
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 8, marginBottom: 18 }}>
         {FLOW_TYPES.map(f => {
           const active = states.some((s: any) => currentFlowKey(s, d.owner, hasActiveListing) === f.key)
+          const clickHint = { blocked: d.owner.doNotContact ? 'Click to re-enable contact' : 'Click to mark do-not-contact',
+            human: humanActiveState ? 'Click to resume now' : null, future: 'Click to set/clear a date',
+            priceflex: primaryState ? 'Click to send now' : null, available: 'Click to view properties', upcoming: 'Click to view properties' }[f.key]
           return (
-            <div key={f.key} style={{ background: active ? AD : '#FFF', border: `1px solid ${active ? AB : HAIRLINE}`, borderRadius: 12, padding: '11px 13px' }}>
+            <div key={f.key} onClick={() => onCardClick(f.key)}
+              style={{ background: active ? AD : '#FFF', border: `1px solid ${active ? AB : HAIRLINE}`, borderRadius: 12, padding: '11px 13px', cursor: 'pointer', transition: 'box-shadow .15s' }}>
               <div style={{ fontSize: 16 }}>{f.icon}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: active ? A : INK, marginTop: 4 }}>{f.title}</div>
               <div style={{ fontSize: 9.5, color: MUTED, marginTop: 3, lineHeight: 1.4 }}>{f.desc}</div>
               {active && <div style={{ fontSize: 8.5, fontWeight: 700, color: A, marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>● Active now</div>}
+              {clickHint && <div style={{ fontSize: 8.5, color: A, marginTop: 5, fontWeight: 600 }}>→ {clickHint}</div>}
             </div>
           )
         })}
