@@ -143,12 +143,18 @@ function OwnerDetail({ id }: { id: number }) {
 
         {/* ══ HEADER ═══════════════════════════════════════════════════════ */}
         <div style={{ marginTop: 12, borderRadius: 18, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <div style={{ height: 76, background: `linear-gradient(115deg, ${NAVY} 0%, #24365e 55%, ${A} 165%)`, position: 'relative' }} />
+          <PhotoUpload
+            ownerId={o.id} kind="cover" imageUrl={o.coverUrl} onSaved={load}
+            style={{ height: 76, background: o.coverUrl ? `center/cover no-repeat url(${o.coverUrl})` : `linear-gradient(115deg, ${NAVY} 0%, #24365e 55%, ${A} 165%)`, position: 'relative' }}
+          />
           <div style={{ background: '#FFF', padding: '0 24px 20px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginTop: -34, flexWrap: 'wrap' }}>
-              <div style={{ width: 76, height: 76, borderRadius: '50%', background: avatarColor(o.id), border: '4px solid #FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontSize: 26, fontWeight: 800, fontFamily: F, flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-                {initials(o.name)}
-              </div>
+              <PhotoUpload
+                ownerId={o.id} kind="avatar" imageUrl={o.avatarUrl} onSaved={load}
+                style={{ width: 76, height: 76, borderRadius: '50%', background: o.avatarUrl ? `center/cover no-repeat url(${o.avatarUrl})` : avatarColor(o.id), border: '4px solid #FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontSize: 26, fontWeight: 800, fontFamily: F, flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+              >
+                {!o.avatarUrl && initials(o.name)}
+              </PhotoUpload>
               <div style={{ flex: 1, minWidth: 220, paddingBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <h1 style={{ fontSize: 21, fontWeight: 800, color: INK, margin: 0, letterSpacing: '-0.02em' }}>{o.name || 'Unnamed owner'}</h1>
@@ -224,7 +230,7 @@ function OwnerDetail({ id }: { id: number }) {
           {tab === 'overview' && <OverviewPanel d={d} onGoto={setTab} />}
           {tab === 'properties' && <PropertiesPanel props={props} incompleteCount={d.incompleteCount} owner={o} router={router} />}
           {tab === 'insights' && <InsightsPanel d={d} owner={o} onSaved={load} setMsg={setMsg} />}
-          {tab === 'flows' && <FlowsPanel d={d} />}
+          {tab === 'flows' && <FlowsPanel d={d} ownerId={id} onSaved={load} setMsg={setMsg} />}
           {tab === 'documents' && <DocumentsPanel ownerId={id} documents={d.documents || []} properties={props} onSaved={load} me={me} />}
           {tab === 'history' && <HistoryPanel history={d.history || []} />}
         </div>
@@ -255,6 +261,45 @@ function StatCard({ label, value, sub, small, onClick }: { label: string; value:
 const backBtn: React.CSSProperties = { background: '#F4F2EC', border: '1px solid #E8E4DA', borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: F, color: '#888', fontWeight: 600 }
 
 // ── HEADER ACTIONS ───────────────────────────────────────────────────────────
+// Click-to-upload avatar/cover — hover shows a camera icon over whatever is
+// already rendered inside (initials fallback or the gradient cover), no
+// separate "edit photo" mode to enter first.
+function PhotoUpload({ ownerId, kind, imageUrl, onSaved, style, children }:
+  { ownerId: number; kind: 'avatar' | 'cover'; imageUrl?: string | null; onSaved: () => void; style: React.CSSProperties; children?: React.ReactNode }) {
+  const [hover, setHover] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const input = useRef<HTMLInputElement>(null)
+
+  async function upload(file: File) {
+    setBusy(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('kind', kind)
+      const res = await fetch(`/api/crm/owners/${ownerId}/photo`, { method: 'POST', credentials: 'same-origin', body: fd })
+      if (!res.ok) throw new Error('Upload failed')
+      onSaved()
+    } catch { alert('Photo upload failed') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <div
+      style={{ ...style, cursor: 'pointer', position: 'relative', overflow: style.borderRadius ? 'hidden' : style.overflow }}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      onClick={() => input.current?.click()}
+    >
+      {children}
+      <input ref={input} type="file" accept="image/*" hidden onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
+      {(hover || busy) && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontSize: kind === 'avatar' ? 16 : 13, fontWeight: 700 }}>
+          {busy ? '…' : '📷'}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function HeaderActions({ o, onSaved, setMsg }: { o: any; onSaved: () => void; setMsg: (s: string) => void }) {
   const { doReveal } = useCrm()
   const router = useRouter()
@@ -615,40 +660,147 @@ function DncControl({ owner, onSaved, setMsg }: { owner: any; onSaved: () => voi
 // ══════════════════════════════════════════════════════════════════════════
 // FLOWS — automation status
 // ══════════════════════════════════════════════════════════════════════════
-function FlowsPanel({ d }: { d: any }) {
+// ── Teil B, §8: 6 named flow types, described once as a reference legend
+// (not raw DB states). "current" is computed per state row from the same
+// signals the backend itself acts on — never a separate guess.
+const FLOW_TYPES = [
+  { key: 'available', icon: '🏠', title: 'Available Flow', desc: 'Active listing — checks in every 4-6 days, updates the exact property from the reply, reschedules automatically.' },
+  { key: 'upcoming', icon: '👋', title: 'Upcoming Inventory Check', desc: 'No active listing — a warm relationship check-in every 21-28 days ("anything coming available?").' },
+  { key: 'future', icon: '📅', title: 'Future Availability', desc: 'Owner named a date — next contact is planned around it instead of the generic rhythm.' },
+  { key: 'human', icon: '🧑‍💬', title: 'Human Conversation Active', desc: 'A person is talking to this owner directly — automation stands down and resumes on its own afterwards.' },
+  { key: 'blocked', icon: '🚫', title: 'Do Not Contact', desc: 'No automated outreach of any kind. Reactivation must be explicit.' },
+  { key: 'priceflex', icon: '💬', title: 'Price Flexibility Follow-up', desc: 'A one-time, context-aware question about price flexibility — not a recurring flow.' },
+]
+function currentFlowKey(s: any, owner: any, hasActiveListing: boolean) {
+  if (owner.doNotContact) return 'blocked'
+  if (s.status === 'HUMAN_ACTIVE') return 'human'
+  if (owner.nextReachAt && new Date(owner.nextReachAt).getTime() > Date.now()) return 'future'
+  if (!s.enabled) return null
+  return hasActiveListing ? 'available' : 'upcoming'
+}
+function humanStatus(s: any, owner: any) {
+  if (owner.doNotContact) return { text: 'Blocked — do not contact', tone: '#B91C1C', bg: '#FEE2E2' }
+  if (!s.enabled) return { text: 'Off', tone: '#6B7280', bg: '#F3F4F6' }
+  if (s.status === 'HUMAN_ACTIVE') return { text: 'Human conversation active — automation will resume afterwards', tone: '#92400E', bg: '#FFFBEB' }
+  if (s.status === 'PAUSED') return { text: 'Paused (viewing reminder armed)', tone: '#92400E', bg: '#FFFBEB' }
+  return { text: 'Active', tone: '#15803D', bg: '#DCFCE7' }
+}
+
+function FlowsPanel({ d, ownerId, onSaved, setMsg }: { d: any; ownerId: number; onSaved: () => void; setMsg: (s: string) => void }) {
   const states = d.automation?.states || []
   const campaigns = d.automation?.campaigns || []
+  const hasActiveListing = (d.properties || []).some((p: any) => propertyStatus(p).key === 'available')
+  const [starting, setStarting] = useState(false)
+
+  async function startAutomation() {
+    setStarting(true)
+    try {
+      const r = await crmJson(`owners/${ownerId}/automation/start`, 'POST', {})
+      if (r.ok === false) { setMsg(r.error || 'Could not start automation'); return }
+      setMsg('Automation started')
+      onSaved()
+    } catch (e: any) { setMsg(e?.message || 'Could not start automation') }
+    finally { setStarting(false) }
+  }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
-      <div style={CARD}>
-        <div style={HEAD}>`!o` automation state{states.length !== 1 ? 's' : ''}</div>
-        {!states.length && <EmptyRow text="This owner has never been armed with !o — no automated check-in loop is running." />}
-        {states.map((s: any) => (
-          <div key={s.id} style={{ padding: '12px 0', borderBottom: `1px solid ${HAIRLINE}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: INK, fontFamily: FM }}>{s.session}</span>
-              <span style={{ fontSize: 10, fontWeight: 700, color: s.enabled ? '#15803D' : '#B91C1C', background: s.enabled ? '#DCFCE7' : '#FEE2E2', borderRadius: 99, padding: '3px 9px' }}>
-                {s.enabled ? (s.status || 'ENABLED').replace(/_/g, ' ') : 'DISABLED'}
-              </span>
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 8, marginBottom: 18 }}>
+        {FLOW_TYPES.map(f => {
+          const active = states.some((s: any) => currentFlowKey(s, d.owner, hasActiveListing) === f.key)
+          return (
+            <div key={f.key} style={{ background: active ? AD : '#FFF', border: `1px solid ${active ? AB : HAIRLINE}`, borderRadius: 12, padding: '11px 13px' }}>
+              <div style={{ fontSize: 16 }}>{f.icon}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: active ? A : INK, marginTop: 4 }}>{f.title}</div>
+              <div style={{ fontSize: 9.5, color: MUTED, marginTop: 3, lineHeight: 1.4 }}>{f.desc}</div>
+              {active && <div style={{ fontSize: 8.5, fontWeight: 700, color: A, marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>● Active now</div>}
             </div>
-            {(s.checkin_min_days || s.checkin_max_days) && <MiniFact label="Check-in rhythm" value={`${s.checkin_min_days ?? '?'}–${s.checkin_max_days ?? '?'} days`} />}
-            {s.pause_until && <MiniFact label="Paused until" value={fmtDate(s.pause_until) || '—'} />}
-            {s.last_action && <MiniFact label="Last action" value={`${s.last_action}${s.last_action_at ? ` · ${daysAgo(s.last_action_at)}` : ''}`} />}
-          </div>
-        ))}
+          )
+        })}
       </div>
-      <div style={CARD}>
-        <div style={HEAD}>Scheduled outreach campaigns</div>
-        {!campaigns.length && <EmptyRow text="Nothing scheduled." />}
-        {campaigns.map((c: any) => (
-          <div key={c.id} style={{ padding: '9px 0', borderBottom: `1px solid ${HAIRLINE}`, fontSize: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, color: INK }}>{c.kind || c.type || 'campaign'}</span>
-              <span style={{ color: MUTED, fontSize: 10.5 }}>{c.status}</span>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+        <div style={CARD}>
+          <div style={HEAD}>`!o` automation state{states.length !== 1 ? 's' : ''}</div>
+          {!states.length && (
+            <>
+              <EmptyRow text="This owner has never been armed with !o — no automated check-in loop is running." />
+              <button onClick={startAutomation} disabled={starting} style={{ ...actBtnDark, marginTop: 8 }}>{starting ? 'Starting…' : '▶ Start automation'}</button>
+            </>
+          )}
+          {states.map((s: any) => <FlowStateRow key={s.id} s={s} owner={d.owner} onSaved={onSaved} setMsg={setMsg} />)}
+        </div>
+        <div style={CARD}>
+          <div style={HEAD}>Scheduled outreach campaigns</div>
+          {!campaigns.length && <EmptyRow text="Nothing scheduled." />}
+          {campaigns.map((c: any) => (
+            <div key={c.id} style={{ padding: '9px 0', borderBottom: `1px solid ${HAIRLINE}`, fontSize: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 700, color: INK }}>{c.kind || c.type || 'campaign'}</span>
+                <span style={{ color: MUTED, fontSize: 10.5 }}>{c.status}</span>
+              </div>
+              {c.scheduled_for && <div style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{fmtDate(c.scheduled_for)}</div>}
             </div>
-            {c.scheduled_for && <div style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{fmtDate(c.scheduled_for)}</div>}
-          </div>
-        ))}
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// One state row: humanized status line (never a raw enum), rhythm editor,
+// and every action routes/crmOwnergroups.js already exposes — enable/
+// disable/resume/price-flex-followup — called by state id, the exact same
+// mutation the `!o` WhatsApp command and the CRM share (Teil B §10).
+function FlowStateRow({ s, owner, onSaved, setMsg }: { s: any; owner: any; onSaved: () => void; setMsg: (s: string) => void }) {
+  const [busy, setBusy] = useState<string | null>(null)
+  const [minD, setMinD] = useState(s.checkin_min_days ?? '')
+  const [maxD, setMaxD] = useState(s.checkin_max_days ?? '')
+  const status = humanStatus(s, owner)
+
+  async function act(action: string, path: string, body: any = {}) {
+    setBusy(action)
+    try {
+      const r = await crmJson(`ownergroups/${s.id}/${path}`, 'POST', body)
+      if (r && r.ok === false) { setMsg(r.error || `${action} failed`); return }
+      setMsg(`${action} done`)
+      onSaved()
+    } catch (e: any) { setMsg(e?.message || `${action} failed`) }
+    finally { setBusy(null) }
+  }
+  async function saveRhythm() {
+    setBusy('rhythm')
+    try {
+      await crmJson(`ownergroups/${s.id}/rhythm`, 'POST', { minDays: minD === '' ? null : Number(minD), maxDays: maxD === '' ? null : Number(maxD) })
+      setMsg('Rhythm updated')
+      onSaved()
+    } catch (e: any) { setMsg(e?.message || 'Rhythm update failed') }
+    finally { setBusy(null) }
+  }
+
+  return (
+    <div style={{ padding: '12px 0', borderBottom: `1px solid ${HAIRLINE}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: INK, fontFamily: FM }}>{s.session}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: status.tone, background: status.bg, borderRadius: 99, padding: '3px 9px' }}>{status.text}</span>
+      </div>
+      {s.last_action && <MiniFact label="Last action" value={`${s.last_action}${s.last_action_at ? ` · ${daysAgo(s.last_action_at)}` : ''}`} />}
+      {owner.nextReachAt && <MiniFact label="Next contact planned" value={fmtDate(owner.nextReachAt) || '—'} />}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 9 }}>
+        <span style={{ fontSize: 10, color: MUTED }}>Rhythm (days)</span>
+        <input value={minD} onChange={e => setMinD(e.target.value)} placeholder="min" type="number" style={{ ...editInp, width: 52, padding: '5px 7px' }} />
+        <span style={{ fontSize: 10, color: MUTED }}>–</span>
+        <input value={maxD} onChange={e => setMaxD(e.target.value)} placeholder="max" type="number" style={{ ...editInp, width: 52, padding: '5px 7px' }} />
+        <MiniBtn onClick={saveRhythm} busy={busy === 'rhythm'}>Save</MiniBtn>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 9 }}>
+        {s.enabled
+          ? <MiniBtn onClick={() => act('Stop', 'disable')} busy={busy === 'Stop'} tone="muted">■ Stop</MiniBtn>
+          : <MiniBtn onClick={() => act('Start', 'enable')} busy={busy === 'Start'}>▶ Start</MiniBtn>}
+        {s.status === 'HUMAN_ACTIVE' && <MiniBtn onClick={() => act('Resume', 'resume')} busy={busy === 'Resume'}>⏭ Resume now</MiniBtn>}
+        <MiniBtn onClick={() => act('Price-flex follow-up', 'price-flex-followup')} busy={busy === 'Price-flex follow-up'} tone="muted">💬 Ask about price flexibility</MiniBtn>
       </div>
     </div>
   )
@@ -767,16 +919,27 @@ function HistoryPanel({ history }: { history: any[] }) {
   )
 }
 function HistoryRow({ h }: { h: any }) {
+  const router = useRouter()
   const label = h.kind === 'automation'
     ? String(h.label || '').replace(/_/g, ' ')
     : describe({ type: h.label, details: h.detail, when: h.at, who: h.agent, significant: h.significant })
+  const tag = h.kind === 'automation' ? '⚙' : (h.propertyRef || 'owner')
+  const linkable = h.kind === 'property' && !!h.propertyId
   return (
     <div style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: `1px solid ${HAIRLINE}`, fontSize: 11.5, alignItems: 'flex-start' }}>
       <span style={{ fontFamily: FM, fontSize: 9.5, color: '#CCC', minWidth: 92, flexShrink: 0 }}>{fmtDate(h.at)}</span>
-      <span style={{ background: h.kind === 'automation' ? 'rgba(27,42,74,0.08)' : AD, border: `1px solid ${h.kind === 'automation' ? 'rgba(27,42,74,0.18)' : AB}`, color: h.kind === 'automation' ? NAVY : A, borderRadius: 4, padding: '1px 6px', fontSize: 9.5, fontWeight: 700, flexShrink: 0 }}>
-        {h.kind === 'automation' ? '⚙' : h.propertyRef || 'owner'}
+      <span
+        onClick={linkable ? () => router.push(`/crm/property/${h.propertyId}`) : undefined}
+        title={linkable ? `Open #${h.propertyRef}` : undefined}
+        style={{
+          background: h.kind === 'automation' ? 'rgba(27,42,74,0.08)' : AD, border: `1px solid ${h.kind === 'automation' ? 'rgba(27,42,74,0.18)' : AB}`,
+          color: h.kind === 'automation' ? NAVY : A, borderRadius: 4, padding: '1px 6px', fontSize: 9.5, fontWeight: 700, flexShrink: 0,
+          cursor: linkable ? 'pointer' : 'default', textDecoration: linkable ? 'underline' : 'none',
+        }}
+      >
+        {tag}
       </span>
-      <span style={{ color: '#555' }}>{h.kind === 'automation' ? label : label}</span>
+      <span style={{ color: '#555' }}>{label}</span>
     </div>
   )
 }
