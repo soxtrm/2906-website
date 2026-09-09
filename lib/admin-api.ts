@@ -86,6 +86,11 @@ export const adminApi = {
   getContent: () => req<SiteContentItem[]>('GET', 'content'),
   updateContent: (key: string, value: string) =>
     req<{ ok: boolean }>('PATCH', `content/${key}`, { value }),
+
+  // FB automation status dashboard (admin only) — Kev, 2026-09-10. Replaces
+  // the WhatsApp status pushes (pause/resume/queue/error) that used to land
+  // in chats/groups agents could see.
+  getFbStatus: () => req<FbStatusResponse>('GET', 'fb-status'),
 }
 
 // Types
@@ -219,6 +224,38 @@ export interface DailyStatsPeriod {
   outreach_sent: number
   replies_received: number
   scraper_leads: number
+}
+
+export interface FbStatusLogEntry {
+  id: number
+  ref: string | null
+  kind: string
+  level: 'info' | 'warn' | 'error'
+  message: string
+  meta: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface FbGroupRun {
+  id: number
+  ref: string
+  status: 'running' | 'paused'
+  paused_reason: string | null
+  posted_count: number
+  failed_count: number
+  total_groups: number
+  cursor: number
+  source: string
+  updated_at: string
+  started_at: string
+}
+
+export interface FbStatusResponse {
+  ok: boolean
+  log: FbStatusLogEntry[]
+  groupRuns: FbGroupRun[]
+  pageQueue: { queued: number | null; paused: boolean | null }
+  wahaSessions: Array<{ name: string; status: string }>
 }
 
 export interface DailyStats {

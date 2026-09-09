@@ -13,6 +13,7 @@ const NAV = [
 ]
 
 const ADMIN_NAV = [
+  { href: '/admin/dashboard/status', label: 'Status Dashboard', icon: '📡' },
   { href: '/admin/dashboard/content', label: 'Website Content', icon: '✏️' },
   { href: '/admin/dashboard/users', label: 'Users', icon: '⚙️' },
 ]
