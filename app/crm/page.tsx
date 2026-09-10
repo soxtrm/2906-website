@@ -48,6 +48,16 @@ function Dashboard() {
           ))}
         </div>
 
+        {me?.role === 'admin' && (
+          <div onClick={() => router.push('/admin/ml-learning')} style={{ marginTop: 18, background: '#FFF', borderRadius: 14, padding: '14px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0F0F0F' }}>🧠 Learning Overview</div>
+              <div style={{ fontSize: 11, color: '#AAA', marginTop: 2 }}>See what the style-learning system has actually picked up, in plain language.</div>
+            </div>
+            <span style={{ fontSize: 12, color: A }}>Open →</span>
+          </div>
+        )}
+
         <div style={{ marginTop: 18, fontSize: 11, color: '#CCC' }}>Earnings, commissions and admin tools arrive in Phase 2.</div>
       </div>
     </CrmShell>
