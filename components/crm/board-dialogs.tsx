@@ -977,23 +977,34 @@ export function StatusDialog({ refId, town, action, onClose, onDone }: {
 // !price already triggers on a price change, just retriggered by a date
 // correction instead. Admin only (no board/agent access), same bar as the
 // € price edit.
+// Kev, 2026-09-10 (Owner-Kadenz #4) — added "Available until" (Bis): the
+// longlet TERMINATION date, independent of Available from. Most relevant
+// for longlets ending at a known date; saved the same PATCH, no repost
+// implication of its own beyond whatever the two existing dates already
+// trigger.
 // ════════════════════════════════════════════════════════════════════════════
-export function AvDateDialog({ refId, propertyId, town, currentAvailable, currentViewing, onClose, onDone }: {
+export function AvDateDialog({ refId, propertyId, town, currentAvailable, currentViewing, currentUntil, onClose, onDone }: {
   refId: string
   propertyId: number
   town?: string | null
   currentAvailable?: string | null
   currentViewing?: string | null
+  // Kev, 2026-09-10 (Owner-Kadenz #4) — longlet termination date ("Bis"),
+  // separate from currentAvailable (when the NEXT tenant can move in).
+  currentUntil?: string | null
   onClose: () => void
   onDone: (msg: string, ref: string) => void
 }) {
   const toInputDate = (v?: string | null) => (v ? String(v).slice(0, 10) : '')
   const [availableDate, setAvailableDate] = useState(toInputDate(currentAvailable))
   const [viewingDate, setViewingDate] = useState(toInputDate(currentViewing))
+  const [untilDate, setUntilDate] = useState(toInputDate(currentUntil))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  const changed = availableDate !== toInputDate(currentAvailable) || viewingDate !== toInputDate(currentViewing)
+  const changed = availableDate !== toInputDate(currentAvailable)
+    || viewingDate !== toInputDate(currentViewing)
+    || untilDate !== toInputDate(currentUntil)
   const canSend = !busy && changed
 
   async function submit() {
@@ -1001,16 +1012,17 @@ export function AvDateDialog({ refId, propertyId, town, currentAvailable, curren
     setErr(null)
     setBusy(true)
     try {
-      // 1. Save both dates — same field the full property editor and the €
+      // 1. Save all three dates — same field the full property editor and the €
       // price-edit button already write (routes/crm.js PATCH
-      // /properties/:id, EDITABLE includes available_date/viewing_date).
-      // No new save path.
+      // /properties/:id, EDITABLE includes available_date/viewing_date/
+      // available_until). No new save path.
       await crmFetch(`properties/${propertyId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           available_date: availableDate || null,
           viewing_date: viewingDate || null,
+          available_until: untilDate || null,
         }),
       })
       // 2. Repost + "still on market" confirmation into the property's
@@ -1056,8 +1068,20 @@ export function AvDateDialog({ refId, propertyId, town, currentAvailable, curren
         type="date"
         value={viewingDate}
         onChange={e => setViewingDate(e.target.value)}
+        className={cn(FIELD, 'mb-4')}
+      />
+
+      <label className={LABEL}>Available until (Bis)</label>
+      <input
+        type="date"
+        value={untilDate}
+        onChange={e => setUntilDate(e.target.value)}
         className={FIELD}
       />
+      <p className="mt-1.5 text-[11px] text-navy/40 leading-relaxed">
+        Longlet termination date — when the CURRENT tenancy ends. Leave blank
+        unless a specific end date is known.
+      </p>
 
       <p className="mt-3 text-[11px] text-navy/40 leading-relaxed">
         Saving reposts this listing to its category group with the updated

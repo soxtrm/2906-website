@@ -42,6 +42,10 @@ type Listing = {
   type: string | null; beds: number | null; baths: number | null
   sizeSqm: number | null; price: number | null; salePrice: number | null
   shortlet: boolean; availableStatus: string | null; availableDate: string | null
+  // Kev, 2026-09-10 (Owner-Kadenz #4, the "Bis" button) — longlet
+  // termination date: when the CURRENT tenancy ends, separate from
+  // availableDate (when the NEXT tenant can move in).
+  availableUntil?: string | null
   // Kev, 2026-08-31 (AV-date-confirm button) — "from when can this be
   // viewed", a separate fact from availableDate.
   viewingDate: string | null
@@ -1581,6 +1585,7 @@ function Board() {
             town={avDateEditing.town}
             currentAvailable={avDateEditing.availableDate}
             currentViewing={avDateEditing.viewingDate}
+            currentUntil={avDateEditing.availableUntil}
             onClose={() => setAvDateEditing(null)}
             onDone={msg => { showToast('ok', msg); reload() }}
           />
