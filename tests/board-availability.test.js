@@ -61,7 +61,7 @@ async function run() {
 
   const consoleErrors = []
   const bad = []
-  const seen = { listings: null, reviewQueue: false, checkIn: null, checkOut: null }
+  const seen = { listings: null, rentedTab: false, checkIn: null, checkOut: null }
 
   page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()) })
   page.on('pageerror', e => consoleErrors.push(`pageerror: ${e.message}`))
@@ -74,7 +74,9 @@ async function run() {
     if (u.includes('schedule-board/listings?') && res.status() === 200) {
       try { seen.listings = JSON.parse(await res.text()) } catch { /* consumed */ }
     }
-    if (u.includes('review-queue') && res.status() === 200) seen.reviewQueue = true
+    // "Needs recheck" lost its own tab/endpoint on 2026-09-10 — 'rented' is
+    // the one tab left that isn't just GET /listings with no extra params.
+    if (u.includes('schedule-board/listings?status=rented') && res.status() === 200) seen.rentedTab = true
     // Status FIRST and synchronously. res.text() on a POST can reject while the
     // dialog that fired it is being torn down, and reading the body inside the
     // same try meant one flaky read lost the status too — the run then reported
@@ -142,10 +144,14 @@ async function run() {
       }
 
       // ── active filter ─────────────────────────────────────────────────────
-      const ACTIVE = ['available', 'available_confirmed']
+      // 2026-09-10: pending_check ("needs recheck") now stays ON the default
+      // board (watermarked, sorted to the bottom) instead of living only in
+      // a separate review-queue tab — see routes/crmScheduleBoard.js's
+      // GET /listings active-filter comment.
+      const ACTIVE = ['available', 'available_confirmed', 'pending_check']
       const offenders = api.filter(x => !ACTIVE.includes(x.availableStatus || 'available'))
-      if (!offenders.length) ok('only active listings on the board', `${api.length} rows`)
-      else no('only active listings on the board',
+      if (!offenders.length) ok('only active (or pending_check) listings on the board', `${api.length} rows`)
+      else no('only active (or pending_check) listings on the board',
         offenders.slice(0, 3).map(o => `${o.ref}=${o.availableStatus}`).join(','))
 
       // ── firewall ──────────────────────────────────────────────────────────
@@ -210,18 +216,19 @@ async function run() {
       ok('newest-first restores the top card', before)
     }
 
-    // ── the review-queue tab ────────────────────────────────────────────────
+    // ── the rented tab (2026-09-10: replaces the old review-queue tab —
+    //    "needs recheck" is now a watermark on the active board instead) ────
     await page.evaluate(() => {
       const b = Array.from(document.querySelectorAll('button'))
-        .find(x => (x.textContent || '').includes('Needs recheck'))
+        .find(x => (x.textContent || '').includes('Rented'))
       if (b) b.click()
     })
     await page.waitForFunction(
-      () => /Nothing waiting for a recheck|could not be read as a yes or a no/.test(document.body.innerText),
+      () => /Nothing rented right now|Reactivate/.test(document.body.innerText),
       { timeout: 20000 })
-    if (seen.reviewQueue) ok('review queue loads from its own endpoint')
-    else no('review queue loads from its own endpoint', 'no /review-queue response seen')
-    ok('review queue view renders')
+    if (seen.rentedTab) ok('rented tab loads via ?status=rented')
+    else no('rented tab loads via ?status=rented', 'no schedule-board/listings?status=rented response seen')
+    ok('rented tab view renders')
 
     await page.evaluate(() => {
       const b = Array.from(document.querySelectorAll('button'))

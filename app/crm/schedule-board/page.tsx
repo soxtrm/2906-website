@@ -19,7 +19,7 @@ import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, can
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
-import { SwipeLinkCreatedModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
+import { SwipeLinkCreatedModal, SwipeModeChoiceModal, SwipeMultiLinksModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
 // that matters is whose listing it is, and navy is the brand's own way of
@@ -181,7 +181,7 @@ const SORTS: Array<[string, string]> = [
 ]
 const DEFAULT_SORT = 'newest'
 
-type BoardView = 'board' | 'recheck' | 'favourites'
+type BoardView = 'board' | 'rented' | 'favourites'
 
 // ── WATag ───────────────────────────────────────────────────────────────────
 // The anti-spam ceiling. The backend enforces the same number and is the real
@@ -296,31 +296,27 @@ function Board() {
     const s = params.get('sort') || ''
     return SORTS.some(([v]) => v === s) ? s : DEFAULT_SORT
   })
-  // 'board' = the active worklist (available + available_confirmed).
-  // 'recheck' = the review queue, everything at pending_check: listings where
-  // the classifier could not read an owner's reply, plus anything flagged by
-  // hand.
+  // 'board' = the active worklist (available + available_confirmed), which
+  // ALSO now includes pending_check ("needs recheck") listings — they carry
+  // a watermark badge and sort to the bottom (see the ORDER BY on the
+  // backend's GET /listings) instead of living in a separate tab. Kev,
+  // 2026-09-10: "needs recheck" is a card state now, not a privileged queue,
+  // so it is visible to every agent, not admin-only.
+  // 'rented' = every listing at available_status='rented', so a wrong call
+  // can be found and reversed with Reactivate (POST .../return-to-market).
   // 'favourites' = the listings this agent has a viewing on. Filled
   // automatically by the Book button, and NOT filtered to what is still on the
   // market — a booking on a flat that just went is the one thing you must not
   // stop seeing. Three endpoints, one grid.
   const [view, setView] = useState<BoardView>(
-    params.get('view') === 'recheck' ? 'recheck'
+    params.get('view') === 'rented' ? 'rented'
       : params.get('view') === 'favourites' ? 'favourites' : 'board')
-  // Kev, 2026-09-04: "Needs recheck" is admin-only now. `me` loads async
-  // (useCrm() context), so this can't be decided in the useState initializer
-  // above without wrongly bouncing an admin whose `me` just hasn't arrived
-  // yet on a deep-linked ?view=recheck URL -- this only acts once `me` is
-  // actually known and turns out NOT admin.
-  useEffect(() => {
-    if (me && me.role !== 'admin' && view === 'recheck') setView('board')
-  }, [me, view])
   const [onlyConfirmed, setOnlyConfirmed] = useState(params.get('only_confirmed') === '1')
   // '' | 'now' | 'soon' | 'dated' | 'YYYY-MM'. The server owns what each means
   // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
   const [avail, setAvail] = useState<string>(() => params.get('avail') || params.get('avail_from') || '')
   const [rows, setRows] = useState<Listing[]>([])
-  const [recheckCount, setRecheckCount] = useState(0)
+  const [rentedCount, setRentedCount] = useState(0)
   const [favCount, setFavCount] = useState(0)
   // ── WATag selection ───────────────────────────────────────────────────────
   // Refs, not ids: the API speaks refs, and a ref is what the agent reads off
@@ -351,6 +347,13 @@ function Board() {
   // card pick-boxes — one selection, two things you can do with it.
   const [swipeCreating, setSwipeCreating] = useState(false)
   const [swipeResult, setSwipeResult] = useState<{ url: string; count: number } | null>(null)
+  const [swipeMultiResult, setSwipeMultiResult] = useState<{ ref: string; url?: string; error?: string }[] | null>(null)
+  // Kev, 2026-09-10: "Collected" (existing behaviour, one deck link) vs
+  // "Multiple" (one persistent single-property link per listing, so he can
+  // send 5 separate links instead of one deck) — only ambiguous with 2+
+  // listings picked, so the chooser only appears then; a single listing goes
+  // straight through as 'collected' (identical result either way for one ref).
+  const [swipeModeChoice, setSwipeModeChoice] = useState(false)
   const [swipePanelOpen, setSwipePanelOpen] = useState(false)
   // MATCH — Property -> Clients (Kev's Prompt B, 2026-08-29). Which ref's
   // panel is open, or null. The panel itself fetches its own data by ref.
@@ -462,15 +465,13 @@ function Board() {
     q.set('sort', sort)
     if (onlyConfirmed) q.set('only_confirmed', '1')
     if (avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
-    // The review queue and Favourites are each their own endpoint. Neither can
-    // be a query parameter on /listings: pending_check is excluded there by the
-    // active filter (which is the point of both), and Favourites is joined to
-    // this agent's own bookmark rows.
-    //
-    // Neither takes the sort or the server-side filters, so the sort control is
-    // disabled on those tabs rather than sending a parameter that is ignored.
-    const path = view === 'recheck'
-      ? 'schedule-board/review-queue'
+    // 'rented' reuses GET /listings with an explicit ?status= — that filter
+    // branch already existed server-side and honours sort like the board
+    // does. Favourites is its own endpoint (joined to this agent's own
+    // bookmark rows) and takes neither sort nor the server-side filters, so
+    // the sort control is disabled on that tab only, below.
+    const path = view === 'rented'
+      ? `schedule-board/listings?status=rented&sort=${encodeURIComponent(sort)}`
       : view === 'favourites'
       ? 'schedule-board/favourites'
       : `schedule-board/listings?${q.toString()}`
@@ -516,17 +517,15 @@ function Board() {
       .catch(() => { deepLinkedRef.current = null })
   }, [rows, params])
 
-  // The recheck tab's badge. Fetched separately so the count is visible while
-  // the agent is on the board — an unread review queue that only announces
-  // itself once you open it is a queue nobody empties.
+  // The rented tab's badge. Fetched separately so the count is visible while
+  // the agent is on the board, same idea as the Favourites badge below.
   useEffect(() => {
-    if (!isAdmin) { setRecheckCount(0); return }
     let alive = true
-    crmFetch('schedule-board/review-queue')
-      .then(d => { if (alive) setRecheckCount((d.listings || []).length) })
-      .catch(() => { if (alive) setRecheckCount(0) })
+    crmFetch('schedule-board/listings?status=rented')
+      .then(d => { if (alive) setRentedCount((d.listings || []).length) })
+      .catch(() => { if (alive) setRentedCount(0) })
     return () => { alive = false }
-  }, [refreshTick, isAdmin])
+  }, [refreshTick])
 
   // Same idea for the Favourites badge: a booking that silently added a card to
   // a tab nobody is looking at is a card nobody finds again.
@@ -709,19 +708,15 @@ function Board() {
     try {
       const d = await crmJson(
         `schedule-board/listings/${encodeURIComponent(r.ref)}/check-in`, 'POST', {})
-      // Confirming is how a listing LEAVES the review queue, so in that view the
-      // row goes; on the board it stays put with a fresh timestamp.
-      if (view === 'recheck') {
-        setRows(rs => rs.filter(x => x.ref !== r.ref))
-        setRecheckCount(n => Math.max(0, n - 1))
-      } else {
-        // Take the server's timestamp over ours — the card should show what is
-        // in the database, not what this browser guessed a moment ago.
-        setRows(rs => rs.map(x => x.ref === r.ref
-          ? { ...x, availableStatus: d.availableStatus || 'available_confirmed',
-                    lastConfirmedAvailableAt: d.lastConfirmedAvailableAt || optimistic }
-          : x))
-      }
+      // Confirming a pending_check card is how it clears the "needs recheck"
+      // watermark — the card stays put, right here on the board, with a
+      // fresh timestamp. Take the server's timestamp over ours: the card
+      // should show what is in the database, not what this browser guessed a
+      // moment ago.
+      setRows(rs => rs.map(x => x.ref === r.ref
+        ? { ...x, availableStatus: d.availableStatus || 'available_confirmed',
+                  lastConfirmedAvailableAt: d.lastConfirmedAvailableAt || optimistic }
+        : x))
       showToast('ok', d.message || `#${r.ref} confirmed available.`)
     } catch (e: any) {
       // Put the card back the way it was. A refusal here is almost always the
@@ -898,17 +893,34 @@ function Board() {
     }
   }
 
-  async function createSwipeLink() {
+  // Entry point from the button: 2+ listings means "Collected" vs "Multiple"
+  // is a real choice, so ask first instead of guessing. One listing has no
+  // ambiguity — go straight to 'collected'.
+  function startSwipeLink() {
     if (swipeCreating || !selected.size) return
+    if (selected.size > 1) { setSwipeModeChoice(true); return }
+    createSwipeLink('collected')
+  }
+
+  async function createSwipeLink(mode: 'collected' | 'multiple') {
+    if (swipeCreating || !selected.size) return
+    setSwipeModeChoice(false)
     setSwipeCreating(true)
     const refs = [...selected]
     try {
-      const d = await crmJson('schedule-board/swipe-links', 'POST', { refs })
-      setSwipeResult({ url: d.url, count: d.count })
+      const d = await crmJson('schedule-board/swipe-links', 'POST', { refs, mode })
+      if (d.mode === 'multiple') {
+        setSwipeMultiResult(d.links || [])
+      } else {
+        setSwipeResult({ url: d.url, count: d.count })
+      }
       setSelected(new Set())
     } catch (e: any) {
       const d = e?.data || {}
-      showToast('err', d.error || e?.message || 'Could not create the swipe link.')
+      // Kev, 2026-09-10: a link that silently failed to create is exactly the
+      // "kunde meinte link sei offline" complaint one step earlier — never
+      // let this fail quietly, always surface it so it gets retried.
+      showToast('err', d.error || e?.message || 'Could not create the swipe link — nothing was sent, try again.')
     } finally {
       setSwipeCreating(false)
     }
@@ -1090,15 +1102,17 @@ function Board() {
     }
   }
 
-  // The three removals all go through StatusDialog, which owns the POST so it
-  // can show a refusal in place rather than as a toast over an empty gap. The
-  // card is pulled the moment the server confirms — nothing is deleted, it has
-  // just stopped being active, and it is still in Inventory and its history.
+  // check-out / archive / return-to-market all go through StatusDialog, which
+  // owns the POST so it can show a refusal in place rather than as a toast
+  // over an empty gap. Either way the card leaves whatever list is currently
+  // on screen the moment the server confirms — nothing is deleted, and for
+  // check-out/archive it is still in Inventory and its history; for
+  // return-to-market (only reachable from the 'rented' tab) it is simply back
+  // on the active board, just not in front of you right here.
   function onStatusDone(msg: string, ref: string) {
     setRows(rs => rs.filter(x => x.ref !== ref))
     showToast('ok', msg)
-    // Refresh the recheck badge — a card that just moved to pending_check is
-    // now one more thing waiting in that queue.
+    // Refresh the Rented tab's badge count too.
     setRefreshTick(t => t + 1)
   }
 
@@ -1128,11 +1142,11 @@ function Board() {
             <select
               value={sort}
               onChange={e => setSort(e.target.value)}
-              disabled={view !== 'board'}
-              title={view === 'recheck'
-                ? 'The review queue is ordered oldest-doubt-first'
-                : view === 'favourites'
+              disabled={view === 'favourites'}
+              title={view === 'favourites'
                 ? 'Favourites are ordered by when you saved them, newest first'
+                : view === 'rented'
+                ? 'Order the rented list'
                 : 'Order the board'}
               className="appearance-none pl-3 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded
                          text-sm text-navy/70 hover:text-navy transition-all
@@ -1214,17 +1228,13 @@ function Board() {
       <div style={{ padding: isMobile ? 14 : 22 }}>
         {err && <Notice text={err} />}
 
-        {/* Active board ⇄ review queue. The board shows only what an agent can
-            offer today; the queue holds the listings where the classifier could
-            not read an owner's reply and refused to guess. */}
+        {/* Active board ⇄ rented. "Needs recheck" no longer has its own tab —
+            those cards stay on the active board with a watermark instead. */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Kev, 2026-09-04: "Needs recheck" is an admin-only view now -- the
-              queue is triage for cases the classifier refused to guess, not
-              everyday agent worklist noise. */}
-          {([['board', 'Active board'], ['recheck', 'Needs recheck'],
-             ['favourites', 'Favourites']] as const).filter(([v]) => v !== 'recheck' || isAdmin).map(([v, label]) => {
+          {([['board', 'Active board'], ['rented', 'Rented'],
+             ['favourites', 'Favourites']] as const).map(([v, label]) => {
             const on = view === v
-            const badge = v === 'recheck' ? recheckCount : v === 'favourites' ? favCount : 0
+            const badge = v === 'rented' ? rentedCount : v === 'favourites' ? favCount : 0
             return (
               <button key={v} data-tab={v} onClick={() => {
                 setView(v)
@@ -1264,15 +1274,15 @@ function Board() {
           <ReachoutSwitch />
         </div>
 
-        {view === 'recheck' && (
+        {view === 'rented' && (
           <div style={{
-            background: AD, border: `1px solid ${AB}`, borderRadius: 10,
-            padding: '10px 14px', fontSize: 11.5, color: '#7A6534',
+            background: '#FEF2F2', border: '1px solid rgba(185,28,28,0.22)', borderRadius: 10,
+            padding: '10px 14px', fontSize: 11.5, color: '#7A2828',
             marginBottom: 14, lineHeight: 1.5,
           }}>
-            These owners replied, but the wording could not be read as a yes or a
-            no — so nothing was assumed. Confirm it or take it off the board.
-            Oldest doubt first.
+            Every listing currently marked rented. Wrong call? Reactivate puts it
+            straight back on the active board as available — not confirmed, so a
+            check-in still gets its own fresh timestamp.
           </div>
         )}
 
@@ -1373,7 +1383,7 @@ function Board() {
               )}
               <button
                 data-swipe-create
-                onClick={createSwipeLink}
+                onClick={startSwipeLink}
                 disabled={swipeCreating}
                 title={`Create a shareable swipe deck out of these ${selected.size} listings`}
                 style={{
@@ -1503,8 +1513,8 @@ function Board() {
 
         {!loading && !visible.length && !err && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: '#BBB', fontSize: 13 }}>
-            {view === 'recheck'
-              ? 'Nothing waiting for a recheck.'
+            {view === 'rented'
+              ? 'Nothing rented right now.'
               : view === 'favourites'
               ? 'No favourites yet. Book a viewing and the listing lands here.'
               : 'Nothing matches this search.'}
@@ -1596,8 +1606,18 @@ function Board() {
       {avNotifications.length > 0 && (
         <AvNotificationStack items={avNotifications} onDismiss={dismissAvNotification} />
       )}
+      {swipeModeChoice && (
+        <SwipeModeChoiceModal
+          count={selected.size}
+          onPick={mode => createSwipeLink(mode)}
+          onClose={() => setSwipeModeChoice(false)}
+        />
+      )}
       {swipeResult && (
         <SwipeLinkCreatedModal url={swipeResult.url} count={swipeResult.count} onClose={() => setSwipeResult(null)} />
+      )}
+      {swipeMultiResult && (
+        <SwipeMultiLinksModal links={swipeMultiResult} onClose={() => setSwipeMultiResult(null)} />
       )}
       {swipePanelOpen && (
         <SwipeLinksPanel
@@ -2753,6 +2773,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             Yours
           </span>
         )}
+        {/* Kev, 2026-09-10: the "needs recheck" tab is gone — pending_check
+            listings stay right here on the active board (sorted to the
+            bottom server-side) with this watermark instead. Bottom-left: top
+            is already Star + Hot/Yours (left) and freshness + agent (right). */}
+        {r.availableStatus === 'pending_check' && (
+          <span title="The owner replied twice and the classifier still could not read it as a yes or a no — confirm it or take it off the board." style={{
+            position: 'absolute', bottom: 8, left: 8,
+            background: 'rgba(201,138,26,0.92)', color: '#FFF', fontSize: 9, fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 5,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+          }}>
+            Needs recheck
+          </span>
+        )}
 
         {/* Upload age (or last-confirmed age, whichever is the more recent
             fact — see freshBadgeLabel) + responsible agent, top right. */}
@@ -3122,28 +3156,50 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             Agent Inquiry
           </button>
 
-          <button
-            onClick={onCheckIn}
-            disabled={busy}
-            title={`Confirm still available — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
-            style={{
-              ...iconSquareBtn, width: 30, height: 30, minHeight: 30,
-              background: 'rgba(47,111,87,0.10)', border: '1px solid rgba(47,111,87,0.22)',
-              opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
-            }}>
-            <Check size={15} color="rgb(47,111,87)" strokeWidth={3} />
-          </button>
-          <button
-            onClick={() => onStatus('check-out')}
-            disabled={busy}
-            title="Mark rented / off market — asks for a reason, then takes it off the board"
-            style={{
-              ...iconSquareBtn, width: 30, height: 30, minHeight: 30, fontSize: 15,
-              background: 'rgba(185,28,28,0.09)', border: '1px solid rgba(185,28,28,0.20)',
-              opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
-            }}>
-            😠
-          </button>
+          {/* Kev, 2026-09-10: a card on the 'rented' tab has no use for
+              check-in / mark-rented (it's already rented) — Reactivate is
+              the one action that applies, and it's the recovery path for a
+              wrong call (returnToMarket() is the only boardAction allowed to
+              talk over 'rented'). */}
+          {r.availableStatus === 'rented' ? (
+            <button
+              onClick={() => onStatus('return-to-market')}
+              disabled={busy}
+              title="Reactivate — puts this back on the active board as available"
+              style={{
+                ...compactBtn, flex: '1 1 0', fontWeight: 600,
+                background: 'rgba(47,111,87,0.10)', border: '1.5px solid rgb(47,111,87)',
+                color: 'rgb(47,111,87)',
+                opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
+              }}>
+              Reactivate
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onCheckIn}
+                disabled={busy}
+                title={`Confirm still available — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
+                style={{
+                  ...iconSquareBtn, width: 30, height: 30, minHeight: 30,
+                  background: 'rgba(47,111,87,0.10)', border: '1px solid rgba(47,111,87,0.22)',
+                  opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
+                }}>
+                <Check size={15} color="rgb(47,111,87)" strokeWidth={3} />
+              </button>
+              <button
+                onClick={() => onStatus('check-out')}
+                disabled={busy}
+                title="Mark rented / off market — asks for a reason, then takes it off the board"
+                style={{
+                  ...iconSquareBtn, width: 30, height: 30, minHeight: 30, fontSize: 15,
+                  background: 'rgba(185,28,28,0.09)', border: '1px solid rgba(185,28,28,0.20)',
+                  opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer',
+                }}>
+                😠
+              </button>
+            </>
+          )}
         </div>
       </div>
       {inquiryOpen && (

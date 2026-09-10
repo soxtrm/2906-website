@@ -782,7 +782,16 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
 // Nothing here deletes anything. The listing stays in Inventory with its whole
 // history — it just stops being offered on the board.
 // ════════════════════════════════════════════════════════════════════════════
-export type StatusAction = 'check-out' | 'recheck' | 'archive'
+// Kev, 2026-09-10: 'recheck' is no longer a manual action an agent picks from
+// this dialog — "needs recheck" is now something the AI classifier alone
+// flags (services/availability.js, after TWO unclear owner replies in a
+// row), and it shows as a watermark on the board card rather than a queue
+// entry. The action name still matches its backend route 1:1 (this file's
+// own convention), which is why the new one is literally 'return-to-market'
+// — the existing POST /listings/:ref/return-to-market route (boardAction.js
+// returnToMarket()) rather than inventing a new 'reactivate' name + a mapping
+// layer.
+export type StatusAction = 'check-out' | 'archive' | 'return-to-market'
 
 const ACTION_COPY: Record<StatusAction, {
   title: string; sub: string; verb: string; presets: string[]; destructive: boolean
@@ -794,19 +803,19 @@ const ACTION_COPY: Record<StatusAction, {
     presets: ['Rented out', 'Owner withdrew it', 'Owner not reachable', 'Price changed', 'Not available yet'],
     destructive: true,
   },
-  recheck: {
-    title: 'Needs a recheck',
-    sub: 'Parks it in the review queue until somebody confirms either way.',
-    verb: 'Send to review queue',
-    presets: ['Owner reply unclear', 'No answer yet', 'Conflicting information', 'Photos look wrong'],
-    destructive: false,
-  },
   archive: {
     title: 'Archive listing',
     sub: 'Off the board and out of the review queue. Still in Inventory.',
     verb: 'Archive',
     presets: ['Duplicate listing', 'Owner withdrew for good', 'Bad or incomplete data', 'Off market'],
     destructive: true,
+  },
+  'return-to-market': {
+    title: 'Reactivate listing',
+    sub: 'Puts it back on the active board as available. Availability is not confirmed yet — a check-in still refreshes that separately.',
+    verb: 'Reactivate',
+    presets: ['Marked rented by mistake', 'Owner said it is free again', 'Tenant fell through'],
+    destructive: false,
   },
 }
 

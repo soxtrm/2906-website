@@ -72,6 +72,111 @@ export function SwipeLinkCreatedModal({ url, count, onClose }: { url: string; co
   )
 }
 
+// ── "Collected or Multiple?" — asked whenever 2+ listings are picked ──────
+// Kev, 2026-09-10: "Collected" is the existing one-deck-link behaviour;
+// "Multiple" makes one persistent single-property link per listing so he can
+// send 5 individual links instead of one deck — some clients read better
+// that way.
+export function SwipeModeChoiceModal({ count, onPick, onClose }: { count: number; onPick: (mode: 'collected' | 'multiple') => void; onClose: () => void }) {
+  return (
+    <div style={overlay} onClick={onClose}>
+      <div style={{ ...sheet, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <div style={head}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
+            <Link2 size={16} color={A} /> {count} listings selected
+          </div>
+          <button onClick={onClose} style={{ border: 0, background: 'none', cursor: 'pointer', color: '#999' }}><X size={18} /></button>
+        </div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button onClick={() => onPick('collected')} style={{
+            textAlign: 'left', padding: '14px 16px', borderRadius: 12, border: `1.5px solid ${AD}`,
+            background: '#FFF', cursor: 'pointer', fontFamily: F,
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#1A1A1A' }}>Collected</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 3 }}>
+              One link, one deck — the customer swipes through all {count} together.
+            </div>
+          </button>
+          <button onClick={() => onPick('multiple')} style={{
+            textAlign: 'left', padding: '14px 16px', borderRadius: 12, border: `1.5px solid ${AD}`,
+            background: '#FFF', cursor: 'pointer', fontFamily: F,
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#1A1A1A' }}>Multiple</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 3 }}>
+              {count} separate links, one per listing — send them individually.
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── "here are your N links" — the Multiple-mode result ────────────────────
+export function SwipeMultiLinksModal({ links, onClose }: { links: { ref: string; url?: string; error?: string }[]; onClose: () => void }) {
+  const [copiedRef, setCopiedRef] = useState<string | null>(null)
+  const [copiedAll, setCopiedAll] = useState(false)
+  const ok = links.filter(l => l.url)
+  const copyOne = async (ref: string, url: string) => {
+    try { await navigator.clipboard.writeText(url); setCopiedRef(ref); setTimeout(() => setCopiedRef(null), 1800) }
+    catch { /* clipboard blocked — the field itself is still selectable */ }
+  }
+  const copyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(ok.map(l => `#${l.ref} ${l.url}`).join('\n'))
+      setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800)
+    } catch { /* clipboard blocked */ }
+  }
+  return (
+    <div style={overlay} onClick={onClose}>
+      <div style={{ ...sheet, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div style={head}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
+            <Link2 size={16} color={A} /> {ok.length} link{ok.length === 1 ? '' : 's'} ready
+          </div>
+          <button onClick={onClose} style={{ border: 0, background: 'none', cursor: 'pointer', color: '#999' }}><X size={18} /></button>
+        </div>
+        <div style={{ padding: '12px 20px 20px', overflowY: 'auto' }}>
+          {links.some(l => l.error) && (
+            <p style={{ fontSize: 12, color: '#B91C1C', margin: '0 0 10px' }}>
+              {links.filter(l => l.error).map(l => `#${l.ref}`).join(', ')} could not be created — try those again.
+            </p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {ok.map(l => (
+              <div key={l.ref} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input readOnly value={`#${l.ref}  ${l.url}`} onFocus={e => e.currentTarget.select()}
+                  style={{
+                    flex: 1, minWidth: 0, padding: '9px 10px', borderRadius: 8, border: '1px solid #E9E5DC',
+                    fontFamily: FM, fontSize: 11.5, color: '#333', background: '#FAFAF7',
+                  }} />
+                <button onClick={() => copyOne(l.ref, l.url as string)} style={{
+                  display: 'flex', alignItems: 'center', gap: 5, padding: '9px 11px', borderRadius: 8,
+                  border: 'none', background: copiedRef === l.ref ? '#DCFCE7' : NAVY,
+                  color: copiedRef === l.ref ? '#15803D' : '#FFF', fontWeight: 700, fontSize: 11.5,
+                  cursor: 'pointer', flexShrink: 0,
+                }}>
+                  {copiedRef === l.ref ? <Check size={13} /> : <Copy size={13} />}
+                </button>
+              </div>
+            ))}
+          </div>
+          {ok.length > 1 && (
+            <button onClick={copyAll} style={{
+              marginTop: 14, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '10px 14px', borderRadius: 10, border: 'none',
+              background: copiedAll ? '#DCFCE7' : NAVY, color: copiedAll ? '#15803D' : '#FFF',
+              fontWeight: 700, fontSize: 12.5, cursor: 'pointer',
+            }}>
+              {copiedAll ? <Check size={14} /> : <Copy size={14} />} {copiedAll ? 'Copied all' : `Copy all ${ok.length} links`}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── results: every link + who liked/favourited what ───────────────────────
 type LinkRow = { id: string; title: string | null; created_at: string; active: boolean; property_count: number; like_count: number; favourite_count: number; visitor_count: number }
 type LinkDetail = {

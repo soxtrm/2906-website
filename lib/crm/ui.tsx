@@ -330,6 +330,15 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
   const items = NAV.filter(i => nav.includes(i.key))
   const roleLabel = me?.role === 'admin' ? 'Admin'
     : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
+  // Kev, 2026-09-07: the mobile bottom nav was cramming up to 7 clickable
+  // items (admin's own nav) into one row — "wird etwas viel". Board-only
+  // agents (nav = ['board']) never hit this, so the threshold only changes
+  // behaviour for accounts that actually have enough items to crowd it.
+  const [moreOpen, setMoreOpen] = useState(false)
+  const MOBILE_PRIMARY_COUNT = 4
+  const showMore = items.length > MOBILE_PRIMARY_COUNT
+  const primaryItems = showMore ? items.slice(0, MOBILE_PRIMARY_COUNT) : items
+  const moreItems = showMore ? items.slice(MOBILE_PRIMARY_COUNT) : []
 
   return (
     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: '#F6F4EF', fontFamily: F, color: '#1A1A1A', overflow: 'hidden', fontSize: 13 }}>
@@ -414,9 +423,32 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
         </div>
       </div>
 
+      {isMobile && moreOpen && (
+        <div onClick={() => setMoreOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 199 }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 62, left: 0, right: 0, background: '#FFF', borderTopLeftRadius: 14, borderTopRightRadius: 14, boxShadow: '0 -8px 28px rgba(0,0,0,0.18)', paddingBottom: 'env(safe-area-inset-bottom,0px)', maxHeight: '60vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: '#EDEBE5', margin: '10px auto 4px' }} />
+            {moreItems.map(item => {
+              const on = active(item.href)
+              return (
+                <div key={item.label} onClick={() => { if (!item.disabled) { setMoreOpen(false); router.push(item.href) } }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: item.disabled ? 'default' : 'pointer', color: item.disabled ? '#CCC' : on ? A : '#1A1A1A' }}>
+                  <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{item.icon}</span>
+                  <span style={{ fontSize: 13, fontFamily: F, fontWeight: on ? 700 : 500 }}>{item.label}</span>
+                  {item.disabled && <span style={{ fontSize: 9, marginLeft: 'auto', color: '#CCC', textTransform: 'uppercase' }}>soon</span>}
+                </div>
+              )
+            })}
+            <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: 'pointer', color: '#B91C1C', borderTop: '1px solid #EDEBE5', marginTop: 4 }}>
+              <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>↩</span>
+              <span style={{ fontSize: 13, fontFamily: F, fontWeight: 500 }}>Sign out</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isMobile && (
         <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFF', borderTop: '1px solid #EDEBE5', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom,0px)', boxShadow: '0 -4px 20px rgba(0,0,0,0.07)' }}>
-          {items.map(item => {
+          {primaryItems.map(item => {
             const on = active(item.href)
             return (
               <button key={item.label} onClick={() => !item.disabled && router.push(item.href)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0 8px', border: 'none', cursor: 'pointer', background: 'transparent', color: item.disabled ? '#DDD' : on ? A : NAVY + '66' }}>
@@ -426,6 +458,12 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
               </button>
             )
           })}
+          {showMore && (
+            <button onClick={() => setMoreOpen(o => !o)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0 8px', border: 'none', cursor: 'pointer', background: 'transparent', color: moreOpen ? A : NAVY + '66' }}>
+              <span style={{ fontSize: 19, lineHeight: 1 }}>☰</span>
+              <span style={{ fontSize: 9, marginTop: 4, fontFamily: F, fontWeight: moreOpen ? 700 : 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>More</span>
+            </button>
+          )}
         </nav>
       )}
     </div>
