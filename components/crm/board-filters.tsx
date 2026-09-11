@@ -19,8 +19,12 @@ import { cn } from '@/lib/utils'
 
 export type BoardFilterValue = {
   q: string
-  beds: string
-  baths: string
+  // Kev, 2026-09-11: "Mehrfach auswahl werkzeuge, ich will nicht nur eine
+  // Sache suchen können" — beds/baths went from a single picked value to a
+  // set of picked values (OR'd together server-side), same shape towns
+  // already used on this board. '' (empty array) still means "don't care".
+  beds: string[]
+  baths: string[]
   min: string
   max: string
   type: string
@@ -138,7 +142,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   }, [])
 
   const activeCount =
-    (value.q ? 1 : 0) + (value.beds ? 1 : 0) + (value.baths ? 1 : 0) +
+    (value.q ? 1 : 0) + (value.beds.length ? 1 : 0) + (value.baths.length ? 1 : 0) +
     (value.type ? 1 : 0) + (value.min || value.max ? 1 : 0) +
     (value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0) +
     (value.updated ? 1 : 0)
@@ -233,30 +237,50 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           )}
         </Dropdown>
 
-        <Dropdown id="beds" label={value.beds ? `${value.beds} beds` : 'Beds'} active={!!value.beds}
+        {/* Kev, 2026-09-11: multi-select — click toggles a chip in/out of the
+            set instead of replacing a single picked value. Dropdown stays
+            open (setOpen(null) removed) so picking 1+3 beds is one open,
+            two clicks, not three. */}
+        <Dropdown id="beds" label={value.beds.length ? `${value.beds.join(', ')} beds` : 'Beds'} active={!!value.beds.length}
           open={open === 'beds'} onToggle={setOpen}>
           <div className="flex flex-wrap gap-1">
             {BEDS.map(b => (
               <button key={b} type="button"
-                onClick={() => { onChange({ beds: value.beds === b ? '' : b }); setOpen(null) }}
-                className={cn(CHIP, 'min-w-[38px]', value.beds === b ? CHIP_ON : CHIP_OFF)}>
+                onClick={() => onChange({
+                  beds: value.beds.includes(b) ? value.beds.filter(x => x !== b) : [...value.beds, b],
+                })}
+                className={cn(CHIP, 'min-w-[38px]', value.beds.includes(b) ? CHIP_ON : CHIP_OFF)}>
                 {b}
               </button>
             ))}
           </div>
+          {value.beds.length > 0 && (
+            <button type="button" onClick={() => onChange({ beds: [] })}
+              className="mt-2 pt-2 border-t border-gray-100 w-full text-[10px] text-navy/40 hover:text-navy">
+              Clear
+            </button>
+          )}
         </Dropdown>
 
-        <Dropdown id="baths" label={value.baths ? `${value.baths}+ baths` : 'Baths'} active={!!value.baths}
+        <Dropdown id="baths" label={value.baths.length ? `${value.baths.join(', ')}+ baths` : 'Baths'} active={!!value.baths.length}
           open={open === 'baths'} onToggle={setOpen}>
           <div className="flex flex-wrap gap-1">
             {BATHS.map(b => (
               <button key={b} type="button"
-                onClick={() => { onChange({ baths: value.baths === b ? '' : b }); setOpen(null) }}
-                className={cn(CHIP, 'min-w-[38px]', value.baths === b ? CHIP_ON : CHIP_OFF)}>
+                onClick={() => onChange({
+                  baths: value.baths.includes(b) ? value.baths.filter(x => x !== b) : [...value.baths, b],
+                })}
+                className={cn(CHIP, 'min-w-[38px]', value.baths.includes(b) ? CHIP_ON : CHIP_OFF)}>
                 {b}+
               </button>
             ))}
           </div>
+          {value.baths.length > 0 && (
+            <button type="button" onClick={() => onChange({ baths: [] })}
+              className="mt-2 pt-2 border-t border-gray-100 w-full text-[10px] text-navy/40 hover:text-navy">
+              Clear
+            </button>
+          )}
         </Dropdown>
 
         <Dropdown id="price" label={priceLabel} active={!!(value.min || value.max)}

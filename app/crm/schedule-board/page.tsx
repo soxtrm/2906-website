@@ -181,7 +181,7 @@ type AgentRequestGroup = {
 
 type Filters = BoardFilterValue & { towns: string[] }
 const EMPTY: Filters = {
-  q: '', beds: '', baths: '', min: '', max: '', type: '', towns: [],
+  q: '', beds: [], baths: [], min: '', max: '', type: '', towns: [],
   pets: '', sharing: '', sublet: false, updated: '',
 }
 
@@ -292,8 +292,8 @@ function Board() {
   // Filters initialise from the URL so a shared link restores the search.
   const [f, setF] = useState<Filters>(() => ({
     q: params.get('q') || '',
-    beds: params.get('beds') || '',
-    baths: params.get('baths') || '',
+    beds: (params.get('beds') || '').split(',').map(s => s.trim()).filter(Boolean),
+    baths: (params.get('baths') || '').split(',').map(s => s.trim()).filter(Boolean),
     min: params.get('min') || '',
     max: params.get('max') || '',
     type: params.get('type') || '',
@@ -437,8 +437,8 @@ function Board() {
     const t = setTimeout(() => {
       const q = new URLSearchParams()
       if (f.q) q.set('q', f.q)
-      if (f.beds) q.set('beds', f.beds)
-      if (f.baths) q.set('baths', f.baths)
+      if (f.beds.length) q.set('beds', f.beds.join(','))
+      if (f.baths.length) q.set('baths', f.baths.join(','))
       if (f.min) q.set('min', f.min)
       if (f.max) q.set('max', f.max)
       if (f.type) q.set('type', f.type)
@@ -475,8 +475,8 @@ function Board() {
     let alive = true
     setLoading(true)
     const q = new URLSearchParams()
-    if (f.beds) q.set('beds', f.beds)
-    if (f.baths) q.set('baths', f.baths)
+    if (f.beds.length) q.set('beds', f.beds.join(','))
+    if (f.baths.length) q.set('baths', f.baths.join(','))
     if (f.min) q.set('price_min', f.min)
     if (f.max) q.set('price_max', f.max)
     if (f.type) q.set('type', f.type)
@@ -2705,6 +2705,40 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
     canQuestion: true, questionReason: null,
   }
 
+  // ── "Still Available" — Kev's redesign, 2026-09-11 ────────────────────────
+  // "das ist der wichtigste Button": ONE smart action instead of the old split
+  // between a plain self-check-in and a separate "On Market?" owner-ask.
+  // Backend already knows the exact same 30h freshness window this card's own
+  // gauge uses (services/availability.js FRESH_CONFIRM_HOURS, bumped to match
+  // `fresh` above) — so clicking this just calls request-availability and lets
+  // the server decide: still fresh -> answers instantly, no owner contact;
+  // already asked today -> offers the escalate step below; otherwise -> a
+  // real WhatsApp check goes out.
+  const [avBusy, setAvBusy] = useState(false)
+  const [escalate, setEscalate] = useState<{ repliedBefore: boolean } | null>(null)
+  async function askStillAvailable(force = false) {
+    if (avBusy) return
+    setAvBusy(true)
+    setEscalate(null)
+    try {
+      const d = await crmJson(
+        `schedule-board/listings/${encodeURIComponent(r.ref)}/request-availability`,
+        'POST', { force })
+      if (d.status === 'already_checked_today' && !force) {
+        setEscalate({ repliedBefore: !!d.repliedBefore })
+        return
+      }
+      flash(d.status === 'dry_run'
+        ? `${d.message} (Fall A not armed yet)`
+        : (d.message || 'Asked the owner.'))
+    } catch (e: any) {
+      const d = e?.data || {}
+      flash(d.error || d.message || e?.message || 'Could not ask.')
+    } finally {
+      setAvBusy(false)
+    }
+  }
+
   // ── visual classification ─────────────────────────────────────────────────
   // 'aesthetics' is the public site's existing Luxury collection (the same
   // `category` field /api/properties already returns) — reused as-is rather
@@ -3006,30 +3040,73 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         )}
 
-        {/* ── confirmed / viewable ──────────────────────────────────────────
-            Two facts, not three — "uploaded" already lives on the photo's
-            own freshness badge (top right), so this stays two clean columns
-            instead of a three-way squeeze (Kev's redesign, 2026-08-30).
-            Kev, 2026-09-11: dropped on the mobile 2-column layout — with a
-            ~170px card this row was wrapping onto three lines; the same
-            facts are one tap away via "..." → On Market? / Confirmed badge. */}
-        {!isMobile && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 18, marginTop: 9 }}>
-          {([
-            ['Confirmed', r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'],
-            // Kev, 2026-09-08 (real bug, live on #2906-9193): this read
-            // r.availableDate — the SAME field the "Available" column above
-            // already shows — so editing Viewing date/time separately on
-            // the property page never visibly changed anything here; both
-            // columns always mirrored the Available date. Now reads the
-            // actual viewing_date field.
-            ['Viewable', r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'],
-          ] as const).map(([label, value]) => (
-            <div key={label} style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>{label}</div>
-              <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>{value}</div>
+        {/* ── Still Available + Confirmed ──────────────────────────────────
+            Kev, 2026-09-11: the most important button on the card, so it is
+            never hidden behind "..." and never off on mobile. Confirmed sits
+            right next to it because that stat is the button's own memory —
+            the fresh/ageing/stale label the button's colour already reflects. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 9 }}>
+          <button
+            onClick={() => c.canAsk && askStillAvailable(false)}
+            disabled={!c.canAsk || avBusy}
+            title={c.reason || fresh.label}
+            style={{
+              ...stillAvailableBtn(fresh.tier),
+              opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
+              cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
+            }}>
+            {avBusy ? 'Asking…' : fresh.tier === 'fresh' ? '✓ Still available' : 'Still available?'}
+          </button>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Confirmed</div>
+            <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
+              {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'}
             </div>
-          ))}
-        </div>}
+          </div>
+        </div>
+
+        {/* Owner already contacted today — offer the deliberate "ask again
+            anyway" escalation instead of silently doing nothing. Which line
+            the bot sends depends on repliedBefore, decided server-side. */}
+        {escalate && (
+          <div style={{
+            marginTop: 6, padding: '8px 10px', borderRadius: 8,
+            background: 'rgba(184,149,63,0.10)', border: `1px solid ${AB}`,
+          }}>
+            <div style={{ fontSize: 10.5, color: DTEXT_DIM, lineHeight: 1.4 }}>
+              Already asked today{escalate.repliedBefore ? ' — she replied, but it wasn\'t a clear yes/no' : ' — no reply yet'}.
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              <button onClick={() => askStillAvailable(true)} disabled={avBusy}
+                style={{ ...menuItemBtn, flex: 1, justifyContent: 'center', background: A, color: '#151C2C', fontWeight: 700, minHeight: 28, padding: '6px 8px' }}>
+                Ask anyway
+              </button>
+              <button onClick={() => setEscalate(null)}
+                style={{ ...menuItemBtn, flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: DTEXT_FAINT }}>
+                Never mind
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Viewable date — desktop only; the ~170px mobile column has no room
+            for a second stat row once Still Available/Confirmed sit above it. */}
+        {!isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
+              {/* Kev, 2026-09-08 (real bug, live on #2906-9193): this read
+                  r.availableDate — the SAME field the "Available" column
+                  above already shows — so editing Viewing date/time
+                  separately on the property page never visibly changed
+                  anything here; both columns always mirrored the Available
+                  date. Now reads the actual viewing_date field. */}
+              <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
+                {r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* The download/copy/price/AV-date/Facebook tools that used to live
             in a row here moved into the "..." menu below (Kev, 2026-09-11) —
@@ -3043,14 +3120,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
       {/* ── actions ─────────────────────────────────────────────────────────────
           Kev's redesign, 2026-09-11: "Chat, Book, Tag sind die nächst
-          wichtigen" — those three are the only buttons that stay on the card
-          at all times; everything else (Ask Owner/Agent, Location, Match,
-          "On Market?", Create Group, Agent Inquiry, confirm/mark-rented,
-          Delete, and the old download/copy/price/AV-date/Facebook icon row)
-          moved behind "...". "More Info" is gone outright, not relocated —
-          the photo, town name and description are already click-to-open.
-          Every onClick/disabled condition below is the SAME one the
-          previous three-row layout used; only where it lives changed. */}
+          wichtigen" — those three plus the Still Available button up in the
+          body (the card's most important action, kept out of any menu) are
+          the ones that stay on the card at all times; everything else (Ask
+          Owner/Agent, Location, Match, Create Group, Agent Inquiry,
+          confirm-myself/mark-rented, Delete, and the old download/copy/
+          price/AV-date/Facebook icon row) moved behind "...". "More Info" is
+          gone outright, not relocated — the photo, town name and description
+          are already click-to-open. Every onClick/disabled condition below
+          is the SAME one the previous three-row layout used; only where it
+          lives changed. */}
       <div style={{
         background: DTRAY, borderTop: `1px solid ${DBORDER}`,
         padding: '9px 11px', position: 'relative',
@@ -3112,13 +3191,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             </button>
 
             <div style={menuSection}>Manage</div>
-            <button
-              onClick={() => { if (c.canAsk) { onAct('request-availability', r); setMenuOpen(false) } }}
-              disabled={!c.canAsk}
-              title={c.reason || (r.isMine ? 'Message the owner' : `Ask ${c.reachesName || 'the listing agent'}`)}
-              style={{ ...menuItemBtn, color: c.canAsk ? A : DTEXT_FAINT, fontWeight: 600, cursor: c.canAsk ? 'pointer' : 'not-allowed' }}>
-              On Market?
-            </button>
+            {/* "On Market?" moved out of this menu entirely — it's the
+                Still Available button above now, same request-availability
+                call for both isMine (owner) and colleague (relay) cases. */}
             <button data-match-btn={r.ref} onClick={() => { onMatch(); setMenuOpen(false) }} title="Find active clients this listing fits" style={menuItemBtn}>
               Match
             </button>
@@ -3158,9 +3233,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 <button
                   onClick={() => { onCheckIn(); setMenuOpen(false) }}
                   disabled={busy}
-                  title={`Confirm still available — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
+                  title={`Confirm it yourself without messaging the owner — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
                   style={{ ...menuItemBtn, color: 'rgb(102,187,158)', cursor: busy ? 'wait' : 'pointer' }}>
-                  ✓ Still available
+                  I confirmed it myself
                 </button>
                 <button
                   onClick={() => { onStatus('check-out'); setMenuOpen(false) }}
@@ -3809,6 +3884,19 @@ const trayPrimaryBtn: React.CSSProperties = {
   background: '#1B2333', border: `1px solid ${DBORDER}`, color: DTEXT,
   flex: '1 1 0', minWidth: 0, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
 }
+// Kev, 2026-09-11: "still available soll neben Confirmed weil das der
+// wichtigste Button ist" — a real, always-on button (not tucked in "..."),
+// styled to actually look like the card's headline action rather than one
+// more outline pill. Colour comes from the SAME `fresh` gauge the freshness
+// dot already uses, so a green/solid button and a green/solid gauge always
+// agree with each other.
+const stillAvailableBtn = (freshTier: string): React.CSSProperties => ({
+  padding: '8px 12px', borderRadius: 10, fontSize: 12, fontFamily: F,
+  fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
+  border: `1.5px solid rgb(${'47,111,87'})`,
+  background: freshTier === 'fresh' ? 'rgb(47,111,87)' : 'rgba(47,111,87,0.12)',
+  color: freshTier === 'fresh' ? '#FFF' : 'rgb(102,187,158)',
+})
 const trayMoreBtn: React.CSSProperties = {
   width: 34, height: 34, minHeight: 34, flex: '0 0 auto', padding: 0,
   borderRadius: 10, border: `1px solid ${DBORDER}`, background: '#1B2333',
