@@ -3074,16 +3074,19 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         )}
 
         {/* ── Still Available + Confirmed ──────────────────────────────────
-            Kev, 2026-09-11 (3rd pass): "mach den button immer über chat
-            direkt" — moved from up near the description down to right here,
-            the last thing in the body, so it sits directly above the tray's
-            Chat button with nothing in between. Still the most important
-            button on the card: never hidden behind "...", never off on
-            mobile. One fixed size/shape/colour for every card (2nd pass) —
-            the freshness state lives only in the small dot, never in the
-            button's own size or fill. flex:1 so it and Confirmed actually
-            use the row's full width instead of leaving a gap. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+            Kev, 2026-09-11 (5th pass): "der fucking available button einfach
+            unten anheften wie rechts" — being the last child in a flex:1
+            body was NOT the same thing as being pinned to the bottom. Body
+            stretches to match the tallest card in the grid row, and any
+            slack that stretch adds lands AFTER whatever content happens to
+            precede this block — a card with a shorter description or no
+            sharing/pets row left visible dead air above the tray, a longer
+            one didn't. marginTop:'auto' on this wrapper eats all of that
+            slack itself, so the button sits flush against the tray on
+            EVERY card regardless of how much is above it, not just the ones
+            that happened to be tall enough already. */}
+        <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => c.canAsk && askStillAvailable(false)}
             disabled={!c.canAsk || avBusy}
@@ -3135,6 +3138,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* ── actions ─────────────────────────────────────────────────────────────
