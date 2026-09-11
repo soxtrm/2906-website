@@ -212,7 +212,11 @@ const btnGhost: React.CSSProperties = {
 // ── ONE profile console ──────────────────────────────────────────────────────
 function ProfileConsole({ account, accent, onChanged }: { account: Account; accent: typeof ACCENTS[0]; onChanged: () => void }) {
   const [plans, setPlans] = useState<Plan[] | null>(null)
-  const [activeLabel, setActiveLabel] = useState<'TODAY' | 'TOMORROW' | 'IN_2_DAYS'>('TOMORROW')
+  // Kev, 2026-09-11: defaults to TODAY, not TOMORROW — "ich hab kb für
+  // morgen alles auszufüllen und dann zu merken dass es für den falschen
+  // tag ist" (filling in the wrong day by accident because it opened on
+  // tomorrow by default).
+  const [activeLabel, setActiveLabel] = useState<'TODAY' | 'TOMORROW' | 'IN_2_DAYS'>('TODAY')
   const [queueText, setQueueText] = useState('')
   const [msgOpen, setMsgOpen] = useState(false)
   const [msgDraft, setMsgDraft] = useState('')
