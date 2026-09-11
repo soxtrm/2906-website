@@ -2977,7 +2977,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           tray and the reference bar below it stay pinned to the bottom of
           every card in a row, no matter how long this one's description
           runs. */}
-      <div style={{ padding: isMobile ? '10px 11px 8px' : '13px 15px 11px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      {/* Kev, 2026-09-11 (4th pass, screenshot): the gap between Still
+          Available and the tray below it read as dead space — bottom
+          padding cut way down so the button sits right against the tray
+          boundary instead of floating above it. */}
+      <div style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
