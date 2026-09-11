@@ -97,7 +97,10 @@ function saveLastUsed(accountId: number, v: { text: string; count: number }) {
 // "Cedric & Default können 40+ und die anderen beiden besser unter 40 weils
 // keine business accs sind."
 function defaultSeedCount(account: Account) {
-  const l = account.label.toLowerCase()
+  // "Default" is a display label ("Kev Primary") over the technical
+  // session_name ("default") — match both so the real default account
+  // qualifies, not just whichever one is literally labelled "Default".
+  const l = (account.label + ' ' + account.sessionName).toLowerCase()
   return l.includes('cedric') || l.includes('default') ? 40 : 35
 }
 
