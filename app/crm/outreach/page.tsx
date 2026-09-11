@@ -29,7 +29,8 @@ const ACCENTS = [
 ]
 function accentFor(index: number) { return ACCENTS[index % ACCENTS.length] }
 
-type Account = { id: number; sessionName: string; phone: string; label: string; connected: boolean }
+type Account = { id: number; sessionName: string; phone: string; label: string; connected: boolean; lastOutreachAt: string | null }
+type Template = { id: number; label: string; text: string; created_at: string }
 type Entry = {
   id: number; normalized_phone: string; display_name: string | null
   classification: string | null; eligibility_status: string; skip_reason: string | null
@@ -51,19 +52,25 @@ function useMaltaClock() {
   return { time, date }
 }
 
-// Spec point 19 — suggest the next day's time as +20min from the previous
-// day's OWN scheduled time (not a stale global default), so setting TODAY
-// to 14:15 suggests TOMORROW=14:35 and IN_2_DAYS=14:55 automatically, and
-// changing TOMORROW to 16:00 re-bases the suggestion for IN_2_DAYS from
-// that instead of the original time.
-function suggestTime(plans: Plan[] | null, label: string): string {
+function maltaHM(d: Date) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+}
+
+// Kev, 2026-09-11: "checkt wann der letzte !outreach gemacht wurde und
+// versucht immer auto +30min zu setzen" — the PRIMARY suggestion is always
+// +30min from the real last send for this account (from outreach_log —
+// covers a manual !outreach typed straight into WhatsApp too, not just
+// ARGUS's own plans). Only falls back to chaining off a previous ARGUS day
+// (+20min, spec point 19) when there's no real send history at all yet.
+function suggestTime(plans: Plan[] | null, label: string, lastOutreachAt: string | null): string {
+  if (lastOutreachAt) {
+    return maltaHM(new Date(new Date(lastOutreachAt).getTime() + 30 * 60_000))
+  }
   const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS']
   const idx = order.indexOf(label)
-  if (idx <= 0 || !plans) return '14:15'
-  const prev = plans.find(p => p.label === order[idx - 1])
-  if (prev?.scheduled_at) {
-    const d = new Date(new Date(prev.scheduled_at).getTime() + 20 * 60_000)
-    return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+  if (idx > 0 && plans) {
+    const prev = plans.find(p => p.label === order[idx - 1])
+    if (prev?.scheduled_at) return maltaHM(new Date(new Date(prev.scheduled_at).getTime() + 20 * 60_000))
   }
   return '14:15'
 }
@@ -86,6 +93,10 @@ function ArgusConsole() {
   const [error, setError] = useState('')
   const [duplicates, setDuplicates] = useState<any[]>([])
   const [summary, setSummary] = useState<any>(null)
+  // Templates are a global library (spec follow-up: "Saved Drafts" button) —
+  // lifted here, not per-console, so saving one in DEFAULT's card makes it
+  // immediately available in every other account's card too.
+  const [templates, setTemplates] = useState<Template[]>([])
   const scrollerRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
@@ -102,7 +113,11 @@ function ArgusConsole() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const loadTemplates = useCallback(async () => {
+    try { const r = await crmGet('outreach/templates'); setTemplates(r.templates || []) } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { load(); loadTemplates() }, [load, loadTemplates])
 
   async function checkDuplicates() {
     try {
@@ -128,7 +143,7 @@ function ArgusConsole() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/" style={{ color: FAINT, fontSize: 11, textDecoration: 'none', marginRight: 4 }}>← CRM</a>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/argus-logo.png" alt="ARGUS / NEON" style={{ height: 34, width: 'auto', display: 'block' }} />
+          <img src="/argus-logo.png" alt="ARGUS / NEON" style={{ height: 40, width: 'auto', display: 'block' }} />
           <div style={{ marginLeft: 18 }}>
             <div style={{ fontSize: 17, fontWeight: 700 }}>Outreach Planner</div>
             <div style={{ fontSize: 11, color: MUTED }}>Plan · Schedule · Execute · Audit</div>
@@ -159,7 +174,7 @@ function ArgusConsole() {
       {accounts && (
         <div ref={scrollerRef} style={{ display: 'flex', gap: 18, overflowX: 'auto', padding: '20px 24px', scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
           {accounts.map((acc, i) => (
-            <ProfileConsole key={acc.id} account={acc} accent={accentFor(i)} onChanged={load} />
+            <ProfileConsole key={acc.id} account={acc} accent={accentFor(i)} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
           ))}
         </div>
       )}
@@ -210,7 +225,11 @@ const btnGhost: React.CSSProperties = {
 }
 
 // ── ONE profile console ──────────────────────────────────────────────────────
-function ProfileConsole({ account, accent, onChanged }: { account: Account; accent: typeof ACCENTS[0]; onChanged: () => void }) {
+function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChanged }: {
+  account: Account; accent: typeof ACCENTS[0]; onChanged: () => void
+  templates: Template[]; onTemplatesChanged: () => void
+}) {
+  const [templatesOpen, setTemplatesOpen] = useState(false)
   const [plans, setPlans] = useState<Plan[] | null>(null)
   // Kev, 2026-09-11: defaults to TODAY, not TOMORROW — "ich hab kb für
   // morgen alles auszufüllen und dann zu merken dass es für den falschen
@@ -257,9 +276,7 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
     // scheduled_at yet gets a suggested time instead of a stale leftover —
     // +20min from the previous day's own time when that's armed (spec
     // point 19's auto-suggest), otherwise a plain default.
-    setArmTime(activePlan.scheduled_at
-      ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(activePlan.scheduled_at))
-      : suggestTime(plans, activeLabel))
+    setArmTime(activePlan.scheduled_at ? maltaHM(new Date(activePlan.scheduled_at)) : suggestTime(plans, activeLabel, account.lastOutreachAt))
     loadEntries(activePlan.id)
   }, [activePlan?.id])
 
@@ -309,6 +326,25 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
     await refresh()
   }
 
+  // Saved Drafts (spec follow-up, Kev 2026-09-11) — a small global template
+  // library so a good message doesn't need retyping on every plan.
+  async function saveAsTemplate() {
+    if (!msgDraft.trim()) return
+    const label = window.prompt('Save this message as a template — give it a short name:', '')
+    if (!label) return
+    await crmJson('outreach/templates', 'POST', { label, text: msgDraft })
+    await onTemplatesChanged()
+  }
+  function loadTemplate(t: Template) {
+    setMsgDraft(t.text)
+    setTemplatesOpen(false)
+  }
+  async function deleteTemplate(id: number, e: React.MouseEvent) {
+    e.stopPropagation()
+    await crmJson(`outreach/templates/${id}`, 'DELETE', {}).catch(() => {})
+    await onTemplatesChanged()
+  }
+
   async function saveDraft() {
     if (!activePlan) return
     setBusy(true)
@@ -350,9 +386,18 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
           <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.04em' }}>{account.label.toUpperCase()}</div>
           <div style={{ fontSize: 11, color: MUTED, fontFamily: FM }}>+{account.phone}</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: account.connected ? '#3ecf8e' : '#f2597a' }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: account.connected ? '#3ecf8e' : '#f2597a' }} />
-          {account.connected ? 'CONNECTED' : 'DISCONNECTED'}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: account.connected ? '#3ecf8e' : '#f2597a' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: account.connected ? '#3ecf8e' : '#f2597a' }} />
+            {account.connected ? 'CONNECTED' : 'DISCONNECTED'}
+          </div>
+          {/* Kev, 2026-09-11: real last-send time from outreach_log — same
+              source suggestTime() bases its +30min suggestion on. */}
+          <div style={{ fontSize: 9.5, color: FAINT, textAlign: 'right' }}>
+            Last outreach: {account.lastOutreachAt
+              ? `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} · ${maltaHM(new Date(account.lastOutreachAt))}`
+              : '—'}
+          </div>
         </div>
       </div>
 
@@ -380,7 +425,7 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
         <div style={{ background: EDITOR, borderRadius: 12, padding: 16, opacity: 0.75 }}>
           <div style={{ color: '#3ecf8e', fontWeight: 700, fontSize: 12.5 }}>✓ OUTREACH COMPLETED</div>
           <div style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>{s?.sent} sent · {s?.skip} skipped</div>
-          {activePlan?.scheduled_at && <div style={{ fontSize: 11, color: FAINT, marginTop: 2 }}>Finished around {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(activePlan.scheduled_at))}</div>}
+          {activePlan?.scheduled_at && <div style={{ fontSize: 11, color: FAINT, marginTop: 2 }}>Finished around {maltaHM(new Date(activePlan.scheduled_at))}</div>}
         </div>
       ) : (
         <textarea
@@ -427,10 +472,29 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
         </div>
       )}
       {msgOpen && !isCompleted && (
-        <div style={{ background: EDITOR, border: `1px solid ${accent.glow}`, borderRadius: 12, padding: 10 }}>
+        <div style={{ background: EDITOR, border: `1px solid ${accent.glow}`, borderRadius: 12, padding: 10, position: 'relative' }}>
           <textarea value={msgDraft} onChange={e => setMsgDraft(e.target.value)} placeholder="Hi [name], quick check on your property…" style={{ width: '100%', background: 'transparent', border: 'none', color: TEXT, fontFamily: F, fontSize: 12.5, resize: 'vertical', height: 80, outline: 'none' }} />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 6 }}>
-            <button onClick={saveMessage} style={btnPrimary(accent)}>Save Message</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, marginTop: 6 }}>
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setTemplatesOpen(o => !o)} title="Load a previously saved message" style={btnGhost}>💾 Saved Drafts ({templates.length})</button>
+              {templatesOpen && (
+                <div style={{ position: 'absolute', bottom: '110%', left: 0, background: PANEL2, border: `1px solid ${HAIRLINE}`, borderRadius: 10, padding: 6, minWidth: 220, maxHeight: 220, overflowY: 'auto', zIndex: 20, boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                  {templates.length === 0 && <div style={{ fontSize: 11, color: FAINT, padding: '6px 8px' }}>No saved drafts yet.</div>}
+                  {templates.map(t => (
+                    <div key={t.id} onClick={() => loadTemplate(t)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.label}</span>
+                      <span onClick={e => deleteTemplate(t.id, e)} style={{ color: FAINT, fontSize: 13, flexShrink: 0 }}>✕</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={saveAsTemplate} title="Save this text as a new reusable draft" style={btnGhost}>Save as Draft</button>
+              <button onClick={saveMessage} style={btnPrimary(accent)}>Save Message</button>
+            </div>
           </div>
         </div>
       )}
@@ -450,7 +514,7 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
           </div>
           {activePlan?.scheduled_at && (
             <div style={{ fontSize: 11, color: MUTED }}>
-              Next: {activePlan.scheduled_date} · {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(activePlan.scheduled_at))}
+              Next: {activePlan.scheduled_date} · {maltaHM(new Date(activePlan.scheduled_at))}
             </div>
           )}
         </div>
