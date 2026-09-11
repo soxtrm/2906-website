@@ -3099,9 +3099,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             }} />
             {avBusy ? 'Asking…' : 'Still available?'}
           </button>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          {/* Kev, screenshot: "ich hab kb dass sich das verschiebt" — this
+              column used to size itself to whatever "Confirmed" said
+              ("Never" vs "10d ago" vs "3h ago"), so the flex:1 button next
+              to it landed at a different width on every card. Fixed width
+              here instead, so the button's right edge never moves. */}
+          <div style={{ textAlign: 'right', flexShrink: 0, width: 62 }}>
             <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Confirmed</div>
-            <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'}
             </div>
           </div>
