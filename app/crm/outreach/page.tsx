@@ -75,6 +75,32 @@ function suggestTime(plans: Plan[] | null, label: string, lastOutreachAt: string
   return '14:15'
 }
 
+// ── AUTO button: per-account "what I used last time" memory ─────────────────
+// Kev, 2026-09-12: "die Presettings übernimmt (textwise und anzahl)... die
+// letzte Nachricht die im Vortag gesettet wurde... dann ist es beim nächsten
+// mal das was beim letzten mal war, das ist ja auch JE account unterschiedlich."
+// No backend field for this (CLAUDE.md: never touch backend from here) —
+// localStorage, keyed per account, is the whole store. Written every time a
+// list is actually generated (AUTO or the manual Create List button), so
+// "last time" means exactly that regardless of which path set it.
+function lastUsedKey(accountId: number) { return `outreach_last_used_${accountId}` }
+function loadLastUsed(accountId: number): { text: string; count: number } | null {
+  try {
+    const raw = localStorage.getItem(lastUsedKey(accountId))
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+function saveLastUsed(accountId: number, v: { text: string; count: number }) {
+  try { localStorage.setItem(lastUsedKey(accountId), JSON.stringify(v)) } catch { /* ignore */ }
+}
+// First-ever AUTO click for an account (no memory yet) — Kev, 2026-09-12:
+// "Cedric & Default können 40+ und die anderen beiden besser unter 40 weils
+// keine business accs sind."
+function defaultSeedCount(account: Account) {
+  const l = account.label.toLowerCase()
+  return l.includes('cedric') || l.includes('default') ? 40 : 35
+}
+
 function dayLabelText(l: string) {
   if (l === 'TODAY') return 'TODAY'
   if (l === 'TOMORROW') return 'TOMORROW'
@@ -302,12 +328,14 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // generator). topUp=true ("Top Up"): keeps everyone already in the queue
   // and only fetches as many ADDITIONAL eligible owners as needed to reach
   // `count` total, never duplicating what's already there.
-  async function generate(topUp = false) {
+  async function generate(topUp = false, overrideCount?: number) {
     if (!activePlan) return
+    const n = overrideCount ?? count
     setBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count, topUp })
+      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: n, topUp })
       await refresh(activePlan.id)
+      saveLastUsed(account.id, { text: msgDraft, count: n })
       setNote(`${r.added} added${r.need && r.added < r.need ? ` (only ${r.added}/${r.need} eligible found)` : ''}.`)
     } catch (e: any) { setNote(e?.message || 'Failed to generate') } finally { setBusy(false) }
   }
@@ -319,11 +347,47 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     finally { setBusy(false) }
   }
 
-  async function saveMessage() {
+  async function saveMessage(overrideText?: string) {
     if (!activePlan) return
-    await crmJson(`outreach/plans/${activePlan.id}/message`, 'POST', { text: msgDraft })
+    const text = overrideText ?? msgDraft
+    await crmJson(`outreach/plans/${activePlan.id}/message`, 'POST', { text })
     setMsgOpen(false)
     await refresh()
+  }
+
+  // Kev, 2026-09-12: one click for the non-custom day. Reuses this account's
+  // last-used text+count (or a sane first-time default), regenerates the
+  // list and saves the message — then, when there's an earlier day-tab in
+  // this 3-day window, nudges the arm time to +15min after it ("zeit +15min
+  // zum vortag automatisch"). Everything it touches stays a normal editable
+  // field afterward (message box left open) — AUTO never arms anything.
+  async function autoRun() {
+    if (!activePlan) return
+    const last = loadLastUsed(account.id)
+    const seedCount = last?.count ?? defaultSeedCount(account)
+    const seedText = last?.text ?? msgDraft
+
+    setCount(seedCount)
+    if (seedText) setMsgDraft(seedText)
+    setMsgOpen(true)
+
+    const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS'] as const
+    const idx = order.indexOf(activeLabel)
+    if (idx > 0 && plans) {
+      const prev = plans.find(p => p.label === order[idx - 1])
+      if (prev?.scheduled_at) setArmTime(maltaHM(new Date(new Date(prev.scheduled_at).getTime() + 15 * 60_000)))
+    }
+
+    setBusy(true); setNote('')
+    try {
+      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: seedCount, topUp: false })
+      if (seedText) await crmJson(`outreach/plans/${activePlan.id}/message`, 'POST', { text: seedText })
+      await refresh(activePlan.id)
+      saveLastUsed(account.id, { text: seedText, count: seedCount })
+      setNote(`Auto: ${r.added} added${seedText ? ' · message set' : ' · no message yet — write one below'}.`)
+    } catch (e: any) {
+      setNote(e?.message || 'Auto failed')
+    } finally { setBusy(false) }
   }
 
   // Saved Drafts (spec follow-up, Kev 2026-09-11) — a small global template
@@ -455,7 +519,13 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       {/* generate row */}
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button disabled={busy} onClick={() => generate(false)} title="Generates a fresh list of eligible owners — the exact same engine as the real !createlist WhatsApp command." style={{ ...btnPrimary(accent), flex: '1 1 auto' }}>+ Create List</button>
+          <button
+            disabled={busy} onClick={autoRun}
+            title="One click for a non-custom day: reuses this account's last text + count, regenerates the list, saves the message, and nudges the arm time — everything stays editable after."
+            style={{ ...btnPrimary(accent), flex: '0 0 auto', paddingLeft: 16, paddingRight: 16 }}>
+            ⚡ AUTO
+          </button>
+          <button disabled={busy} onClick={() => generate(false)} title="Generates a fresh list of eligible owners — the exact same engine as the real !createlist WhatsApp command." style={{ ...btnGhost, flex: '1 1 auto' }}>+ Create List</button>
           <input type="number" value={count} onChange={e => setCount(Math.max(1, Math.min(200, parseInt(e.target.value) || 40)))} style={inputSmall} />
           <button disabled={busy} onClick={() => generate(true)} title="Keeps everyone already in the queue and only adds as many NEW eligible owners as needed to reach the count above." style={btnGhost}>Top Up</button>
           <button disabled={busy} onClick={clearList} title="Removes everyone from this queue and releases their reservation." style={btnGhost}>Clear</button>
@@ -493,7 +563,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={saveAsTemplate} title="Save this text as a new reusable draft" style={btnGhost}>Save as Draft</button>
-              <button onClick={saveMessage} style={btnPrimary(accent)}>Save Message</button>
+              <button onClick={() => saveMessage()} style={btnPrimary(accent)}>Save Message</button>
             </div>
           </div>
         </div>
