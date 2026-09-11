@@ -59,13 +59,13 @@ function DashboardTabs() {
     { href: '/ownergroups', label: 'Ownergroups' },
   ]
   return (
-    <div className="flex gap-1 mb-4 border-b border-navy/10">
+    <div className="flex gap-1 mb-4 border-b border-white/10">
       {tabs.map(t => {
         const active = pathname.startsWith(t.href)
         return (
           <button key={t.href} onClick={() => router.push(t.href)}
             className={`px-4 py-2 text-xs font-semibold transition-colors border-b-2 -mb-px ${
-              active ? 'border-gold text-navy' : 'border-transparent text-navy/40 hover:text-navy'
+              active ? 'border-gold text-white' : 'border-transparent text-white/40 hover:text-white'
             }`}>
             {t.label}
           </button>
@@ -77,27 +77,27 @@ function DashboardTabs() {
 
 function OwnergroupCard({ og, onOpen }: { og: Ownergroup; onOpen: () => void }) {
   return (
-    <div onClick={onOpen} className="rounded-lg border border-navy/10 bg-white p-4 cursor-pointer hover:border-gold/40 transition-colors">
+    <div onClick={onOpen} className="rounded-lg border border-white/10 bg-[#141B29] p-4 cursor-pointer hover:border-gold/40 transition-colors">
       <div className="flex items-start justify-between mb-2">
         <div>
-          <div className="font-semibold text-sm text-navy">{og.ownerName || og.ownerPhone || 'Unlinked owner'}</div>
-          <div className="text-[11px] text-navy/40">{og.session} · {og.chatId.replace(/@.*/, '')}</div>
+          <div className="font-semibold text-sm text-white">{og.ownerName || og.ownerPhone || 'Unlinked owner'}</div>
+          <div className="text-[11px] text-white/40">{og.session} · {og.chatId.replace(/@.*/, '')}</div>
         </div>
         {statusPill(og.status)}
       </div>
       <div className="flex flex-wrap gap-1 mb-2">
         {og.propertyRefs.slice(0, 4).map(ref => (
-          <span key={ref} className="text-[10px] px-1.5 py-0.5 rounded bg-off-white text-navy/60 font-mono">{ref}</span>
+          <span key={ref} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/60 font-mono">{ref}</span>
         ))}
-        {og.propertiesCount > 4 && <span className="text-[10px] text-navy/40">+{og.propertiesCount - 4} more</span>}
-        {!og.propertiesCount && <span className="text-[10px] text-navy/30">No properties on file</span>}
+        {og.propertiesCount > 4 && <span className="text-[10px] text-white/40">+{og.propertiesCount - 4} more</span>}
+        {!og.propertiesCount && <span className="text-[10px] text-white/30">No properties on file</span>}
       </div>
-      <div className="flex items-center gap-3 text-[11px] text-navy/50">
+      <div className="flex items-center gap-3 text-[11px] text-white/50">
         <span>{og.listedCount}/{og.propertiesCount} listed</span>
         {og.hasCard && <span className="text-gold font-semibold">🗂 {og.preferenceCount} pref{og.preferenceCount === 1 ? '' : 's'}</span>}
-        {og.pendingViewingReminder && <span className="text-blue-600 font-semibold">⏰ viewing pending</span>}
+        {og.pendingViewingReminder && <span className="text-blue-400 font-semibold">⏰ viewing pending</span>}
       </div>
-      <div className="text-[10px] text-navy/30 mt-2">{og.lastAction ? `Last: ${og.lastAction} (${fmtTimeAgo(og.lastActionAt)})` : 'No action yet'}</div>
+      <div className="text-[10px] text-white/30 mt-2">{og.lastAction ? `Last: ${og.lastAction} (${fmtTimeAgo(og.lastActionAt)})` : 'No action yet'}</div>
     </div>
   )
 }
@@ -117,29 +117,29 @@ function OwnergroupsInner() {
 
   if (me && me.role !== 'admin') {
     return (
-      <CrmShell title="Ownergroups" subtitle="Admins only">
+      <CrmShell title="Ownergroups" subtitle="Admins only" dark>
         <DashboardTabs />
-        <p className="text-sm text-navy/40">This dashboard is admin-only.</p>
+        <p className="text-sm text-white/40">This dashboard is admin-only.</p>
       </CrmShell>
     )
   }
 
   return (
-    <CrmShell title="Ownergroups" subtitle={`${rows.length} managed owner conversation${rows.length === 1 ? '' : 's'}`}>
+    <CrmShell title="Ownergroups" subtitle={`${rows.length} managed owner conversation${rows.length === 1 ? '' : 's'}`} dark>
       <DashboardTabs />
-      {err && <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</div>}
+      {err && <div className="mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded p-2">{err}</div>}
       {loading ? (
-        <p className="text-sm text-navy/40">Loading…</p>
+        <p className="text-sm text-white/40">Loading…</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-navy/40">No ownergroups yet — activate one with <code>!o</code> in an owner's chat.</p>
+        <p className="text-sm text-white/40">No ownergroups yet — activate one with <code>!o</code> in an owner's chat.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {rows.map(og => <OwnergroupCard key={og.id} og={og} onOpen={() => router.push(`/crm/ownergroups/${og.id}`)} />)}
         </div>
       )}
-      <div className="mt-6 rounded-lg border border-dashed border-navy/15 p-4">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-navy/40 mb-1">Warm reachout waves</h3>
-        <p className="text-xs text-navy/30">Not built yet — the underlying wave engine is still two ad-hoc scripts (wave_send.js/wave_send_jasmine.js), parked pending a dedicated build. This section will surface real wave data once that exists.</p>
+      <div className="mt-6 rounded-lg border border-dashed border-white/15 p-4">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-white/40 mb-1">Warm reachout waves</h3>
+        <p className="text-xs text-white/30">Not built yet — the underlying wave engine is still two ad-hoc scripts (wave_send.js/wave_send_jasmine.js), parked pending a dedicated build. This section will surface real wave data once that exists.</p>
       </div>
     </CrmShell>
   )

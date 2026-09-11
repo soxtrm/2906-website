@@ -1146,6 +1146,7 @@ function Board() {
       count={visible.length}
       mineCount={mineCount}
       loading={loading}
+      dark
       extra={
         <>
           {/* Sort. Newest-first is the default and the reason the board reads
@@ -1497,12 +1498,9 @@ function Board() {
           // its buttons and the on/off-market pair got clipped off the right
           // edge of the card. Wider minimum = one fewer card per row, and the
           // buttons have room to sit on one line instead of overflowing.
-          // Kev, 2026-09-11: "gerade die mobile leute würden von kleineren
-          // besser strukturierten Listings profitieren" — a single full-width
-          // card per row on a phone was one huge photo and a lot of scrolling
-          // to see very little; two smaller cards side by side surface more
-          // of the board per screen, same as the public site's own mobile grid.
-          gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(auto-fill,minmax(340px,1fr))',
+          // Kev, 2026-09-11: tried two smaller cards per row on mobile, but it
+          // made the board unreadable — reverted to one full-width card per row.
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(340px,1fr))',
         }}>
           {visible.map(r => (
             <Card

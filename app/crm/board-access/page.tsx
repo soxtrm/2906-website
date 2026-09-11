@@ -10,7 +10,10 @@
 // ============================================================================
 import { useCallback, useEffect, useState } from 'react'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, NAVY, F, useIsMobile } from '@/lib/crm/ui'
+import {
+  CrmProvider, CrmShell, A, F, useIsMobile,
+  DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER,
+} from '@/lib/crm/ui'
 
 type Row = {
   id: number; name: string | null; email: string | null; username: string
@@ -143,12 +146,12 @@ function BoardAccess() {
   const staff  = rows.filter(r => r.role !== 'board')
 
   return (
-    <CrmShell title="Board access" subtitle={`${agents.length} outside ${agents.length === 1 ? 'agent' : 'agents'} · ${staff.length} staff`}>
-      <div style={{ maxWidth: 780 }}>
+    <CrmShell title="Board access" subtitle={`${agents.length} outside ${agents.length === 1 ? 'agent' : 'agents'} · ${staff.length} staff`} dark>
+      <div style={{ maxWidth: 780, padding: isMobile ? '14px' : '22px' }}>
         {/* add */}
-        <div style={{ background: '#FFFDFA', border: '1px solid #EDEBE5', borderRadius: 12, padding: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Add an agent</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, lineHeight: 1.5 }}>
+        <div style={{ background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 12, padding: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT }}>Add an agent</div>
+          <div style={{ fontSize: 12, color: DTEXT_DIM, marginTop: 4, lineHeight: 1.5 }}>
             They sign in at <strong>/board-login</strong> with this address — no password needed.
             Set one too and they can also sign in at the full CRM login with it.
           </div>
@@ -166,20 +169,20 @@ function BoardAccess() {
               placeholder="Handynummer (optional, with country code)" type="tel"
               style={{ ...inp, flex: 1 }} onKeyDown={e => e.key === 'Enter' && valid && !busy && add()} />
             <button onClick={add} disabled={!valid || busy}
-              style={{ background: NAVY, color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px',
+              style={{ background: A, color: '#151C2C', border: 'none', borderRadius: 9, padding: '11px 20px',
                        fontSize: 12.5, fontWeight: 700, fontFamily: F, cursor: valid && !busy ? 'pointer' : 'not-allowed',
                        opacity: valid && !busy ? 1 : 0.5, whiteSpace: 'nowrap', flex: isMobile ? undefined : '0 0 auto' }}>
               {busy ? 'Adding…' : 'Add'}
             </button>
           </div>
-          {note && <div style={{ marginTop: 10, fontSize: 12, color: NAVY, fontWeight: 600 }}>{note}</div>}
+          {note && <div style={{ marginTop: 10, fontSize: 12, color: A, fontWeight: 600 }}>{note}</div>}
         </div>
 
         {/* Facebook cookie uploader — replaces pasting a cookie export into
             WhatsApp for someone to scp onto the VPS by hand. */}
-        <div style={{ background: '#FFFDFA', border: '1px solid #EDEBE5', borderRadius: 12, padding: 18, marginTop: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Facebook cookie upload</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, lineHeight: 1.5 }}>
+        <div style={{ background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 12, padding: 18, marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT }}>Facebook cookie upload</div>
+          <div style={{ fontSize: 12, color: DTEXT_DIM, marginTop: 4, lineHeight: 1.5 }}>
             Paste the exported cookie JSON (the array with c_user / xs / …) to re-log the Facebook poster in.
           </div>
           <textarea value={cookieText} onChange={e => setCookieText(e.target.value)}
@@ -191,7 +194,7 @@ function BoardAccess() {
             {cookieBusy ? 'Importing & verifying…' : 'Import & verify'}
           </button>
           {cookieNote && (
-            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: cookieNote.ok ? NAVY : '#B91C1C' }}>
+            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: cookieNote.ok ? A : '#F87171' }}>
               {cookieNote.text}
             </div>
           )}
@@ -200,9 +203,9 @@ function BoardAccess() {
         {/* FB-groups backlog launcher — same selection fb_backlog_seed.js uses
             (never reached ≥5 groups, newest + photo listings first), same
             one-at-a-time backlog !upload/!price already share safely. */}
-        <div style={{ background: '#FFFDFA', border: '1px solid #EDEBE5', borderRadius: 12, padding: 18, marginTop: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Launch FB-groups queue</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, lineHeight: 1.5 }}>
+        <div style={{ background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 12, padding: 18, marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT }}>Launch FB-groups queue</div>
+          <div style={{ fontSize: 12, color: DTEXT_DIM, marginTop: 4, lineHeight: 1.5 }}>
             Queues the N listings still under 5 groups (newest + photos first) and starts the backlog — one listing at a time, its own pacing.
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
@@ -215,19 +218,19 @@ function BoardAccess() {
             </button>
           </div>
           {queueNote && (
-            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: queueNote.ok ? NAVY : '#B91C1C' }}>
+            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: queueNote.ok ? A : '#F87171' }}>
               {queueNote.text}
             </div>
           )}
         </div>
 
-        {err && <div style={{ marginTop: 16, color: '#B91C1C', fontSize: 13, fontWeight: 600 }}>{err}</div>}
+        {err && <div style={{ marginTop: 16, color: '#F87171', fontSize: 13, fontWeight: 600 }}>{err}</div>}
 
         {/* Not rendered while loading: an empty list and a list that has not
             arrived yet look identical, and "Nobody yet — add the first address"
             is a lie that reads as fact for as long as the request takes. */}
         {loading ? (
-          <div style={{ marginTop: 20, fontSize: 13, color: '#6b7280' }}>Loading…</div>
+          <div style={{ marginTop: 20, fontSize: 13, color: DTEXT_DIM }}>Loading…</div>
         ) : (
           <>
             <Section title="Board agents" hint="Outside agents. Removing one deletes the account." rows={agents}
@@ -258,7 +261,7 @@ function PhoneCell({ r, onSave }: { r: Row; onSave: (r: Row, value: string) => v
   }
   return (
     <div onClick={() => setEditing(true)} title="Click to edit"
-      style={{ fontSize: 11.5, color: r.whatsapp_phone ? '#1A1A1A' : '#8b8f98', cursor: 'pointer', minWidth: 110 }}>
+      style={{ fontSize: 11.5, color: r.whatsapp_phone ? DTEXT : DTEXT_FAINT, cursor: 'pointer', minWidth: 110 }}>
       {r.whatsapp_phone ? `+${r.whatsapp_phone}` : 'no phone — click to add'}
     </div>
   )
@@ -270,26 +273,26 @@ function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, is
 }) {
   return (
     <div style={{ marginTop: 26 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</div>
-      <div style={{ fontSize: 11.5, color: '#8b8f98', marginTop: 3 }}>{hint}</div>
-      <div style={{ marginTop: 10, background: '#FFFDFA', border: '1px solid #EDEBE5', borderRadius: 12, overflow: 'hidden' }}>
-        {!rows.length && <div style={{ padding: 16, fontSize: 12.5, color: '#8b8f98' }}>{empty}</div>}
+      <div style={{ fontSize: 12, fontWeight: 700, color: DTEXT, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</div>
+      <div style={{ fontSize: 11.5, color: DTEXT_FAINT, marginTop: 3 }}>{hint}</div>
+      <div style={{ marginTop: 10, background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+        {!rows.length && <div style={{ padding: 16, fontSize: 12.5, color: DTEXT_FAINT }}>{empty}</div>}
         {rows.map((r, i) => (
           <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                                   borderTop: i ? '1px solid #F1EFE9' : 'none',
+                                   borderTop: i ? `1px solid ${DBORDER}` : 'none',
                                    flexWrap: isMobile ? 'wrap' : 'nowrap', opacity: r.active ? 1 : 0.55 }}>
             <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: DTEXT }}>
                 {r.name || r.username}
-                {!r.active && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: '#B45309',
-                                             background: '#FEF3C7', padding: '2px 7px', borderRadius: 5 }}>SUSPENDED</span>}
+                {!r.active && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: '#F59E0B',
+                                             background: 'rgba(245,158,11,0.12)', padding: '2px 7px', borderRadius: 5 }}>SUSPENDED</span>}
               </div>
-              <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 2 }}>{r.email || 'no address — cannot sign in'}</div>
+              <div style={{ fontSize: 11.5, color: DTEXT_DIM, marginTop: 2 }}>{r.email || 'no address — cannot sign in'}</div>
             </div>
             <PhoneCell r={r} onSave={onSavePhone} />
-            <div style={{ fontSize: 11.5, color: '#8b8f98', minWidth: 110 }}>last in: {when(r.last_login_at)}</div>
+            <div style={{ fontSize: 11.5, color: DTEXT_FAINT, minWidth: 110 }}>last in: {when(r.last_login_at)}</div>
             <button onClick={() => onToggle(r)} style={ghost}>{r.active ? 'Suspend' : 'Re-enable'}</button>
-            <button onClick={() => onRemove(r)} style={{ ...ghost, color: '#B91C1C', borderColor: '#F3D6D6' }}>Remove</button>
+            <button onClick={() => onRemove(r)} style={{ ...ghost, color: '#F87171', borderColor: 'rgba(248,113,113,0.35)' }}>Remove</button>
           </div>
         ))}
       </div>
@@ -302,14 +305,14 @@ export default function Page() {
 }
 
 const inp: React.CSSProperties = {
-  background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 9, padding: '11px 13px',
-  fontSize: 12.5, color: '#1A1A1A', fontFamily: F, outline: 'none', minWidth: 0,
+  background: '#0E1420', border: `1px solid ${DBORDER}`, borderRadius: 9, padding: '11px 13px',
+  fontSize: 12.5, color: DTEXT, fontFamily: F, outline: 'none', minWidth: 0,
 }
 const btn: React.CSSProperties = {
-  background: NAVY, color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px',
+  background: A, color: '#151C2C', border: 'none', borderRadius: 9, padding: '11px 20px',
   fontSize: 12.5, fontWeight: 700, fontFamily: F, whiteSpace: 'nowrap',
 }
 const ghost: React.CSSProperties = {
-  background: 'transparent', border: '1px solid #E4E0D6', color: NAVY, borderRadius: 8,
+  background: 'transparent', border: `1px solid ${DBORDER}`, color: DTEXT_DIM, borderRadius: 8,
   padding: '7px 13px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer',
 }

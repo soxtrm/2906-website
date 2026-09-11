@@ -119,7 +119,7 @@ function Dropdown({ id, label, active, open, onToggle, children }: {
   )
 }
 
-export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra }: {
+export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark }: {
   value: BoardFilterValue
   onChange: (patch: Partial<BoardFilterValue>) => void
   onReset: () => void
@@ -128,6 +128,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   loading: boolean
   /** Rendered at the end of the row — the board puts its "drawn area" pill here. */
   extra?: React.ReactNode
+  /** The mobile toggle row sits directly on CrmShell's filterBar background —
+   * on the dark shell that's near-black navy, so it needs light text instead
+   * of the public site's navy-on-white default or it reads as invisible. */
+  dark?: boolean
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -178,7 +182,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       <button
         type="button"
         onClick={() => setMobileOpen(o => !o)}
-        className="lg:hidden flex items-center gap-2 text-navy text-sm font-medium w-full min-h-[38px] py-1"
+        className={cn(
+          'lg:hidden flex items-center gap-2 text-sm font-medium w-full min-h-[38px] py-1',
+          dark ? 'text-[#EDEAE1]' : 'text-navy',
+        )}
       >
         <SlidersHorizontal className="w-4 h-4" />
         Filters
@@ -187,7 +194,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
             {activeCount}
           </span>
         )}
-        <span className="ml-auto text-navy/40 text-xs font-normal tabular-nums">
+        <span className={cn('ml-auto text-xs font-normal tabular-nums', dark ? 'text-[#EDEAE1]/40' : 'text-navy/40')}>
           {loading ? '…' : `${count} listing${count === 1 ? '' : 's'}`}
         </span>
       </button>

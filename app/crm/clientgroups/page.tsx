@@ -26,13 +26,13 @@ function DashboardTabs() {
     { href: '/ownergroups', label: 'Ownergroups' },
   ]
   return (
-    <div className="flex gap-1 mb-4 border-b border-navy/10">
+    <div className="flex gap-1 mb-4 border-b border-white/10">
       {tabs.map(t => {
         const active = pathname.startsWith(t.href)
         return (
           <button key={t.href} onClick={() => router.push(t.href)}
             className={`px-4 py-2 text-xs font-semibold transition-colors border-b-2 -mb-px ${
-              active ? 'border-gold text-navy' : 'border-transparent text-navy/40 hover:text-navy'
+              active ? 'border-gold text-white' : 'border-transparent text-white/40 hover:text-white'
             }`}>
             {t.label}
           </button>
@@ -61,14 +61,14 @@ const LOCATIONS_MESSAGES = {
 }
 
 const FIELD =
-  'w-full px-3 py-2 bg-off-white border-0 rounded text-sm text-navy ' +
-  'placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50'
-const LABEL = 'block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/40 mb-1.5'
+  'w-full px-3 py-2 bg-white/5 border-0 rounded text-sm text-white ' +
+  'placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-gold/50'
+const LABEL = 'block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40 mb-1.5'
 const PRIMARY =
-  'px-3 py-2 rounded bg-navy text-white text-xs font-semibold hover:bg-navy-light ' +
+  'px-3 py-2 rounded bg-gold text-navy text-xs font-semibold hover:bg-gold-light ' +
   'transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-const GHOST = 'px-3 py-2 rounded text-xs text-navy/50 hover:text-navy transition-colors border border-navy/10'
-const DANGER = 'px-3 py-2 rounded text-xs text-red-600 hover:bg-red-50 transition-colors border border-red-200'
+const GHOST = 'px-3 py-2 rounded text-xs text-white/50 hover:text-white transition-colors border border-white/10'
+const DANGER = 'px-3 py-2 rounded text-xs text-red-400 hover:bg-red-500/10 transition-colors border border-red-500/20'
 
 type Clientgroup = {
   id: number; shortCode: string; chatId: string; session: string; clientId: string | null
@@ -190,37 +190,37 @@ function ClientgroupCard({ cg, onOpen }: { cg: Clientgroup; onOpen: () => void }
   const flags = nationalityFlags(cg.search.nationalities)
 
   return (
-    <div onClick={onOpen} className="cursor-pointer bg-white rounded-lg border border-navy/8 hover:border-gold/40 hover:shadow-md transition-all p-4">
+    <div onClick={onOpen} className="cursor-pointer bg-[#141B29] rounded-lg border border-white/[0.09] hover:border-gold/40 hover:shadow-md transition-all p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-bold text-navy text-sm flex items-center gap-1.5">
+          <div className="font-bold text-white text-sm flex items-center gap-1.5">
             {flags.length > 0 && <span title="Nationality">{flags.join(' ')}</span>}
             {cg.label}
           </div>
-          <div className="text-[10px] text-navy/40 font-mono mt-0.5">{cg.shortCode} · {cg.session}</div>
+          <div className="text-[10px] text-white/40 font-mono mt-0.5">{cg.shortCode} · {cg.session}</div>
         </div>
         {statusPill(cg.status)}
       </div>
-      <div className="flex items-center gap-3 mt-2 text-[11px] text-navy/50">
+      <div className="flex items-center gap-3 mt-2 text-[11px] text-white/50">
         <span>{cg.enabled ? (cg.autoMode ? '🟢 Auto ON' : '🟡 Manual only') : '⚫ Off'}</span>
         {cg.agent && <span>· {cg.agent}</span>}
         {cg.collaboratorAgentIds?.length > 0 && <span title="Shared with collaborators">· +{cg.collaboratorAgentIds.length}</span>}
       </div>
       {cg.status === 'PAUSED' && cg.pauseUntil && (
-        <div className="text-[10px] text-navy/40 mt-1">Paused until {fmtDateTime(cg.pauseUntil)}</div>
+        <div className="text-[10px] text-white/40 mt-1">Paused until {fmtDateTime(cg.pauseUntil)}</div>
       )}
       {cg.status !== 'PAUSED' && cg.enabled && cg.autoMode && fmtEvalWindow(cg.nextEvalWindowStart, cg.nextEvalWindowEnd) && (
-        <div className="text-[10px] text-navy/30 mt-1">Next evaluation: {fmtEvalWindow(cg.nextEvalWindowStart, cg.nextEvalWindowEnd)}</div>
+        <div className="text-[10px] text-white/30 mt-1">Next evaluation: {fmtEvalWindow(cg.nextEvalWindowStart, cg.nextEvalWindowEnd)}</div>
       )}
       {searchBits.length > 0 && (
-        <div className="text-[11px] text-navy/60 mt-2 truncate">{searchBits.join(' · ')}</div>
+        <div className="text-[11px] text-white/60 mt-2 truncate">{searchBits.join(' · ')}</div>
       )}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-navy/5">
-        <span className="text-[10px] text-navy/40">Last activity {fmtTimeAgo(cg.lastClientMessageAt || cg.lastAssistantMessageAt || cg.lastHumanMessageAt || cg.updatedAt)}</span>
-        <span className="text-[10px] font-semibold text-navy/60">
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+        <span className="text-[10px] text-white/40">Last activity {fmtTimeAgo(cg.lastClientMessageAt || cg.lastAssistantMessageAt || cg.lastHumanMessageAt || cg.updatedAt)}</span>
+        <span className="text-[10px] font-semibold text-white/60">
           {cg.matches.total} match{cg.matches.total === 1 ? '' : 'es'}
           {cg.matches.unsent > 0 && <span className="text-gold ml-1">· {cg.matches.unsent} new</span>}
-          {cg.hasQueuedAction && <span className="text-blue-500 ml-1">· queued</span>}
+          {cg.hasQueuedAction && <span className="text-blue-400 ml-1">· queued</span>}
         </span>
       </div>
     </div>
@@ -484,8 +484,8 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
   if (!data) {
     return (
       <>
-        <div onClick={onClose} className="fixed inset-0 z-[199] bg-navy/20 backdrop-blur-[3px]" />
-        <div className="fixed z-[200] bg-white shadow-2xl rounded-xl p-6 inset-x-4 top-1/2 -translate-y-1/2 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[520px] text-sm text-navy/50">
+        <div onClick={onClose} className="fixed inset-0 z-[199] bg-black/40 backdrop-blur-[3px]" />
+        <div className="fixed z-[200] bg-[#141B29] shadow-2xl rounded-xl p-6 inset-x-4 top-1/2 -translate-y-1/2 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[520px] text-sm text-white/50">
           {err ? err : 'Loading…'}
         </div>
       </>
@@ -495,18 +495,18 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
   const s = data.state
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 z-[199] bg-navy/20 backdrop-blur-[3px]" />
-      <div className="fixed z-[200] bg-white shadow-2xl flex flex-col inset-x-0 bottom-0 rounded-t-2xl max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[600px] sm:rounded-xl sm:max-h-[88vh]">
-        <div className="flex items-start justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
+      <div onClick={onClose} className="fixed inset-0 z-[199] bg-black/40 backdrop-blur-[3px]" />
+      <div className="fixed z-[200] bg-[#141B29] shadow-2xl flex flex-col inset-x-0 bottom-0 rounded-t-2xl max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[600px] sm:rounded-xl sm:max-h-[88vh]">
+        <div className="flex items-start justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-white/10 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-navy tracking-tight">C{s.id} · {data.client?.name || s.client_title || 'Unconfigured'}</h2>
-            <p className="text-xs text-navy/40 mt-0.5">{s.chat_id} · {s.session}</p>
+            <h2 className="text-lg font-bold text-white tracking-tight">C{s.id} · {data.client?.name || s.client_title || 'Unconfigured'}</h2>
+            <p className="text-xs text-white/40 mt-0.5">{s.chat_id} · {s.session}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded flex items-center justify-center bg-off-white text-navy/40 hover:text-navy">✕</button>
+          <button onClick={onClose} className="w-8 h-8 rounded flex items-center justify-center bg-white/5 text-white/40 hover:text-white">✕</button>
         </div>
 
         <div className="px-5 sm:px-6 py-5 overflow-y-auto grow space-y-5">
-          {err && <div className="rounded bg-red-50 text-red-700 text-xs px-3 py-2">{err}</div>}
+          {err && <div className="rounded bg-red-500/10 text-red-400 text-xs px-3 py-2">{err}</div>}
 
           {/* controls — Start / Pause / Pause Until / Resume / Stop (Kev's
               exact vocabulary) over the existing enabled/status/auto_mode/
@@ -589,7 +589,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                           disabled={collabBusy}
                           onClick={() => toggleCollaborator(a.id)}
                           className={`px-2.5 py-1 rounded-full border text-xs transition-colors ${
-                            active ? 'bg-navy text-white border-navy' : 'bg-white text-navy/60 border-gray-200 hover:border-navy/40'
+                            active ? 'bg-gold text-navy border-gold' : 'bg-white/5 text-white/60 border-white/10 hover:border-white/40'
                           }`}
                         >
                           {a.name || a.username}
@@ -606,8 +606,8 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
               trigger interval range. Gallery stays the default/preferred
               format; the hard 10/day ceiling is enforced server-side
               regardless of what's configured here. */}
-          <div className="rounded-lg border border-navy/10 p-4 bg-off-white/50">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50 mb-3">Delivery &amp; timing</h3>
+          <div className="rounded-lg border border-white/10 p-4 bg-white/5">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-white/50 mb-3">Delivery &amp; timing</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={LABEL}>Delivery format</label>
@@ -655,9 +655,9 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                   onChange={e => setSettingsDraft((p: any) => ({ ...p, link_daily_limit: e.target.value }))} />
               </div>
             </div>
-            <p className="text-[10px] text-navy/40 mt-2">A range, not a fixed schedule — the assistant picks a natural point inside it based on engagement and available matches, always inside 08:00–20:00 Malta time. The three limits below are hard ceilings shared by manual and automatic sends alike — raise them for an urgent 1–2 day search, lower them for a relaxed one.</p>
+            <p className="text-[10px] text-white/40 mt-2">A range, not a fixed schedule — the assistant picks a natural point inside it based on engagement and available matches, always inside 08:00–20:00 Malta time. The three limits below are hard ceilings shared by manual and automatic sends alike — raise them for an urgent 1–2 day search, lower them for a relaxed one.</p>
             {data.usageToday && (
-              <p className="text-[11px] font-semibold text-navy/70 mt-2">
+              <p className="text-[11px] font-semibold text-white/70 mt-2">
                 Today: {data.usageToday.total}/{data.usageToday.dailyLimit} · Gallery: {data.usageToday.gallery}/{data.usageToday.galleryLimit} · Links: {data.usageToday.link}/{data.usageToday.linkLimit}
               </p>
             )}
@@ -674,7 +674,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
               see when a clientgroup opens. */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-navy/50">Matches ({data.matches?.length || 0})</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-white/50">Matches ({data.matches?.length || 0})</h3>
               <div className="flex items-center gap-2">
                 <button disabled={matchNowBusy} onClick={matchNow}
                   title="Run the matching engine right now instead of waiting for the next scheduled check"
@@ -687,7 +687,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     key={f}
                     onClick={() => setMatchFilter(f)}
                     className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-                      matchFilter === f ? 'bg-navy text-white' : 'bg-off-white text-navy/40 hover:text-navy'
+                      matchFilter === f ? 'bg-gold text-navy' : 'bg-white/5 text-white/40 hover:text-white'
                     }`}
                   >{f}</button>
                 ))}
@@ -707,45 +707,45 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 .map((m: any) => {
                   const isBusy = matchBusyId === m.property_id
                   return (
-                    <div key={m.id} className="bg-off-white rounded px-3 py-2 text-xs">
+                    <div key={m.id} className="bg-white/5 rounded px-3 py-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-navy">#{m.ref} · {m.town || '?'} · {m.bedrooms ?? '?'}bed · €{m.price ?? '?'}</span>
-                        <span className="text-navy/40 shrink-0">{m.match_score}pt</span>
+                        <span className="font-medium text-white">#{m.ref} · {m.town || '?'} · {m.bedrooms ?? '?'}bed · €{m.price ?? '?'}</span>
+                        <span className="text-white/40 shrink-0">{m.match_score}pt</span>
                       </div>
                       <div className="flex items-center justify-between gap-2 mt-1.5">
                         <div className="text-[10px] uppercase tracking-wide">
                           {m.sent_to_client ? (
-                            <span className="text-green-600 font-semibold">
+                            <span className="text-green-400 font-semibold">
                               SENT{m.sent_via ? ` · ${m.sent_via}` : ''}
-                              {m.sent_at && <span className="text-navy/30 font-normal normal-case ml-1">{fmtDateTime(m.sent_at)}</span>}
-                              {m.client_reaction && <span className="text-navy/40 font-normal normal-case ml-1">· {m.client_reaction}</span>}
+                              {m.sent_at && <span className="text-white/30 font-normal normal-case ml-1">{fmtDateTime(m.sent_at)}</span>}
+                              {m.client_reaction && <span className="text-white/40 font-normal normal-case ml-1">· {m.client_reaction}</span>}
                             </span>
                           ) : isBusy ? (
-                            <span className="text-blue-500 font-semibold">SENDING…</span>
+                            <span className="text-blue-400 font-semibold">SENDING…</span>
                           ) : (
-                            <span className="text-navy/40 font-semibold">UNSENT</span>
+                            <span className="text-white/40 font-semibold">UNSENT</span>
                           )}
                         </div>
                         <div className="flex gap-1">
                           <button disabled={isBusy} onClick={() => sendMatch(m.property_id, 'send-gallery')}
-                            className="px-2 py-1 rounded bg-navy text-white text-[10px] font-semibold hover:bg-navy-light disabled:opacity-40">
+                            className="px-2 py-1 rounded bg-gold text-navy text-[10px] font-semibold hover:bg-gold-light disabled:opacity-40">
                             {isBusy ? '…' : 'Gallery'}
                           </button>
                           <button disabled={isBusy} onClick={() => sendMatch(m.property_id, 'send-link')}
-                            className="px-2 py-1 rounded border border-navy/20 text-navy text-[10px] font-semibold hover:bg-white disabled:opacity-40">
+                            className="px-2 py-1 rounded border border-white/20 text-white text-[10px] font-semibold hover:bg-white/10 disabled:opacity-40">
                             Send Link
                           </button>
                           <button disabled={isBusy} onClick={() => openOrCopyLink(m.property_id, 'open')}
-                            title="Open listing" className="px-2 py-1 rounded text-navy/50 text-[10px] hover:text-navy">
+                            title="Open listing" className="px-2 py-1 rounded text-white/50 text-[10px] hover:text-white">
                             Open
                           </button>
                           <button disabled={isBusy} onClick={() => openOrCopyLink(m.property_id, 'copy')}
-                            title="Copy link" className="px-2 py-1 rounded text-navy/50 text-[10px] hover:text-navy">
+                            title="Copy link" className="px-2 py-1 rounded text-white/50 text-[10px] hover:text-white">
                             ⧉
                           </button>
                           {!m.sent_to_client && (
                             <button disabled={isBusy} onClick={() => markSent(m.property_id)}
-                              title="Already shared this manually outside the tool" className="px-2 py-1 rounded text-navy/30 text-[10px] hover:text-navy/60">
+                              title="Already shared this manually outside the tool" className="px-2 py-1 rounded text-white/30 text-[10px] hover:text-white/60">
                               Mark Sent
                             </button>
                           )}
@@ -754,7 +754,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     </div>
                   )
                 })}
-              {(!data.matches || data.matches.length === 0) && <p className="text-xs text-navy/30">No matches yet.</p>}
+              {(!data.matches || data.matches.length === 0) && <p className="text-xs text-white/30">No matches yet.</p>}
             </div>
           </div>
 
@@ -763,10 +763,10 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
               an explicit instruction here is a conscious delegation.
               Collapsed by default (2026-09-04, Kev's explicit ask — Matches
               above is what this sheet should lead with). */}
-          <details className="rounded-lg border border-navy/10 bg-off-white/50">
-            <summary className="cursor-pointer select-none px-4 py-3 text-xs font-bold uppercase tracking-wide text-navy/50">Assistant steering</summary>
+          <details className="rounded-lg border border-white/10 bg-white/5">
+            <summary className="cursor-pointer select-none px-4 py-3 text-xs font-bold uppercase tracking-wide text-white/50">Assistant steering</summary>
             <div className="px-4 pb-4">
-            <p className="text-[10px] text-navy/40 mb-2 leading-relaxed">
+            <p className="text-[10px] text-white/40 mb-2 leading-relaxed">
               Internal instruction only — never sent to the client as-is. The assistant translates it into a natural message when appropriate, and will act even if you recently wrote in this chat yourself (explicit delegation overrides normal human-silence).
             </p>
             <textarea
@@ -780,10 +780,10 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
             <button className={PRIMARY + ' mt-2'} disabled={steerBusy || !steerText.trim() || !s.client_id} onClick={sendSteering}>
               {steerBusy ? 'Thinking…' : 'Send instruction'}
             </button>
-            {!s.client_id && <p className="text-[10px] text-navy/30 mt-1">No linked client yet — configure the profile first.</p>}
+            {!s.client_id && <p className="text-[10px] text-white/30 mt-1">No linked client yet — configure the profile first.</p>}
 
             {steerResult && (
-              <div className={`mt-3 rounded px-3 py-2.5 text-xs ${steerResult.executed === false ? 'bg-amber-50 text-amber-800' : 'bg-green-50 text-green-800'}`}>
+              <div className={`mt-3 rounded px-3 py-2.5 text-xs ${steerResult.executed === false ? 'bg-amber-500/10 text-amber-400' : 'bg-green-500/10 text-green-400'}`}>
                 <div className="font-semibold uppercase text-[10px] tracking-wide mb-1">
                   {steerResult.intent} · {steerResult.executed === false ? 'BLOCKED' : 'EXECUTED'}
                 </div>
@@ -803,9 +803,9 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
               immediately. Collapsed by default, same reasoning as steering
               above. */}
           <details>
-            <summary className="cursor-pointer select-none text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Client search profile</summary>
+            <summary className="cursor-pointer select-none text-xs font-bold uppercase tracking-wide text-white/50 mb-2">Client search profile</summary>
             {!s.client_id ? (
-              <p className="text-xs text-navy/40">No linked client yet — configure via reply-in-control-channel or !cadd C{s.id} first.</p>
+              <p className="text-xs text-white/40">No linked client yet — configure via reply-in-control-channel or !cadd C{s.id} first.</p>
             ) : (
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div><label className={LABEL}>Name</label><input className={FIELD} value={profileDraft.name} onChange={e => setProfileDraft((p: any) => ({ ...p, name: e.target.value }))} /></div>
@@ -817,7 +817,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 <div><label className={LABEL}>Duration (months)</label><input className={FIELD} value={profileDraft.duration_months} onChange={e => setProfileDraft((p: any) => ({ ...p, duration_months: e.target.value }))} /></div>
                 <div><label className={LABEL}>Property types (comma-sep)</label><input className={FIELD} value={profileDraft.property_types} onChange={e => setProfileDraft((p: any) => ({ ...p, property_types: e.target.value }))} /></div>
 
-                <div className="col-span-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-navy/30">Location</div>
+                <div className="col-span-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-white/30">Location</div>
                 {/* CLIENTGROUPS fix (2026-09-04): dropped the free-text
                     "Locations"/"Preferred locations" comma-sep inputs Kev
                     called out as still impractical — the canonical selector
@@ -831,7 +831,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     "Sliema"/"sliema"/typo variants can't happen here and the
                     Match Engine (services/matchEngine.js's scoreLocation)
                     already reads these exact columns directly. */}
-                <div className="col-span-2 rounded-lg border border-navy/10 p-3 bg-off-white/40">
+                <div className="col-span-2 rounded-lg border border-white/10 p-3 bg-white/5">
                   <NextIntlClientProvider locale="en" messages={LOCATIONS_MESSAGES}>
                     <LocationSelector
                       value={{
@@ -849,12 +849,12 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                   </NextIntlClientProvider>
                 </div>
 
-                <div className="col-span-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-navy/30">Property features</div>
+                <div className="col-span-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-white/30">Property features</div>
                 <div className="col-span-2"><label className={LABEL}>Features wanted (comma-sep)</label><input className={FIELD} value={profileDraft.features_wanted} onChange={e => setProfileDraft((p: any) => ({ ...p, features_wanted: e.target.value }))} /></div>
                 <div><label className={LABEL}>Preferred features (comma-sep)</label><input className={FIELD} value={profileDraft.preferred_features} onChange={e => setProfileDraft((p: any) => ({ ...p, preferred_features: e.target.value }))} /></div>
                 <div><label className={LABEL}>Top-priority features (comma-sep)</label><input className={FIELD} value={profileDraft.top_priority_features} onChange={e => setProfileDraft((p: any) => ({ ...p, top_priority_features: e.target.value }))} /></div>
 
-                <div className="col-span-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-navy/30">Client</div>
+                <div className="col-span-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-white/30">Client</div>
                 <div><label className={LABEL}>Nationalities (comma-sep)</label><input className={FIELD} value={profileDraft.nationalities} onChange={e => setProfileDraft((p: any) => ({ ...p, nationalities: e.target.value }))} /></div>
                 <div><label className={LABEL}>Group size</label><input className={FIELD} value={profileDraft.group_size} onChange={e => setProfileDraft((p: any) => ({ ...p, group_size: e.target.value }))} /></div>
                 <div><label className={LABEL}>Pets</label><input className={FIELD} value={profileDraft.pets} onChange={e => setProfileDraft((p: any) => ({ ...p, pets: e.target.value }))} /></div>
@@ -867,11 +867,11 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
 
           {/* recent events — collapsed by default, same reasoning as above. */}
           <details>
-            <summary className="cursor-pointer select-none text-xs font-bold uppercase tracking-wide text-navy/50 mb-2">Recent activity</summary>
+            <summary className="cursor-pointer select-none text-xs font-bold uppercase tracking-wide text-white/50 mb-2">Recent activity</summary>
             <div className="space-y-1 max-h-[160px] overflow-y-auto pt-2">
               {(data.events || []).map((ev: any, i: number) => (
-                <div key={i} className="text-[11px] text-navy/50">
-                  <span className="font-mono text-navy/30">{fmtTimeAgo(ev.created_at)}</span> — {ev.kind}{ev.reason ? ` (${ev.reason})` : ''}
+                <div key={i} className="text-[11px] text-white/50">
+                  <span className="font-mono text-white/30">{fmtTimeAgo(ev.created_at)}</span> — {ev.kind}{ev.reason ? ` (${ev.reason})` : ''}
                 </div>
               ))}
             </div>
@@ -903,15 +903,15 @@ function ClientgroupsInner() {
   }, [rows, q])
 
   return (
-    <CrmShell title="Clientgroups" subtitle={`${rows.length} managed conversation${rows.length === 1 ? '' : 's'}`}>
+    <CrmShell title="Clientgroups" subtitle={`${rows.length} managed conversation${rows.length === 1 ? '' : 's'}`} dark>
       <DashboardTabs />
       <div className="mb-4">
         <input className={FIELD + ' max-w-xs'} placeholder="Search by label or agent…" value={q} onChange={e => setQ(e.target.value)} />
       </div>
       {loading ? (
-        <p className="text-sm text-navy/40">Loading…</p>
+        <p className="text-sm text-white/40">Loading…</p>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-navy/40">No clientgroups {me?.role === 'admin' ? 'yet' : 'assigned to you yet'}.</p>
+        <p className="text-sm text-white/40">No clientgroups {me?.role === 'admin' ? 'yet' : 'assigned to you yet'}.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map(cg => <ClientgroupCard key={cg.id} cg={cg} onOpen={() => setOpenId(cg.id)} />)}
