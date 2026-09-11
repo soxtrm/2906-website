@@ -2772,7 +2772,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       style={{
         background: DCARD,
         borderRadius: 14,
-        overflow: 'hidden',
+        // Kev, 2026-09-12: the "..." popover (menuPanel below) is an
+        // absolutely-positioned child of this card — with the card clipping
+        // its own overflow and no stacking order of its own, the next card
+        // in the single-column mobile grid (a later DOM sibling, painted on
+        // top by default) could clip or cover it. Only lifted while this
+        // card's own menu is actually open, so every other card keeps its
+        // normal rounded-photo clipping.
+        position: 'relative',
+        overflow: menuOpen ? 'visible' : 'hidden',
+        zIndex: menuOpen ? 30 : 'auto',
         // Kev, 2026-08-22: "copy airbnb.de's own UI" — an Airbnb card has
         // almost no shadow at all, just a hairline border; the card reads as
         // "the photo plus some text", not a boxed panel. Dropped the 14/28px

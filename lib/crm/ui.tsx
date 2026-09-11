@@ -613,6 +613,16 @@ export function OwnerPanel({ ownerId, onClose }: { ownerId: number; onClose: () 
             </div>
             <button onClick={onClose} style={{ background: '#F4F2EC', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 18, color: '#999', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
+          {/* Kev, 2026-09-11: this panel is a quick read-only preview — there
+              was no way from here (or the owners list it opens from, on
+              mobile especially) to reach the actual owner profile page,
+              which is where the `!o` automation Flows/settings live. */}
+          {owner && (
+            <button onClick={() => router.push(`/owner/${owner.id}`)}
+              style={{ marginTop: 12, width: '100%', background: NAVY, color: '#FFF', border: 'none', borderRadius: 9, padding: '10px 14px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              Full profile &amp; settings →
+            </button>
+          )}
         </div>
 
         {owner && (
