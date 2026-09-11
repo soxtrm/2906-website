@@ -2,20 +2,28 @@
 import { use, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, Masked, Thumbs, A, AD, AB, NAVY, F, FM, fmtMoney, fmtDate, useCrm, describe } from '@/lib/crm/ui'
+import {
+  CrmProvider, CrmShell, Masked, Thumbs, A, AD, AB, NAVY, F, FM, fmtMoney, fmtDate, useCrm, describe,
+  DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
+} from '@/lib/crm/ui'
 
 export default function OwnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   return <CrmProvider><OwnerDetail id={parseInt(id)} /></CrmProvider>
 }
 
-// ── design tokens (local to this page — same palette as lib/crm/ui.tsx) ─────
-const CARD: React.CSSProperties = { background: '#FFF', borderRadius: 16, padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }
-const HEAD: React.CSSProperties = { fontSize: 9, fontWeight: 700, color: '#B0AA9C', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }
-const MUTED = '#9C978A'
-const INK = '#1A1A1A'
-const HAIRLINE = '#EDEBE5'
-const BG = '#FAFAF7'
+// ── design tokens (local to this page — same dark palette lib/crm/ui.tsx
+// exports, plus a per-owner glow) ────────────────────────────────────────────
+// Kev, 2026-09-11: "das owner profile kann ruhig bisschen fanciger" — the
+// same dark cards Inventory and Schedule Board now use, but CARD itself gets
+// an per-owner-id colour glow (see glowFor) instead of a plain hairline, and
+// the hero banner below adds the ambient gradient wash from the mockup.
+const CARD: React.CSSProperties = { background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 16, padding: '20px 22px' }
+const HEAD: React.CSSProperties = { fontSize: 9, fontWeight: 700, color: DTEXT_FAINT, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }
+const MUTED = DTEXT_FAINT
+const INK = DTEXT
+const HAIRLINE = DBORDER
+const BG = '#0E1420'
 
 function initials(name?: string | null) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
@@ -90,7 +98,14 @@ function StatusPill({ p, small }: { p: any; small?: boolean }) {
   )
 }
 function Badge({ children, tone = 'gold' }: { children: React.ReactNode; tone?: 'gold' | 'green' | 'navy' }) {
-  const map = { gold: { bg: AD, text: A, bd: AB }, green: { bg: '#DCFCE7', text: '#15803D', bd: '#86EFAC' }, navy: { bg: 'rgba(27,42,74,0.08)', text: NAVY, bd: 'rgba(27,42,74,0.18)' } }[tone]
+  // 'navy' reads fine as dark-text-on-light-tint over the CRM's usual cream
+  // background, but NAVY text on a near-black card is close to invisible —
+  // this tone gets a light cool-blue instead once the page went dark.
+  const map = {
+    gold: { bg: AD, text: A, bd: AB },
+    green: { bg: 'rgba(34,197,94,0.14)', text: '#4ADE80', bd: 'rgba(34,197,94,0.35)' },
+    navy: { bg: 'rgba(93,138,242,0.14)', text: '#8FADF7', bd: 'rgba(93,138,242,0.32)' },
+  }[tone]
   return <span style={{ fontSize: 10, fontWeight: 700, color: map.text, background: map.bg, border: `1px solid ${map.bd}`, borderRadius: 99, padding: '4px 10px', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>{children}</span>
 }
 
@@ -129,29 +144,49 @@ function OwnerDetail({ id }: { id: number }) {
   const props: any[] = d?.properties || []
   const realPhone = useRef<string | null>(null)
 
-  if (err) return <CrmShell title="Owner"><div style={{ padding: 26, color: '#B91C1C' }}>{err}</div></CrmShell>
-  if (!o) return <CrmShell title="Owner"><div style={{ padding: 26, color: MUTED }}>Loading…</div></CrmShell>
+  if (err) return <CrmShell title="Owner" dark><div style={{ padding: 26, color: '#B91C1C' }}>{err}</div></CrmShell>
+  if (!o) return <CrmShell title="Owner" dark><div style={{ padding: 26, color: MUTED }}>Loading…</div></CrmShell>
 
   const activeCount = props.filter(p => propertyStatus(p).key === 'available').length
   const upcomingCount = props.filter(p => propertyStatus(p).key === 'upcoming').length
   const automationOn = (d.automation?.states || []).some((s: any) => s.enabled)
 
   return (
-    <CrmShell title={o.name || 'Owner'} subtitle={`ON-${String(o.id).padStart(4, '0')}`}>
+    <CrmShell title={o.name || 'Owner'} subtitle={`ON-${String(o.id).padStart(4, '0')}`} dark>
       <div style={{ padding: '20px 20px 40px', fontFamily: F, maxWidth: 1120, margin: '0 auto' }}>
         <button onClick={() => router.push('/crm/owners')} style={backBtn}>← Owners</button>
 
-        {/* ══ HEADER ═══════════════════════════════════════════════════════ */}
-        <div style={{ marginTop: 12, borderRadius: 18, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        {/* ══ HEADER ═══════════════════════════════════════════════════════
+            Kev, 2026-09-11: "das owner profile kann ruhig bisschen
+            fanciger" — a per-owner glow (glowFor(o.id), same deterministic
+            palette as Inventory's card glow) now rings the avatar and washes
+            the banner corner instead of the old flat navy gradient alone. */}
+        {(() => { const heroGlow = glowFor(o.id); return (
+        <div style={{
+          marginTop: 12, borderRadius: 18, overflow: 'hidden',
+          boxShadow: `0 0 0 1px rgba(255,255,255,0.03), 0 24px 60px -28px ${heroGlow.glow}`,
+          position: 'relative',
+        }}>
           <PhotoUpload
             ownerId={o.id} kind="cover" imageUrl={o.coverUrl} onSaved={load}
-            style={{ height: 76, background: o.coverUrl ? `center/cover no-repeat url(${o.coverUrl})` : `linear-gradient(115deg, ${NAVY} 0%, #24365e 55%, ${A} 165%)`, position: 'relative' }}
+            style={{
+              height: 76, position: 'relative',
+              background: o.coverUrl
+                ? `center/cover no-repeat url(${o.coverUrl})`
+                : `radial-gradient(ellipse 480px 200px at 85% -30%, ${heroGlow.soft}, transparent), linear-gradient(115deg, ${NAVY} 0%, #172038 55%, #0E1420 140%)`,
+            }}
           />
-          <div style={{ background: '#FFF', padding: '0 24px 20px' }}>
+          <div style={{ background: DCARD, padding: '0 24px 20px', borderTop: `1px solid ${DCARD_BORDER}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginTop: -34, flexWrap: 'wrap' }}>
               <PhotoUpload
                 ownerId={o.id} kind="avatar" imageUrl={o.avatarUrl} onSaved={load}
-                style={{ width: 76, height: 76, borderRadius: '50%', background: o.avatarUrl ? `center/cover no-repeat url(${o.avatarUrl})` : avatarColor(o.id), border: '4px solid #FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontSize: 26, fontWeight: 800, fontFamily: F, flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+                style={{
+                  width: 76, height: 76, borderRadius: '50%',
+                  background: o.avatarUrl ? `center/cover no-repeat url(${o.avatarUrl})` : avatarColor(o.id),
+                  border: `3px solid ${heroGlow.a}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontSize: 26, fontWeight: 800, fontFamily: F, flexShrink: 0,
+                  boxShadow: `0 0 0 5px ${DCARD}, 0 0 0 6px ${heroGlow.glow}, 0 0 24px 2px ${heroGlow.glow}`,
+                }}
               >
                 {!o.avatarUrl && initials(o.name)}
               </PhotoUpload>
@@ -165,7 +200,7 @@ function OwnerDetail({ id }: { id: number }) {
                   {activeCount > 0 && <Badge tone="green">{activeCount} ACTIVE LISTING{activeCount === 1 ? '' : 'S'}</Badge>}
                   {upcomingCount > 0 && <Badge>UPCOMING INVENTORY</Badge>}
                   {automationOn && <Badge tone="navy">⚙ AUTOMATION ACTIVE</Badge>}
-                  {!o.warmth && !activeCount && !upcomingCount && !automationOn && <span style={{ fontSize: 11, color: '#CCC' }}>No signals yet</span>}
+                  {!o.warmth && !activeCount && !upcomingCount && !automationOn && <span style={{ fontSize: 11, color: DTEXT_FAINT }}>No signals yet</span>}
                 </div>
               </div>
               <HeaderActions o={o} onSaved={load} setMsg={setMsg} />
@@ -184,19 +219,24 @@ function OwnerDetail({ id }: { id: number }) {
               {d.accountLabels?.length > 0 && (
                 <MetaField label="Connected accounts">
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {d.accountLabels.map((a: any) => <span key={a.account_session} style={{ ...metaVal, background: '#F4F2EC', borderRadius: 6, padding: '2px 7px', fontSize: 10.5, fontFamily: FM }}>{a.account_session}</span>)}
+                    {d.accountLabels.map((a: any) => <span key={a.account_session} style={{ ...metaVal, background: DBORDER, borderRadius: 6, padding: '2px 7px', fontSize: 10.5, fontFamily: FM }}>{a.account_session}</span>)}
                   </div>
                 </MetaField>
               )}
             </div>
-            {msg && <div style={{ marginTop: 10, fontSize: 11, color: '#15803D', fontWeight: 600 }}>{msg}</div>}
+            {msg && <div style={{ marginTop: 10, fontSize: 11, color: '#4ADE80', fontWeight: 600 }}>{msg}</div>}
           </div>
         </div>
+        ) })()}
 
         {/* ══ NEXT ACTION ══════════════════════════════════════════════════ */}
         {(() => {
           const na = nextAction(d, o, props)
-          const tone = { warn: { bg: '#FFFBEB', bd: '#FDE68A', text: '#92400E', icon: '⚡' }, info: { bg: AD, bd: AB, text: A, icon: '→' }, muted: { bg: '#FFF', bd: HAIRLINE, text: '#888', icon: '✓' } }[na.tone]
+          const tone = {
+            warn: { bg: 'rgba(217,119,6,0.12)', bd: 'rgba(217,119,6,0.35)', text: '#F0B14E', icon: '⚡' },
+            info: { bg: AD, bd: AB, text: A, icon: '→' },
+            muted: { bg: DCARD, bd: HAIRLINE, text: DTEXT_DIM, icon: '✓' },
+          }[na.tone]
           return (
             <div style={{ marginTop: 14, background: tone.bg, border: `1px solid ${tone.bd}`, borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 9, fontWeight: 700, color: tone.text, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{tone.icon} Next action</span>
@@ -244,21 +284,28 @@ const metaVal: React.CSSProperties = { fontSize: 12.5, color: INK, fontWeight: 6
 function MetaField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontSize: 9, color: '#C4BFB2', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 9, color: DTEXT_FAINT, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{label}</div>
       {children}
     </div>
   )
 }
+// Kev, 2026-09-11: each tile gets its own glow (glowFor(label), deterministic
+// so "Active listings" is always the same colour) — the mockup's row of
+// differently-tinted stat cards, not six identical grey boxes.
 function StatCard({ label, value, sub, small, onClick }: { label: string; value: any; sub?: string; small?: boolean; onClick?: () => void }) {
+  const g = glowFor(label)
   return (
-    <div onClick={onClick} style={{ ...CARD, padding: '14px 16px', cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow .15s' }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: '#B0AA9C', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+    <div onClick={onClick} style={{
+      ...CARD, padding: '14px 16px', cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow .15s',
+      boxShadow: `0 0 0 1px rgba(255,255,255,0.02), 0 14px 32px -20px ${g.glow}`,
+    }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: DTEXT_FAINT, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
       <div style={{ fontSize: small ? 16 : 24, fontWeight: 800, color: INK, marginTop: 4, fontFamily: small ? F : FM }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: A, marginTop: 2, fontWeight: 600 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: g.a, marginTop: 2, fontWeight: 600 }}>{sub}</div>}
     </div>
   )
 }
-const backBtn: React.CSSProperties = { background: '#F4F2EC', border: '1px solid #E8E4DA', borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: F, color: '#888', fontWeight: 600 }
+const backBtn: React.CSSProperties = { background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: F, color: DTEXT_DIM, fontWeight: 600 }
 
 // ── HEADER ACTIONS ───────────────────────────────────────────────────────────
 // Click-to-upload avatar/cover — hover shows a camera icon over whatever is
@@ -352,9 +399,9 @@ function HeaderActions({ o, onSaved, setMsg }: { o: any; onSaved: () => void; se
     </div>
   )
 }
-const editInp: React.CSSProperties = { background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '7px 10px', fontSize: 12, fontFamily: F, width: 130, outline: 'none' }
-const actBtnLight: React.CSSProperties = { background: '#F4F2EC', border: '1px solid #E8E4DA', borderRadius: 9, padding: '8px 13px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer', color: '#555' }
-const actBtnDark: React.CSSProperties = { background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: '8px 13px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer' }
+const editInp: React.CSSProperties = { background: '#0E1420', border: `1px solid ${DBORDER}`, borderRadius: 8, padding: '7px 10px', fontSize: 12, fontFamily: F, width: 130, outline: 'none', color: DTEXT }
+const actBtnLight: React.CSSProperties = { background: DBORDER, border: `1px solid ${DCARD_BORDER}`, borderRadius: 9, padding: '8px 13px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer', color: DTEXT_DIM }
+const actBtnDark: React.CSSProperties = { background: A, color: '#151C2C', border: 'none', borderRadius: 9, padding: '8px 13px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer' }
 
 // ══════════════════════════════════════════════════════════════════════════
 // OVERVIEW — the landing tab: recent activity + a properties-at-a-glance
@@ -386,13 +433,13 @@ function OverviewPanel({ d, onGoto }: { d: any; onGoto: (t: TabKey) => void }) {
         {d.owner.conversationSummary && (
           <div style={CARD}>
             <div style={HEAD}>Conversation summary</div>
-            <div style={{ fontSize: 12.5, color: '#555', lineHeight: 1.5 }}>{d.owner.conversationSummary}</div>
+            <div style={{ fontSize: 12.5, color: DTEXT_DIM, lineHeight: 1.5 }}>{d.owner.conversationSummary}</div>
           </div>
         )}
         {d.owner.lastReplyQuote && (
           <div style={CARD}>
             <div style={HEAD}>Last thing they said</div>
-            <div style={{ fontSize: 12.5, color: '#555', fontStyle: 'italic', lineHeight: 1.5 }}>&ldquo;{d.owner.lastReplyQuote}&rdquo;</div>
+            <div style={{ fontSize: 12.5, color: DTEXT_DIM, fontStyle: 'italic', lineHeight: 1.5 }}>&ldquo;{d.owner.lastReplyQuote}&rdquo;</div>
           </div>
         )}
         <div style={CARD}>
@@ -409,7 +456,7 @@ function OverviewPanel({ d, onGoto }: { d: any; onGoto: (t: TabKey) => void }) {
     </div>
   )
 }
-function EmptyRow({ text }: { text: string }) { return <div style={{ fontSize: 12, color: '#C4BFB2', padding: '6px 0' }}>{text}</div> }
+function EmptyRow({ text }: { text: string }) { return <div style={{ fontSize: 12, color: DTEXT_FAINT, padding: '6px 0' }}>{text}</div> }
 
 // ══════════════════════════════════════════════════════════════════════════
 // PROPERTIES — the "understand all 20 at a glance" grid.
@@ -432,18 +479,18 @@ function PropertiesPanel({ props, incompleteCount, owner, router }: { props: any
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
         {PROPERTY_FILTERS.map(f => (
           <button key={f.key} onClick={() => setFilter(f.key)} style={{
-            background: filter === f.key ? A : '#FFF', color: filter === f.key ? '#FFF' : '#777',
-            border: `1px solid ${filter === f.key ? A : '#E8E4DA'}`, borderRadius: 99, padding: '6px 13px',
+            background: filter === f.key ? A : DCARD, color: filter === f.key ? '#151C2C' : DTEXT_DIM,
+            border: `1px solid ${filter === f.key ? A : DCARD_BORDER}`, borderRadius: 99, padding: '6px 13px',
             fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer',
           }}>{f.label}</button>
         ))}
       </div>
       {incompleteCount > 0 && (
-        <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', fontSize: 11.5, color: '#92400E', marginBottom: 14 }}>
+        <div style={{ background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.35)', borderRadius: 10, padding: '10px 14px', fontSize: 11.5, color: '#F0B14E', marginBottom: 14 }}>
           ⏳ {incompleteCount} more record{incompleteCount === 1 ? '' : 's'} for this owner {incompleteCount === 1 ? 'is' : 'are'} still incomplete (missing ref/locality/price/type) — not shown as listings, pending completion in the review queue.
         </div>
       )}
-      {!filtered.length && <div style={{ ...CARD, textAlign: 'center', color: '#C4BFB2', padding: 40 }}>No properties match this filter.</div>}
+      {!filtered.length && <div style={{ ...CARD, textAlign: 'center', color: DTEXT_FAINT, padding: 40 }}>No properties match this filter.</div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 14 }}>
         {filtered.map(p => <PropertyCard key={p.id} p={p} router={router} />)}
       </div>
@@ -473,11 +520,11 @@ function PropertyCard({ p, router }: { p: any; router: any }) {
 
   return (
     <div style={{ ...CARD, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ position: 'relative', height: 140, background: '#EDEBE5' }}>
+      <div style={{ position: 'relative', height: 140, background: '#1B2333' }}>
         {p.images?.[0] ? (
           <img src={p.images[0].thumbnail || p.images[0].url || p.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.exclusive ? 'blur(3px) brightness(0.6)' : 'none' }} />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CCC', fontSize: 12 }}>No image</div>
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: DTEXT_FAINT, fontSize: 12 }}>No image</div>
         )}
         <div style={{ position: 'absolute', top: 8, left: 8 }}><StatusPill p={p} /></div>
         {p.exclusive && <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 9, fontWeight: 700, borderRadius: 5, padding: '3px 7px' }}>🔒 EXCLUSIVE</div>}
@@ -511,16 +558,16 @@ function PropertyCard({ p, router }: { p: any; router: any }) {
 function MiniFact({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5 }}>
-      <span style={{ color: '#B0AA9C' }}>{label}</span>
-      <span style={{ color: warn ? '#A16207' : '#555', fontWeight: 600 }}>{value}</span>
+      <span style={{ color: DTEXT_FAINT }}>{label}</span>
+      <span style={{ color: warn ? '#F0B14E' : DTEXT_DIM, fontWeight: 600 }}>{value}</span>
     </div>
   )
 }
 function MiniBtn({ children, onClick, disabled, busy, tone }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; busy?: boolean; tone?: 'muted' }) {
   return (
     <button onClick={onClick} disabled={disabled || busy} style={{
-      background: tone === 'muted' ? '#F6F4EF' : AD, color: tone === 'muted' ? '#888' : A,
-      border: `1px solid ${tone === 'muted' ? '#E8E4DA' : AB}`, borderRadius: 7, padding: '5px 9px',
+      background: tone === 'muted' ? DBORDER : AD, color: tone === 'muted' ? DTEXT_FAINT : A,
+      border: `1px solid ${tone === 'muted' ? DCARD_BORDER : AB}`, borderRadius: 7, padding: '5px 9px',
       fontSize: 10.5, fontWeight: 700, fontFamily: F, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
     }}>{busy ? '…' : children}</button>
   )
@@ -565,9 +612,9 @@ function InsightsPanel({ d, owner, onSaved, setMsg }: { d: any; owner: any; onSa
           ))}
           {owner.phoneVariants?.length > 0 && (
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${HAIRLINE}` }}>
-              <div style={{ fontSize: 10, color: '#B0AA9C', marginBottom: 6 }}>Known phone numbers ({owner.phoneVariants.length}) — same identity, resolved across every account</div>
+              <div style={{ fontSize: 10, color: DTEXT_FAINT, marginBottom: 6 }}>Known phone numbers ({owner.phoneVariants.length}) — same identity, resolved across every account</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {owner.phoneVariants.map((v: any, i: number) => <span key={i} style={{ fontSize: 10.5, fontFamily: FM, background: '#F6F4EF', borderRadius: 6, padding: '3px 8px', color: '#555' }}>{v.phoneMasked}{v.primary ? ' ★' : ''}</span>)}
+                {owner.phoneVariants.map((v: any, i: number) => <span key={i} style={{ fontSize: 10.5, fontFamily: FM, background: DBORDER, borderRadius: 6, padding: '3px 8px', color: DTEXT_DIM }}>{v.phoneMasked}{v.primary ? ' ★' : ''}</span>)}
               </div>
             </div>
           )}
@@ -600,13 +647,13 @@ function InsightsPanel({ d, owner, onSaved, setMsg }: { d: any; owner: any; onSa
         </div>
 
         {contextOnly.length > 0 && (
-          <div style={{ ...CARD, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-            <div style={{ ...HEAD, color: '#B45309' }}>In the owner's own words — context only</div>
-            <div style={{ fontSize: 10.5, color: '#92400E', marginBottom: 10, lineHeight: 1.5 }}>
+          <div style={{ ...CARD, background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.28)' }}>
+            <div style={{ ...HEAD, color: '#F0B14E' }}>In the owner's own words — context only</div>
+            <div style={{ fontSize: 10.5, color: '#E3A458', marginBottom: 10, lineHeight: 1.5 }}>
               Never used for matching or filtering. Shown only so you understand what was actually said.
             </div>
             {contextOnly.map((p: any) => (
-              <div key={p.id} style={{ fontSize: 12, color: '#78350F', fontStyle: 'italic', padding: '6px 0', borderBottom: '1px solid #FDE68A' }}>
+              <div key={p.id} style={{ fontSize: 12, color: '#D9B382', fontStyle: 'italic', padding: '6px 0', borderBottom: '1px solid rgba(217,119,6,0.22)' }}>
                 &ldquo;{p.source_note || p.value}&rdquo;
               </div>
             ))}
@@ -647,10 +694,10 @@ function DncControl({ owner, onSaved, setMsg }: { owner: any; onSaved: () => voi
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
       <div>
-        <span style={{ fontSize: 12, color: '#555' }}>Do not contact</span>
+        <span style={{ fontSize: 12, color: DTEXT_DIM }}>Do not contact</span>
         {owner.doNotContactReason && <div style={{ fontSize: 10, color: '#B91C1C', marginTop: 2 }}>{owner.doNotContactReason}</div>}
       </div>
-      <button onClick={toggle} disabled={busy} style={{ ...actBtnLight, color: owner.doNotContact ? '#B91C1C' : '#888', padding: '5px 11px', fontSize: 10.5 }}>
+      <button onClick={toggle} disabled={busy} style={{ ...actBtnLight, color: owner.doNotContact ? '#EF4444' : DTEXT_FAINT, padding: '5px 11px', fontSize: 10.5 }}>
         {busy ? '…' : owner.doNotContact ? 'Re-enable contact' : 'Mark DNC'}
       </button>
     </div>
@@ -756,7 +803,7 @@ function FlowsPanel({ d, ownerId, onSaved, setMsg, onGoto }: { d: any; ownerId: 
             priceflex: primaryState ? 'Click to send now' : null, available: 'Click to view properties', upcoming: 'Click to view properties' }[f.key]
           return (
             <div key={f.key} onClick={() => onCardClick(f.key)}
-              style={{ background: active ? AD : '#FFF', border: `1px solid ${active ? AB : HAIRLINE}`, borderRadius: 12, padding: '11px 13px', cursor: 'pointer', transition: 'box-shadow .15s' }}>
+              style={{ background: active ? AD : DCARD, border: `1px solid ${active ? AB : HAIRLINE}`, borderRadius: 12, padding: '11px 13px', cursor: 'pointer', transition: 'box-shadow .15s' }}>
               <div style={{ fontSize: 16 }}>{f.icon}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: active ? A : INK, marginTop: 4 }}>{f.title}</div>
               <div style={{ fontSize: 9.5, color: MUTED, marginTop: 3, lineHeight: 1.4 }}>{f.desc}</div>
@@ -904,7 +951,7 @@ function DocumentsPanel({ ownerId, documents, properties, onSaved, me }: { owner
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); doUpload(e.dataTransfer.files) }}
-        style={{ ...CARD, border: `2px dashed ${dragging ? A : '#E8E4DA'}`, background: dragging ? AD : '#FFF', textAlign: 'center', padding: 28, marginBottom: 18, cursor: 'pointer' }}
+        style={{ ...CARD, border: `2px dashed ${dragging ? A : DCARD_BORDER}`, background: dragging ? AD : DCARD, textAlign: 'center', padding: 28, marginBottom: 18, cursor: 'pointer' }}
         onClick={() => fileInput.current?.click()}
       >
         <input ref={fileInput} type="file" multiple hidden onChange={e => doUpload(e.target.files)} />
@@ -928,7 +975,7 @@ function DocumentsPanel({ ownerId, documents, properties, onSaved, me }: { owner
 
       {DOC_CATEGORIES.map(cat => grouped[cat.key]?.length ? (
         <div key={cat.key} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#B0AA9C', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{cat.label} ({grouped[cat.key].length})</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: DTEXT_FAINT, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{cat.label} ({grouped[cat.key].length})</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 10 }}>
             {grouped[cat.key].map((doc: any) => (
               <div key={doc.id} style={{ ...CARD, padding: '12px 14px' }}>
@@ -937,7 +984,7 @@ function DocumentsPanel({ ownerId, documents, properties, onSaved, me }: { owner
                   {doc.uploaded_by === 'owner-self' ? 'Uploaded by owner' : `by ${doc.uploaded_by}`} · {fmtDate(doc.created_at)}
                   {doc.property_ref && ` · #${doc.property_ref}`}
                 </div>
-                {doc.notes && <div style={{ fontSize: 10.5, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{doc.notes}</div>}
+                {doc.notes && <div style={{ fontSize: 10.5, color: DTEXT_FAINT, marginTop: 4, fontStyle: 'italic' }}>{doc.notes}</div>}
                 <div style={{ display: 'flex', gap: 6, marginTop: 9 }}>
                   <a href={doc.url} target="_blank" rel="noreferrer" style={{ ...linkBtn }}>View</a>
                   <a href={doc.url} download style={{ ...linkBtn }}>Download</a>
@@ -948,7 +995,7 @@ function DocumentsPanel({ ownerId, documents, properties, onSaved, me }: { owner
           </div>
         </div>
       ) : null)}
-      {!documents.length && <div style={{ ...CARD, textAlign: 'center', color: '#C4BFB2', padding: 30 }}>No documents yet — the vault is ready for the first one.</div>}
+      {!documents.length && <div style={{ ...CARD, textAlign: 'center', color: DTEXT_FAINT, padding: 30 }}>No documents yet — the vault is ready for the first one.</div>}
     </div>
   )
 }
@@ -975,7 +1022,7 @@ function HistoryRow({ h }: { h: any }) {
   const linkable = h.kind === 'property' && !!h.propertyId
   return (
     <div style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: `1px solid ${HAIRLINE}`, fontSize: 11.5, alignItems: 'flex-start' }}>
-      <span style={{ fontFamily: FM, fontSize: 9.5, color: '#CCC', minWidth: 92, flexShrink: 0 }}>{fmtDate(h.at)}</span>
+      <span style={{ fontFamily: FM, fontSize: 9.5, color: DTEXT_FAINT, minWidth: 92, flexShrink: 0 }}>{fmtDate(h.at)}</span>
       <span
         onClick={linkable ? () => router.push(`/crm/property/${h.propertyId}`) : undefined}
         title={linkable ? `Open #${h.propertyRef}` : undefined}
@@ -987,7 +1034,7 @@ function HistoryRow({ h }: { h: any }) {
       >
         {tag}
       </span>
-      <span style={{ color: '#555' }}>{label}</span>
+      <span style={{ color: DTEXT_DIM }}>{label}</span>
     </div>
   )
 }

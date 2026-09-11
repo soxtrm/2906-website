@@ -145,7 +145,7 @@ export function MiniBtn({ children, onClick, disabled, busy, tone }: { children:
   )
 }
 
-export function Thumbs({ images = [], count, exclusive, w = 68, h = 44 }: { images?: any[]; count?: number; exclusive?: boolean; w?: number; h?: number }) {
+export function Thumbs({ images = [], count, exclusive, w = 68, h = 44, dark }: { images?: any[]; count?: number; exclusive?: boolean; w?: number; h?: number; dark?: boolean }) {
   const n = count ?? images.length
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, width: w, height: h, flexShrink: 0, borderRadius: 7, overflow: 'hidden' }}>
@@ -153,7 +153,7 @@ export function Thumbs({ images = [], count, exclusive, w = 68, h = 44 }: { imag
         const img = images[i]
         const url = img && (img.thumbnail || img.url || img)
         return (
-          <div key={i} style={{ background: i < n && url ? `center/cover no-repeat url(${url})` : (i < n ? 'linear-gradient(135deg,#2A4A38,#162E24)' : '#F0EEEA'), display: 'flex', alignItems: 'center', justifyContent: 'center', filter: exclusive ? 'blur(3px) brightness(0.55)' : 'none', fontSize: 9, color: '#CCC' }}>
+          <div key={i} style={{ background: i < n && url ? `center/cover no-repeat url(${url})` : (i < n ? 'linear-gradient(135deg,#2A4A38,#162E24)' : (dark ? '#1B2333' : '#F0EEEA')), display: 'flex', alignItems: 'center', justifyContent: 'center', filter: exclusive ? 'blur(3px) brightness(0.55)' : 'none', fontSize: 9, color: dark ? '#5C6478' : '#CCC' }}>
             {i >= n && '·'}{exclusive && i < n && <span style={{ fontSize: 10 }}>{'🔒'}</span>}
           </div>
         )
@@ -162,11 +162,11 @@ export function Thumbs({ images = [], count, exclusive, w = 68, h = 44 }: { imag
   )
 }
 
-export function Bar({ pct }: { pct: number }) {
+export function Bar({ pct, dark }: { pct: number; dark?: boolean }) {
   const c = pct === 100 ? '#22C55E' : pct < 50 ? '#EF4444' : '#EAB308'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-      <div style={{ flex: 1, height: 3, background: '#EDEBE5', borderRadius: 2 }}><div style={{ width: `${pct}%`, height: '100%', background: c, borderRadius: 2 }} /></div>
+      <div style={{ flex: 1, height: 3, background: dark ? 'rgba(255,255,255,0.10)' : '#EDEBE5', borderRadius: 2 }}><div style={{ width: `${pct}%`, height: '100%', background: c, borderRadius: 2 }} /></div>
       <span style={{ fontSize: 10, color: c, fontWeight: 700, minWidth: 26, textAlign: 'right', fontFamily: FM }}>{pct}%</span>
     </div>
   )
@@ -188,7 +188,7 @@ export const useCrm = () => {
   return c
 }
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -293,7 +293,7 @@ export function Masked({ entityType, entityId, masked, hasValue, propertyId, siz
 }
 
 // ── app shell (sidebar / header / mobile bottom nav) ─────────────────────────
-const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: boolean }[] = [
+const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: boolean; adminOnly?: boolean }[] = [
   { key: 'dashboard', icon: '▦', label: 'Dashboard', href: '/' },
   { key: 'inventory', icon: '≡', label: 'Inventory', href: '/inventory' },
   { key: 'board',     icon: '◈', label: 'Board',     href: '/schedule-board' },
@@ -310,6 +310,12 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'ownergroups', icon: '⌂', label: 'Ownergroups', href: '/ownergroups' },
   { key: 'earnings',  icon: '€', label: 'Earnings',  href: '/earnings', disabled: true },
   { key: 'admin',     icon: '⚙', label: 'Admin',     href: '/admin', disabled: true },
+  // Kev, 2026-09-11: "outreach kann auch ins crm tab, halt nur für mich" —
+  // ARGUS lived only as a link off the dashboard page before this; adminOnly
+  // (not just a nav-array membership check) because FULL_NAV is the same
+  // array every non-board agent's login resolves to, and this one really is
+  // Kevin-only, not "every agent, like Clientgroups".
+  { key: 'outreach',  icon: '🛰', label: 'Outreach',  href: '/outreach', adminOnly: true },
 ]
 
 // Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean
@@ -317,7 +323,48 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
 // other CRM screen keeps its current look until it asks for this too. Only
 // the header / reveal banners / filter bar / content backdrop change here;
 // the sidebar was already navy and needs nothing.
-const DARK_BG = '#0E1420', DARK_SURFACE = '#151C2C', DARK_BORDER = 'rgba(255,255,255,0.08)'
+export const DARK_BG = '#0E1420', DARK_SURFACE = '#151C2C', DARK_BORDER = 'rgba(255,255,255,0.08)'
+// Card-level dark tokens — Schedule Board originated these page-scoped, then
+// Inventory and the Owner Profile picked up the same look (Kev, 2026-09-11:
+// "inventory und owner profile bzw komplettes dashboard im gleichen style").
+// Centralised here once three pages wanted the identical five colours rather
+// than tripling the same consts across files.
+export const DCARD = '#141B29', DCARD_BORDER = 'rgba(255,255,255,0.09)'
+export const DTRAY = '#0F1521'
+export const DTEXT = '#EDEAE1', DTEXT_DIM = '#8B93A6', DTEXT_FAINT = '#5C6478'
+export const DBORDER = 'rgba(255,255,255,0.10)'
+
+// ── "lights" — the ARGUS/NEON glow palette, reused ───────────────────────────
+// Kev, 2026-09-11: "mit lights meine ich diese verschickten Farbverlaufkonturen
+// ... fände das pimpt das krass auf" — the blurred colour-gradient outlines
+// already built for /outreach's per-account cards. Centralised so Inventory
+// and the Owner Profile can put the same glow language on a HOT badge, an
+// avatar ring or a stat card without re-inventing the eight-colour set.
+export const GLOWS = [
+  { name: 'magenta', a: '#e0389f', b: '#7a1054', glow: 'rgba(224,56,159,0.28)', soft: 'rgba(224,56,159,0.12)' },
+  { name: 'amber',   a: '#f2a53d', b: '#8a4a06', glow: 'rgba(242,165,61,0.26)', soft: 'rgba(242,165,61,0.12)' },
+  { name: 'cyan',    a: '#35d6c4', b: '#0d6b62', glow: 'rgba(53,214,196,0.26)', soft: 'rgba(53,214,196,0.12)' },
+  { name: 'cobalt',  a: '#4f7bf2', b: '#1c2f8a', glow: 'rgba(79,123,242,0.28)', soft: 'rgba(79,123,242,0.12)' },
+  { name: 'violet',  a: '#9d6ef2', b: '#4a1d8a', glow: 'rgba(157,110,242,0.26)', soft: 'rgba(157,110,242,0.12)' },
+  { name: 'emerald', a: '#3ecf8e', b: '#0f6b45', glow: 'rgba(62,207,142,0.24)', soft: 'rgba(62,207,142,0.12)' },
+  { name: 'rose',    a: '#f2597a', b: '#8a1030', glow: 'rgba(242,89,122,0.26)', soft: 'rgba(242,89,122,0.12)' },
+  { name: 'lime',    a: '#b9d94a', b: '#5a6b10', glow: 'rgba(185,217,74,0.22)', soft: 'rgba(185,217,74,0.12)' },
+]
+// A stable colour per id/name, not per position — an owner or a property
+// keeps the same glow across reloads instead of it shuffling with the list.
+export function glowFor(key: string | number): typeof GLOWS[number] {
+  const s = String(key)
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return GLOWS[h % GLOWS.length]
+}
+// The soft twin-blob ambient wash behind a dark hero/page background —
+// exactly outreach's own `radial-gradient(...), radial-gradient(...), ${BG}`
+// trick, parameterised so two different pages don't have to hand-tune it.
+export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)', c2: string = 'rgba(79,123,242,0.06)') {
+  return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
+         `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
+}
 export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark }:
   { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean }) {
   const isMobile = useIsMobile()
@@ -333,7 +380,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark }:
   // The server decides what this account may see. Filtering here is cosmetic —
   // the routes themselves refuse a board token — but a menu that offers a
   // door you cannot open is a bug in its own right.
-  const items = NAV.filter(i => nav.includes(i.key))
+  const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
   const roleLabel = me?.role === 'admin' ? 'Admin'
     : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   // Kev, 2026-09-07: the mobile bottom nav was cramming up to 7 clickable

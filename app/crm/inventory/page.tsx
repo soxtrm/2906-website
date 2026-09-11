@@ -5,13 +5,14 @@ import { crmFetch } from '@/lib/crm/api'
 import {
   CrmProvider, CrmShell, OwnerPanel, Masked, Pill, Thumbs, Bar, Heart,
   AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useIsMobile, useCrm, describe,
+  DCARD, DCARD_BORDER, DTRAY, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
 } from '@/lib/crm/ui'
 
 export default function InventoryPage() {
   return <CrmProvider><Inventory /></CrmProvider>
 }
 
-const sel: React.CSSProperties = { background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 7, padding: '5px 9px', fontSize: 11, color: '#888', fontFamily: F, cursor: 'pointer', flexShrink: 0 }
+const sel: React.CSSProperties = { background: DCARD, border: `1px solid ${DBORDER}`, borderRadius: 7, padding: '5px 9px', fontSize: 11, color: DTEXT_DIM, fontFamily: F, cursor: 'pointer', flexShrink: 0 }
 
 function Inventory() {
   const router = useRouter()
@@ -98,10 +99,10 @@ function Inventory() {
   )
 
   return (
-    <CrmShell title="Property Inventory" subtitle={`${rows.length} shown · ${total} total`} onAdd={() => router.push('/property/new')} filterBar={filterBar}>
+    <CrmShell title="Property Inventory" subtitle={`${rows.length} shown · ${total} total`} onAdd={() => router.push('/property/new')} filterBar={filterBar} dark>
       {ownerPanel != null && <OwnerPanel ownerId={ownerPanel} onClose={() => setOwnerPanel(null)} />}
       {isAdmin && selected.size > 0 && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 6, display: 'flex', alignItems: 'center', gap: 10, background: '#1B2A4A', color: '#FFF', padding: '9px 16px', fontFamily: F, fontSize: 12 }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 6, display: 'flex', alignItems: 'center', gap: 10, background: DTRAY, borderBottom: `1px solid ${DBORDER}`, color: DTEXT, padding: '9px 16px', fontFamily: F, fontSize: 12 }}>
           <span style={{ fontWeight: 700 }}>{selected.size} selected</span>
           <button onClick={deleteSelected} disabled={deleting}
             style={{ background: '#EF4444', color: '#FFF', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
@@ -117,14 +118,14 @@ function Inventory() {
   )
 }
 
-const chk: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#999', cursor: 'pointer' }
-const Empty = () => <div style={{ padding: 40, textAlign: 'center', color: '#BBB', fontSize: 13, fontFamily: F }}>No properties match these filters.</div>
+const chk: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: DTEXT_DIM, cursor: 'pointer' }
+const Empty = () => <div style={{ padding: 40, textAlign: 'center', color: DTEXT_FAINT, fontSize: 13, fontFamily: F }}>No properties match these filters.</div>
 
 // ── desktop table ─────────────────────────────────────────────────────────────
 function DesktopTable({ rows, isAdmin, selected, onToggleSelect, onDelete, onOwner, onOpen }: { rows: any[]; isAdmin?: boolean; selected?: Set<number>; onToggleSelect?: (id: number) => void; onDelete?: (id: number) => void; onOwner: (id: number) => void; onOpen: (id: number) => void }) {
   const [open, setOpen] = useState<number | null>(null)
-  const thS: React.CSSProperties = { padding: '9px 16px', textAlign: 'left', fontSize: 9, fontWeight: 700, color: '#AAA', letterSpacing: '0.12em', textTransform: 'uppercase', borderBottom: '1px solid #EDEBE5', background: '#FAFAF7', position: 'sticky', top: 0, zIndex: 5, whiteSpace: 'nowrap', fontFamily: F }
-  const tdS: React.CSSProperties = { padding: '13px 16px', verticalAlign: 'middle', borderBottom: '1px solid #F6F4EF' }
+  const thS: React.CSSProperties = { padding: '9px 16px', textAlign: 'left', fontSize: 9, fontWeight: 700, color: DTEXT_FAINT, letterSpacing: '0.12em', textTransform: 'uppercase', borderBottom: `1px solid ${DBORDER}`, background: DTRAY, position: 'sticky', top: 0, zIndex: 5, whiteSpace: 'nowrap', fontFamily: F }
+  const tdS: React.CSSProperties = { padding: '13px 16px', verticalAlign: 'middle', borderBottom: `1px solid ${DBORDER}` }
   if (!rows.length) return <Empty />
   const headers = isAdmin ? ['', 'Ref · Gallery', '', 'Owner', 'Location', 'Price', 'Bd/Ba', 'Available', 'Viewing', 'Profile', ''] : ['Ref · Gallery', '', 'Owner', 'Location', 'Price', 'Bd/Ba', 'Available', 'Viewing', 'Profile', '']
   return (
@@ -149,7 +150,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
   useEffect(() => { if (isOpen && !acts) crmFetch(`properties/${p.id}`).then(d => setActs(d.activities || [])).catch(() => setActs([])) }, [isOpen])
   return (
     <>
-      <tr style={{ background: '#FFF', borderLeft: p.exclusive ? `3px solid ${A}` : incomplete ? '3px solid #EF4444' : '3px solid transparent' }}>
+      <tr style={{ background: DCARD, borderLeft: p.exclusive ? `3px solid ${A}` : incomplete ? '3px solid #EF4444' : '3px solid transparent' }}>
         {isAdmin && (
           <td style={{ ...tdS, width: 30 }}>
             <input type="checkbox" checked={checked} onChange={onToggleSelect} style={{ accentColor: A, width: 15, height: 15, cursor: 'pointer' }} />
@@ -157,13 +158,13 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
         )}
         <td style={tdS}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} />
+            <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} dark />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: p.published ? A : '#CCC', fontFamily: FM, cursor: 'pointer' }} onClick={() => onOpen(p.id)}>{p.ref}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: p.published ? A : DTEXT_FAINT, fontFamily: FM, cursor: 'pointer' }} onClick={() => onOpen(p.id)}>{p.ref}</span>
                 {p.published
                   ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE ↗</span>
-                  : <span style={{ fontSize: 9, background: '#F4F2EC', border: '1px solid #E0DDD6', color: '#BBB', borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
+                  : <span style={{ fontSize: 9, background: DTRAY, border: `1px solid ${DBORDER}`, color: DTEXT_FAINT, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 {p.exclusive && <span style={{ fontSize: 9, fontWeight: 700, color: A, background: AD, border: `1px solid ${AB}`, borderRadius: 4, padding: '2px 6px' }}>🔒 EXCL</span>}
@@ -172,28 +173,28 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
             </div>
           </div>
         </td>
-        <td style={{ ...tdS, color: '#AAA', fontSize: 11, whiteSpace: 'nowrap' }}>{p.type}</td>
+        <td style={{ ...tdS, color: DTEXT_FAINT, fontSize: 11, whiteSpace: 'nowrap' }}>{p.type}</td>
         <td style={{ ...tdS, minWidth: 160 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#0F0F0F', cursor: 'pointer', borderBottom: `1px dashed ${AB}`, display: 'inline-block', marginBottom: 5 }} onClick={() => onOwner(p.owner.id)}>{p.owner.name || '—'}</div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: DTEXT, cursor: 'pointer', borderBottom: `1px dashed ${AB}`, display: 'inline-block', marginBottom: 5 }} onClick={() => onOwner(p.owner.id)}>{p.owner.name || '—'}</div>
           <Masked entityType="owner_phone" entityId={p.owner.id} masked={p.owner.phoneMasked} hasValue={p.owner.hasPhone} propertyId={p.id} />
           <Masked entityType="owner_email" entityId={p.owner.id} masked={p.owner.emailMasked} hasValue={p.owner.hasEmail} propertyId={p.id} />
         </td>
         <td style={{ ...tdS, fontSize: 12 }}>
-          <div style={{ fontWeight: 700 }}>{p.location.town}</div>
-          {p.location.street && <div style={{ color: '#AAA', fontSize: 11, marginTop: 1 }}>{p.location.street}</div>}
-          {p.location.apt && <div style={{ color: '#CCC', fontSize: 10, marginTop: 1 }}>{p.location.apt}</div>}
+          <div style={{ fontWeight: 700, color: DTEXT }}>{p.location.town}</div>
+          {p.location.street && <div style={{ color: DTEXT_FAINT, fontSize: 11, marginTop: 1 }}>{p.location.street}</div>}
+          {p.location.apt && <div style={{ color: DTEXT_FAINT, fontSize: 10, marginTop: 1 }}>{p.location.apt}</div>}
         </td>
         <td style={{ ...tdS, whiteSpace: 'nowrap' }}>
-          {p.prices.longlet != null && <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em' }}>{fmtMoney(p.prices.longlet)}<span style={{ fontSize: 10, color: '#AAA', fontWeight: 400 }}>/mo</span></div>}
+          {p.prices.longlet != null && <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em', color: DTEXT }}>{fmtMoney(p.prices.longlet)}<span style={{ fontSize: 10, color: DTEXT_FAINT, fontWeight: 400 }}>/mo</span></div>}
           {p.prices.shortlet && <div style={{ fontSize: 11, color: A, marginTop: 3, fontWeight: 600 }}>↗ Shortlet</div>}
-          {p.prices.sale != null && <div style={{ fontSize: 11, color: '#AAA', marginTop: 3 }}>{fmtMoney(p.prices.sale)} sale</div>}
+          {p.prices.sale != null && <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 3 }}>{fmtMoney(p.prices.sale)} sale</div>}
         </td>
-        <td style={{ ...tdS, textAlign: 'center', fontWeight: 800, fontSize: 15 }}>{p.beds ?? '—'}<span style={{ color: '#DDD', fontWeight: 300 }}>/</span>{p.baths ?? '—'}</td>
-        <td style={{ ...tdS, whiteSpace: 'nowrap' }}><Pill status={p.availableStatus} map={AVAIL} /><div style={{ fontSize: 10, color: '#BBB', marginTop: 5, fontFamily: FM }}>{fmtDate(p.availableDate)}</div></td>
+        <td style={{ ...tdS, textAlign: 'center', fontWeight: 800, fontSize: 15, color: DTEXT }}>{p.beds ?? '—'}<span style={{ color: DTEXT_FAINT, fontWeight: 300 }}>/</span>{p.baths ?? '—'}</td>
+        <td style={{ ...tdS, whiteSpace: 'nowrap' }}><Pill status={p.availableStatus} map={AVAIL} /><div style={{ fontSize: 10, color: DTEXT_FAINT, marginTop: 5, fontFamily: FM }}>{fmtDate(p.availableDate)}</div></td>
         <td style={{ ...tdS, whiteSpace: 'nowrap' }}><Pill status={p.viewingStatus} map={VIEW} /></td>
         <td style={{ ...tdS, minWidth: 128 }}>
-          <Bar pct={p.completeness} />
-          <div style={{ marginTop: 6, fontSize: 10, color: '#AAA', lineHeight: 1.9, fontFamily: FM }}>
+          <Bar pct={p.completeness} dark />
+          <div style={{ marginTop: 6, fontSize: 10, color: DTEXT_FAINT, lineHeight: 1.9, fontFamily: FM }}>
             <div>🔑 {p.ownerCreator || '—'}</div>
             <div>📋 {p.listingAgents.length ? p.listingAgents.join(' + ') : '—'}</div>
             {p.activityAgents.length > 0 && <div>⚡ {p.activityAgents.join(' + ')}</div>}
@@ -203,10 +204,10 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <button onClick={() => onOpen(p.id)} style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 7, padding: '5px 11px', fontSize: 10, cursor: 'pointer', fontFamily: F, fontWeight: 700 }}>Edit</button>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <span style={{ background: '#F6F4EF', border: '1px solid #E8E4DA', borderRadius: 6, padding: '3px 8px', display: 'inline-flex' }}><Heart propertyId={p.id} fav={p.fav} size={13} /></span>
+              <span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 6, padding: '3px 8px', display: 'inline-flex' }}><Heart propertyId={p.id} fav={p.fav} size={13} /></span>
               {[['⏱', 'History'], ['⚑', 'Report']].map(([ico, tip]) => (
                 <button key={ico} title={tip} onClick={() => ico === '⏱' ? onToggle() : null}
-                  style={{ background: ico === '⏱' && isOpen ? AD : '#F6F4EF', border: `1px solid ${ico === '⏱' && isOpen ? AB : '#E8E4DA'}`, borderRadius: 6, padding: '5px 8px', fontSize: 11, cursor: 'pointer', color: ico === '⏱' && isOpen ? A : '#AAA' }}>{ico}</button>
+                  style={{ background: ico === '⏱' && isOpen ? AD : DTRAY, border: `1px solid ${ico === '⏱' && isOpen ? AB : DBORDER}`, borderRadius: 6, padding: '5px 8px', fontSize: 11, cursor: 'pointer', color: ico === '⏱' && isOpen ? A : DTEXT_FAINT }}>{ico}</button>
               ))}
               {isAdmin && (
                 <button title="Delete this listing" onClick={onDelete}
@@ -217,16 +218,16 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
         </td>
       </tr>
       {isOpen && (
-        <tr style={{ background: '#FAFAF7' }}>
+        <tr style={{ background: DTRAY }}>
           <td colSpan={isAdmin ? 11 : 10} style={{ padding: '12px 28px 14px' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: '#BBB', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: F, marginBottom: 10 }}>Activity History</div>
-            {acts == null && <div style={{ fontSize: 12, color: '#BBB' }}>Loading…</div>}
-            {acts && acts.length === 0 && <div style={{ fontSize: 12, color: '#BBB' }}>No activity yet.</div>}
+            <div style={{ fontSize: 9, fontWeight: 700, color: DTEXT_FAINT, letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: F, marginBottom: 10 }}>Activity History</div>
+            {acts == null && <div style={{ fontSize: 12, color: DTEXT_FAINT }}>Loading…</div>}
+            {acts && acts.length === 0 && <div style={{ fontSize: 12, color: DTEXT_FAINT }}>No activity yet.</div>}
             {acts?.map((h: any) => (
-              <div key={h.id} style={{ display: 'flex', gap: 18, padding: '6px 0', borderBottom: '1px solid #F0EDE8', fontSize: 12, alignItems: 'center' }}>
-                <span style={{ fontFamily: FM, fontSize: 10, color: '#CCC', minWidth: 150, flexShrink: 0 }}>{fmtDate(h.when)}</span>
+              <div key={h.id} style={{ display: 'flex', gap: 18, padding: '6px 0', borderBottom: `1px solid ${DBORDER}`, fontSize: 12, alignItems: 'center' }}>
+                <span style={{ fontFamily: FM, fontSize: 10, color: DTEXT_FAINT, minWidth: 150, flexShrink: 0 }}>{fmtDate(h.when)}</span>
                 <span style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700, minWidth: 46, textAlign: 'center' }}>{h.who || '—'}</span>
-                <span style={{ color: '#555' }}>{describe(h)}</span>
+                <span style={{ color: DTEXT_DIM }}>{describe(h)}</span>
                 {h.significant && <span style={{ marginLeft: 'auto', fontSize: 9, color: A }}>●</span>}
               </div>
             ))}
@@ -241,15 +242,21 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
 function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, onOpen }: any) {
   const [open, setOpen] = useState(false)
   const incomplete = p.completeness < 60
+  const g = glowFor(p.id)
   return (
-    <div style={{ background: '#FFF', borderRadius: 14, marginBottom: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05),0 4px 12px rgba(0,0,0,0.04)', borderLeft: p.exclusive ? `4px solid ${A}` : incomplete ? '4px solid #EF4444' : '4px solid transparent' }}>
+    <div style={{
+      background: DCARD, borderRadius: 14, marginBottom: 10, overflow: 'hidden',
+      border: `1px solid ${DCARD_BORDER}`,
+      boxShadow: p.exclusive || incomplete ? undefined : `0 0 0 1px rgba(255,255,255,0.02), 0 10px 26px -18px ${g.glow}`,
+      borderLeft: p.exclusive ? `4px solid ${A}` : incomplete ? '4px solid #EF4444' : `4px solid transparent`,
+    }}>
       <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
         {isAdmin && (
           <div onClick={e => { e.stopPropagation(); onToggleSelect?.() }} style={{ paddingTop: 4 }}>
             <input type="checkbox" checked={!!selected} onChange={() => {}} style={{ accentColor: A, width: 16, height: 16, cursor: 'pointer' }} />
           </div>
         )}
-        <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} w={76} h={52} />
+        <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} w={76} h={52} dark />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -257,16 +264,16 @@ function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, o
                 <span style={{ fontSize: 11, fontWeight: 700, color: A, fontFamily: FM }}>{p.ref}</span>
                 {p.published
                   ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE</span>
-                  : <span style={{ fontSize: 9, background: '#F4F2EC', border: '1px solid #E0DDD6', color: '#BBB', borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
+                  : <span style={{ fontSize: 9, background: DTRAY, border: `1px solid ${DBORDER}`, color: DTEXT_FAINT, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#0F0F0F', fontFamily: F, marginTop: 2 }}>{p.location.town} · {p.type}</div>
-              {p.location.street && <div style={{ fontSize: 10, color: '#AAA', fontFamily: F, marginTop: 1 }}>{p.location.street}</div>}
+              <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT, fontFamily: F, marginTop: 2 }}>{p.location.town} · {p.type}</div>
+              {p.location.street && <div style={{ fontSize: 10, color: DTEXT_FAINT, fontFamily: F, marginTop: 1 }}>{p.location.street}</div>}
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <div onClick={e => e.stopPropagation()}><Heart propertyId={p.id} fav={p.fav} size={16} /></div>
               <div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: '#0F0F0F', fontFamily: F }}>{fmtMoney(p.prices.longlet || p.prices.sale || 0)}</div>
-                <div style={{ fontSize: 9, color: '#AAA', fontFamily: F }}>{p.prices.longlet ? '/mo' : 'sale'}</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: DTEXT, fontFamily: F }}>{fmtMoney(p.prices.longlet || p.prices.sale || 0)}</div>
+                <div style={{ fontSize: 9, color: DTEXT_FAINT, fontFamily: F }}>{p.prices.longlet ? '/mo' : 'sale'}</div>
               </div>
             </div>
           </div>
@@ -275,24 +282,24 @@ function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, o
             {p.viewingStatus !== 'none' && <Pill status={p.viewingStatus} map={VIEW} small />}
             {p.exclusive && <span style={{ fontSize: 9, color: A, fontWeight: 700, background: AD, border: `1px solid ${AB}`, borderRadius: 4, padding: '2px 6px' }}>🔒 EXCL</span>}
           </div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 7, fontSize: 10, color: '#AAA', fontFamily: F, alignItems: 'center' }}>
-            <span style={{ fontWeight: 600, color: '#666' }}>🛏 {p.beds ?? '—'} · 🚿 {p.baths ?? '—'}</span>
+          <div style={{ display: 'flex', gap: 12, marginTop: 7, fontSize: 10, color: DTEXT_FAINT, fontFamily: F, alignItems: 'center' }}>
+            <span style={{ fontWeight: 600, color: DTEXT_DIM }}>🛏 {p.beds ?? '—'} · 🚿 {p.baths ?? '—'}</span>
             <span>{fmtDate(p.availableDate)}</span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: '#CCC' }}>{open ? '▲' : '▼'}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: DTEXT_FAINT }}>{open ? '▲' : '▼'}</span>
           </div>
         </div>
       </div>
       {open && (
-        <div style={{ borderTop: '1px solid #F4F2EC', padding: '14px 16px', background: '#FAFAF7' }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: '#BBB', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: F, marginBottom: 8 }}>Owner</div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#0F0F0F', fontFamily: F, borderBottom: `1px dashed ${AB}`, cursor: 'pointer' }} onClick={() => onOwner(p.owner.id)}>{p.owner.name || '—'}</span>
+        <div style={{ borderTop: `1px solid ${DBORDER}`, padding: '14px 16px', background: DTRAY }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: DTEXT_FAINT, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: F, marginBottom: 8 }}>Owner</div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: DTEXT, fontFamily: F, borderBottom: `1px dashed ${AB}`, cursor: 'pointer' }} onClick={() => onOwner(p.owner.id)}>{p.owner.name || '—'}</span>
           <div style={{ marginTop: 7, display: 'flex', flexDirection: 'column', gap: 5 }}>
             <Masked entityType="owner_phone" entityId={p.owner.id} masked={p.owner.phoneMasked} hasValue={p.owner.hasPhone} propertyId={p.id} size={12} />
             <Masked entityType="owner_email" entityId={p.owner.id} masked={p.owner.emailMasked} hasValue={p.owner.hasEmail} propertyId={p.id} size={12} />
           </div>
-          <div style={{ marginTop: 12, marginBottom: 14 }}><Bar pct={p.completeness} /></div>
+          <div style={{ marginTop: 12, marginBottom: 14 }}><Bar pct={p.completeness} dark /></div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={onOpen} style={{ flex: 1, background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: '11px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>Open / Edit</button>
+            <button onClick={onOpen} style={{ flex: 1, background: A, color: '#151C2C', border: 'none', borderRadius: 9, padding: '11px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>Open / Edit</button>
             {isAdmin && (
               <button onClick={onDelete} style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 9, padding: '11px 14px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>🗑</button>
             )}
