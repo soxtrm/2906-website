@@ -312,8 +312,14 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'admin',     icon: '⚙', label: 'Admin',     href: '/admin', disabled: true },
 ]
 
-export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
-  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode }) {
+// Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean
+// und übersichtlicher" — opt-in per page rather than a global flip, so every
+// other CRM screen keeps its current look until it asks for this too. Only
+// the header / reveal banners / filter bar / content backdrop change here;
+// the sidebar was already navy and needs nothing.
+const DARK_BG = '#0E1420', DARK_SURFACE = '#151C2C', DARK_BORDER = 'rgba(255,255,255,0.08)'
+export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark }:
+  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean }) {
   const isMobile = useIsMobile()
   const pathname = usePathname() || '/'
   const router = useRouter()
@@ -387,7 +393,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
       )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header style={{ background: '#FFF', borderBottom: '1px solid #EDEBE5', padding: isMobile ? '12px 16px' : '16px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <header style={{ background: dark ? DARK_SURFACE : '#FFF', borderBottom: `1px solid ${dark ? DARK_BORDER : '#EDEBE5'}`, padding: isMobile ? '12px 16px' : '16px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             {/* Kev's redesign brief (2026-08-22): bumped 22→28 with tighter
                 tracking — the page title is the one place a bit of scale
@@ -395,10 +401,10 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
                 label the same size as everything else". */}
             {/* Kev, 2026-08-22: 800→600. Bricolage at 800 reads heavy/blocky
                 at 28px; Airbnb's own page titles sit at semibold. */}
-            <h1 style={{ fontFamily: F, fontSize: isMobile ? 20 : 28, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', color: '#222222' }}>{title}</h1>
-            {subtitle && <div style={{ fontSize: 11.5, color: '#A39D8F', marginTop: 4, letterSpacing: '0.01em' }}>{subtitle}</div>}
+            <h1 style={{ fontFamily: F, fontSize: isMobile ? 20 : 28, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', color: dark ? '#F3F1EA' : '#222222' }}>{title}</h1>
+            {subtitle && <div style={{ fontSize: 11.5, color: dark ? 'rgba(243,241,234,0.42)' : '#A39D8F', marginTop: 4, letterSpacing: '0.01em' }}>{subtitle}</div>}
           </div>
-          {onAdd && <button onClick={onAdd} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: isMobile ? '9px 14px' : '10px 18px', fontSize: isMobile ? 11 : 12, cursor: 'pointer', fontFamily: F, fontWeight: 700, letterSpacing: '0.03em' }}>+ Add</button>}
+          {onAdd && <button onClick={onAdd} style={{ background: dark ? A : '#0F0F0F', color: dark ? '#151C2C' : '#FFF', border: 'none', borderRadius: 9, padding: isMobile ? '9px 14px' : '10px 18px', fontSize: isMobile ? 11 : 12, cursor: 'pointer', fontFamily: F, fontWeight: 700, letterSpacing: '0.03em' }}>+ Add</button>}
         </header>
 
         {warn && (
@@ -413,12 +419,12 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children }:
         )}
 
         {filterBar !== undefined && (
-          <div style={{ background: '#FFF', borderBottom: '1px solid #EDEBE5', padding: isMobile ? '8px 14px' : '10px 26px', display: 'flex', gap: 7, flexShrink: 0, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', alignItems: 'center' }}>
+          <div style={{ background: dark ? DARK_SURFACE : '#FFF', borderBottom: `1px solid ${dark ? DARK_BORDER : '#EDEBE5'}`, padding: isMobile ? '8px 14px' : '10px 26px', display: 'flex', gap: 7, flexShrink: 0, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', alignItems: 'center' }}>
             {filterBar}
           </div>
         )}
 
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: '#FAFAF7', paddingBottom: isMobile ? 76 : 0 }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: dark ? DARK_BG : '#FAFAF7', paddingBottom: isMobile ? 76 : 0 }}>
           {children}
         </div>
       </div>
