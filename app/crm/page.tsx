@@ -49,7 +49,17 @@ function Dashboard() {
         </div>
 
         {me?.role === 'admin' && (
-          <div onClick={() => router.push('/admin/ml-learning')} style={{ marginTop: 18, background: '#FFF', borderRadius: 14, padding: '14px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div onClick={() => router.push('/outreach')} style={{ marginTop: 18, background: '#0d0d12', borderRadius: 14, padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(224,56,159,0.35)' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>🛰 ARGUS · Outreach Planner</div>
+              <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Prepare and schedule multi-account outreach for the next few days.</div>
+            </div>
+            <span style={{ fontSize: 12, color: '#e0389f' }}>Open →</span>
+          </div>
+        )}
+
+        {me?.role === 'admin' && (
+          <div onClick={() => router.push('/admin/ml-learning')} style={{ marginTop: 10, background: '#FFF', borderRadius: 14, padding: '14px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#0F0F0F' }}>🧠 Learning Overview</div>
               <div style={{ fontSize: 11, color: '#AAA', marginTop: 2 }}>See what the style-learning system has actually picked up, in plain language.</div>
