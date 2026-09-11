@@ -51,6 +51,23 @@ function useMaltaClock() {
   return { time, date }
 }
 
+// Spec point 19 — suggest the next day's time as +20min from the previous
+// day's OWN scheduled time (not a stale global default), so setting TODAY
+// to 14:15 suggests TOMORROW=14:35 and IN_2_DAYS=14:55 automatically, and
+// changing TOMORROW to 16:00 re-bases the suggestion for IN_2_DAYS from
+// that instead of the original time.
+function suggestTime(plans: Plan[] | null, label: string): string {
+  const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS']
+  const idx = order.indexOf(label)
+  if (idx <= 0 || !plans) return '14:15'
+  const prev = plans.find(p => p.label === order[idx - 1])
+  if (prev?.scheduled_at) {
+    const d = new Date(new Date(prev.scheduled_at).getTime() + 20 * 60_000)
+    return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+  }
+  return '14:15'
+}
+
 function dayLabelText(l: string) {
   if (l === 'TODAY') return 'TODAY'
   if (l === 'TOMORROW') return 'TOMORROW'
@@ -110,15 +127,8 @@ function ArgusConsole() {
       <div style={{ padding: '22px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, borderBottom: `1px solid ${HAIRLINE}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/" style={{ color: FAINT, fontSize: 11, textDecoration: 'none', marginRight: 4 }}>← CRM</a>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '0.12em' }}>ARGUS</span>
-              <span style={{ fontSize: 10, color: FAINT, letterSpacing: '0.1em' }}>2906</span>
-              <span style={{ width: 1, height: 14, background: HAIRLINE }} />
-              <span style={{ fontSize: 16, fontStyle: 'italic', fontWeight: 600, color: '#d9a6ff' }}>NEON</span>
-            </div>
-            <div style={{ fontSize: 9, color: FAINT, letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 2 }}>Automatic Outreach Engine</div>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/argus-logo.png" alt="ARGUS / NEON" style={{ height: 34, width: 'auto', display: 'block' }} />
           <div style={{ marginLeft: 18 }}>
             <div style={{ fontSize: 17, fontWeight: 700 }}>Outreach Planner</div>
             <div style={{ fontSize: 11, color: MUTED }}>Plan · Schedule · Execute · Audit</div>
@@ -220,33 +230,63 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
 
   const activePlan = plans?.find(p => p.label === activeLabel) || null
 
+  // Kev, 2026-09-11 (real bug: "sieht man die Liste aber nicht" — Create
+  // List updated the STATS but never the textarea, because this effect only
+  // re-fetches entries when activePlan.id CHANGES, and generating/topping-up
+  // never changes the id (same plan, more rows) — so nothing re-triggered
+  // it, and only a full page reload ever showed the new numbers. Split out
+  // as its own function so every action that can change entries (generate,
+  // top up, clear) can force a reload immediately, not just tab-switching.
+  const loadEntries = useCallback(async (planId: number) => {
+    const r = await crmGet(`outreach/plans/${planId}`)
+    setQueueText((r.plan.entries || []).map((e: Entry) => `+${e.normalized_phone}${e.display_name ? ' ' + e.display_name : ''}`).join('\n'))
+  }, [])
+
   useEffect(() => {
     if (!activePlan) return
     setMsgDraft(activePlan.message_template || '')
-    if (activePlan.scheduled_at) setArmTime(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(activePlan.scheduled_at)))
-    crmGet(`outreach/plans/${activePlan.id}`).then(r => {
-      setQueueText((r.plan.entries || []).map((e: Entry) => `+${e.normalized_phone}${e.display_name ? ' ' + e.display_name : ''}`).join('\n'))
-    }).catch(() => {})
+    // Kev, 2026-09-11 (real bug: "die Zeit hängt am ersten" — editing
+    // TOMORROW's time then switching tabs kept showing that same value on
+    // TODAY/IN 2 DAYS) — armTime is ONE shared field for the whole console,
+    // so it must be explicitly RESET on every tab switch, unconditionally,
+    // never left over from whichever tab was open before. A plan with no
+    // scheduled_at yet gets a suggested time instead of a stale leftover —
+    // +20min from the previous day's own time when that's armed (spec
+    // point 19's auto-suggest), otherwise a plain default.
+    setArmTime(activePlan.scheduled_at
+      ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(activePlan.scheduled_at))
+      : suggestTime(plans, activeLabel))
+    loadEntries(activePlan.id)
   }, [activePlan?.id])
 
-  async function refresh() { await loadPlans(); onChanged() }
+  async function refresh(alsoReloadEntriesForPlanId?: number) {
+    await loadPlans()
+    if (alsoReloadEntriesForPlanId) await loadEntries(alsoReloadEntriesForPlanId)
+    onChanged()
+  }
 
   async function savePastedList() {
     if (!activePlan) return
     setBusy(true); setNote('')
     try {
       await crmJson(`outreach/plans/${activePlan.id}/paste`, 'POST', { text: queueText })
-      await refresh()
+      await refresh(activePlan.id)
       setNote('Saved.')
     } catch (e: any) { setNote(e?.message || 'Failed to save') } finally { setBusy(false) }
   }
 
+  // topUp=false ("Create List"): generates a fresh batch of `count` eligible
+  // owners via the SAME engine the real !createlist WhatsApp command uses
+  // (services/listBuilder.js:buildPoolBatch — not a separate/fake frontend
+  // generator). topUp=true ("Top Up"): keeps everyone already in the queue
+  // and only fetches as many ADDITIONAL eligible owners as needed to reach
+  // `count` total, never duplicating what's already there.
   async function generate(topUp = false) {
     if (!activePlan) return
     setBusy(true); setNote('')
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count, topUp })
-      await refresh()
+      await refresh(activePlan.id)
       setNote(`${r.added} added${r.need && r.added < r.need ? ` (only ${r.added}/${r.need} eligible found)` : ''}.`)
     } catch (e: any) { setNote(e?.message || 'Failed to generate') } finally { setBusy(false) }
   }
@@ -254,7 +294,7 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
   async function clearList() {
     if (!activePlan) return
     setBusy(true)
-    try { await crmJson(`outreach/plans/${activePlan.id}/clear`, 'POST', {}); setQueueText(''); await refresh() }
+    try { await crmJson(`outreach/plans/${activePlan.id}/clear`, 'POST', {}); setQueueText(''); await refresh(activePlan.id) }
     finally { setBusy(false) }
   }
 
@@ -366,10 +406,10 @@ function ProfileConsole({ account, accent, onChanged }: { account: Account; acce
       {/* generate row */}
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button disabled={busy} onClick={() => generate(false)} style={{ ...btnPrimary(accent), flex: '1 1 auto' }}>+ Create List</button>
+          <button disabled={busy} onClick={() => generate(false)} title="Generates a fresh list of eligible owners — the exact same engine as the real !createlist WhatsApp command." style={{ ...btnPrimary(accent), flex: '1 1 auto' }}>+ Create List</button>
           <input type="number" value={count} onChange={e => setCount(Math.max(1, Math.min(200, parseInt(e.target.value) || 40)))} style={inputSmall} />
-          <button disabled={busy} onClick={() => generate(true)} style={btnGhost}>Top Up</button>
-          <button disabled={busy} onClick={clearList} style={btnGhost}>Clear</button>
+          <button disabled={busy} onClick={() => generate(true)} title="Keeps everyone already in the queue and only adds as many NEW eligible owners as needed to reach the count above." style={btnGhost}>Top Up</button>
+          <button disabled={busy} onClick={clearList} title="Removes everyone from this queue and releases their reservation." style={btnGhost}>Clear</button>
         </div>
       )}
 
