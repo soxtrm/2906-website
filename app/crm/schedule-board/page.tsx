@@ -3041,21 +3041,31 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         )}
 
         {/* ── Still Available + Confirmed ──────────────────────────────────
-            Kev, 2026-09-11: the most important button on the card, so it is
-            never hidden behind "..." and never off on mobile. Confirmed sits
-            right next to it because that stat is the button's own memory —
-            the fresh/ageing/stale label the button's colour already reflects. */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 9 }}>
+            Kev, 2026-09-11 (2nd pass): "mach nicht die listings so weird...
+            die buttons sollen alle gleich klein sein, nicht so weird
+            verschoben, überall gleich" — the button used to swing between a
+            solid-filled pill (fresh) and a faint outline (not fresh), so
+            freshly uploaded cards looked structurally different from
+            everything else on the board. One fixed size/shape/colour now,
+            for every card; the freshness signal lives only in the small dot,
+            never in the button's own size or fill. flex:1 so it and
+            Confirmed actually use the row's full width instead of leaving a
+            gap ("den Platz den wir gewonnen haben nutzen"). */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
           <button
             onClick={() => c.canAsk && askStillAvailable(false)}
             disabled={!c.canAsk || avBusy}
             title={c.reason || fresh.label}
             style={{
-              ...stillAvailableBtn(fresh.tier),
+              ...stillAvailableBtn,
               opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
               cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
             }}>
-            {avBusy ? 'Asking…' : fresh.tier === 'fresh' ? '✓ Still available' : 'Still available?'}
+            <span style={{
+              display: 'inline-block', width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+              background: fresh.tier === 'fresh' ? 'rgb(47,111,87)' : fresh.tier === 'ageing' ? '#C98A1A' : '#8A8477',
+            }} />
+            {avBusy ? 'Asking…' : 'Still available?'}
           </button>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Confirmed</div>
@@ -3163,89 +3173,98 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {menuOpen && (
           <div style={menuPanel}>
+            {/* Kev, 2026-09-11: "sieht zu unübersichtlich aus" — a tall list
+                of full-width text rows read as clutter next to the Tools
+                icon row he liked. Same actions, laid out as a compact grid
+                of small pills instead, so the popover reads as one tidy
+                panel rather than a long menu. */}
             <div style={menuSection}>Talk to</div>
-            <button
-              onClick={() => { if (c.canQuestion) { onAsk(); setMenuOpen(false) } }}
-              disabled={!c.canQuestion}
-              title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
-              style={{ ...menuItemBtn, color: c.canQuestion ? DTEXT : DTEXT_FAINT, cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
-              {r.isMine ? 'Ask Owner' : 'Ask Agent'}
-            </button>
-            {(() => {
-              const canAskLocation = !r.isMine && !r.hasViewingLocation && c.canAsk
-              return (
-                <button
-                  onClick={() => { canAskLocation ? onAct('request-location', r) : handleLocationReveal(); setMenuOpen(false) }}
-                  title={canAskLocation ? 'Ask the listing agent where the viewing is' : "Show this listing's town / area"}
-                  style={menuItemBtn}>
-                  Location
-                </button>
-              )
-            })()}
-            <button
-              onClick={() => { if (!r.isMine) { setInquiryOpen(true); setMenuOpen(false) } }}
-              disabled={r.isMine}
-              title={r.isMine ? 'This is your own listing.' : `Send a quick note to ${r.listedBy.displayName || 'the listing agent'}`}
-              style={{ ...menuItemBtn, color: r.isMine ? DTEXT_FAINT : DTEXT, cursor: r.isMine ? 'not-allowed' : 'pointer' }}>
-              Agent Inquiry
-            </button>
+            <div style={menuGrid}>
+              <button
+                onClick={() => { if (c.canQuestion) { onAsk(); setMenuOpen(false) } }}
+                disabled={!c.canQuestion}
+                title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
+                style={{ ...menuGridBtn, color: c.canQuestion ? DTEXT : DTEXT_FAINT, cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
+                {r.isMine ? 'Ask Owner' : 'Ask Agent'}
+              </button>
+              {(() => {
+                const canAskLocation = !r.isMine && !r.hasViewingLocation && c.canAsk
+                return (
+                  <button
+                    onClick={() => { canAskLocation ? onAct('request-location', r) : handleLocationReveal(); setMenuOpen(false) }}
+                    title={canAskLocation ? 'Ask the listing agent where the viewing is' : "Show this listing's town / area"}
+                    style={menuGridBtn}>
+                    Location
+                  </button>
+                )
+              })()}
+              <button
+                onClick={() => { if (!r.isMine) { setInquiryOpen(true); setMenuOpen(false) } }}
+                disabled={r.isMine}
+                title={r.isMine ? 'This is your own listing.' : `Send a quick note to ${r.listedBy.displayName || 'the listing agent'}`}
+                style={{ ...menuGridBtn, color: r.isMine ? DTEXT_FAINT : DTEXT, cursor: r.isMine ? 'not-allowed' : 'pointer' }}>
+                Agent Inquiry
+              </button>
+            </div>
 
             <div style={menuSection}>Manage</div>
             {/* "On Market?" moved out of this menu entirely — it's the
                 Still Available button above now, same request-availability
                 call for both isMine (owner) and colleague (relay) cases. */}
-            <button data-match-btn={r.ref} onClick={() => { onMatch(); setMenuOpen(false) }} title="Find active clients this listing fits" style={menuItemBtn}>
-              Match
-            </button>
-            {(() => {
-              const ready = canCreateGroupBtn && !!r.viewing?.canCreateGroup
-              const already = !!r.viewing?.groupJid
-              const title = already
-                ? 'Group already created for this booking.'
-                : ready
-                ? 'Owner confirmed — create the WhatsApp group with the agent and owner.'
-                : r.viewing?.status === 'confirmed'
-                ? 'Admins only.'
-                : 'Needs a confirmed booking first — the owner has to say yes.'
-              return (
-                <button
-                  onClick={() => { if (ready) { onCreateGroup(); setMenuOpen(false) } }}
-                  disabled={!ready || already}
-                  title={title}
-                  style={{ ...menuItemBtn, color: ready && !already ? DTEXT : DTEXT_FAINT, cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
-                  {already ? 'Grouped ✓' : 'Create Group'}
-                </button>
-              )
-            })()}
-            {/* Kev, 2026-09-10: a card on the 'rented' tab has no use for
-                check-in / mark-rented (it's already rented) — Reactivate is
-                the one action that applies. */}
-            {r.availableStatus === 'rented' ? (
-              <button
-                onClick={() => { onStatus('return-to-market'); setMenuOpen(false) }}
-                disabled={busy}
-                title="Reactivate — puts this back on the active board as available"
-                style={{ ...menuItemBtn, color: 'rgb(102,187,158)', fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
-                Reactivate
+            <div style={menuGrid}>
+              <button data-match-btn={r.ref} onClick={() => { onMatch(); setMenuOpen(false) }} title="Find active clients this listing fits" style={menuGridBtn}>
+                Match
               </button>
-            ) : (
-              <>
+              {(() => {
+                const ready = canCreateGroupBtn && !!r.viewing?.canCreateGroup
+                const already = !!r.viewing?.groupJid
+                const title = already
+                  ? 'Group already created for this booking.'
+                  : ready
+                  ? 'Owner confirmed — create the WhatsApp group with the agent and owner.'
+                  : r.viewing?.status === 'confirmed'
+                  ? 'Admins only.'
+                  : 'Needs a confirmed booking first — the owner has to say yes.'
+                return (
+                  <button
+                    onClick={() => { if (ready) { onCreateGroup(); setMenuOpen(false) } }}
+                    disabled={!ready || already}
+                    title={title}
+                    style={{ ...menuGridBtn, color: ready && !already ? DTEXT : DTEXT_FAINT, cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
+                    {already ? 'Grouped ✓' : 'Create Group'}
+                  </button>
+                )
+              })()}
+              {/* Kev, 2026-09-10: a card on the 'rented' tab has no use for
+                  check-in / mark-rented (it's already rented) — Reactivate is
+                  the one action that applies. */}
+              {r.availableStatus === 'rented' ? (
                 <button
-                  onClick={() => { onCheckIn(); setMenuOpen(false) }}
+                  onClick={() => { onStatus('return-to-market'); setMenuOpen(false) }}
                   disabled={busy}
-                  title={`Confirm it yourself without messaging the owner — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
-                  style={{ ...menuItemBtn, color: 'rgb(102,187,158)', cursor: busy ? 'wait' : 'pointer' }}>
-                  I confirmed it myself
+                  title="Reactivate — puts this back on the active board as available"
+                  style={{ ...menuGridBtn, color: 'rgb(102,187,158)', fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
+                  Reactivate
                 </button>
-                <button
-                  onClick={() => { onStatus('check-out'); setMenuOpen(false) }}
-                  disabled={busy}
-                  title="Mark rented / off market — asks for a reason, then takes it off the board"
-                  style={{ ...menuItemBtn, color: '#E29B9B', cursor: busy ? 'wait' : 'pointer' }}>
-                  Mark rented / gone
-                </button>
-              </>
-            )}
+              ) : (
+                <>
+                  <button
+                    onClick={() => { onCheckIn(); setMenuOpen(false) }}
+                    disabled={busy}
+                    title={`Confirm it yourself without messaging the owner — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
+                    style={{ ...menuGridBtn, color: 'rgb(102,187,158)', cursor: busy ? 'wait' : 'pointer' }}>
+                    Confirmed myself
+                  </button>
+                  <button
+                    onClick={() => { onStatus('check-out'); setMenuOpen(false) }}
+                    disabled={busy}
+                    title="Mark rented / off market — asks for a reason, then takes it off the board"
+                    style={{ ...menuGridBtn, color: '#E29B9B', cursor: busy ? 'wait' : 'pointer' }}>
+                    Mark rented / gone
+                  </button>
+                </>
+              )}
+            </div>
 
             <div style={menuSection}>Tools</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 9px' }}>
@@ -3885,18 +3904,21 @@ const trayPrimaryBtn: React.CSSProperties = {
   flex: '1 1 0', minWidth: 0, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
 }
 // Kev, 2026-09-11: "still available soll neben Confirmed weil das der
-// wichtigste Button ist" — a real, always-on button (not tucked in "..."),
-// styled to actually look like the card's headline action rather than one
-// more outline pill. Colour comes from the SAME `fresh` gauge the freshness
-// dot already uses, so a green/solid button and a green/solid gauge always
-// agree with each other.
-const stillAvailableBtn = (freshTier: string): React.CSSProperties => ({
-  padding: '8px 12px', borderRadius: 10, fontSize: 12, fontFamily: F,
-  fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
-  border: `1.5px solid rgb(${'47,111,87'})`,
-  background: freshTier === 'fresh' ? 'rgb(47,111,87)' : 'rgba(47,111,87,0.12)',
-  color: freshTier === 'fresh' ? '#FFF' : 'rgb(102,187,158)',
-})
+// wichtigste Button ist" — a real, always-on button (not tucked in "...").
+// 2nd pass, same day: ONE fixed size/shape/colour for every card, same
+// visual weight as trayPrimaryBtn below it — the freshness state used to
+// swing this between a solid fill and a faint outline, which is exactly
+// what read as "weird" across a board of otherwise-identical cards. The
+// small dot next to the label (see the JSX) is the only thing that still
+// varies with `fresh`.
+const stillAvailableBtn: React.CSSProperties = {
+  padding: '8px 12px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
+  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
+  border: '1px solid rgba(47,111,87,0.4)',
+  background: '#1B2333', color: 'rgb(102,187,158)',
+  flex: '1 1 0', minWidth: 0, textAlign: 'center',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+}
 const trayMoreBtn: React.CSSProperties = {
   width: 34, height: 34, minHeight: 34, flex: '0 0 auto', padding: 0,
   borderRadius: 10, border: `1px solid ${DBORDER}`, background: '#1B2333',
@@ -3925,6 +3947,19 @@ const menuItemBtn: React.CSSProperties = {
   width: '100%', textAlign: 'left', padding: '8px 9px', borderRadius: 8,
   background: 'transparent', border: 'none', fontSize: 12, fontFamily: F,
   fontWeight: 500, color: DTEXT, cursor: 'pointer', minHeight: 34,
+}
+// Kev, 2026-09-11: the "Talk to" / "Manage" sections used to be tall lists
+// of menuItemBtn rows — "sieht zu unübersichtlich aus" next to the Tools
+// icon row he liked. Same actions, a compact 2-column grid of small pills
+// instead, so the popover reads as one tidy panel, not a long menu.
+const menuGrid: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 4,
+}
+const menuGridBtn: React.CSSProperties = {
+  padding: '7px 8px', borderRadius: 8, fontSize: 11, fontFamily: F,
+  fontWeight: 500, color: DTEXT, cursor: 'pointer', minHeight: 30,
+  background: '#1B2333', border: `1px solid ${DBORDER}`, textAlign: 'center',
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 }
 // The two low-frequency card actions. Reads as a text link, sized as a button:
 // 30px is the same tap floor the buttons and village chips hold to.
