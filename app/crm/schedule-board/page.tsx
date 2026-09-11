@@ -3040,18 +3040,46 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         )}
 
+        {/* Viewable date — desktop only; the ~170px mobile column has no room
+            for a second stat row alongside Still Available/Confirmed, which
+            now live at the bottom of the body, right above the tray. */}
+        {!isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
+              {/* Kev, 2026-09-08 (real bug, live on #2906-9193): this read
+                  r.availableDate — the SAME field the "Available" column
+                  above already shows — so editing Viewing date/time
+                  separately on the property page never visibly changed
+                  anything here; both columns always mirrored the Available
+                  date. Now reads the actual viewing_date field. */}
+              <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
+                {r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* The download/copy/price/AV-date/Facebook tools that used to live
+            in a row here moved into the "..." menu below (Kev, 2026-09-11) —
+            see menuSection "Tools". */}
+
+        {/* Why it last moved — the review queue is unusable without it. */}
+        {r.statusChangeReason && (
+          <div style={{ fontSize: 9.5, color: '#D3A876', marginTop: 8, lineHeight: 1.35 }}>{r.statusChangeReason}</div>
+        )}
+
         {/* ── Still Available + Confirmed ──────────────────────────────────
-            Kev, 2026-09-11 (2nd pass): "mach nicht die listings so weird...
-            die buttons sollen alle gleich klein sein, nicht so weird
-            verschoben, überall gleich" — the button used to swing between a
-            solid-filled pill (fresh) and a faint outline (not fresh), so
-            freshly uploaded cards looked structurally different from
-            everything else on the board. One fixed size/shape/colour now,
-            for every card; the freshness signal lives only in the small dot,
-            never in the button's own size or fill. flex:1 so it and
-            Confirmed actually use the row's full width instead of leaving a
-            gap ("den Platz den wir gewonnen haben nutzen"). */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
+            Kev, 2026-09-11 (3rd pass): "mach den button immer über chat
+            direkt" — moved from up near the description down to right here,
+            the last thing in the body, so it sits directly above the tray's
+            Chat button with nothing in between. Still the most important
+            button on the card: never hidden behind "...", never off on
+            mobile. One fixed size/shape/colour for every card (2nd pass) —
+            the freshness state lives only in the small dot, never in the
+            button's own size or fill. flex:1 so it and Confirmed actually
+            use the row's full width instead of leaving a gap. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           <button
             onClick={() => c.canAsk && askStillAvailable(false)}
             disabled={!c.canAsk || avBusy}
@@ -3097,34 +3125,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               </button>
             </div>
           </div>
-        )}
-
-        {/* Viewable date — desktop only; the ~170px mobile column has no room
-            for a second stat row once Still Available/Confirmed sit above it. */}
-        {!isMobile && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
-              {/* Kev, 2026-09-08 (real bug, live on #2906-9193): this read
-                  r.availableDate — the SAME field the "Available" column
-                  above already shows — so editing Viewing date/time
-                  separately on the property page never visibly changed
-                  anything here; both columns always mirrored the Available
-                  date. Now reads the actual viewing_date field. */}
-              <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
-                {r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* The download/copy/price/AV-date/Facebook tools that used to live
-            in a row here moved into the "..." menu below (Kev, 2026-09-11) —
-            see menuSection "Tools". */}
-
-        {/* Why it last moved — the review queue is unusable without it. */}
-        {r.statusChangeReason && (
-          <div style={{ fontSize: 9.5, color: '#D3A876', marginTop: 8, lineHeight: 1.35 }}>{r.statusChangeReason}</div>
         )}
       </div>
 
