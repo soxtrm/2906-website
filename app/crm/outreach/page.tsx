@@ -514,7 +514,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           </div>
           {activePlan?.scheduled_at && (
             <div style={{ fontSize: 11, color: MUTED }}>
-              Next: {activePlan.scheduled_date} · {maltaHM(new Date(activePlan.scheduled_at))}
+              Next: {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(activePlan.scheduled_at))} · {maltaHM(new Date(activePlan.scheduled_at))}
             </div>
           )}
         </div>
