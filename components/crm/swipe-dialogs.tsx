@@ -123,7 +123,11 @@ export function SwipeMultiLinksModal({ links, onClose }: { links: { ref: string;
   }
   const copyAll = async () => {
     try {
-      await navigator.clipboard.writeText(ok.map(l => `#${l.ref} ${l.url}`).join('\n'))
+      // Kev, 2026-09-14 (spec item 12): numbered, one blank line between
+      // entries — same shape every other match/swipe output uses now, so a
+      // human reads it as fast as a bot can reference "Option 2".
+      await navigator.clipboard.writeText(
+        ok.map((l, i) => `${i + 1}. #${l.ref}\n${l.url}`).join('\n\n'))
       setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800)
     } catch { /* clipboard blocked */ }
   }
