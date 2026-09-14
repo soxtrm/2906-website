@@ -2692,9 +2692,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const status = confirmed ? { c: GREEN, t: 'confirmed available' }
     : r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
     : r.availableStatus === 'rented' ? { c: '#B91C1C', t: 'rented' }
+    // Kev, 2026-09-14 (spec item 1): occupied until a known future date —
+    // its own state, not lumped into "needs a recheck" (that reads as an AI
+    // being unsure) or "not available" (that reads as a dead end).
+    : r.availableStatus === 'upcoming' ? { c: '#7C5CFC', t: `upcoming${fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)}` : ''}` }
     : r.availableStatus === 'pending_check' ? { c: '#C98A1A', t: 'needs a recheck' }
     : r.availableStatus === 'not_available' ? { c: '#B91C1C', t: 'not available' }
     : { c: '#C9C4B8', t: 'unknown' }
+  const isUpcoming = r.availableStatus === 'upcoming'
   // Older cached responses predate the contact block; default to "usable" so a
   // stale payload degrades to the previous behaviour instead of a dead card.
   const c = r.contact || {
@@ -2714,24 +2719,38 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // real WhatsApp check goes out.
   const [avBusy, setAvBusy] = useState(false)
   const [escalate, setEscalate] = useState<{ repliedBefore: boolean } | null>(null)
-  async function askStillAvailable(force = false) {
+  const [urgentAsk, setUrgentAsk] = useState(false)
+  // Kev, 2026-09-14 (spec item 2): the 2.4s flash was the ONLY feedback a
+  // click ever produced — once it faded there was nothing on the card to
+  // show whether anything actually happened. This persists until the next
+  // click (or the card's own status changes on reload), so "sent, waiting
+  // for the owner" stays visible instead of vanishing after two seconds.
+  const [avOutcome, setAvOutcome] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null)
+  async function askStillAvailable(force = false, urgent = false) {
     if (avBusy) return
     setAvBusy(true)
     setEscalate(null)
+    setAvOutcome(null)
     try {
       const d = await crmJson(
         `schedule-board/listings/${encodeURIComponent(r.ref)}/request-availability`,
-        'POST', { force })
+        'POST', { force, urgent })
       if (d.status === 'already_checked_today' && !force) {
         setEscalate({ repliedBefore: !!d.repliedBefore })
         return
       }
-      flash(d.status === 'dry_run'
+      const text = d.status === 'dry_run'
         ? `${d.message} (Fall A not armed yet)`
-        : (d.message || 'Asked the owner.'))
+        : d.status === 'sent' ? 'Sent — waiting for owner reply'
+        : d.status === 'too_far_out' ? (d.message || 'Too far out to ask yet')
+        : (d.message || 'Asked the owner.')
+      flash(text)
+      setAvOutcome({ text, tone: 'ok' })
     } catch (e: any) {
       const d = e?.data || {}
-      flash(d.error || d.message || e?.message || 'Could not ask.')
+      const text = d.error || d.message || e?.message || 'Could not ask — needs review.'
+      flash(text)
+      setAvOutcome({ text, tone: 'err' })
     } finally {
       setAvBusy(false)
     }
@@ -3093,6 +3112,19 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             EVERY card regardless of how much is above it, not just the ones
             that happened to be tall enough already. */}
         <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+        {/* Kev, 2026-09-14 (spec item 1): an owner-confirmed future date means
+            "still available?" is the wrong question to even offer — no button,
+            just the fact and when we'll check again. */}
+        {isUpcoming ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#7C5CFC' }}>
+              UPCOMING{fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)!.toUpperCase()}` : ''}
+            </div>
+            <div style={{ fontSize: 9.5, color: DTEXT_FAINT, textAlign: 'right' }}>
+              Next check: near availability date
+            </div>
+          </div>
+        ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => c.canAsk && askStillAvailable(false)}
@@ -3107,7 +3139,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               display: 'inline-block', width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
               background: fresh.tier === 'fresh' ? 'rgb(47,111,87)' : fresh.tier === 'ageing' ? '#C98A1A' : '#8A8477',
             }} />
-            {avBusy ? 'Asking…' : 'Still available?'}
+            {avBusy ? 'Checking…' : 'Still available?'}
           </button>
           {/* Kev, screenshot: "ich hab kb dass sich das verschiebt" — this
               column used to size itself to whatever "Confirmed" said
@@ -3121,6 +3153,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             </div>
           </div>
         </div>
+        )}
+
+        {/* Kev, 2026-09-14 (spec item 2): persists after the 2.4s flash fades —
+            "nothing visible happens" was the actual complaint, and a toast that
+            is gone in two seconds does not fix that. Stays until the next click
+            or the next reload picks up a real status change. */}
+        {!isUpcoming && avOutcome && (
+          <div style={{ fontSize: 10, marginTop: 5, color: avOutcome.tone === 'ok' ? 'rgb(47,111,87)' : '#B91C1C' }}>
+            {avOutcome.tone === 'ok' ? '✓ ' : '⚠ '}{avOutcome.text}
+          </div>
+        )}
 
         {/* Owner already contacted today — offer the deliberate "ask again
             anyway" escalation instead of silently doing nothing. Which line
@@ -3133,12 +3176,19 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             <div style={{ fontSize: 10.5, color: DTEXT_DIM, lineHeight: 1.4 }}>
               Already asked today{escalate.repliedBefore ? ' — she replied, but it wasn\'t a clear yes/no' : ' — no reply yet'}.
             </div>
+            {/* Kev, 2026-09-14 (spec item 6): GENERAL is the default everywhere
+                — this is the one moment urgent wording makes sense (an agent
+                deliberately escalating), never turned on silently. */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 10, color: DTEXT_FAINT, cursor: 'pointer' }}>
+              <input type="checkbox" checked={urgentAsk} onChange={e => setUrgentAsk(e.target.checked)} style={{ accentColor: A }} />
+              Mention a client is waiting (urgent)
+            </label>
             <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-              <button onClick={() => askStillAvailable(true)} disabled={avBusy}
+              <button onClick={() => askStillAvailable(true, urgentAsk)} disabled={avBusy}
                 style={{ ...menuItemBtn, flex: 1, justifyContent: 'center', background: A, color: '#151C2C', fontWeight: 700, minHeight: 28, padding: '6px 8px' }}>
                 Ask anyway
               </button>
-              <button onClick={() => setEscalate(null)}
+              <button onClick={() => { setEscalate(null); setUrgentAsk(false) }}
                 style={{ ...menuItemBtn, flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: DTEXT_FAINT }}>
                 Never mind
               </button>
