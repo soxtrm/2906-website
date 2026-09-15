@@ -96,6 +96,20 @@ function BoardAccess() {
     catch (e: any) { setNote(e?.message || 'Could not update the phone number') }
   }
 
+  // Kev, 2026-09-16 ("wieso kann ich denen nicht ne email automatisiert
+  // schicken zum aktivieren"): board access itself was already granted, but
+  // the only way an agent ever received their login link was to already
+  // know about and visit the public board-login page and request one
+  // themselves — several never got that far ("last in: never"). This lets
+  // Kev trigger the exact same email himself, right from this row.
+  async function sendInvite(r: Row) {
+    setNote(null)
+    try {
+      await crmJson(`board-access/${r.id}/send-invite`, 'POST', {})
+      setNote(`Login link sent to ${r.email}.`)
+    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Could not send the login link') }
+  }
+
   async function remove(r: Row) {
     const who = r.email || r.name || r.username
     const staff = r.role !== 'board'
@@ -234,9 +248,9 @@ function BoardAccess() {
         ) : (
           <>
             <Section title="Board agents" hint="Outside agents. Removing one deletes the account." rows={agents}
-              empty="Nobody yet — add the first address above." onToggle={toggle} onRemove={remove} onSavePhone={savePhone} isMobile={isMobile} />
+              empty="Nobody yet — add the first address above." onToggle={toggle} onRemove={remove} onSavePhone={savePhone} onSendInvite={sendInvite} isMobile={isMobile} />
             <Section title="Staff with board access" hint="Their CRM account is untouched; only board access is removed here."
-              rows={staff} empty="No staff has board access." onToggle={toggle} onRemove={remove} onSavePhone={savePhone} isMobile={isMobile} />
+              rows={staff} empty="No staff has board access." onToggle={toggle} onRemove={remove} onSavePhone={savePhone} onSendInvite={sendInvite} isMobile={isMobile} />
           </>
         )}
       </div>
@@ -267,9 +281,10 @@ function PhoneCell({ r, onSave }: { r: Row; onSave: (r: Row, value: string) => v
   )
 }
 
-function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, isMobile }: {
+function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, onSendInvite, isMobile }: {
   title: string; hint: string; rows: Row[]; empty: string
-  onToggle: (r: Row) => void; onRemove: (r: Row) => void; onSavePhone: (r: Row, value: string) => void; isMobile: boolean
+  onToggle: (r: Row) => void; onRemove: (r: Row) => void; onSavePhone: (r: Row, value: string) => void
+  onSendInvite: (r: Row) => void; isMobile: boolean
 }) {
   return (
     <div style={{ marginTop: 26 }}>
@@ -291,6 +306,12 @@ function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, is
             </div>
             <PhoneCell r={r} onSave={onSavePhone} />
             <div style={{ fontSize: 11.5, color: DTEXT_FAINT, minWidth: 110 }}>last in: {when(r.last_login_at)}</div>
+            {/* Kev, 2026-09-16: most useful for someone who has never logged
+                in ("last in: never") — but left available any time, since a
+                link never used within 30 minutes just expires quietly. */}
+            {r.email && r.active && (
+              <button onClick={() => onSendInvite(r)} style={ghost} title={`Email a login link to ${r.email}`}>Send login link</button>
+            )}
             <button onClick={() => onToggle(r)} style={ghost}>{r.active ? 'Suspend' : 'Re-enable'}</button>
             <button onClick={() => onRemove(r)} style={{ ...ghost, color: '#F87171', borderColor: 'rgba(248,113,113,0.35)' }}>Remove</button>
           </div>

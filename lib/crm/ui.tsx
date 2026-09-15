@@ -416,9 +416,13 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark }:
                 plain <a href>, so it's an in-app navigation (no full
                 reload) straight to the dashboard, same target and same
                 mechanism the sidebar's own nav items below already use. */}
-            <img src="/logo-wide.png" alt="2906" onClick={() => router.push('/')}
+            {/* Kev, 2026-09-16: swapped to the Argus wordmark, CRM-only —
+                white-on-transparent artwork, made for this dark navy
+                sidebar specifically. The loading screen just below (light
+                background) deliberately keeps the old /logo-wide.png — the
+                white version would be invisible there. */}
+            <img src="/argus-logo-wide.png" alt="Argus" onClick={() => router.push('/')}
               style={{ width: 108, display: 'block', cursor: 'pointer' }} />
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 8, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ESTATE · CRM</div>
           </div>
           <nav style={{ padding: '12px 0', flex: 1 }}>
             {items.map(item => {
