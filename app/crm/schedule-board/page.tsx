@@ -329,6 +329,14 @@ function Board() {
   const [view, setView] = useState<BoardView>(
     params.get('view') === 'rented' ? 'rented'
       : params.get('view') === 'favourites' ? 'favourites' : 'board')
+  // Kev, 2026-09-15 (future inventory board, spec items 11-12): a filtered
+  // VIEW over the same 'board' data, not a separate fetch or a duplicated
+  // property — isFarFuture() below is the one place that decides "far
+  // future" for this purpose, same >100-day line the backend's own
+  // farFutureTier/CHECK-ANYWAY guardrail already uses. Defaults to 'active'
+  // so a listing 6 months out never shows up mixed into the normal board by
+  // accident — that's the whole point of the tab.
+  const [horizon, setHorizon] = useState<'active' | 'future'>('active')
   const [onlyConfirmed, setOnlyConfirmed] = useState(params.get('only_confirmed') === '1')
   // '' | 'now' | 'soon' | 'dated' | 'YYYY-MM'. The server owns what each means
   // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
@@ -638,11 +646,26 @@ function Board() {
         if (r.lat == null || r.lng == null) return false
         if (metresBetween(circ.lat, circ.lng, r.lat, r.lng) > circ.r) return false
       }
+      // Kev, 2026-09-15 (future inventory board, items 11-12): a filtered
+      // VIEW over this same data, only meaningful on the 'board' tab — the
+      // 'rented'/'favourites' tabs are their own separate fetches and have
+      // no "far future" concept of their own.
+      if (view === 'board') {
+        const farFuture = isFarFuture(r)
+        if (horizon === 'active' && farFuture) return false
+        if (horizon === 'future' && !farFuture) return false
+      }
       return true
     })
-  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, rect, circ])
+  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, rect, circ, view, horizon])
 
   const mineCount = visible.filter(r => r.isMine).length
+  // Count for the +3 Months tab badge — always computed off the 'active'
+  // set regardless of which horizon is currently selected, so the badge
+  // does not read 0 the moment you're already looking at that tab.
+  const futureCount = useMemo(
+    () => (view === 'board' ? positioned.filter(isFarFuture).length : 0),
+    [positioned, view])
 
   function toggleTown(k: string) {
     setF(s => ({ ...s, towns: s.towns.includes(k) ? s.towns.filter(x => x !== k) : [...s.towns, k] }))
@@ -1296,6 +1319,34 @@ function Board() {
               robot is chasing owners before deciding to chase one himself. */}
           <ReachoutSwitch />
         </div>
+
+        {/* Kev, 2026-09-15 (future inventory board, spec items 11-12): a
+            second, narrower pill row rather than a peer of Active/Rented/
+            Favourites above — this is a VIEW over the same 'board' data, not
+            a separate fetch, and only means anything on that tab. Defaults
+            to Active so a listing 6 months out is never mixed into the
+            normal board by accident. */}
+        {view === 'board' && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
+            {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
+              const on = horizon === h
+              return (
+                <button key={h} onClick={() => setHorizon(h)} style={{
+                  ...chip, borderRadius: 999, padding: '4px 11px', fontSize: 11,
+                  background: on ? (h === 'future' ? 'rgba(92,100,120,0.28)' : GREEN_SOFT) : 'transparent',
+                  borderColor: on ? DBORDER : 'transparent',
+                  color: on ? DTEXT_DIM : DTEXT_FAINT,
+                  fontWeight: on ? 700 : 500,
+                }}>
+                  {label}
+                  {h === 'future' && futureCount > 0 && (
+                    <span style={{ marginLeft: 5, fontFamily: FM, fontSize: 10, color: DTEXT_FAINT }}>{futureCount}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {view === 'rented' && (
           <div style={{
@@ -2213,6 +2264,27 @@ function fmtDateDots(iso: string | null | undefined): string | null {
   return t.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.')
 }
 
+// Kev, 2026-09-15 (future inventory board, spec items 11-12): same math and
+// the same >100-day "far future" line as the backend's own guardrail
+// (services/availability.js farFutureTier / daysUntilAvailable) — one
+// property that reads as "far future" here must read as far future there
+// too, or the board's +3 MONTHS tab and the WhatsApp "CHECK ANYWAY" dialog
+// above would disagree about the exact same listing.
+function daysUntilAvailable(iso: string | null | undefined): number | null {
+  if (!iso) return null
+  const target = new Date(iso)
+  if (!Number.isFinite(target.getTime())) return null
+  const today = new Date()
+  const targetDay = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate())
+  const todayDay = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  return Math.round((targetDay - todayDay) / 86_400_000)
+}
+function isFarFuture(r: { availableStatus: string; availableDate: string | null }): boolean {
+  if (r.availableStatus !== 'upcoming') return false
+  const days = daysUntilAvailable(r.availableDate)
+  return days != null && days > 100
+}
+
 // The photo-overlay pill (Kev, 2026-08-22): "Uploaded X" until somebody
 // confirms it, then "Updated X" — whichever of the two actually happened
 // most recently is the one fact worth stating there.
@@ -2695,6 +2767,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
     // Kev, 2026-09-14 (spec item 1): occupied until a known future date —
     // its own state, not lumped into "needs a recheck" (that reads as an AI
     // being unsure) or "not available" (that reads as a dead end).
+    // Kev, 2026-09-15 (future inventory board, item 12): >100 days out gets
+    // its own "🕓 FUTURE" reading — same days-away fact the +3 MONTHS tab and
+    // guardrail dialog already use — so a card never has to be opened to
+    // tell "available next month" apart from "available in 6 months".
+    : isFarFuture(r) ? { c: '#5C6478', t: `🕓 future${fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)}` : ''}${daysUntilAvailable(r.availableDate) != null ? ` · ${daysUntilAvailable(r.availableDate)}d away` : ''}` }
     : r.availableStatus === 'upcoming' ? { c: '#7C5CFC', t: `upcoming${fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)}` : ''}` }
     : r.availableStatus === 'pending_check' ? { c: '#C98A1A', t: 'needs a recheck' }
     : r.availableStatus === 'not_available' ? { c: '#B91C1C', t: 'not available' }
@@ -2720,29 +2797,38 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const [avBusy, setAvBusy] = useState(false)
   const [escalate, setEscalate] = useState<{ repliedBefore: boolean } | null>(null)
   const [urgentAsk, setUrgentAsk] = useState(false)
+  // Kev, 2026-09-14 (far-future availability guardrail): the "CHECK ANYWAY /
+  // CANCEL" prompt for a listing >100 days out — a separate dialog from
+  // `escalate` above (different question: "this far out?" vs. "again
+  // today?"), so hitting one never silently trips the other.
+  const [farFutureConfirm, setFarFutureConfirm] = useState<{ daysUntilAvailable: number; availableDate: string } | null>(null)
   // Kev, 2026-09-14 (spec item 2): the 2.4s flash was the ONLY feedback a
   // click ever produced — once it faded there was nothing on the card to
   // show whether anything actually happened. This persists until the next
   // click (or the card's own status changes on reload), so "sent, waiting
   // for the owner" stays visible instead of vanishing after two seconds.
   const [avOutcome, setAvOutcome] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null)
-  async function askStillAvailable(force = false, urgent = false) {
+  async function askStillAvailable(force = false, urgent = false, confirmedFarFuture = false) {
     if (avBusy) return
     setAvBusy(true)
     setEscalate(null)
+    setFarFutureConfirm(null)
     setAvOutcome(null)
     try {
       const d = await crmJson(
         `schedule-board/listings/${encodeURIComponent(r.ref)}/request-availability`,
-        'POST', { force, urgent })
+        'POST', { force, urgent, confirmed: confirmedFarFuture })
       if (d.status === 'already_checked_today' && !force) {
         setEscalate({ repliedBefore: !!d.repliedBefore })
+        return
+      }
+      if (d.status === 'confirm_required' && !confirmedFarFuture) {
+        setFarFutureConfirm({ daysUntilAvailable: d.daysUntilAvailable, availableDate: d.availableDate })
         return
       }
       const text = d.status === 'dry_run'
         ? `${d.message} (Fall A not armed yet)`
         : d.status === 'sent' ? 'Sent — waiting for owner reply'
-        : d.status === 'too_far_out' ? (d.message || 'Too far out to ask yet')
         : (d.message || 'Asked the owner.')
       flash(text)
       setAvOutcome({ text, tone: 'ok' })
@@ -3191,6 +3277,37 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               <button onClick={() => { setEscalate(null); setUrgentAsk(false) }}
                 style={{ ...menuItemBtn, flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: DTEXT_FAINT }}>
                 Never mind
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Kev, 2026-09-14 (far-future availability guardrail): >100 days out
+            still doesn't block the click outright — it stops for one explicit
+            confirmation first, exactly the spec's own CHECK ANYWAY / CANCEL
+            example, rather than silently pinging an owner about a flat
+            that's still three months from being anyone's business. */}
+        {farFutureConfirm && (
+          <div style={{
+            marginTop: 6, padding: '8px 10px', borderRadius: 8,
+            background: 'rgba(124,92,252,0.10)', border: '1px solid #7C5CFC',
+          }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#7C5CFC' }}>⚠️ FUTURE AVAILABILITY</div>
+            <div style={{ fontSize: 10.5, color: DTEXT_DIM, lineHeight: 1.4, marginTop: 3 }}>
+              #{r.ref}{r.town ? ` · ${r.town}` : ''}{r.price ? ` · €${r.price.toLocaleString()}` : ''}
+              <br />
+              Only expected to become available in {farFutureConfirm.daysUntilAvailable} days
+              {farFutureConfirm.availableDate ? ` (${fmtDateDots(farFutureConfirm.availableDate)})` : ''}.
+              Are you sure you want to ask the owner already?
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              <button onClick={() => askStillAvailable(false, urgentAsk, true)} disabled={avBusy}
+                style={{ ...menuItemBtn, flex: 1, justifyContent: 'center', background: '#7C5CFC', color: '#FFF', fontWeight: 700, minHeight: 28, padding: '6px 8px' }}>
+                Check anyway
+              </button>
+              <button onClick={() => setFarFutureConfirm(null)}
+                style={{ ...menuItemBtn, flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: DTEXT_FAINT }}>
+                Cancel
               </button>
             </div>
           </div>
