@@ -319,8 +319,13 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // Kev, 2026-09-15: cross-agent Board-chat monitor — admin-only, same
   // rule as Outreach above (FULL_NAV membership alone would show it to
   // every non-board agent; adminOnly is the actual gate the filter below
-  // checks).
-  { key: 'agentchats', icon: '💬', label: 'Agent Chats', href: '/admin/agent-chats', adminOnly: true },
+  // checks). Deliberately NOT under /admin/* — proxy.ts's middleware
+  // matcher excludes any path starting with "admin" (that prefix is
+  // reserved for the public site's own separate admin dashboard), so an
+  // /admin/* href here would 404 on crm.2906.estate. app/crm/admin/
+  // ml-learning has the same problem and is only reachable at the
+  // doubled /crm/admin/ml-learning — found live while testing this page.
+  { key: 'agentchats', icon: '💬', label: 'Agent Chats', href: '/agent-chats', adminOnly: true },
 ]
 
 // Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean

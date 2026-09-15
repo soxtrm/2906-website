@@ -1,8 +1,11 @@
 'use client'
 // ============================================================================
-// /admin/agent-chats — cross-agent overview of running Board-chat
-// conversations (Kev, 2026-09-15). Admin-only, both here and server-side
-// (routes/crm.js GET /admin/agent-chats, `auth` + `adminOnly`).
+// /agent-chats — cross-agent overview of running Board-chat conversations
+// (Kev, 2026-09-15). Admin-only, both here and server-side (routes/crm.js
+// GET /api/crm/admin/agent-chats, `auth` + `adminOnly`). Deliberately not
+// placed under app/crm/admin/ — proxy.ts's middleware matcher excludes any
+// path starting with "admin" (reserved for the public site's own separate
+// admin dashboard), so that would 404 on crm.2906.estate.
 //
 // Same services/bookRelay.js engine the per-agent Agent Workspace chat panel
 // (public/agent-workspace/index.html, backend) and the WhatsApp !chat
