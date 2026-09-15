@@ -188,7 +188,7 @@ export const useCrm = () => {
   return c
 }
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -316,6 +316,11 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // array every non-board agent's login resolves to, and this one really is
   // Kevin-only, not "every agent, like Clientgroups".
   { key: 'outreach',  icon: '🛰', label: 'Outreach',  href: '/outreach', adminOnly: true },
+  // Kev, 2026-09-15: cross-agent Board-chat monitor — admin-only, same
+  // rule as Outreach above (FULL_NAV membership alone would show it to
+  // every non-board agent; adminOnly is the actual gate the filter below
+  // checks).
+  { key: 'agentchats', icon: '💬', label: 'Agent Chats', href: '/admin/agent-chats', adminOnly: true },
 ]
 
 // Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean
