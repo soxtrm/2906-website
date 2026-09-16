@@ -180,6 +180,15 @@ type CrmCtx = {
   nav: NavKey[]
   doReveal: (entityType: string, entityId: number, propertyId?: number) => Promise<string>
   logout: () => Promise<void>
+  // Kev, 2026-09-16 ("lightmode button"): a viewer-side preference only —
+  // per-browser (localStorage), never sent to the server, never touches
+  // agents/any settings row. A page's own CrmShell `dark` prop is still
+  // read as that page's DEFAULT for a first-ever visit (schedule-board
+  // opted into dark by design, 2026-09-11); once the viewer has actually
+  // toggled at least once, that explicit choice wins everywhere, on every
+  // CRM page, until they toggle again.
+  theme: 'dark' | 'light' | null
+  toggleTheme: () => void
 }
 const Ctx = createContext<CrmCtx | null>(null)
 export const useCrm = () => {
@@ -187,6 +196,8 @@ export const useCrm = () => {
   if (!c) throw new Error('useCrm outside provider')
   return c
 }
+
+const THEME_STORAGE_KEY = 'crm_theme_pref'
 
 const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats']
 
@@ -196,6 +207,25 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   const [reveals, setReveals] = useState<Reveals>({ used: 0, limit: 50 })
   const [nav, setNav] = useState<NavKey[]>(FULL_NAV)
   const [ready, setReady] = useState(false)
+  // null = "no explicit viewer preference yet" -- each CrmShell falls back
+  // to its own `dark` prop in that case. Read lazily (not in an effect) so
+  // the very first paint already has the right theme instead of a flash of
+  // the wrong one; wrapped in try/catch per this codebase's own artifact
+  // convention for storage access that can throw (private window, blocked
+  // site data).
+  const [theme, setTheme] = useState<'dark' | 'light' | null>(() => {
+    try {
+      const v = localStorage.getItem(THEME_STORAGE_KEY)
+      return v === 'dark' || v === 'light' ? v : null
+    } catch { return null }
+  })
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => {
+      const next = prev === 'light' ? 'dark' : 'light'
+      try { localStorage.setItem(THEME_STORAGE_KEY, next) } catch {}
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -242,7 +272,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       </div>
     )
   }
-  return <Ctx.Provider value={{ me, reveals, nav, doReveal, logout }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ me, reveals, nav, doReveal, logout, theme, toggleTheme }}>{children}</Ctx.Provider>
 }
 
 // ── responsive hook ──────────────────────────────────────────────────────────
@@ -375,12 +405,18 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark }:
+export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: darkDefault }:
   { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean }) {
   const isMobile = useIsMobile()
   const pathname = usePathname() || '/'
   const router = useRouter()
-  const { me, reveals, nav, logout } = useCrm()
+  const { me, reveals, nav, logout, theme, toggleTheme } = useCrm()
+  // Kev, 2026-09-16 ("lightmode button"): the page's own `dark` prop is
+  // just its DEFAULT (schedule-board says true, most other CRM pages say
+  // nothing i.e. false) -- once the viewer has actually clicked the
+  // toggle at least once, that explicit per-browser choice overrides every
+  // page's own default, everywhere, until they toggle again.
+  const dark = theme != null ? theme === 'dark' : !!darkDefault
   const active = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   // A board-only agent has no reveal budget because there is nothing for them
   // to reveal — hide the meter rather than show a meaningless 0/0.
@@ -448,6 +484,18 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark }:
                 <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>reveals today</div>
               </>
             )}
+            {/* Kev, 2026-09-16 ("lightmode button"): a plain white pill so
+                it visibly reads as "the light one" against this navy rail
+                regardless of which theme is currently active -- the label
+                itself always says what clicking it switches TO. */}
+            <button onClick={toggleTheme} style={{
+              marginTop: 14, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              background: '#FFFFFF', color: '#1A1A1A', border: 'none', borderRadius: 8,
+              padding: '8px 10px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
+              textTransform: 'uppercase', cursor: 'pointer', fontFamily: F,
+            }}>
+              {dark ? '☀ Light mode' : '● Dark mode'}
+            </button>
             <div onClick={logout} style={{ marginTop: 12, fontSize: 10, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}>↩ Sign out</div>
           </div>
         </aside>
@@ -505,7 +553,15 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark }:
                 </div>
               )
             })}
-            <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: 'pointer', color: '#B91C1C', borderTop: '1px solid #EDEBE5', marginTop: 4 }}>
+            {/* Kev, 2026-09-16 ("lightmode button", hamburger-menu placement) —
+                same toggle as the desktop sidebar's bottom, same persisted
+                per-browser preference either way. */}
+            <div onClick={() => { toggleTheme(); setMoreOpen(false) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: 'pointer', color: '#1A1A1A', borderTop: '1px solid #EDEBE5', marginTop: 4 }}>
+              <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{dark ? '☀' : '●'}</span>
+              <span style={{ fontSize: 13, fontFamily: F, fontWeight: 500 }}>{dark ? 'Light mode' : 'Dark mode'}</span>
+            </div>
+            <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: 'pointer', color: '#B91C1C', borderTop: '1px solid #EDEBE5' }}>
               <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>↩</span>
               <span style={{ fontSize: 13, fontFamily: F, fontWeight: 500 }}>Sign out</span>
             </div>
