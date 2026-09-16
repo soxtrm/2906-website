@@ -60,6 +60,10 @@ type Listing = {
   type: string | null; beds: number | null; baths: number | null
   sizeSqm: number | null; price: number | null; salePrice: number | null
   shortlet: boolean; availableStatus: string | null; availableDate: string | null
+  // ARGUS V3 (Kev, 2026-09-16) — first-class lease type. Drives the
+  // snowflake badge for winter/short-let stock so it reads as time-limited
+  // at a glance instead of looking like a normal long-let.
+  leaseType?: 'long_let' | 'winter_let' | 'short_let' | 'flexible' | null
   // Kev, 2026-09-10 (Owner-Kadenz #4, the "Bis" button) — longlet
   // termination date: when the CURRENT tenancy ends, separate from
   // availableDate (when the NEXT tenant can move in).
@@ -3005,6 +3009,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             Yours
           </span>
         )}
+        {/* ARGUS V3 (Kev, 2026-09-16): visible on mobile too (unlike the
+            Viewable-row snowflake below, which is desktop-only) — a
+            winter/short-let card needs to read as "special/time-limited" at
+            a glance everywhere, not just on desktop. */}
+        {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
+          <span
+            title="Time-limited — winter/short-let, excluded from normal !match search"
+            style={{ position: 'absolute', top: 10, right: 10, background: '#1B3A4B', color: '#7EC8E3', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+            ❄️ {r.leaseType === 'winter_let' ? 'Winter' : 'Short'}
+          </span>
+        )}
         {/* Kev, 2026-09-10: the "needs recheck" tab is gone — pending_check
             listings stay right here on the active board (sorted to the
             bottom server-side) with this watermark instead. Bottom-left: top
@@ -3216,6 +3231,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
                 {r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'}
               </div>
+              {/* ARGUS V3 (Kev, 2026-09-16): "mache bei allen properties die
+                  zeitlich begrenzt sind auf shortlets und winterperiod so ein
+                  schneeflocke icon unter viewable" — winter/short-let stock
+                  gets a snowflake right under Viewable so it reads as
+                  time-limited at a glance, distinct from a normal long-let. */}
+              {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
+                <div style={{ fontSize: 10, color: '#7EC8E3', marginTop: 3, whiteSpace: 'nowrap' }} title="Time-limited — winter/short-let, excluded from normal !match search">
+                  ❄️ {r.leaseType === 'winter_let' ? 'Winter let' : 'Short let'}
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -37,6 +37,16 @@ function Detail({ id }: { id: number }) {
       viewing_status: p.viewingStatus || 'none', viewing_date: p.viewingDate ? String(p.viewingDate).slice(0, 16) : '',
       viewing_notes: p.viewingNotes || '', internal_notes: p.internalNotes || '', description: p.description || '',
       is_exclusive: !!p.exclusive, exclusive_until: p.exclusiveUntil ? String(p.exclusiveUntil).slice(0, 10) : '', published: !!p.published,
+      // ARGUS V3 (Kev, 2026-09-16): lease type drives the board's snowflake
+      // badge and gates whether !match ever shows this listing to a client.
+      // Balcony/study/parking are agent-verified truth the match engine's
+      // scorer reads directly — leave as '' (unknown) rather than guessing;
+      // '' round-trips as null, never as a false yes/no.
+      lease_type: p.leaseType || 'long_let',
+      has_balcony: p.hasBalcony === true ? 'true' : p.hasBalcony === false ? 'false' : '',
+      balcony_size: p.balconySize || '',
+      has_study_room: p.hasStudyRoom === true ? 'true' : p.hasStudyRoom === false ? 'false' : '',
+      parking_available: p.parkingAvailable === true ? 'true' : p.parkingAvailable === false ? 'false' : '',
     })
   }).catch(() => {})
   useEffect(() => { load() }, [id])
@@ -55,10 +65,22 @@ function Detail({ id }: { id: number }) {
     } catch (e: any) { setMsg(e?.message || 'Update failed') }
   }
 
+  // Tri-state ('' = unknown/unverified, never guessed) fields the form keeps
+  // as strings for a plain <select>, converted to real boolean|null only at
+  // save time so "unknown" round-trips as null, never as a false negative.
+  const triState = (v: string) => (v === 'true' ? true : v === 'false' ? false : null)
+
   async function save() {
     setSaving(true); setMsg('')
     try {
-      const r = await crmJson(`properties/${id}`, 'PATCH', form)
+      const payload = {
+        ...form,
+        has_balcony: triState(form.has_balcony),
+        has_study_room: triState(form.has_study_room),
+        parking_available: triState(form.parking_available),
+        balcony_size: form.balcony_size || null,
+      }
+      const r = await crmJson(`properties/${id}`, 'PATCH', payload)
       let webNote = ''
       // website is only present when the published checkbox actually
       // changed this save — see routes/crm.js PATCH /properties/:id.
@@ -164,6 +186,46 @@ function Detail({ id }: { id: number }) {
                 <div style={{ marginTop: 12 }}>
                   <label style={lbl}>Internal notes (private)</label>
                   <textarea style={{ ...inp, minHeight: 50, resize: 'vertical', background: '#FFFBEB', borderColor: '#FDE68A' }} value={form.internal_notes} onChange={e => set('internal_notes', e.target.value)} />
+                </div>
+                {/* ARGUS V3 (Kev, 2026-09-16): lease type drives the board's
+                    snowflake badge AND gates whether !match ever shows this
+                    listing to a client (winter/short-let is excluded from a
+                    normal search unless the client explicitly accepts one).
+                    Balcony/study/parking are agent-verified truth the match
+                    engine's scorer reads directly for the layout/balcony
+                    fallback rules — "Unverified" is a real, honest state,
+                    never defaulted to yes or no. */}
+                <div style={{ marginTop: 14, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Field label="Lease type">
+                    <select style={inp} value={form.lease_type} onChange={e => set('lease_type', e.target.value)}>
+                      <option value="long_let">Long-let</option>
+                      <option value="winter_let">Winter-let ❄️</option>
+                      <option value="short_let">Short-let ❄️</option>
+                      <option value="flexible">Flexible</option>
+                    </select>
+                  </Field>
+                  <Field label="Balcony/terrace">
+                    <select style={inp} value={form.has_balcony} onChange={e => set('has_balcony', e.target.value)}>
+                      <option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option>
+                    </select>
+                  </Field>
+                  {form.has_balcony === 'true' && (
+                    <Field label="Balcony size">
+                      <select style={inp} value={form.balcony_size} onChange={e => set('balcony_size', e.target.value)}>
+                        <option value="">Unspecified</option><option value="small">Small</option><option value="large">Large</option>
+                      </select>
+                    </Field>
+                  )}
+                  <Field label="Study/office room">
+                    <select style={inp} value={form.has_study_room} onChange={e => set('has_study_room', e.target.value)}>
+                      <option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option>
+                    </select>
+                  </Field>
+                  <Field label="Parking">
+                    <select style={inp} value={form.parking_available} onChange={e => set('parking_available', e.target.value)}>
+                      <option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option>
+                    </select>
+                  </Field>
                 </div>
                 <div style={{ marginTop: 14, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                   <label style={chk}><input type="checkbox" checked={form.published} onChange={e => set('published', e.target.checked)} style={{ accentColor: A }} /> Published (LIVE)</label>

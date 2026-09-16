@@ -61,7 +61,7 @@ export const adminApi = {
     req<{ ok: boolean }>('PATCH', `crm/owners/${phone}`, data),
 
   getClients: (params = '') => req<{ clients: Client[]; total: number }>('GET', `crm/clients${params}`),
-  updateClient: (phone: string, data: { status?: string; notes?: string }) =>
+  updateClient: (phone: string, data: Partial<Client> | Record<string, unknown>) =>
     req<{ ok: boolean }>('PATCH', `crm/clients/${phone}`, data),
 
   getWarm: (params = '') => req<{ contacts: WarmContact[]; total: number }>('GET', `crm/warm${params}`),
@@ -162,6 +162,22 @@ export interface Client {
   notes: string
   assigned_agent: string
   created_at: string
+  // ARGUS V3 (Kev, 2026-09-16, spec section 24) — the structured
+  // ClientRequirement fields matchEngine.js's scorer reads. Optional: older
+  // rows and the FastMatchProfile path may not have all of these set.
+  stretch_budget_max?: number | null
+  bedroom_alternatives?: { bedrooms: number; requires_study_room?: boolean }[] | null
+  property_types?: string[] | null
+  balcony_requirement?: 'required' | 'fallback_only' | null
+  top_priority_villages?: string[] | null
+  preferred_villages?: string[] | null
+  selected_areas?: string[] | null
+  lease_type_wanted?: 'long_let' | 'winter_let' | 'short_let' | 'flexible' | null
+  parking_wanted?: boolean | null
+  move_in_date?: string | null
+  move_in_to?: string | null
+  pets?: string | null
+  subletting?: string | null
 }
 
 export interface WarmContact {
