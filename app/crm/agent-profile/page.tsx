@@ -40,7 +40,7 @@ type Invoice = { id: number; invoice_number: string | null; client_or_owner_name
 type ContractRow = { id: number; property_ref: string | null; owner_name: string | null; tenant_name: string | null; start_date: string | null; end_date: string | null; status: string }
 type Bundle = {
   agent: Agent
-  whatsapp: { status: string; session: string | null; phone?: string | null }
+  whatsapp: { status: string; session: string | null; phone?: string | null; qr?: string }
   notificationEngine: { searches: SavedSearch[]; channel: any }
   propertyFeeds: { my_active_listings: string; my_total_listings: string }
   outreach: { status: string; n: string }[]
@@ -292,17 +292,7 @@ function AgentProfilePage() {
       </div>
 
       {/* ── WhatsApp connection ──────────────────────────────────────────── */}
-      <SectionCard title="WhatsApp Connection" icon="💬" right={<Badge {...(WA_BADGE[bundle.whatsapp.status] || WA_BADGE.OFFLINE)} />}>
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: DTEXT_DIM }}>
-          <div>Session: <span style={{ color: DTEXT }}>{bundle.whatsapp.session || 'not assigned'}</span></div>
-          {bundle.whatsapp.phone && <div>Number: <span style={{ color: DTEXT }}>{bundle.whatsapp.phone}</span></div>}
-        </div>
-        {bundle.whatsapp.status !== 'CONNECTED' && (
-          <div style={{ marginTop: 10, fontSize: 11, color: DTEXT_FAINT }}>
-            Self-serve QR connect is coming in the next pass — for now, ask an admin to assign/reconnect your WhatsApp session.
-          </div>
-        )}
-      </SectionCard>
+      <WhatsAppConnectionPanel agentId={agentId!} whatsapp={bundle.whatsapp} canSeeFull={canSeeFull} onChange={load} />
 
       {/* ── Notification Engine ──────────────────────────────────────────── */}
       <NotificationEnginePanel agentId={agentId!} bundle={bundle} onChange={load} />
@@ -324,6 +314,9 @@ function AgentProfilePage() {
             </div>}
         <div style={{ marginTop: 10, fontSize: 11, color: DTEXT_FAINT }}>Full outreach workspace (draft / arm / schedule) is coming in the next pass.</div>
       </SectionCard>
+
+      {/* ── Scheduled Messages ───────────────────────────────────────────── */}
+      <ScheduledMessagesPanel agentId={agentId!} />
 
       {/* ── Invoice Creator ──────────────────────────────────────────────── */}
       <InvoiceCreator agentId={agentId!} agent={a} invoices={bundle.invoices} onCreated={load} />
@@ -364,6 +357,201 @@ function AgentProfilePage() {
             </div>}
       </SectionCard>
     </div>
+  )
+}
+
+// ARGUS Agent Layer, Second Delivery §1-5: self-serve QR connect. Polls the
+// SAME status endpoint the aggregate profile load uses, refreshing the QR
+// image each tick since WAHA's QR rotates/expires. RBAC is enforced
+// server-side (assertScope in crmAgentProfile.js) -- `canSeeFull` here is
+// only a display convenience, not the actual security boundary.
+function WhatsAppConnectionPanel({ agentId, whatsapp, canSeeFull, onChange }: { agentId: number; whatsapp: Bundle['whatsapp']; canSeeFull: boolean; onChange: () => void }) {
+  const [live, setLive] = useState(whatsapp)
+  const [busy, setBusy] = useState(false)
+  const [polling, setPolling] = useState(false)
+
+  useEffect(() => { setLive(whatsapp) }, [whatsapp])
+
+  useEffect(() => {
+    if (!polling) return
+    const t = setInterval(async () => {
+      try {
+        const d = await crmFetch(`agent-profile/${agentId}/whatsapp/status`)
+        setLive(d)
+        if (d.status === 'CONNECTED') { setPolling(false); onChange() }
+      } catch { /* keep polling, transient network error */ }
+    }, 3000)
+    return () => clearInterval(t)
+  }, [polling, agentId, onChange])
+
+  async function connect() {
+    setBusy(true)
+    try {
+      const d = await crmFetch(`agent-profile/${agentId}/whatsapp/connect`, { method: 'POST' })
+      setLive(d)
+      if (d.status !== 'CONNECTED') setPolling(true)
+      else onChange()
+    } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not start WhatsApp connection') }
+    finally { setBusy(false) }
+  }
+
+  async function disconnect() {
+    if (!confirm('Disconnect this WhatsApp session?')) return
+    setBusy(true)
+    try {
+      await crmJson(`agent-profile/${agentId}/whatsapp/disconnect`, 'POST', {})
+      setPolling(false)
+      onChange()
+    } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not disconnect') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <SectionCard title="WhatsApp Connection" icon="💬" right={<Badge {...(WA_BADGE[live.status] || WA_BADGE.OFFLINE)} />}>
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: DTEXT_DIM, marginBottom: 10 }}>
+        <div>Session: <span style={{ color: DTEXT }}>{live.session || 'not assigned'}</span></div>
+        {live.phone && <div>Number: <span style={{ color: DTEXT }}>{live.phone}</span></div>}
+      </div>
+
+      {canSeeFull && live.status !== 'CONNECTED' && !live.qr && (
+        <button onClick={connect} disabled={busy} style={btnPrimary()}>{busy ? 'Starting…' : 'Connect WhatsApp'}</button>
+      )}
+
+      {live.qr && live.status !== 'CONNECTED' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 4 }}>
+          <div style={{ fontSize: 11.5, color: DTEXT_DIM }}>Scan this QR with WhatsApp (Linked Devices → Link a Device):</div>
+          <img src={live.qr} alt="WhatsApp QR" style={{ width: 180, height: 180, borderRadius: 10, border: `1px solid ${DBORDER}`, background: '#fff', padding: 6 }} />
+          <button onClick={connect} disabled={busy} style={btnGhost()}>↻ Refresh QR</button>
+        </div>
+      )}
+
+      {canSeeFull && live.status === 'CONNECTED' && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={connect} disabled={busy} style={btnGhost()}>Reconnect</button>
+          <button onClick={disconnect} disabled={busy} style={{ ...btnGhost(), color: '#F2597A' }}>Disconnect</button>
+        </div>
+      )}
+
+      {!canSeeFull && (
+        <div style={{ fontSize: 11, color: DTEXT_FAINT }}>Only this Agent (or an admin) can manage this connection.</div>
+      )}
+    </SectionCard>
+  )
+}
+
+type ScheduledMsg = {
+  id: number; recipient_phone: string; recipient_name: string | null; message_payload: string
+  property_ref: string | null; scheduled_at: string; status: string; skip_reason: string | null
+}
+const SM_STATUS_BADGE: Record<string, { bg: string; fg: string; label: string }> = {
+  SCHEDULED: { bg: 'rgba(79,123,242,0.14)', fg: '#7EA0FF', label: 'SCHEDULED' },
+  SENT: { bg: 'rgba(62,207,142,0.14)', fg: '#3ECF8E', label: 'SENT' },
+  SKIPPED: { bg: 'rgba(242,165,61,0.14)', fg: '#F2A53D', label: 'SKIPPED' },
+  FAILED: { bg: 'rgba(242,89,122,0.14)', fg: '#F2597A', label: 'FAILED' },
+  CANCELLED: { bg: 'rgba(255,255,255,0.06)', fg: DTEXT_FAINT, label: 'CANCELLED' },
+}
+
+// ARGUS Agent Layer, Second Delivery §14-20: a simple personal scheduling
+// queue, NOT mass outreach. Every send (whether the cron tick fires it or
+// the agent hits SEND NOW here) goes through services/scheduledMessages.js's
+// mandatory pre-send recheck — this panel only ever displays the result.
+function ScheduledMessagesPanel({ agentId }: { agentId: number }) {
+  const [items, setItems] = useState<ScheduledMsg[]>([])
+  const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [recipientName, setRecipientName] = useState('')
+  const [propertyRef, setPropertyRef] = useState('')
+  const [message, setMessage] = useState('')
+  const [when, setWhen] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    try { setItems(await crmFetch(`scheduled-messages?agent_id=${agentId}`)) }
+    catch { /* non-fatal for the profile page */ }
+    finally { setLoading(false) }
+  }, [agentId])
+
+  useEffect(() => { load() }, [load])
+
+  async function create() {
+    if (!phone.trim() || !message.trim() || !when) return
+    setBusy(true)
+    try {
+      await crmJson(`scheduled-messages?agent_id=${agentId}`, 'POST', {
+        recipient_phone: phone.trim(), recipient_name: recipientName || null,
+        property_ref: propertyRef || null, message_payload: message.trim(),
+        scheduled_at: new Date(when).toISOString(),
+      })
+      setForm(false); setPhone(''); setRecipientName(''); setPropertyRef(''); setMessage(''); setWhen('')
+      load()
+    } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not schedule message') }
+    finally { setBusy(false) }
+  }
+
+  async function sendNow(id: number) {
+    try {
+      const r = await crmJson(`scheduled-messages/${id}/send-now?agent_id=${agentId}`, 'POST', {})
+      if (r.skipped) alert(`Not sent — ${r.detail}`)
+      load()
+    } catch (e: any) { alert(e?.data?.error || e?.message || 'Send failed') }
+  }
+  async function cancel(id: number) {
+    if (!confirm('Cancel this scheduled message?')) return
+    await crmJson(`scheduled-messages/${id}?agent_id=${agentId}`, 'DELETE', {})
+    load()
+  }
+
+  const pending = items.filter(i => ['SCHEDULED', 'DRAFT'].includes(i.status))
+  const resolved = items.filter(i => !['SCHEDULED', 'DRAFT'].includes(i.status)).slice(0, 8)
+
+  return (
+    <SectionCard title="Scheduled Messages" icon="⏰" right={<button onClick={() => setForm(v => !v)} style={btnGhost()}>{form ? 'Cancel' : '+ Schedule Message'}</button>}>
+      {form && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 8, marginBottom: 14, padding: 12, background: DCARD2, borderRadius: 10 }}>
+          <input placeholder="Recipient phone" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle()} />
+          <input placeholder="Recipient name (optional)" value={recipientName} onChange={e => setRecipientName(e.target.value)} style={inputStyle()} />
+          <input placeholder="Property REF (optional)" value={propertyRef} onChange={e => setPropertyRef(e.target.value)} style={inputStyle()} />
+          <input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} style={inputStyle()} />
+          <textarea placeholder="Message" value={message} onChange={e => setMessage(e.target.value)} style={{ ...inputStyle(), gridColumn: 'span 2', minHeight: 50 }} />
+          <button onClick={create} disabled={busy} style={btnPrimary()}>{busy ? 'Scheduling…' : 'Schedule'}</button>
+        </div>
+      )}
+      {loading ? <div style={{ fontSize: 12, color: DTEXT_FAINT }}>Loading…</div> : (
+        <>
+          {pending.length === 0
+            ? <div style={{ fontSize: 12, color: DTEXT_FAINT }}>Nothing scheduled.</div>
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: resolved.length ? 14 : 0 }}>
+                {pending.map(m => (
+                  <div key={m.id} style={{ background: DCARD2, border: `1px solid ${DBORDER}`, borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 12.5, fontWeight: 700 }}>{m.recipient_name || m.recipient_phone}{m.property_ref ? ` · #${m.property_ref}` : ''}</div>
+                        <div style={{ fontSize: 11, color: DTEXT_DIM, marginTop: 3 }}>{m.message_payload}</div>
+                        <div style={{ fontSize: 10.5, color: DTEXT_FAINT, marginTop: 3 }}>{new Date(m.scheduled_at).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button onClick={() => sendNow(m.id)} style={btnGhost()}>Send Now</button>
+                        <button onClick={() => cancel(m.id)} style={{ ...btnGhost(), color: '#F2597A' }}>Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>}
+          {resolved.length > 0 && (
+            <div style={{ borderTop: `1px solid ${DBORDER}`, paddingTop: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: DTEXT_FAINT, marginBottom: 8 }}>RECENT</div>
+              {resolved.map(m => (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5, color: DTEXT_DIM, padding: '5px 0' }}>
+                  <span>{m.recipient_name || m.recipient_phone}{m.property_ref ? ` · #${m.property_ref}` : ''}{m.skip_reason ? ` — ${m.skip_reason}` : ''}</span>
+                  <Badge {...(SM_STATUS_BADGE[m.status] || SM_STATUS_BADGE.CANCELLED)} />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </SectionCard>
   )
 }
 
@@ -411,8 +599,49 @@ function NotificationEnginePanel({ agentId, bundle, onChange }: { agentId: numbe
     onChange()
   }
 
+  const [groupForm, setGroupForm] = useState(false)
+  const [groupName, setGroupName] = useState('')
+  const [groupParticipants, setGroupParticipants] = useState('')
+  const [groupBusy, setGroupBusy] = useState(false)
+
+  async function createGroup() {
+    setGroupBusy(true)
+    try {
+      const participants = groupParticipants.split(',').map(s => s.trim()).filter(Boolean)
+      await crmJson(`notification-engine/channel/create?agent_id=${agentId}`, 'POST', { name: groupName || undefined, participants })
+      setGroupForm(false); setGroupName(''); setGroupParticipants('')
+      onChange()
+    } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not create the WhatsApp group') }
+    finally { setGroupBusy(false) }
+  }
+  async function disconnectGroup() {
+    if (!confirm('Disconnect the notification group?')) return
+    await crmJson(`notification-engine/channel?agent_id=${agentId}`, 'DELETE', {})
+    onChange()
+  }
+
   return (
     <SectionCard title="Notification Engine" icon="🔔" right={<button onClick={() => setCreating(v => !v)} style={btnGhost()}>{creating ? 'Cancel' : '+ Create Search'}</button>}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: DCARD2, border: `1px solid ${DBORDER}`, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 11.5, color: DTEXT_DIM }}>
+          Delivery group: {bundle.notificationEngine.channel
+            ? <span style={{ color: DTEXT }}>{bundle.notificationEngine.channel.whatsapp_group_id}</span>
+            : <span style={{ color: DTEXT_FAINT }}>none connected</span>}
+        </div>
+        {bundle.notificationEngine.channel
+          ? <button onClick={disconnectGroup} style={{ ...btnGhost(), color: '#F2597A' }}>Disconnect</button>
+          : <button onClick={() => setGroupForm(v => !v)} style={btnGhost()}>{groupForm ? 'Cancel' : '+ Create Group'}</button>}
+      </div>
+      {groupForm && !bundle.notificationEngine.channel && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, marginBottom: 14, padding: 12, background: DCARD2, borderRadius: 10 }}>
+          <input placeholder={`Group name (default: ARGUS — ${bundle.agent.name} Notifications)`} value={groupName} onChange={e => setGroupName(e.target.value)} style={{ ...inputStyle(), gridColumn: 'span 2' }} />
+          <input placeholder="Participant phone numbers, comma-separated" value={groupParticipants} onChange={e => setGroupParticipants(e.target.value)} style={{ ...inputStyle(), gridColumn: 'span 2' }} />
+          <div style={{ fontSize: 10.5, color: DTEXT_FAINT, gridColumn: 'span 2' }}>
+            Requires your WhatsApp to be connected. At least one participant besides you is required by WhatsApp itself.
+          </div>
+          <button onClick={createGroup} disabled={groupBusy} style={btnPrimary()}>{groupBusy ? 'Creating…' : 'Create Group'}</button>
+        </div>
+      )}
       {creating && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 8, marginBottom: 14, padding: 12, background: DCARD2, borderRadius: 10 }}>
           <input placeholder="Search name" value={name} onChange={e => setName(e.target.value)} style={inputStyle()} />
