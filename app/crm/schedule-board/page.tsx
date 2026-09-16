@@ -3274,6 +3274,27 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             EVERY card regardless of how much is above it, not just the ones
             that happened to be tall enough already. */}
         <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+        {/* Kev, 2026-09-16 ("die minicions vlt über das still available
+            anheften, da ist ja garnix"): moved up from the tray below — this
+            row above the button had nothing in it, and that's a better home
+            for these than buried under Chat/Book/Tag. Facebook stays behind
+            "..." exactly where it was; only download/copy/price/AV-date
+            moved again. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
+          <PhotoDownload r={r} />
+          <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
+            <Copy size={14} />
+          </button>
+          <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
+            <Euro size={14} />
+          </button>
+          {isAdmin && (
+            <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
+              <CalendarClock size={14} />
+            </button>
+          )}
+          {rowMsg && <span style={{ fontSize: 10.5, color: A, marginLeft: 2 }}>{rowMsg}</span>}
+        </div>
         {/* Kev, 2026-09-14 (spec item 1): an owner-confirmed future date means
             "still available?" is the wrong question to even offer — no button,
             just the fact and when we'll check again. */}
@@ -3407,27 +3428,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
         padding: '9px 11px', position: 'relative',
       }} ref={menuRef}>
-        {/* Kev, 2026-09-16 ("miniaction icons... nicht versteckt"): Copy-
-            link/Price/AV-date/Photo-download were part of the 2026-09-11
-            move into "...", but copying a link in particular is common
-            enough to want one tap, not two — pulled back out as small
-            always-visible icons. Facebook stays inside "..." exactly where
-            it already is (still under menuSection "Tools"), untouched. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
-          <PhotoDownload r={r} />
-          <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
-            <Copy size={14} />
-          </button>
-          <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
-            <Euro size={14} />
-          </button>
-          {isAdmin && (
-            <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
-              <CalendarClock size={14} />
-            </button>
-          )}
-          {rowMsg && <span style={{ fontSize: 10.5, color: A, marginLeft: 2 }}>{rowMsg}</span>}
-        </div>
+        {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
+            to live here moved up above the Still Available button — see the
+            block right before `isUpcoming` above. Facebook stays inside "..."
+            exactly where it already is (still under menuSection "Tools"). */}
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={onChat} title="Chat with the owner" style={trayPrimaryBtn(dark)}>
             Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
