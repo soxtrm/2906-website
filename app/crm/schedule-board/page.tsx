@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -175,6 +175,13 @@ type Listing = {
 type AvNotification = {
   id: number; ref: string; town: string | null; beds: number | null
   price: number | null; image: string | null; status: string; statusLabel: string
+}
+
+type PendingPropertyChange = {
+  id: number; property_id: number; ref: string; field: string
+  old_value: string | null; new_value: string | null
+  proposed_by_name: string | null; proposed_by_username: string
+  created_at: string
 }
 
 type AgentRequestGroup = {
@@ -436,6 +443,32 @@ function Board() {
     setAvNotifications(prev => prev.filter(n => n.id !== id))
     crmJson(`schedule-board/notifications/${id}/seen`, 'POST', {}).catch(() => {})
   }, [])
+
+  // ── pending classification changes (Kev, 2026-09-17) ─────────────────────
+  // "im dashboard als notification angezeigt die wir bestätigen müssen" —
+  // admin-only, same polling idiom as the availability notifications above.
+  // A non-admin's lease_type change via the card's settings gear lands here
+  // instead of applying, until an admin approves or rejects it.
+  const [pendingChanges, setPendingChanges] = useState<PendingPropertyChange[]>([])
+  useEffect(() => {
+    if (me?.role !== 'admin') return
+    let alive = true
+    async function poll() {
+      try {
+        const d = await crmFetch('property-changes/pending')
+        if (alive && Array.isArray(d)) setPendingChanges(d)
+      } catch { /* a missed poll just tries again next interval */ }
+    }
+    poll()
+    const t = setInterval(poll, 20_000)
+    return () => { alive = false; clearInterval(t) }
+  }, [me?.role])
+
+  async function resolvePendingChange(id: number, action: 'approve' | 'reject') {
+    setPendingChanges(prev => prev.filter(c => c.id !== id))
+    try { await crmJson(`property-changes/${id}/${action}`, 'POST', {}) }
+    catch { showToast('err', 'Could not resolve that change — it may already be handled.') }
+  }
 
   // ── URL mirror ────────────────────────────────────────────────────────────
   // history.replaceState, not router.replace: the URL here is a shareable
@@ -1686,6 +1719,9 @@ function Board() {
       {avNotifications.length > 0 && (
         <AvNotificationStack items={avNotifications} onDismiss={dismissAvNotification} />
       )}
+      {pendingChanges.length > 0 && (
+        <PendingChangesStack items={pendingChanges} onResolve={resolvePendingChange} />
+      )}
       {swipeModeChoice && (
         <SwipeModeChoiceModal
           count={selected.size}
@@ -2450,6 +2486,69 @@ async function downloadPhotos(r: Listing, onProgress: (done: number) => void) {
 
 // The button itself. Its own tiny component so the download state belongs to one
 // card and a click cannot bubble up into "open the listing".
+// Kev, 2026-09-17 ("settings rad bei die ...., Winterlet unso, nur Admins
+// können es direkt ändern"): a small classification control living next to
+// the "..." Tools button. Admins apply immediately via the ordinary
+// property PATCH; a non-admin's change comes back with `pendingChange` set
+// instead of being applied — the backend decides, this component just
+// reflects whichever happened.
+function ClassificationGear({ r, dark, isAdmin }: { r: Listing; dark: boolean; isAdmin: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState<string>(r.leaseType || 'long_let')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  async function apply() {
+    if (value === (r.leaseType || 'long_let')) { setOpen(false); return }
+    setBusy(true)
+    try {
+      const d = await crmJson(`properties/${r.id}`, 'PATCH', { lease_type: value })
+      setNote(d?.pendingChange ? 'Queued for admin approval' : 'Updated')
+      setTimeout(() => { setOpen(false); setNote(null) }, 1400)
+    } catch (e: any) {
+      setNote(e?.data?.error || e?.message || 'Failed')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        title="Change lease type"
+        style={{ ...trayMoreBtn(dark), width: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Settings size={15} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: '110%', right: 0, zIndex: 40,
+          background: dark ? '#141B29' : '#fff', border: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : '#E5E1D8'}`,
+          borderRadius: 10, padding: 10, width: 200, boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+        }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: dark ? '#8B93A6' : '#8A8578', marginBottom: 6 }}>
+            {isAdmin ? 'Lease type' : 'Propose lease type'}
+          </div>
+          <select value={value} onChange={e => setValue(e.target.value)} style={{
+            width: '100%', fontSize: 12, padding: '6px 8px', borderRadius: 7, marginBottom: 8,
+            background: dark ? '#0F1521' : '#F6F4EF', color: dark ? '#EDEAE1' : '#222',
+            border: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : '#E5E1D8'}`,
+          }}>
+            <option value="long_let">Long-let</option>
+            <option value="winter_let">Winter-let</option>
+            <option value="short_let">Short-let</option>
+            <option value="flexible">Flexible</option>
+          </select>
+          {note
+            ? <div style={{ fontSize: 11, color: dark ? '#EDEAE1' : '#222' }}>{note}</div>
+            : <button onClick={apply} disabled={busy} style={{
+                width: '100%', background: A, color: '#151C2C', border: 'none', borderRadius: 7,
+                padding: '6px 0', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+              }}>{busy ? '…' : isAdmin ? 'Apply' : 'Propose'}</button>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PhotoDownload({ r }: { r: Listing }) {
   const [done, setDone] = useState<number | null>(null)
   const n = r.imageCount || (r.images || []).length
@@ -3481,6 +3580,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             style={{ ...trayMoreBtn(dark), background: menuOpen ? A : trayMoreBtn(dark).background, color: menuOpen ? '#151C2C' : (dark ? DTEXT_DIM : LTEXT_DIM), borderColor: menuOpen ? A : (dark ? DBORDER : LBORDER) }}>
             <MoreHorizontal size={16} />
           </button>
+          {/* Kev, 2026-09-17: "settings rad bei die ...." — classification
+              (lease_type / winter-let) change, separate from the Tools menu.
+              Admins apply immediately; a non-admin's change queues as a
+              property_pending_changes row an admin must confirm (the bell in
+              the sidebar), same PATCH endpoint either way — the backend
+              decides which happens, this button never needs to know. */}
+          <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} />
         </div>
 
         {menuOpen && (
@@ -4057,6 +4163,46 @@ function AvNotificationStack({ items, onDismiss }: {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// Kev, 2026-09-17 ("im dashboard als notification angezeigt die wir
+// bestätigen müssen"): admin-only, left side so it never collides with the
+// availability-answer stack on the right. Each row is one agent's proposed
+// classification change, sitting there until approved or rejected — no
+// auto-dismiss, since this is a decision, not just information.
+function PendingChangesStack({ items, onResolve }: {
+  items: PendingPropertyChange[]
+  onResolve: (id: number, action: 'approve' | 'reject') => void
+}) {
+  const FIELD_LABEL: Record<string, string> = { lease_type: 'Lease type' }
+  return (
+    <div style={{
+      position: 'fixed', top: 16, left: 16, zIndex: 310,
+      display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320, width: 'calc(100vw - 32px)',
+    }}>
+      {items.map(c => (
+        <div key={c.id} style={{
+          background: CARD, borderRadius: 12, padding: 12,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.22)', fontFamily: F,
+        }}>
+          <div style={{ fontFamily: FM, fontSize: 11, color: A, marginBottom: 4 }}>#{c.ref} · {FIELD_LABEL[c.field] || c.field}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: '#222', marginBottom: 8 }}>
+            {c.proposed_by_name || c.proposed_by_username} wants <b>{c.old_value}</b> → <b>{c.new_value}</b>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => onResolve(c.id, 'approve')} style={{
+              flex: 1, background: '#22C55E', color: '#fff', border: 'none', borderRadius: 8,
+              padding: '7px 0', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+            }}>Approve</button>
+            <button onClick={() => onResolve(c.id, 'reject')} style={{
+              flex: 1, background: 'transparent', color: '#B5AFA2', border: '1px solid #E5E1D8', borderRadius: 8,
+              padding: '7px 0', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+            }}>Reject</button>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
