@@ -2896,6 +2896,25 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // exact top-right spot the "Uploaded/Updated X ago" pill already lives.
   const isFreshlyUpdated = !!r.updatedAt && (Date.now() - Date.parse(r.updatedAt) < 48 * 3600_000)
 
+  // Kev, 2026-09-17: "wenn man mit der maus über ein listing hoverd, dass
+  // die blätter im 2 sekunden switchen, nur über dem bild selber" — cycle
+  // through the listing's own photos on hover, scoped to the image itself
+  // (not the whole card, so hovering the text/tray below doesn't do this).
+  // Stops and resets to the cover photo the instant the mouse leaves.
+  const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
+  const hoverPhotoTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  function startPhotoHover() {
+    if ((r.images || []).length < 2) return
+    hoverPhotoTimer.current = setInterval(() => {
+      setHoverPhotoIdx(i => (i + 1) % r.images.length)
+    }, 2000)
+  }
+  function stopPhotoHover() {
+    if (hoverPhotoTimer.current) { clearInterval(hoverPhotoTimer.current); hoverPhotoTimer.current = null }
+    setHoverPhotoIdx(0)
+  }
+  useEffect(() => () => { if (hoverPhotoTimer.current) clearInterval(hoverPhotoTimer.current) }, [])
+
   // First four photos as thumbnails, "+N" for the rest — matches the count
   // badge on the photo (4 shown + N more = imageCount).
   const thumbs = (r.images || []).slice(0, 4)
@@ -2945,9 +2964,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           height is the only way every photo on the board is the same size no
           matter how many columns fit. `objectFit: cover` still crops rather
           than distorts, so nothing is squashed. */}
-      <div onClick={onOpen} style={{ cursor: 'pointer', position: 'relative', height: isMobile ? 152 : 200, flexShrink: 0, background: '#111' }}>
-        {r.images[0]
-          ? <img src={r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      <div
+        onClick={onOpen}
+        onMouseEnter={startPhotoHover}
+        onMouseLeave={stopPhotoHover}
+        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? 152 : 200, flexShrink: 0, background: '#111' }}
+      >
+        {r.images[hoverPhotoIdx] || r.images[0]
+          ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
 
         {/* Kev's redesign brief (2026-08-22): a real scrim instead of relying on
