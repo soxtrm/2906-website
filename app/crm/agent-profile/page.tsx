@@ -19,6 +19,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CrmProvider, CrmShell, useCrm, DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, A, AD, F } from '@/lib/crm/ui'
 import { crmFetch, crmJson } from '@/lib/crm/api'
+import { jsPDF } from 'jspdf'
 
 const DPAGE = '#0B0F17'
 const DCARD2 = '#0F1521'
@@ -81,14 +82,22 @@ function Badge({ bg, fg, label }: { bg: string; fg: string; label: string }) {
 
 function SectionCard({ id, title, icon, children, right }: { id?: string; title: string; icon?: string; children: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <div id={id} style={{ background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 14, padding: '18px 20px', marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+    <div id={id} style={{
+      background: `linear-gradient(180deg, ${DCARD} 0%, #10182A 100%)`, border: `1px solid ${DCARD_BORDER}`,
+      borderRadius: 14, padding: '18px 20px', marginBottom: 16, position: 'relative', overflow: 'hidden',
+      boxShadow: '0 12px 32px -18px rgba(0,0,0,0.55)',
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 20, right: 20, height: 1, background: 'linear-gradient(90deg, transparent, rgba(184,149,63,0.35), transparent)' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5, fontWeight: 700, color: DTEXT }}>
-          {icon && <span style={{ fontSize: 15 }}>{icon}</span>}{title}
+          {icon && <span style={{
+            width: 26, height: 26, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, background: AD, boxShadow: '0 0 14px -4px rgba(184,149,63,0.5)',
+          }}>{icon}</span>}{title}
         </div>
         {right}
       </div>
-      {children}
+      <div style={{ position: 'relative' }}>{children}</div>
     </div>
   )
 }
@@ -117,6 +126,7 @@ function AgentProfilePage() {
   const [editing, setEditing] = useState(false)
   const [editDraft, setEditDraft] = useState<Partial<Agent>>({})
   const [saveBusy, setSaveBusy] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
 
   const load = useCallback(async () => {
     if (!agentId) return
@@ -140,6 +150,20 @@ function AgentProfilePage() {
     finally { setSaveBusy(false) }
   }
 
+  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !agentId) return
+    setPhotoBusy(true)
+    try {
+      const fd = new FormData()
+      fd.append('photo', file)
+      await crmFetch(`agent-profile/${agentId}/photo`, { method: 'POST', body: fd })
+      await load()
+    } catch (err: any) { alert(err?.data?.error || err?.message || 'Could not upload photo') }
+    finally { setPhotoBusy(false) }
+  }
+
   const canSeeFull = me?.role === 'admin' || isSelf
   const a = bundle?.agent
 
@@ -154,17 +178,45 @@ function AgentProfilePage() {
 
   return (
     <div style={{ background: DPAGE, minHeight: '100%', padding: '20px 18px 60px', color: DTEXT, fontFamily: F }}>
+      <style>{`
+        .agent-tool-card > div:hover {
+          transform: translateY(-2px);
+          border-color: rgba(184,149,63,0.5) !important;
+          box-shadow: 0 16px 34px -16px rgba(184,149,63,0.25) !important;
+        }
+      `}</style>
       {/* ── Identity card ─────────────────────────────────────────────── */}
-      <div style={{ background: `linear-gradient(160deg, ${DCARD} 0%, ${DCARD2} 100%)`, border: `1px solid ${DCARD_BORDER}`, borderRadius: 16, padding: '22px 22px 20px', marginBottom: 18, position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(184,149,63,0.14), transparent 70%)' }} />
+      <div style={{
+        background: `linear-gradient(160deg, #172038 0%, ${DCARD2} 65%, #0A0D14 100%)`,
+        border: `1px solid ${DCARD_BORDER}`, borderTop: `1px solid rgba(184,149,63,0.45)`,
+        borderRadius: 16, padding: '24px 22px 22px', marginBottom: 18, position: 'relative', overflow: 'hidden',
+        boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+      }}>
+        {/* Dual-tone brand glow — gold (identity/warmth) top-right, electric
+            blue (system/tech) bottom-left, per "das soll super modern
+            aussehen" — echoes the mockup's own gold radial without being flat. */}
+        <div style={{ position: 'absolute', top: -80, right: -80, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(184,149,63,0.22), transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -100, left: -60, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,123,242,0.16), transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(184,149,63,0.6), transparent)' }} />
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
-          <div style={{
-            width: 76, height: 76, borderRadius: '50%', flexShrink: 0,
-            background: a.profile_image_url ? `url(${a.profile_image_url}) center/cover` : 'linear-gradient(135deg, rgba(184,149,63,0.35), rgba(79,123,242,0.35))',
-            border: `2px solid ${A}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 700,
+          <label style={{
+            width: 78, height: 78, borderRadius: '50%', flexShrink: 0, position: 'relative', cursor: canSeeFull ? 'pointer' : 'default',
+            background: a.profile_image_url ? `url(${a.profile_image_url}) center/cover` : 'linear-gradient(135deg, rgba(184,149,63,0.4), rgba(79,123,242,0.4))',
+            border: `2px solid ${A}`, boxShadow: '0 0 0 4px rgba(184,149,63,0.10), 0 8px 24px -6px rgba(184,149,63,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 700,
           }}>
             {!a.profile_image_url && (a.name || a.username || '?').charAt(0).toUpperCase()}
-          </div>
+            {canSeeFull && (
+              <>
+                <div style={{
+                  position: 'absolute', bottom: -2, right: -2, width: 24, height: 24, borderRadius: '50%',
+                  background: A, color: '#151C2C', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, border: `2px solid ${DCARD}`,
+                }} title="Change photo">{photoBusy ? '…' : '✎'}</div>
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onPickPhoto} />
+              </>
+            )}
+          </label>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 19, fontWeight: 800 }}>{a.name}{a.surname ? ` ${a.surname}` : ''}</div>
@@ -220,11 +272,20 @@ function AgentProfilePage() {
           { href: '#features', icon: '⬡', label: 'Be Part of ARGUS', desc: 'Explore all tools available to you.' },
           { href: '/schedule-board', icon: '📊', label: 'Agent Dashboard', desc: 'Open your personal dashboard.', external: true },
         ].map(c => (
-          <a key={c.label} href={c.href} style={{ textDecoration: 'none' }}>
-            <div style={{ background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 12, padding: '16px 16px', cursor: 'pointer', height: '100%' }}>
-              <div style={{ width: 34, height: 34, borderRadius: 9, background: AD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, marginBottom: 10 }}>{c.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT }}>{c.label}</div>
-              <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 3 }}>{c.desc}</div>
+          <a key={c.label} href={c.href} className="agent-tool-card" style={{ textDecoration: 'none' }}>
+            <div style={{
+              background: `linear-gradient(155deg, ${DCARD} 0%, #0F1521 100%)`, border: `1px solid ${DCARD_BORDER}`,
+              borderRadius: 12, padding: '16px 16px', cursor: 'pointer', height: '100%', position: 'relative', overflow: 'hidden',
+              boxShadow: '0 10px 26px -16px rgba(0,0,0,0.6)', transition: 'transform .15s, box-shadow .15s, border-color .15s',
+            }}>
+              <div style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(184,149,63,0.16), transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{
+                width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg, ${AD}, rgba(79,123,242,0.12))`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, marginBottom: 10,
+                boxShadow: '0 0 16px -4px rgba(184,149,63,0.45)', position: 'relative',
+              }}>{c.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT, position: 'relative' }}>{c.label}</div>
+              <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 3, position: 'relative' }}>{c.desc}</div>
             </div>
           </a>
         ))}
@@ -389,8 +450,150 @@ function NotificationEnginePanel({ agentId, bundle, onChange }: { agentId: numbe
   )
 }
 
+// Structured, legible, ARGUS-branded PDF — deliberately not the final
+// designed invoice template (Kev: that comes later, supplied separately).
+// This is the generator SHELL producing a real, downloadable document now.
+function buildInvoicePdf(data: {
+  agent: Agent; clientName: string; billingCompanyNumber: string; billingVatNumber: string; billingAddress: string
+  propertyRef: string; dealRef: string; invoiceNumber?: string | null
+  lines: { description: string; price: string }[]; vatEnabled: boolean; vatRate: string; notes: string
+}) {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  const GOLD: [number, number, number] = [184, 149, 63]
+  const NAVY: [number, number, number] = [27, 42, 74]
+  const INK: [number, number, number] = [30, 34, 44]
+  const MUTED: [number, number, number] = [110, 118, 138]
+  const pageW = doc.internal.pageSize.getWidth()
+  const margin = 48
+
+  doc.setFillColor(...NAVY)
+  doc.rect(0, 0, pageW, 86, 'F')
+  doc.setFillColor(...GOLD)
+  doc.rect(0, 86, pageW, 3, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(22)
+  doc.text('A R G U S', margin, 42)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(210, 216, 230)
+  doc.text('2906 Estate · Malta', margin, 60)
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.text('INVOICE', pageW - margin, 42, { align: 'right' })
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(210, 216, 230)
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  doc.text(`Date: ${today}`, pageW - margin, 60, { align: 'right' })
+  if (data.invoiceNumber) doc.text(`Invoice #${data.invoiceNumber}`, pageW - margin, 72, { align: 'right' })
+
+  let y = 120
+  doc.setTextColor(...MUTED)
+  doc.setFontSize(9)
+  doc.text('FROM', margin, y)
+  doc.text('BILL TO', pageW / 2, y)
+  y += 14
+  doc.setTextColor(...INK)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.text(`${data.agent.name || ''}${data.agent.surname ? ' ' + data.agent.surname : ''}`, margin, y)
+  doc.text(data.clientName || '—', pageW / 2, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9.5)
+  doc.setTextColor(...MUTED)
+  let yl = y + 14, yr = y + 14
+  if (data.agent.vat_number) { doc.text(`VAT ${data.agent.vat_number}`, margin, yl); yl += 12 }
+  if (data.agent.company_number) { doc.text(`Co. Nr ${data.agent.company_number}`, margin, yl); yl += 12 }
+  if (data.agent.email) { doc.text(data.agent.email, margin, yl); yl += 12 }
+  if (data.billingVatNumber) { doc.text(`VAT ${data.billingVatNumber}`, pageW / 2, yr); yr += 12 }
+  if (data.billingCompanyNumber) { doc.text(`Co. Nr ${data.billingCompanyNumber}`, pageW / 2, yr); yr += 12 }
+  if (data.billingAddress) { doc.text(doc.splitTextToSize(data.billingAddress, pageW / 2 - margin), pageW / 2, yr); yr += 12 }
+
+  y = Math.max(yl, yr) + 16
+  if (data.propertyRef || data.dealRef) {
+    doc.setFontSize(9)
+    doc.text([data.propertyRef ? `Property REF: ${data.propertyRef}` : '', data.dealRef ? `Deal REF: ${data.dealRef}` : ''].filter(Boolean).join('   ·   '), margin, y)
+    y += 20
+  }
+
+  doc.setDrawColor(...GOLD)
+  doc.setLineWidth(1)
+  doc.line(margin, y, pageW - margin, y)
+  y += 20
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(...MUTED)
+  doc.text('DESCRIPTION', margin, y)
+  doc.text('AMOUNT', pageW - margin, y, { align: 'right' })
+  y += 10
+  doc.setDrawColor(220, 220, 220)
+  doc.line(margin, y, pageW - margin, y)
+  y += 16
+
+  const validLines = data.lines.filter(l => l.description || l.price)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10.5)
+  doc.setTextColor(...INK)
+  let subtotal = 0
+  for (const l of validLines) {
+    const price = Number(l.price) || 0
+    subtotal += price
+    doc.text(l.description || '—', margin, y)
+    doc.text(`€${price.toFixed(2)}`, pageW - margin, y, { align: 'right' })
+    y += 18
+  }
+
+  const vat = data.vatEnabled ? subtotal * (Number(data.vatRate) || 0) / 100 : 0
+  const total = subtotal + vat
+  y += 8
+  doc.line(pageW - margin - 160, y, pageW - margin, y)
+  y += 16
+  doc.setFontSize(10)
+  doc.setTextColor(...MUTED)
+  doc.text('Subtotal', pageW - margin - 160, y)
+  doc.setTextColor(...INK)
+  doc.text(`€${subtotal.toFixed(2)}`, pageW - margin, y, { align: 'right' })
+  if (data.vatEnabled) {
+    y += 16
+    doc.setTextColor(...MUTED)
+    doc.text(`VAT (${data.vatRate}%)`, pageW - margin - 160, y)
+    doc.setTextColor(...INK)
+    doc.text(`€${vat.toFixed(2)}`, pageW - margin, y, { align: 'right' })
+  }
+  y += 20
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  doc.setTextColor(...GOLD)
+  doc.text('TOTAL', pageW - margin - 160, y)
+  doc.text(`€${total.toFixed(2)}`, pageW - margin, y, { align: 'right' })
+
+  if (data.notes) {
+    y += 36
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9.5)
+    doc.setTextColor(...MUTED)
+    doc.text('NOTES', margin, y)
+    y += 14
+    doc.setTextColor(...INK)
+    doc.text(doc.splitTextToSize(data.notes, pageW - margin * 2), margin, y)
+  }
+
+  doc.setFontSize(8)
+  doc.setTextColor(...MUTED)
+  doc.text('Generated by ARGUS · 2906 Estate', margin, doc.internal.pageSize.getHeight() - 30)
+
+  return doc
+}
+
 function InvoiceCreator({ agentId, agent, invoices, onCreated }: { agentId: number; agent: Agent; invoices: Invoice[]; onCreated: () => void }) {
   const [clientName, setClientName] = useState('')
+  const [billingCompanyNumber, setBillingCompanyNumber] = useState('')
+  const [billingVatNumber, setBillingVatNumber] = useState('')
+  const [billingAddress, setBillingAddress] = useState('')
   const [propertyRef, setPropertyRef] = useState('')
   const [dealRef, setDealRef] = useState('')
   const [lines, setLines] = useState<{ description: string; price: string }[]>([{ description: '', price: '' }])
@@ -407,15 +610,28 @@ function InvoiceCreator({ agentId, agent, invoices, onCreated }: { agentId: numb
     setLines(ls => ls.map((l, idx) => idx === i ? { ...l, [field]: v } : l))
   }
 
-  async function save() {
+  function reset() {
+    setClientName(''); setBillingCompanyNumber(''); setBillingVatNumber(''); setBillingAddress('')
+    setPropertyRef(''); setDealRef(''); setLines([{ description: '', price: '' }]); setNotes('')
+  }
+
+  // Kev, 2026-09-16: "anstatt Save Draft ... PDF download" — this now saves
+  // the draft (so it still shows in Recent Drafts / the activity log / the
+  // audit trail) AND immediately generates a real downloadable PDF from the
+  // same data, in one action.
+  async function saveAndDownload() {
     setBusy(true)
     try {
-      await crmJson(`agent-profile/${agentId}/invoices`, 'POST', {
+      const created = await crmJson(`agent-profile/${agentId}/invoices`, 'POST', {
         client_or_owner_name: clientName || null, property_ref: propertyRef || null, deal_ref: dealRef || null,
+        billing_company_number: billingCompanyNumber || null, billing_vat_number: billingVatNumber || null,
+        billing_address: billingAddress || null,
         line_items: lines.filter(l => l.description || l.price).map(l => ({ description: l.description, price: Number(l.price) || 0 })),
         vat_enabled: vatEnabled, vat_rate: Number(vatRate) || 0, notes: notes || null,
       })
-      setClientName(''); setPropertyRef(''); setDealRef(''); setLines([{ description: '', price: '' }]); setNotes('')
+      const doc = buildInvoicePdf({ agent, clientName, billingCompanyNumber, billingVatNumber, billingAddress, propertyRef, dealRef, invoiceNumber: created?.invoice_number, lines, vatEnabled, vatRate, notes })
+      doc.save(`invoice${propertyRef ? '-' + propertyRef : ''}-${new Date().toISOString().slice(0, 10)}.pdf`)
+      reset()
       onCreated()
     } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not save invoice') }
     finally { setBusy(false) }
@@ -425,10 +641,15 @@ function InvoiceCreator({ agentId, agent, invoices, onCreated }: { agentId: numb
     <SectionCard id="invoice" title="Invoice Creator" icon="🧾">
       <div style={{ fontSize: 10.5, color: DTEXT_FAINT, marginBottom: 12 }}>
         From: {agent.name}{agent.surname ? ` ${agent.surname}` : ''}{agent.vat_number ? ` · VAT ${agent.vat_number}` : ''}{agent.company_number ? ` · Co. Nr ${agent.company_number}` : ''}
-        {' '}— structured draft only, final PDF template comes later.
+        {' '}— structured document now, final branded template comes later.
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, marginBottom: 8 }}>
+        <input placeholder="Client / Owner name / Company" value={clientName} onChange={e => setClientName(e.target.value)} style={inputStyle()} />
+        <input placeholder="Company Nr (optional)" value={billingCompanyNumber} onChange={e => setBillingCompanyNumber(e.target.value)} style={inputStyle()} />
+        <input placeholder="VAT Number (optional)" value={billingVatNumber} onChange={e => setBillingVatNumber(e.target.value)} style={inputStyle()} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, marginBottom: 10 }}>
-        <input placeholder="Client / Owner name" value={clientName} onChange={e => setClientName(e.target.value)} style={inputStyle()} />
+        <input placeholder="Billing address (optional)" value={billingAddress} onChange={e => setBillingAddress(e.target.value)} style={inputStyle()} />
         <input placeholder="Property REF (e.g. 2906-1234)" value={propertyRef} onChange={e => setPropertyRef(e.target.value)} style={inputStyle()} />
         <input placeholder="Deal REF" value={dealRef} onChange={e => setDealRef(e.target.value)} style={inputStyle()} />
       </div>
@@ -453,11 +674,11 @@ function InvoiceCreator({ agentId, agent, invoices, onCreated }: { agentId: numb
         {vatEnabled && <div>VAT: <b style={{ color: DTEXT }}>€{vat.toFixed(2)}</b></div>}
         <div>Total: <b style={{ color: A }}>€{total.toFixed(2)}</b></div>
       </div>
-      <button onClick={save} disabled={busy} style={btnPrimary()}>{busy ? 'Saving…' : 'Save Draft'}</button>
+      <button onClick={saveAndDownload} disabled={busy} style={btnPrimary()}>{busy ? 'Generating…' : '⬇ Download PDF'}</button>
 
       {invoices.length > 0 && (
         <div style={{ marginTop: 18, borderTop: `1px solid ${DBORDER}`, paddingTop: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: DTEXT_FAINT, marginBottom: 8 }}>RECENT DRAFTS</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: DTEXT_FAINT, marginBottom: 8 }}>RECENT INVOICES</div>
           {invoices.map(inv => {
             const sub = (inv.line_items || []).reduce((s, l) => s + (Number(l.price) || 0), 0)
             return (
