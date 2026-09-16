@@ -19,7 +19,12 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CrmProvider, CrmShell, useCrm, DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, A, AD, F } from '@/lib/crm/ui'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { jsPDF } from 'jspdf'
+// Dynamically imported inside buildInvoicePdf() instead of a static top-level
+// import: jspdf pulls in fflate's Node build (a dynamic Worker() require)
+// which Turbopack cannot resolve while SSR-ing this 'use client' page's
+// initial HTML — even though jsPDF itself only ever runs in the browser,
+// inside an onClick handler. A dynamic import() is only evaluated at call
+// time, so it never enters the SSR bundle at all.
 
 const DPAGE = '#0B0F17'
 const DCARD2 = '#0F1521'
@@ -682,11 +687,12 @@ function NotificationEnginePanel({ agentId, bundle, onChange }: { agentId: numbe
 // Structured, legible, ARGUS-branded PDF — deliberately not the final
 // designed invoice template (Kev: that comes later, supplied separately).
 // This is the generator SHELL producing a real, downloadable document now.
-function buildInvoicePdf(data: {
+async function buildInvoicePdf(data: {
   agent: Agent; clientName: string; billingCompanyNumber: string; billingVatNumber: string; billingAddress: string
   propertyRef: string; dealRef: string; invoiceNumber?: string | null
   lines: { description: string; price: string }[]; vatEnabled: boolean; vatRate: string; notes: string
 }) {
+  const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const GOLD: [number, number, number] = [184, 149, 63]
   const NAVY: [number, number, number] = [27, 42, 74]
@@ -858,7 +864,7 @@ function InvoiceCreator({ agentId, agent, invoices, onCreated }: { agentId: numb
         line_items: lines.filter(l => l.description || l.price).map(l => ({ description: l.description, price: Number(l.price) || 0 })),
         vat_enabled: vatEnabled, vat_rate: Number(vatRate) || 0, notes: notes || null,
       })
-      const doc = buildInvoicePdf({ agent, clientName, billingCompanyNumber, billingVatNumber, billingAddress, propertyRef, dealRef, invoiceNumber: created?.invoice_number, lines, vatEnabled, vatRate, notes })
+      const doc = await buildInvoicePdf({ agent, clientName, billingCompanyNumber, billingVatNumber, billingAddress, propertyRef, dealRef, invoiceNumber: created?.invoice_number, lines, vatEnabled, vatRate, notes })
       doc.save(`invoice${propertyRef ? '-' + propertyRef : ''}-${new Date().toISOString().slice(0, 10)}.pdf`)
       reset()
       onCreated()

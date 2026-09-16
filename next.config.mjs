@@ -10,6 +10,14 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // jspdf (Agent Profile invoice PDF export) pulls in fflate's Node build,
+  // which has a `new Worker(<dynamic>)` call Turbopack cannot statically
+  // resolve while building the SSR module graph for the client component
+  // that imports it — even via a runtime dynamic import(), since Turbopack
+  // still needs a server-side graph entry for the RSC flight manifest.
+  // Marking it external skips bundling/analysis entirely; Node resolves it
+  // normally at runtime, and it is only ever actually called in the browser.
+  serverExternalPackages: ['jspdf'],
 }
 
 export default withNextIntl(nextConfig)
