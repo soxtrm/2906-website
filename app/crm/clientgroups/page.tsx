@@ -83,7 +83,7 @@ type Clientgroup = {
   nextEvalWindowStart: string | null; nextEvalWindowEnd: string | null
   search: {
     budgetMin: number | null; budgetMax: number | null; bedroomsWanted: number[] | null
-    locations: string[] | null; moveInDate: string | null; pets: string | null
+    locations: string[] | null; moveInDate: string | null; pets: string | null; subletting: string | null
     nationalities: string[] | null; groupSize: number | null; notes: string | null
   }
   matches: { total: number; unsent: number; sent: number; liked: number; rejected: number }
@@ -290,7 +290,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         duration_months: d.client?.duration_months ?? '',
         nationalities: (d.client?.nationalities || []).join(', '),
         group_size: d.client?.group_size ?? '',
-        pets: d.client?.pets || '', profession: d.client?.profession || '', notes: d.client?.notes || '',
+        pets: d.client?.pets || '', subletting: d.client?.subletting || '', profession: d.client?.profession || '', notes: d.client?.notes || '',
       })
       setCollaboratorIds(d.state?.collaborator_agent_ids || [])
       setSettingsDraft({
@@ -459,6 +459,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         nationalities: arr(profileDraft.nationalities),
         group_size: numOrNull(profileDraft.group_size),
         pets: profileDraft.pets || null,
+        subletting: profileDraft.subletting || null,
         profession: profileDraft.profession || null,
         notes: profileDraft.notes || null,
       })
@@ -858,6 +859,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 <div><label className={LABEL}>Nationalities (comma-sep)</label><input className={FIELD} value={profileDraft.nationalities} onChange={e => setProfileDraft((p: any) => ({ ...p, nationalities: e.target.value }))} /></div>
                 <div><label className={LABEL}>Group size</label><input className={FIELD} value={profileDraft.group_size} onChange={e => setProfileDraft((p: any) => ({ ...p, group_size: e.target.value }))} /></div>
                 <div><label className={LABEL}>Pets</label><input className={FIELD} value={profileDraft.pets} onChange={e => setProfileDraft((p: any) => ({ ...p, pets: e.target.value }))} /></div>
+                <div><label className={LABEL}>Subletting</label><input className={FIELD} value={profileDraft.subletting} onChange={e => setProfileDraft((p: any) => ({ ...p, subletting: e.target.value }))} placeholder="e.g. needs to sublet a room" /></div>
                 <div><label className={LABEL}>Profession</label><input className={FIELD} value={profileDraft.profession} onChange={e => setProfileDraft((p: any) => ({ ...p, profession: e.target.value }))} /></div>
                 <div className="col-span-2"><label className={LABEL}>Notes</label><textarea className={FIELD} rows={2} value={profileDraft.notes} onChange={e => setProfileDraft((p: any) => ({ ...p, notes: e.target.value }))} /></div>
                 <div className="col-span-2"><button className={PRIMARY} disabled={busy} onClick={saveProfile}>Save profile</button></div>

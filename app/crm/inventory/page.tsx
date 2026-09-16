@@ -24,7 +24,7 @@ function Inventory() {
   const [agents, setAgents] = useState<any[]>([])
   const [locations, setLocations] = useState<string[]>([])
   const [ownerPanel, setOwnerPanel] = useState<number | null>(null)
-  const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false })
+  const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false, sublet: false })
   // Kev, 2026-09-04: ~50 empty/ref-less listings went out again -- admins
   // need to clear bad inventory in bulk, not one property-detail-page at a
   // time. Reuses the SAME DELETE /properties/:id the single-property page
@@ -69,6 +69,7 @@ function Inventory() {
     if (f.only_mine) q.set('only_mine', '1')
     if (f.exclusive) q.set('exclusive', '1')
     if (f.only_favourites) q.set('only_favourites', '1')
+    if (f.sublet) q.set('sublet', '1')
     if (f.price) {
       const [mn, mx] = f.price.split('-')
       if (mn) q.set('price_min', mn); if (mx) q.set('price_max', mx)
@@ -91,6 +92,7 @@ function Inventory() {
         <>
           <label style={chk}><input type="checkbox" checked={f.only_mine} onChange={e => set('only_mine', e.target.checked)} style={{ accentColor: A }} /> Only mine</label>
           <label style={chk}><input type="checkbox" checked={f.exclusive} onChange={e => set('exclusive', e.target.checked)} style={{ accentColor: A }} /> Exclusive</label>
+          <label style={chk}><input type="checkbox" checked={f.sublet} onChange={e => set('sublet', e.target.checked)} style={{ accentColor: A }} /> Subletting</label>
           <label style={chk}><input type="checkbox" checked={f.only_favourites} onChange={e => set('only_favourites', e.target.checked)} style={{ accentColor: A }} /> ♥ Only favourites</label>
         </>
       )}
