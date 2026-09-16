@@ -2290,8 +2290,19 @@ function daysUntilAvailable(iso: string | null | undefined): number | null {
   const todayDay = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
   return Math.round((targetDay - todayDay) / 86_400_000)
 }
+// Kev, 2026-09-16 (real live bug: "+3 Months tab is empty, but there are
+// several 2027 things"): this required availableStatus === 'upcoming' --
+// but NO property in the live database ever uses that status (checked:
+// zero rows). Every far-future listing is plain 'available' with a distant
+// available_date, so this returned false for literally every real
+// property, and the +3 MONTHS tab + its count badge were empty by
+// construction, not because the data didn't exist. The backend's own
+// equivalent (services/availability.js farFutureTier/daysUntilAvailable,
+// this function's own namesake) has no status gate at all -- purely
+// date-based -- which is exactly the parity this file's own comment above
+// already promises and this status check was silently breaking.
 function isFarFuture(r: { availableStatus: string; availableDate: string | null }): boolean {
-  if (r.availableStatus !== 'upcoming') return false
+  if (r.availableStatus === 'rented' || r.availableStatus === 'archived') return false
   const days = daysUntilAvailable(r.availableDate)
   return days != null && days > 100
 }
