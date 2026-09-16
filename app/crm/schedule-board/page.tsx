@@ -2264,6 +2264,17 @@ function fmtDateDots(iso: string | null | undefined): string | null {
   return t.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.')
 }
 
+// Kev, 2026-09-16 (WINTER tag, spec item 1): "until April" — just the month
+// name, not the full dotted date fmtDateDots gives. A termination date is a
+// season fact for an agent scanning the board ("still has a few weeks" vs
+// "ending any day"), not a precise deadline they'd act on to the day.
+function monthLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const t = new Date(iso)
+  if (!Number.isFinite(t.getTime())) return null
+  return t.toLocaleDateString('en-GB', { month: 'long' })
+}
+
 // Kev, 2026-09-15 (future inventory board, spec items 11-12): same math and
 // the same >100-day "far future" line as the backend's own guardrail
 // (services/availability.js farFutureTier / daysUntilAvailable) — one
@@ -3100,10 +3111,24 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             actions in the "..." menu, so nothing is lost, this row just
             reads cleaner ("wie Apple"). */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <span onClick={onOpen} title={status.t} style={{
-            cursor: 'pointer', fontSize: isMobile ? 14.5 : 17, fontWeight: 600, color: DTEXT, letterSpacing: '-0.02em',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
-          }}>{townLabel(r.town)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <span onClick={onOpen} title={status.t} style={{
+              cursor: 'pointer', fontSize: isMobile ? 14.5 : 17, fontWeight: 600, color: DTEXT, letterSpacing: '-0.02em',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+            }}>{townLabel(r.town)}</span>
+            {/* Kev, 2026-09-16 (WINTER tag, spec item 1): a longlet with a
+                termination date ("Bis") was going unflagged on the board —
+                agents were asking on it like a normal, year-round longlet.
+                r.availableUntil is the same field the "Bis" button
+                (Owner-Kadenz #4) already writes; this is purely additive, a
+                new read of an existing fact, no new field. */}
+            {r.availableUntil && (
+              <span title={`Winter let — available until ${monthLabel(r.availableUntil)}`} style={{
+                fontSize: 9, fontWeight: 800, color: '#fff', background: '#2E6FA8',
+                padding: '2px 6px', borderRadius: 5, letterSpacing: '0.03em', flexShrink: 0,
+              }}>❄️ WINTER</span>
+            )}
+          </div>
           <div style={{ fontFamily: FM, fontSize: isMobile ? 15 : 19, fontWeight: 500, color: DTEXT, letterSpacing: '-0.03em', flexShrink: 0, lineHeight: 1.1 }}>
             {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
           </div>
@@ -3125,6 +3150,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             {r.availableDate && (
               <div style={{ fontSize: 12, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1 }}>
                 {fmtDateDots(r.availableDate)}
+              </div>
+            )}
+            {/* Kev, 2026-09-16 (WINTER tag, spec item 1): "until April" right
+                under Available — same r.availableUntil the WINTER badge
+                above reads, so the two facts can never disagree. */}
+            {r.availableUntil && (
+              <div style={{ fontSize: 10, color: '#5FA3D8', fontFamily: FM, fontWeight: 500, marginTop: 1 }}>
+                until {monthLabel(r.availableUntil)}
               </div>
             )}
           </div>
