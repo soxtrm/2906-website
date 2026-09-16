@@ -2659,9 +2659,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
   // threading it through the list would be one more prop to forget.
-  const { me } = useCrm()
+  const { me, theme } = useCrm()
   const isAdmin = me?.role === 'admin'
   const isMobile = useIsMobile()
+  // Kev, 2026-09-16 ("lightmode button... buttons still dark-style"): this
+  // board opted into dark by design (2026-09-11) before the theme toggle
+  // existed, so its own action-button styles never read the viewer's
+  // preference at all. Card background/text stay dark by choice (Kev,
+  // scope call 2026-09-16) — only the interactive controls (tray buttons,
+  // "..." menu + panel, icon row) below now respond to it.
+  const dark = theme != null ? theme === 'dark' : true
   // Olga/Katya: trusted for Create Group specifically, not admin generally.
   const canCreateGroupBtn = canCreateGroup(me)
   const confirmed = r.availableStatus === 'available_confirmed'
@@ -3286,7 +3293,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             disabled={!c.canAsk || avBusy}
             title={c.reason || fresh.label}
             style={{
-              ...stillAvailableBtn,
+              ...stillAvailableBtn(dark),
               opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
               cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
             }}>
@@ -3334,17 +3341,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             {/* Kev, 2026-09-14 (spec item 6): GENERAL is the default everywhere
                 — this is the one moment urgent wording makes sense (an agent
                 deliberately escalating), never turned on silently. */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 10, color: DTEXT_FAINT, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 10, color: (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: 'pointer' }}>
               <input type="checkbox" checked={urgentAsk} onChange={e => setUrgentAsk(e.target.checked)} style={{ accentColor: A }} />
               Mention a client is waiting (urgent)
             </label>
             <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
               <button onClick={() => askStillAvailable(true, urgentAsk)} disabled={avBusy}
-                style={{ ...menuItemBtn, flex: 1, justifyContent: 'center', background: A, color: '#151C2C', fontWeight: 700, minHeight: 28, padding: '6px 8px' }}>
+                style={{ ...menuItemBtn(dark), flex: 1, justifyContent: 'center', background: A, color: '#151C2C', fontWeight: 700, minHeight: 28, padding: '6px 8px' }}>
                 Ask anyway
               </button>
               <button onClick={() => { setEscalate(null); setUrgentAsk(false) }}
-                style={{ ...menuItemBtn, flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: DTEXT_FAINT }}>
+                style={{ ...menuItemBtn(dark), flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: (dark ? DTEXT_FAINT : LTEXT_FAINT) }}>
                 Never mind
               </button>
             </div>
@@ -3362,7 +3369,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             background: 'rgba(124,92,252,0.10)', border: '1px solid #7C5CFC',
           }}>
             <div style={{ fontSize: 10.5, fontWeight: 700, color: '#7C5CFC' }}>⚠️ FUTURE AVAILABILITY</div>
-            <div style={{ fontSize: 10.5, color: DTEXT_DIM, lineHeight: 1.4, marginTop: 3 }}>
+            <div style={{ fontSize: 10.5, color: (dark ? DTEXT_DIM : LTEXT_DIM), lineHeight: 1.4, marginTop: 3 }}>
               #{r.ref}{r.town ? ` · ${r.town}` : ''}{r.price ? ` · €${r.price.toLocaleString()}` : ''}
               <br />
               Only expected to become available in {farFutureConfirm.daysUntilAvailable} days
@@ -3371,11 +3378,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             </div>
             <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
               <button onClick={() => askStillAvailable(false, urgentAsk, true)} disabled={avBusy}
-                style={{ ...menuItemBtn, flex: 1, justifyContent: 'center', background: '#7C5CFC', color: '#FFF', fontWeight: 700, minHeight: 28, padding: '6px 8px' }}>
+                style={{ ...menuItemBtn(dark), flex: 1, justifyContent: 'center', background: '#7C5CFC', color: '#FFF', fontWeight: 700, minHeight: 28, padding: '6px 8px' }}>
                 Check anyway
               </button>
               <button onClick={() => setFarFutureConfirm(null)}
-                style={{ ...menuItemBtn, flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: DTEXT_FAINT }}>
+                style={{ ...menuItemBtn(dark), flex: '0 0 auto', minHeight: 28, padding: '6px 10px', color: (dark ? DTEXT_FAINT : LTEXT_FAINT) }}>
                 Cancel
               </button>
             </div>
@@ -3397,14 +3404,35 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           is the SAME one the previous three-row layout used; only where it
           lives changed. */}
       <div style={{
-        background: DTRAY, borderTop: `1px solid ${DBORDER}`,
+        background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
         padding: '9px 11px', position: 'relative',
       }} ref={menuRef}>
+        {/* Kev, 2026-09-16 ("miniaction icons... nicht versteckt"): Copy-
+            link/Price/AV-date/Photo-download were part of the 2026-09-11
+            move into "...", but copying a link in particular is common
+            enough to want one tap, not two — pulled back out as small
+            always-visible icons. Facebook stays inside "..." exactly where
+            it already is (still under menuSection "Tools"), untouched. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
+          <PhotoDownload r={r} />
+          <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
+            <Copy size={14} />
+          </button>
+          <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
+            <Euro size={14} />
+          </button>
+          {isAdmin && (
+            <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
+              <CalendarClock size={14} />
+            </button>
+          )}
+          {rowMsg && <span style={{ fontSize: 10.5, color: A, marginLeft: 2 }}>{rowMsg}</span>}
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={onChat} title="Chat with the owner" style={trayPrimaryBtn}>
+          <button onClick={onChat} title="Chat with the owner" style={trayPrimaryBtn(dark)}>
             Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
           </button>
-          <button onClick={onBook} title="Book a viewing" style={trayPrimaryBtn}>
+          <button onClick={onBook} title="Book a viewing" style={trayPrimaryBtn(dark)}>
             Book
           </button>
           <button
@@ -3413,8 +3441,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             disabled={!canTag || tagging}
             title={tagWhy}
             style={{
-              ...trayPrimaryBtn,
-              color: canTag ? DTEXT : DTEXT_FAINT, cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
+              ...trayPrimaryBtn(dark),
+              color: canTag ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
             }}>
             @Tag
           </button>
@@ -3422,25 +3450,25 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             onClick={() => setMenuOpen(v => !v)}
             aria-expanded={menuOpen}
             title="More actions"
-            style={{ ...trayMoreBtn, background: menuOpen ? A : trayMoreBtn.background, color: menuOpen ? '#151C2C' : DTEXT_DIM, borderColor: menuOpen ? A : DBORDER }}>
+            style={{ ...trayMoreBtn(dark), background: menuOpen ? A : trayMoreBtn(dark).background, color: menuOpen ? '#151C2C' : (dark ? DTEXT_DIM : LTEXT_DIM), borderColor: menuOpen ? A : (dark ? DBORDER : LBORDER) }}>
             <MoreHorizontal size={16} />
           </button>
         </div>
 
         {menuOpen && (
-          <div style={menuPanel}>
+          <div style={menuPanel(dark)}>
             {/* Kev, 2026-09-11: "sieht zu unübersichtlich aus" — a tall list
                 of full-width text rows read as clutter next to the Tools
                 icon row he liked. Same actions, laid out as a compact grid
                 of small pills instead, so the popover reads as one tidy
                 panel rather than a long menu. */}
-            <div style={menuSection}>Talk to</div>
+            <div style={menuSection(dark)}>Talk to</div>
             <div style={menuGrid}>
               <button
                 onClick={() => { if (c.canQuestion) { onAsk(); setMenuOpen(false) } }}
                 disabled={!c.canQuestion}
                 title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
-                style={{ ...menuGridBtn, color: c.canQuestion ? DTEXT : DTEXT_FAINT, cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
+                style={{ ...menuGridBtn(dark), color: c.canQuestion ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
                 {r.isMine ? 'Ask Owner' : 'Ask Agent'}
               </button>
               {(() => {
@@ -3449,7 +3477,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                   <button
                     onClick={() => { canAskLocation ? onAct('request-location', r) : handleLocationReveal(); setMenuOpen(false) }}
                     title={canAskLocation ? 'Ask the listing agent where the viewing is' : "Show this listing's town / area"}
-                    style={menuGridBtn}>
+                    style={menuGridBtn(dark)}>
                     Location
                   </button>
                 )
@@ -3458,17 +3486,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 onClick={() => { if (!r.isMine) { setInquiryOpen(true); setMenuOpen(false) } }}
                 disabled={r.isMine}
                 title={r.isMine ? 'This is your own listing.' : `Send a quick note to ${r.listedBy.displayName || 'the listing agent'}`}
-                style={{ ...menuGridBtn, color: r.isMine ? DTEXT_FAINT : DTEXT, cursor: r.isMine ? 'not-allowed' : 'pointer' }}>
+                style={{ ...menuGridBtn(dark), color: r.isMine ? (dark ? DTEXT_FAINT : LTEXT_FAINT) : (dark ? DTEXT : LTEXT), cursor: r.isMine ? 'not-allowed' : 'pointer' }}>
                 Agent Inquiry
               </button>
             </div>
 
-            <div style={menuSection}>Manage</div>
+            <div style={menuSection(dark)}>Manage</div>
             {/* "On Market?" moved out of this menu entirely — it's the
                 Still Available button above now, same request-availability
                 call for both isMine (owner) and colleague (relay) cases. */}
             <div style={menuGrid}>
-              <button data-match-btn={r.ref} onClick={() => { onMatch(); setMenuOpen(false) }} title="Find active clients this listing fits" style={menuGridBtn}>
+              <button data-match-btn={r.ref} onClick={() => { onMatch(); setMenuOpen(false) }} title="Find active clients this listing fits" style={menuGridBtn(dark)}>
                 Match
               </button>
               {(() => {
@@ -3486,7 +3514,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                     onClick={() => { if (ready) { onCreateGroup(); setMenuOpen(false) } }}
                     disabled={!ready || already}
                     title={title}
-                    style={{ ...menuGridBtn, color: ready && !already ? DTEXT : DTEXT_FAINT, cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
+                    style={{ ...menuGridBtn(dark), color: ready && !already ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
                     {already ? 'Grouped ✓' : 'Create Group'}
                   </button>
                 )
@@ -3499,7 +3527,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                   onClick={() => { onStatus('return-to-market'); setMenuOpen(false) }}
                   disabled={busy}
                   title="Reactivate — puts this back on the active board as available"
-                  style={{ ...menuGridBtn, color: 'rgb(102,187,158)', fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
+                  style={{ ...menuGridBtn(dark), color: 'rgb(102,187,158)', fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
                   Reactivate
                 </button>
               ) : (
@@ -3508,53 +3536,46 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                     onClick={() => { onCheckIn(); setMenuOpen(false) }}
                     disabled={busy}
                     title={`Confirm it yourself without messaging the owner — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
-                    style={{ ...menuGridBtn, color: 'rgb(102,187,158)', cursor: busy ? 'wait' : 'pointer' }}>
+                    style={{ ...menuGridBtn(dark), color: 'rgb(102,187,158)', cursor: busy ? 'wait' : 'pointer' }}>
                     Confirmed myself
                   </button>
                   <button
                     onClick={() => { onStatus('check-out'); setMenuOpen(false) }}
                     disabled={busy}
                     title="Mark rented / off market — asks for a reason, then takes it off the board"
-                    style={{ ...menuGridBtn, color: '#E29B9B', cursor: busy ? 'wait' : 'pointer' }}>
+                    style={{ ...menuGridBtn(dark), color: '#E29B9B', cursor: busy ? 'wait' : 'pointer' }}>
                     Mark rented / gone
                   </button>
                 </>
               )}
             </div>
 
-            <div style={menuSection}>Tools</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 9px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <PhotoDownload r={r} />
-                <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn, color: DTEXT_DIM, cursor: copyBusy ? 'wait' : 'pointer' }}>
-                  <Copy size={14} />
-                </button>
-                <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn, color: DTEXT_DIM }}>
-                  <Euro size={14} />
-                </button>
-                {isAdmin && (
-                  <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn, color: DTEXT_DIM }}>
-                    <CalendarClock size={14} />
-                  </button>
-                )}
-                {isAdmin && (
-                  <button onClick={onFbQueue} disabled={fbQueueBusy} title={r.facebookQueueStatus === 'queued' ? 'In the Facebook posting queue — click to pause' : 'Not in the Facebook posting queue — click to enqueue'}
-                    style={{ ...iconRowBtn, color: r.facebookQueueStatus === 'queued' ? '#4E9EF5' : DTEXT_FAINT, cursor: fbQueueBusy ? 'wait' : 'pointer' }}>
-                    <FacebookGlyph size={14} />
-                  </button>
-                )}
-              </span>
-            </div>
-            {rowMsg && <div style={{ fontSize: 10.5, color: A, padding: '0 9px 4px' }}>{rowMsg}</div>}
+            {/* Kev, 2026-09-16: Photo-download/Copy/Price/AV-date moved to
+                the always-visible icon row above the tray buttons (see this
+                card's own comment there) — Facebook stays here, unchanged,
+                exactly where it's always been. */}
+            {isAdmin && (
+              <>
+                <div style={menuSection(dark)}>Tools</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 9px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <button onClick={onFbQueue} disabled={fbQueueBusy} title={r.facebookQueueStatus === 'queued' ? 'In the Facebook posting queue — click to pause' : 'Not in the Facebook posting queue — click to enqueue'}
+                      style={{ ...iconRowBtn(dark), color: r.facebookQueueStatus === 'queued' ? '#4E9EF5' : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: fbQueueBusy ? 'wait' : 'pointer' }}>
+                      <FacebookGlyph size={14} />
+                    </button>
+                  </span>
+                </div>
+              </>
+            )}
 
             {isAdmin && (
               <>
-                <div style={menuSection}>Danger</div>
+                <div style={menuSection(dark)}>Danger</div>
                 <button
                   onClick={handleDeleteClick}
                   title={`Delete #${r.ref} permanently`}
                   style={{
-                    ...menuItemBtn, justifyContent: 'center', fontWeight: 700,
+                    ...menuItemBtn(dark), justifyContent: 'center', fontWeight: 700,
                     color: deleteArmed ? '#FFF' : '#EF4444',
                     background: deleteArmed ? '#B91C1C' : 'rgba(239,68,68,0.10)',
                   }}>
@@ -4142,23 +4163,35 @@ const compactBtn: React.CSSProperties = {
 // The four small utility icons on the redesigned card (download / copy /
 // facebook / price) — one visual language, one size, one hover, so they read
 // as a single row of tools rather than four different button styles.
-const iconRowBtn: React.CSSProperties = {
+// Kev, 2026-09-16 ("lightmode button"): these 8 button/menu styles were
+// fixed dark-mode constants from before the theme toggle existed — turned
+// into functions of `dark` so a light-mode viewer gets real light buttons
+// instead of a dark pill floating on a light card. Card background/body
+// text are untouched by design (Kev's own scope call, same date) — only the
+// interactive controls below.
+const LTEXT = '#1F2430'        // primary text on light
+const LTEXT_DIM = '#5B6472'    // secondary text on light
+const LTEXT_FAINT = '#8A8F9C'  // tertiary / metadata on light
+const LBORDER = 'rgba(15,20,30,0.14)'
+const LSURFACE = '#F1F0EA'     // button fill on light (matches the CRM's own light chrome)
+
+const iconRowBtn = (dark: boolean): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   width: 22, height: 22, padding: 0, background: 'none', border: 'none',
-  color: DTEXT_FAINT, cursor: 'pointer', lineHeight: 0, flexShrink: 0,
-}
+  color: dark ? DTEXT_FAINT : LTEXT_FAINT, cursor: 'pointer', lineHeight: 0, flexShrink: 0,
+})
 // ── Kev's redesign, 2026-09-11 — "Chat, Book, Tag sind die nächst
 // wichtigen", everything else behind "..." ─────────────────────────────────
 // The three survivors of the old 12-button tray, kept exactly this
 // prominent because they are the ones an agent actually reaches for dozens
 // of times a day; every rarer control moved into menuPanel below instead of
 // competing for the same row.
-const trayPrimaryBtn: React.CSSProperties = {
+const trayPrimaryBtn = (dark: boolean): React.CSSProperties => ({
   padding: '8px 6px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
   fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
-  background: '#1B2333', border: `1px solid ${DBORDER}`, color: DTEXT,
+  background: dark ? '#1B2333' : LSURFACE, border: `1px solid ${dark ? DBORDER : LBORDER}`, color: dark ? DTEXT : LTEXT,
   flex: '1 1 0', minWidth: 0, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
-}
+})
 // Kev, 2026-09-11: "still available soll neben Confirmed weil das der
 // wichtigste Button ist" — a real, always-on button (not tucked in "...").
 // 2nd pass, same day: ONE fixed size/shape/colour for every card, same
@@ -4167,43 +4200,43 @@ const trayPrimaryBtn: React.CSSProperties = {
 // what read as "weird" across a board of otherwise-identical cards. The
 // small dot next to the label (see the JSX) is the only thing that still
 // varies with `fresh`.
-const stillAvailableBtn: React.CSSProperties = {
+const stillAvailableBtn = (dark: boolean): React.CSSProperties => ({
   padding: '8px 12px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
   fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
   border: '1px solid rgba(47,111,87,0.4)',
-  background: '#1B2333', color: 'rgb(102,187,158)',
+  background: dark ? '#1B2333' : '#EAF5F0', color: 'rgb(76,150,124)',
   flex: '1 1 0', minWidth: 0, textAlign: 'center',
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-}
-const trayMoreBtn: React.CSSProperties = {
+})
+const trayMoreBtn = (dark: boolean): React.CSSProperties => ({
   width: 34, height: 34, minHeight: 34, flex: '0 0 auto', padding: 0,
-  borderRadius: 10, border: `1px solid ${DBORDER}`, background: '#1B2333',
-  color: DTEXT_DIM, display: 'grid', placeItems: 'center', cursor: 'pointer',
-}
+  borderRadius: 10, border: `1px solid ${dark ? DBORDER : LBORDER}`, background: dark ? '#1B2333' : LSURFACE,
+  color: dark ? DTEXT_DIM : LTEXT_DIM, display: 'grid', placeItems: 'center', cursor: 'pointer',
+})
 // The overflow popover. Anchored to the tray's right edge regardless of
 // where the card sits in the grid — on a 2-column mobile board a left-column
 // card's panel would otherwise run off the right of the viewport.
-const menuPanel: React.CSSProperties = {
+const menuPanel = (dark: boolean): React.CSSProperties => ({
   position: 'absolute', bottom: '100%', right: 0, marginBottom: 6,
   width: 'min(252px, 88vw)', maxHeight: '70vh', overflowY: 'auto',
-  background: '#1A2233', border: `1px solid ${DBORDER}`, borderRadius: 12,
-  boxShadow: '0 10px 32px rgba(0,0,0,0.5)', padding: 8, zIndex: 40,
+  background: dark ? '#1A2233' : '#FFFFFF', border: `1px solid ${dark ? DBORDER : LBORDER}`, borderRadius: 12,
+  boxShadow: dark ? '0 10px 32px rgba(0,0,0,0.5)' : '0 10px 32px rgba(15,20,30,0.18)', padding: 8, zIndex: 40,
   display: 'flex', flexDirection: 'column', gap: 3,
-}
-const menuSection: React.CSSProperties = {
+})
+const menuSection = (dark: boolean): React.CSSProperties => ({
   fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-  color: DTEXT_FAINT, padding: '6px 8px 2px',
-}
+  color: dark ? DTEXT_FAINT : LTEXT_FAINT, padding: '6px 8px 2px',
+})
 // One row per action inside the popover — full width, left-aligned, an icon
 // slot on the right for a value/hint (e.g. "Grouped", "queued"). Deliberately
 // plainer than the old pill buttons: forty of these can exist across a
 // session and only a handful get used, so they read as a menu, not a toolbar.
-const menuItemBtn: React.CSSProperties = {
+const menuItemBtn = (dark: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
   width: '100%', textAlign: 'left', padding: '8px 9px', borderRadius: 8,
   background: 'transparent', border: 'none', fontSize: 12, fontFamily: F,
-  fontWeight: 500, color: DTEXT, cursor: 'pointer', minHeight: 34,
-}
+  fontWeight: 500, color: dark ? DTEXT : LTEXT, cursor: 'pointer', minHeight: 34,
+})
 // Kev, 2026-09-11: the "Talk to" / "Manage" sections used to be tall lists
 // of menuItemBtn rows — "sieht zu unübersichtlich aus" next to the Tools
 // icon row he liked. Same actions, a compact 2-column grid of small pills
@@ -4211,12 +4244,12 @@ const menuItemBtn: React.CSSProperties = {
 const menuGrid: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 4,
 }
-const menuGridBtn: React.CSSProperties = {
+const menuGridBtn = (dark: boolean): React.CSSProperties => ({
   padding: '7px 8px', borderRadius: 8, fontSize: 11, fontFamily: F,
-  fontWeight: 500, color: DTEXT, cursor: 'pointer', minHeight: 30,
-  background: '#1B2333', border: `1px solid ${DBORDER}`, textAlign: 'center',
+  fontWeight: 500, color: dark ? DTEXT : LTEXT, cursor: 'pointer', minHeight: 30,
+  background: dark ? '#1B2333' : LSURFACE, border: `1px solid ${dark ? DBORDER : LBORDER}`, textAlign: 'center',
   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-}
+})
 // The two low-frequency card actions. Reads as a text link, sized as a button:
 // 30px is the same tap floor the buttons and village chips hold to.
 const subtleLink: React.CSSProperties = {
