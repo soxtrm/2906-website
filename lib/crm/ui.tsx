@@ -199,7 +199,7 @@ export const useCrm = () => {
 
 const THEME_STORAGE_KEY = 'crm_theme_pref'
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -356,6 +356,11 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // ml-learning has the same problem and is only reachable at the
   // doubled /crm/admin/ml-learning — found live while testing this page.
   { key: 'agentchats', icon: '💬', label: 'Agent Chats', href: '/agent-chats', adminOnly: true },
+  // ARGUS Agent Layer (Kev, 2026-09-16): every agent's own operating
+  // identity page (profile, WhatsApp connection, Notification Engine,
+  // Invoice/Contract creators) — shown to everyone, same as Clientgroups,
+  // never adminOnly (it's each agent's OWN profile by default).
+  { key: 'profile', icon: '◉', label: 'Profile', href: '/agent-profile' },
 ]
 
 // Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean
