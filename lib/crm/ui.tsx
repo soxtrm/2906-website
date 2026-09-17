@@ -199,7 +199,7 @@ export const useCrm = () => {
 
 const THEME_STORAGE_KEY = 'crm_theme_pref'
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -361,6 +361,10 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // Invoice/Contract creators) — shown to everyone, same as Clientgroups,
   // never adminOnly (it's each agent's OWN profile by default).
   { key: 'profile', icon: '◉', label: 'Profile', href: '/agent-profile' },
+  // Base Inventory Review (Kev, 2026-09-17): admin-only in spirit (agents can
+  // propose, per crmBaseInventory.js's own auth — no role gate on GET), but
+  // shown to everyone like Clientgroups/Ownergroups already are.
+  { key: 'baseinventory', icon: '▤', label: 'Base Inventory', href: '/base-inventory' },
 ]
 
 // Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean
