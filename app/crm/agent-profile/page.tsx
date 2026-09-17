@@ -732,12 +732,9 @@ async function buildInvoicePdf(data: {
   doc.setFillColor(...GOLD)
   doc.rect(0, 86, pageW, 3, 'F')
   const logo = await loadLogoDataUri()
-  const logoW = 78
-  doc.addImage(logo.uri, 'PNG', margin, 26, logoW, logoW / logo.ratio)
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(210, 216, 230)
-  doc.text('2906 Estate · Malta', margin, 66)
+  const logoW = 70
+  const logoH = logoW / logo.ratio
+  doc.addImage(logo.uri, 'PNG', margin, (86 - logoH) / 2, logoW, logoH)
 
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
@@ -978,12 +975,9 @@ async function buildContractPdf(data: {
   doc.setFillColor(...GOLD)
   doc.rect(0, 86, pageW, 3, 'F')
   const logo = await loadLogoDataUri()
-  const logoW = 78
-  doc.addImage(logo.uri, 'PNG', margin, 26, logoW, logoW / logo.ratio)
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(210, 216, 230)
-  doc.text('2906 Estate · Malta', margin, 66)
+  const logoW = 70
+  const logoH = logoW / logo.ratio
+  doc.addImage(logo.uri, 'PNG', margin, (86 - logoH) / 2, logoW, logoH)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
   doc.setTextColor(255, 255, 255)
