@@ -29,6 +29,32 @@ import { crmFetch, crmJson } from '@/lib/crm/api'
 const DPAGE = '#0B0F17'
 const DCARD2 = '#0F1521'
 
+// Kev, 2026-09-17 ("das watermark oben links von 2906 also das logo, clean
+// und edel"): client-facing documents (invoice/contract) carry the 2906
+// brand mark, not the internal ARGUS wordmark — same split already applied
+// between crm.2906.estate (ARGUS) and 2906.estate (2906 logo). Fetched once
+// and cached as a data URI so jsPDF's addImage() can embed it directly.
+let logoDataUriPromise: Promise<{ uri: string; ratio: number }> | null = null
+function loadLogoDataUri(): Promise<{ uri: string; ratio: number }> {
+  if (!logoDataUriPromise) {
+    logoDataUriPromise = (async () => {
+      const buf = await fetch('/logo-transparent.png').then(r => r.arrayBuffer())
+      let binary = ''
+      const bytes = new Uint8Array(buf)
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+      const uri = `data:image/png;base64,${btoa(binary)}`
+      const ratio = await new Promise<number>(resolve => {
+        const img = new Image()
+        img.onload = () => resolve(img.naturalWidth / img.naturalHeight)
+        img.onerror = () => resolve(3)
+        img.src = uri
+      })
+      return { uri, ratio }
+    })()
+  }
+  return logoDataUriPromise
+}
+
 type Agent = {
   id: number; username: string; name: string; display_name: string | null; surname: string | null
   email: string | null; whatsapp_phone: string | null; public_phone: string | null; address: string | null
@@ -705,14 +731,13 @@ async function buildInvoicePdf(data: {
   doc.rect(0, 0, pageW, 86, 'F')
   doc.setFillColor(...GOLD)
   doc.rect(0, 86, pageW, 3, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(22)
-  doc.text('A R G U S', margin, 42)
+  const logo = await loadLogoDataUri()
+  const logoW = 78
+  doc.addImage(logo.uri, 'PNG', margin, 26, logoW, logoW / logo.ratio)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(210, 216, 230)
-  doc.text('2906 Estate · Malta', margin, 60)
+  doc.text('2906 Estate · Malta', margin, 66)
 
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
@@ -952,14 +977,13 @@ async function buildContractPdf(data: {
   doc.rect(0, 0, pageW, 86, 'F')
   doc.setFillColor(...GOLD)
   doc.rect(0, 86, pageW, 3, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(22)
-  doc.text('A R G U S', margin, 42)
+  const logo = await loadLogoDataUri()
+  const logoW = 78
+  doc.addImage(logo.uri, 'PNG', margin, 26, logoW, logoW / logo.ratio)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(210, 216, 230)
-  doc.text('2906 Estate · Malta', margin, 60)
+  doc.text('2906 Estate · Malta', margin, 66)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
   doc.setTextColor(255, 255, 255)
