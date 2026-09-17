@@ -24,6 +24,9 @@ function Detail({ id }: { id: number }) {
   const [msg, setMsg] = useState('')
   const [agents, setAgents] = useState<any[]>([])
   const [notifying, setNotifying] = useState(false)
+  const [catKey, setCatKey] = useState('seafront')
+  const [catReason, setCatReason] = useState('')
+  const [catSaving, setCatSaving] = useState(false)
   const isAdmin = me?.role === 'admin'
 
   const load = () => crmFetch(`properties/${id}`).then((r) => {
@@ -96,6 +99,29 @@ function Detail({ id }: { id: number }) {
     } catch (e: any) { setMsg(e?.message || 'Save failed') }
     finally { setSaving(false) }
   }
+  // Manual category override (Phase 1, 2026-09-17) — a ROUTING decision
+  // only: which WhatsApp group this listing posts to. Never touches
+  // bedrooms/price/type. See services/categoryClassifier.js.
+  async function setOverride() {
+    setCatSaving(true); setMsg('')
+    try {
+      await crmJson(`properties/${id}/category-override`, 'POST', { key: catKey, reason: catReason || null })
+      setMsg(`Category override set → ${catKey.toUpperCase()}`)
+      setCatReason('')
+      await load()
+    } catch (e: any) { setMsg(e?.message || 'Failed to set category override') }
+    finally { setCatSaving(false) }
+  }
+  async function resetOverride() {
+    setCatSaving(true); setMsg('')
+    try {
+      await crmJson(`properties/${id}/category-override/reset`, 'POST', {})
+      setMsg('Category override reset → AUTO')
+      await load()
+    } catch (e: any) { setMsg(e?.message || 'Failed to reset category override') }
+    finally { setCatSaving(false) }
+  }
+
   async function del() {
     if (!confirm('Delete this property? This cannot be undone.')) return
     try { await crmFetch(`properties/${id}`, { method: 'DELETE' }); router.replace('/inventory') }
@@ -272,6 +298,42 @@ function Detail({ id }: { id: number }) {
                   value={p.activityAgentId} agents={agents} editable={isAdmin}
                   fallback={p.activityAgent || p.activityAgents.join(' + ')} onChange={v => reassign('activity_agent_id', v)} />
                 <div style={{ fontSize: 10, color: '#CCC', marginTop: 8 }}>Reassignment is logged and never grants an Activity-Bonus. Commission engine arrives in Phase 2.</div>
+              </div>
+
+              {/* publishing category override (Phase 1, 2026-09-17) */}
+              <div style={card}>
+                <div style={head}>Publishing Category</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: p.categoryOverride ? A : '#999', background: p.categoryOverride ? AD : '#F4F2EC', border: `1px solid ${p.categoryOverride ? AB : '#E8E4DA'}`, borderRadius: 6, padding: '3px 9px' }}>
+                    {p.categoryOverride ? `MANUAL OVERRIDE · ${String(p.categoryOverride).toUpperCase()}` : 'AUTO'}
+                  </span>
+                </div>
+                {p.categoryOverride ? (
+                  <>
+                    {p.categoryOverrideReason && <div style={{ fontSize: 11, color: '#999', marginBottom: 8 }}>Reason: {p.categoryOverrideReason}</div>}
+                    <button onClick={resetOverride} disabled={catSaving} style={{ background: '#F4F2EC', border: '1px solid #E8E4DA', borderRadius: 8, padding: '8px 14px', fontSize: 11.5, fontWeight: 700, fontFamily: F, color: '#666', cursor: catSaving ? 'wait' : 'pointer' }}>
+                      {catSaving ? 'Working…' : 'Reset to AUTO'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 11, color: '#BBB', marginBottom: 8 }}>Set this only when ARGUS can't confidently classify the listing (e.g. bedrooms unknown/conflicting) — it never changes the Property's own bedrooms/price/type.</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <select value={catKey} onChange={e => setCatKey(e.target.value)} style={{ ...inp, width: 'auto', flex: '0 1 160px' }}>
+                        <option value="seafront">Seafront</option>
+                        <option value="villas">House/Villa</option>
+                        <option value="luxury">Luxury</option>
+                        <option value="bed1">1 Bedroom</option>
+                        <option value="bed2">2 Bedroom</option>
+                        <option value="bed3">3 & 4 Bedrooms</option>
+                      </select>
+                      <input style={{ ...inp, width: 'auto', flex: '1 1 160px' }} placeholder="Reason (optional)" value={catReason} onChange={e => setCatReason(e.target.value)} />
+                      <button onClick={setOverride} disabled={catSaving} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: catSaving ? 'wait' : 'pointer' }}>
+                        {catSaving ? 'Working…' : 'Set override'}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* activity log */}
