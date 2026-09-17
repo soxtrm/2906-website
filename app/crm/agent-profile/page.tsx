@@ -62,6 +62,7 @@ type Agent = {
   profile_image_url: string | null; bio: string | null; languages: string[]; specialties: string[]
   role: string; active: boolean; whatsapp_session: string | null
   feature_entitlements: Record<string, string>; invoice_settings: any; contract_settings: any
+  notifications_paused: boolean
 }
 type SavedSearch = {
   id: number; name: string; filters: any; enabled: boolean
@@ -336,14 +337,32 @@ function AgentProfilePage() {
         </div>
       </SectionCard>
 
-      {/* ── Personal Outreach ────────────────────────────────────────────── */}
+      {/* ── Personal Outreach (Phase E, 2026-09-17) ─────────────────────────
+          The real Outreach Planner already exists and works (/crm/outreach,
+          create/edit/save/schedule/arm/pause/cancel — fixed and verified
+          earlier the same day this widget was updated). No second Outreach
+          system built here — this is just the real one, linked in.
+          It's currently gated adminOnly server-side (routes/crm.js), and
+          scoped to the legacy whatsapp_accounts table, not every agent's
+          own self-serve WA session yet — so a non-admin agent gets an
+          honest explanation instead of a link that would just 403. */}
       <SectionCard title="Personal Outreach" icon="🛰">
         {bundle.outreach.length === 0
           ? <div style={{ fontSize: 12, color: DTEXT_FAINT }}>No outreach campaigns yet.</div>
           : <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               {bundle.outreach.map(o => <Stat key={o.status} label={o.status} value={o.n} />)}
             </div>}
-        <div style={{ marginTop: 10, fontSize: 11, color: DTEXT_FAINT }}>Full outreach workspace (draft / arm / schedule) is coming in the next pass.</div>
+        {me?.role === 'admin' ? (
+          <a href="/crm/outreach" style={{ textDecoration: 'none' }}>
+            <button style={{ marginTop: 10, background: A, color: DPAGE, border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>
+              Open Outreach Planner →
+            </button>
+          </a>
+        ) : (
+          <div style={{ marginTop: 10, fontSize: 11, color: DTEXT_FAINT }}>
+            The full Outreach Planner is available to admin accounts today. Ask an admin to run a campaign for you, or connect your own WhatsApp session above once per-agent Outreach is enabled.
+          </div>
+        )}
       </SectionCard>
 
       {/* ── Scheduled Messages ───────────────────────────────────────────── */}
@@ -651,8 +670,34 @@ function NotificationEnginePanel({ agentId, bundle, onChange }: { agentId: numbe
     onChange()
   }
 
+  const [pauseBusy, setPauseBusy] = useState(false)
+  async function togglePause() {
+    setPauseBusy(true)
+    try {
+      await crmJson(`agent-profile/${agentId}`, 'PATCH', { notifications_paused: !bundle.agent.notifications_paused })
+      onChange()
+    } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not update') }
+    finally { setPauseBusy(false) }
+  }
+
   return (
     <SectionCard title="Notification Engine" icon="🔔" right={<button onClick={() => setCreating(v => !v)} style={btnGhost()}>{creating ? 'Cancel' : '+ Create Search'}</button>}>
+      {/* Whole-channel master pause (Phase E, 2026-09-17) — separate from
+          each saved search's own enabled state below. Backed by
+          agents.notifications_paused, the single WHERE-clause gate
+          services/notificationEngine.js:loadEnabledSearches() checks
+          before any send — pausing here actually stops delivery, not just
+          the UI label. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: bundle.agent.notifications_paused ? 'rgba(242,89,122,0.10)' : DCARD2, border: `1px solid ${bundle.agent.notifications_paused ? 'rgba(242,89,122,0.35)' : DBORDER}`, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 11.5, color: DTEXT_DIM }}>
+          {bundle.agent.notifications_paused
+            ? <span style={{ color: '#F2597A', fontWeight: 700 }}>⏸ All notifications paused</span>
+            : <span>Notifications active — every saved search below can send</span>}
+        </div>
+        <button onClick={togglePause} disabled={pauseBusy} style={btnGhost()}>
+          {pauseBusy ? 'Working…' : (bundle.agent.notifications_paused ? 'Resume all notifications' : 'Pause all notifications')}
+        </button>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: DCARD2, border: `1px solid ${DBORDER}`, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
         <div style={{ fontSize: 11.5, color: DTEXT_DIM }}>
           Delivery group: {bundle.notificationEngine.channel

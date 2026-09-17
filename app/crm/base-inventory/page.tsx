@@ -68,6 +68,8 @@ function BaseInventory() {
 
   const [source, setSource] = useState('')
   const [search, setSearch] = useState('')
+  const [locality, setLocality] = useState('')
+  const [bedrooms, setBedrooms] = useState('')
   const [leaseType, setLeaseType] = useState('')
   const [priceKnown, setPriceKnown] = useState('')
   const [availKnown, setAvailKnown] = useState('')
@@ -81,6 +83,8 @@ function BaseInventory() {
       const params = new URLSearchParams()
       if (source) params.set('source', source)
       if (search) params.set('search', search)
+      if (locality) params.set('locality', locality)
+      if (bedrooms) params.set('bedrooms', bedrooms)
       if (leaseType) params.set('lease_type', leaseType)
       if (priceKnown) params.set('price_known', priceKnown)
       if (availKnown) params.set('availability_known', availKnown)
@@ -91,7 +95,7 @@ function BaseInventory() {
       setRows(d.rows || []); setSummary(d.summary || {})
     } catch { /* keep last good state */ }
     finally { setLoading(false) }
-  }, [source, search, leaseType, priceKnown, availKnown, seafrontOnly, needsReviewOnly, eligibleOnly])
+  }, [source, search, locality, bedrooms, leaseType, priceKnown, availKnown, seafrontOnly, needsReviewOnly, eligibleOnly])
 
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t) }, [load])
 
@@ -143,6 +147,16 @@ function BaseInventory() {
         <select value={source} onChange={e => setSource(e.target.value)} style={inputStyle()}>
           <option value="">All sources</option>
           {sources.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <input placeholder="Locality" value={locality} onChange={e => setLocality(e.target.value)} style={{ ...inputStyle(), width: 130 }} />
+        <select value={bedrooms} onChange={e => setBedrooms(e.target.value)} style={inputStyle()}>
+          <option value="">Any bedrooms</option>
+          <option value="0">Studio</option>
+          <option value="1">1 bed</option>
+          <option value="2">2 bed</option>
+          <option value="3">3 bed</option>
+          <option value="4">4 bed</option>
+          <option value="5">5 bed</option>
         </select>
         <select value={leaseType} onChange={e => setLeaseType(e.target.value)} style={inputStyle()}>
           <option value="">Any lease type</option>
@@ -258,6 +272,13 @@ function ReviewDrawer({ row, onClose, onChange, isAdmin }: { row: Row; onClose: 
     try { await crmJson(`base-inventory/${row.id}`, 'PATCH', edit); onChange(); setEdit({}) }
     catch (e: any) { alert(e?.data?.error || e?.message || 'Save failed') }
     finally { setBusy(false) }
+  }
+  async function mergeInto() {
+    const target = prompt('Merge this record into which website_source_inventory ID? (the record it duplicates)')
+    if (!target) return
+    const intoId = Number(target)
+    if (!Number.isFinite(intoId) || intoId <= 0) { alert('Enter a valid numeric ID'); return }
+    await act('merge', { into_id: intoId })
   }
 
   const description = [
@@ -379,10 +400,19 @@ function ReviewDrawer({ row, onClose, onChange, isAdmin }: { row: Row; onClose: 
             <button onClick={() => act('approve-base')} disabled={busy} style={btnGhost()}>Approve Base Inventory</button>
             <button onClick={() => act('keep-base-only')} disabled={busy} style={btnGhost()}>Keep Base Only</button>
             <button onClick={() => act('needs-review')} disabled={busy} style={btnGhost()}>Mark Needs Review</button>
+            <button onClick={mergeInto} disabled={busy} style={btnGhost()}>Merge Duplicate…</button>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <a href={row.source_url} target="_blank" rel="noreferrer"><button style={btnGhost()}>Open Source</button></a>
             {row.canonical_property_id && <a href={`/property/${row.canonical_property_id}`} target="_blank" rel="noreferrer"><button style={btnGhost()}>Open Property</button></a>}
+            {/* No CRM profile page exists yet for website_source_inventory's
+                UUID-keyed `owners` table (a SEPARATE identity system from
+                owner_contacts' integer ids that /crm/owner/[id] reads) --
+                linking there would 404. A direct WhatsApp link to the real
+                owner phone is honest and genuinely useful today; a proper
+                Owner Profile view for this table is real follow-up work,
+                not something to fake here. */}
+            {row.owner_phone && <a href={`https://wa.me/${row.owner_phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"><button style={btnGhost()}>Message Owner ({row.owner_name || row.owner_phone})</button></a>}
             {isAdmin && <button onClick={() => act('archive')} disabled={busy} style={{ ...btnGhost(), color: '#F2597A' }}>Delete / Archive</button>}
           </div>
         </div>
