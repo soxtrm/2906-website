@@ -18,6 +18,7 @@ import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
+import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { SwipeLinkCreatedModal, SwipeModeChoiceModal, SwipeMultiLinksModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
@@ -68,6 +69,9 @@ type Listing = {
   // termination date: when the CURRENT tenancy ends, separate from
   // availableDate (when the NEXT tenant can move in).
   availableUntil?: string | null
+  // Rental modes (2026-09-21): LONG / WINTER / SHORT let, several at once. Effective
+  // modes from the backend — already derived for listings nobody classified yet.
+  rentalModes?: string[] | null
   // Kev, 2026-08-31 (AV-date-confirm button) — "from when can this be
   // viewed", a separate fact from availableDate.
   viewingDate: string | null
@@ -193,7 +197,7 @@ type AgentRequestGroup = {
 type Filters = BoardFilterValue & { towns: string[] }
 const EMPTY: Filters = {
   q: '', beds: [], baths: [], min: '', max: '', type: '', towns: [],
-  pets: '', sharing: '', sublet: false, updated: '',
+  pets: '', sharing: '', sublet: false, updated: '', rental: '',
 }
 
 // Newest-first is the default because it is what the board is for: the listing
@@ -318,6 +322,8 @@ function Board() {
     sublet: params.get('sublet') === '1',
     updated: (['24h', '48h', '5d', '10d', '3w'].includes(params.get('updated') || '')
       ? params.get('updated') : '') as Filters['updated'],
+    rental: (['long_let', 'winter_let', 'short_let'].includes(params.get('rental') || '')
+      ? params.get('rental') : '') as Filters['rental'],
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
   const [circ, setCirc] = useState<Circ | null>(() => parseCirc(params.get('circ')))
@@ -495,6 +501,7 @@ function Board() {
       if (f.sharing) q.set('sharing', f.sharing)
       if (f.sublet) q.set('sublet', '1')
       if (f.updated) q.set('updated', f.updated)
+      if (f.rental) q.set('rental', f.rental)
       if (rect) q.set('rect', rectToParam(rect))
       if (circ) q.set('circ', circToParam(circ))
       if (sort !== DEFAULT_SORT) q.set('sort', sort)
@@ -664,6 +671,10 @@ function Board() {
       if (f.sharing === 'yes' && r.sharing !== true) return false
       if (f.sharing === 'no' && r.sharing !== false) return false
       if (f.sublet && r.subletting !== true) return false
+      // Rental mode tab (2026-09-21): a listing matches when ANY of its modes is the
+      // picked one (a winter + short let shows under both). Modes come derived from
+      // the backend, so unclassified listings still land under Long / Winter / Short.
+      if (f.rental && !(r.rentalModes || []).includes(f.rental)) return false
       // Recency filter (Kev, 2026-08-28): createdAt is bumped by both a fresh
       // !upload and a deliberate !price repost, so "updated in last N" reads
       // as a cheap "still on the market" proxy. No createdAt on file is
@@ -694,7 +705,7 @@ function Board() {
       }
       return true
     })
-  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, rect, circ, view, horizon])
+  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon])
 
   const mineCount = visible.filter(r => r.isMine).length
   // Count for the +3 Months tab badge — always computed off the 'active'
@@ -3278,12 +3289,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 r.availableUntil is the same field the "Bis" button
                 (Owner-Kadenz #4) already writes; this is purely additive, a
                 new read of an existing fact, no new field. */}
-            {r.availableUntil && (
-              <span title={`Winter let — available until ${monthLabel(r.availableUntil)}`} style={{
-                fontSize: 9, fontWeight: 800, color: '#fff', background: '#2E6FA8',
-                padding: '2px 6px', borderRadius: 5, letterSpacing: '0.03em', flexShrink: 0,
-              }}>❄️ WINTER</span>
-            )}
+            {/* 2026-09-21: the same tag now also covers rental modes — WINTER for a
+                winter-let mode OR a "Bis" date (unchanged rule), SHORT for a short
+                let. Rendered by the shared component so board, inventory and the
+                property page can never disagree. */}
+            <RentalModeBadges modes={r.rentalModes} availableUntil={r.availableUntil} />
+
           </div>
           <div style={{ fontFamily: FM, fontSize: isMobile ? 15 : 19, fontWeight: 500, color: DTEXT, letterSpacing: '-0.03em', flexShrink: 0, lineHeight: 1.1 }}>
             {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
@@ -3311,11 +3322,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             {/* Kev, 2026-09-16 (WINTER tag, spec item 1): "until April" right
                 under Available — same r.availableUntil the WINTER badge
                 above reads, so the two facts can never disagree. */}
-            {r.availableUntil && (
-              <div style={{ fontSize: 10, color: '#5FA3D8', fontFamily: FM, fontWeight: 500, marginTop: 1 }}>
-                until {monthLabel(r.availableUntil)}
-              </div>
-            )}
+            <UntilLine availableUntil={r.availableUntil} style={{ fontFamily: FM }} />
           </div>
         </div>
 

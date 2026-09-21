@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
 
 export type BoardFilterValue = {
   q: string
@@ -51,6 +52,9 @@ export type BoardFilterValue = {
   // (2026-08-28): a recency filter reads as a cheap proxy for "still
   // available" — nobody has bumped a rented listing in weeks.
   updated: '' | '24h' | '48h' | '5d' | '10d' | '3w'
+  // Rental mode tab (2026-09-21): '' = all. A listing with several modes shows
+  // under each of them; filtered client-side on the card's rentalModes.
+  rental: '' | 'long_let' | 'winter_let' | 'short_let'
 }
 
 export const UPDATED_OPTIONS: [BoardFilterValue['updated'], string][] = [
@@ -149,7 +153,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     (value.q ? 1 : 0) + (value.beds.length ? 1 : 0) + (value.baths.length ? 1 : 0) +
     (value.type ? 1 : 0) + (value.min || value.max ? 1 : 0) +
     (value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0) +
-    (value.updated ? 1 : 0)
+    (value.updated ? 1 : 0) + (value.rental ? 1 : 0)
 
   const typeLabel = value.type
     ? (TYPES.find(t => t[0] === value.type)?.[1] || value.type)
@@ -160,6 +164,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const updatedLabel = value.updated
     ? `Updated: ${UPDATED_OPTIONS.find(o => o[0] === value.updated)?.[1] || value.updated}`
     : 'Updated'
+  const rentalLabel = value.rental ? `Rental: ${RENTAL_LABEL[value.rental]}` : 'Rental'
 
   // One dropdown holds all three tenancy rules. Three separate triggers would
   // push the row past the width the map leaves it on a laptop, and these are
@@ -378,6 +383,25 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 onClick={() => { onChange({ updated: value.updated === v ? '' : v }); setOpen(null) }}
                 className={cn(CHIP, value.updated === v ? CHIP_ON : CHIP_OFF)}>
                 {l}
+              </button>
+            ))}
+          </div>
+        </Dropdown>
+
+        {/* Rental mode (2026-09-21): Long let / Winter let / Short let. Tapping the
+            active one again clears it, like the other chip dropdowns. */}
+        <Dropdown id="rental" label={rentalLabel} active={!!value.rental}
+          open={open === 'rental'} onToggle={setOpen}>
+          <div data-testid="rental-filter" className="flex flex-wrap gap-1 max-w-[240px]">
+            <button type="button" onClick={() => { onChange({ rental: '' }); setOpen(null) }}
+              className={cn(CHIP, !value.rental ? CHIP_ON : CHIP_OFF)}>
+              All
+            </button>
+            {RENTAL_MODES.map(m => (
+              <button key={m.key} type="button" data-testid={`rental-filter-${m.key}`}
+                onClick={() => { onChange({ rental: value.rental === m.key ? '' : m.key }); setOpen(null) }}
+                className={cn(CHIP, value.rental === m.key ? CHIP_ON : CHIP_OFF)}>
+                {m.icon ? `${m.icon} ` : ''}{m.label}
               </button>
             ))}
           </div>

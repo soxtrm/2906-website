@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, LocationSelect, useCrm, A, AD, AB, F, FM, fmtMoney } from '@/lib/crm/ui'
+import { RentalModePicker } from '@/components/crm/rental-modes'
 
 export default function NewPropertyPage() {
   return <CrmProvider><NewProperty /></CrmProvider>
@@ -25,7 +26,7 @@ function NewProperty() {
   const [checking, setChecking] = useState(false)
   const [check, setCheck] = useState<any>(null) // {exists, owner?}
   const [owner, setOwner] = useState({ name: '', email: '', alt_phone: '' })
-  const [p, setP] = useState<any>({ property_type: 'Apartment', town: '', sub_location: '', street: '', apt: '', bedrooms: '', bathrooms: '', size_sqm: '', longlet_price: '', shortlet: false, sale_price: '', available_status: 'available', available_date: '', description: '', internal_notes: '' })
+  const [p, setP] = useState<any>({ property_type: 'Apartment', town: '', sub_location: '', street: '', apt: '', bedrooms: '', bathrooms: '', size_sqm: '', longlet_price: '', shortlet: false, sale_price: '', available_status: 'available', available_date: '', available_until: '', rental_modes: [] as string[], description: '', internal_notes: '' })
   const [images, setImages] = useState<any[]>([])
   const [uploading, setUploading] = useState(false)
   const [excl, setExcl] = useState({ on: false, weeks: 2 })
@@ -146,8 +147,14 @@ function NewProperty() {
               <div><label style={lbl}>Sale price €</label><input style={inp} type="number" value={p.sale_price} onChange={e => setp('sale_price', e.target.value)} /></div>
               <div><label style={lbl}>Available status</label><select style={inp} value={p.available_status} onChange={e => setp('available_status', e.target.value)}><option value="available">Available</option><option value="soon_available">Soon</option><option value="rented">Rented</option><option value="reserved">Reserved</option></select></div>
               <div><label style={lbl}>Available date</label><input style={inp} type="date" value={p.available_date} onChange={e => setp('available_date', e.target.value)} /></div>
+              <div><label style={lbl}>Available until (Bis)</label><input data-testid="new-available-until" style={inp} type="date" value={p.available_until} onChange={e => setp('available_until', e.target.value)} /></div>
             </div>
-            <label style={{ ...chk, marginTop: 12 }}><input type="checkbox" checked={p.shortlet} onChange={e => setp('shortlet', e.target.checked)} style={{ accentColor: A }} /> Short-let also available</label>
+            {/* Rental modes (2026-09-21): several may apply. Left empty = not set (a person
+                decides later); it is never guessed. Replaces the single "short-let also" tick. */}
+            <div style={{ marginTop: 12 }}>
+              <label style={lbl}>Rental modes</label>
+              <RentalModePicker value={p.rental_modes} onChange={m => setp('rental_modes', m)} />
+            </div>
             <div style={{ marginTop: 12 }}><label style={lbl}>Description</label><textarea style={{ ...inp, minHeight: 70, resize: 'vertical' }} value={p.description} onChange={e => setp('description', e.target.value)} /></div>
 
             {/* images */}
@@ -211,8 +218,9 @@ function NewProperty() {
             <Review label="Owner" value={`${check?.exists ? (check.owner.name || 'Existing') : (owner.name || 'New owner')} · ${phone}${check?.exists ? ` (existing — listing bonus only)` : ' (new — you are creator)'}`} />
             <Review label="Property" value={`${p.property_type} · ${p.town || '—'}${p.street ? ', ' + p.street : ''}`} />
             <Review label="Specs" value={`${p.bedrooms || '—'} bed · ${p.bathrooms || '—'} bath${p.size_sqm ? ` · ${p.size_sqm} sqm` : ''}`} />
-            <Review label="Price" value={[p.longlet_price ? `${fmtMoney(p.longlet_price)}/mo` : null, p.shortlet ? 'short-let' : null, p.sale_price ? `${fmtMoney(p.sale_price)} sale` : null].filter(Boolean).join(' · ') || '—'} />
-            <Review label="Availability" value={`${p.available_status}${p.available_date ? ` · ${p.available_date}` : ''}`} />
+            <Review label="Price" value={[p.longlet_price ? `${fmtMoney(p.longlet_price)}/mo` : null, p.sale_price ? `${fmtMoney(p.sale_price)} sale` : null].filter(Boolean).join(' · ') || '—'} />
+            <Review label="Availability" value={`${p.available_status}${p.available_date ? ` · ${p.available_date}` : ''}${p.available_until ? ` · until ${p.available_until}` : ''}`} />
+            <Review label="Rental modes" value={p.rental_modes.length ? p.rental_modes.map((m: string) => m.replace('_', ' ')).join(' + ') : 'not set'} />
             <Review label="Images" value={`${images.length} uploaded`} />
             <Review label="Exclusive" value={excl.on ? `Yes · until ${exclDate()}` : 'No'} />
             <Review label="Listed by" value={(() => { const ag = agents.find(x => String(x.id) === listedBy); return ag ? (ag.name || ag.username) : 'You' })()} />

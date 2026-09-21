@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch } from '@/lib/crm/api'
 import {
@@ -7,6 +7,7 @@ import {
   AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useIsMobile, useCrm, describe,
   DCARD, DCARD_BORDER, DTRAY, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
 } from '@/lib/crm/ui'
+import { RentalModeBadges, UntilLine, RentalTabs } from '@/components/crm/rental-modes'
 
 export default function InventoryPage() {
   return <CrmProvider><Inventory /></CrmProvider>
@@ -24,7 +25,7 @@ function Inventory() {
   const [agents, setAgents] = useState<any[]>([])
   const [locations, setLocations] = useState<string[]>([])
   const [ownerPanel, setOwnerPanel] = useState<number | null>(null)
-  const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false, sublet: false })
+  const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false, sublet: false, rental: '' })
   // Kev, 2026-09-04: ~50 empty/ref-less listings went out again -- admins
   // need to clear bad inventory in bulk, not one property-detail-page at a
   // time. Reuses the SAME DELETE /properties/:id the single-property page
@@ -59,7 +60,13 @@ function Inventory() {
 
   useEffect(() => { crmFetch('agents').then(d => setAgents(d.agents || [])).catch(() => {}); crmFetch('locations').then(d => setLocations(d.locations || [])).catch(() => {}) }, [])
 
+  // Only the LATEST request may update the list. The unfiltered first load is 500 rows and
+  // slow; a tab/filter clicked right after page load fired a second, faster request, and
+  // when the slow one landed last it overwrote the filtered result (seen in the rental-mode
+  // browser test: the Winter tab briefly — and sometimes permanently — showed every listing).
+  const reqRef = useRef(0)
   const load = useCallback(() => {
+    const myReq = ++reqRef.current
     const q = new URLSearchParams()
     if (f.town) q.set('town', f.town)
     if (f.beds) q.set('beds', f.beds)
@@ -70,11 +77,12 @@ function Inventory() {
     if (f.exclusive) q.set('exclusive', '1')
     if (f.only_favourites) q.set('only_favourites', '1')
     if (f.sublet) q.set('sublet', '1')
+    if (f.rental) q.set('rental_mode', f.rental)   // Long / Winter / Short tab (2026-09-21) — server filters on effective modes
     if (f.price) {
       const [mn, mx] = f.price.split('-')
       if (mn) q.set('price_min', mn); if (mx) q.set('price_max', mx)
     }
-    crmFetch(`properties?${q.toString()}`).then(d => { setRows(d.properties || []); setTotal(d.total || 0) }).catch(() => {})
+    crmFetch(`properties?${q.toString()}`).then(d => { if (myReq !== reqRef.current) return; setRows(d.properties || []); setTotal(d.total || 0) }).catch(() => {})
   }, [f])
   useEffect(() => { load() }, [load])
 
@@ -82,6 +90,7 @@ function Inventory() {
 
   const filterBar = (
     <>
+      <RentalTabs value={f.rental} onChange={v => set('rental', v)} dark />
       <select style={sel} value={f.town} onChange={e => set('town', e.target.value)}><option value="">Location</option>{locations.map(l => <option key={l} value={l}>{l}</option>)}</select>
       <select style={sel} value={f.beds} onChange={e => set('beds', e.target.value)}><option value="">Bedrooms</option>{[1, 2, 3, 4, 5].map(b => <option key={b} value={b}>{b} bed</option>)}</select>
       <select style={sel} value={f.price} onChange={e => set('price', e.target.value)}><option value="">Price</option><option value="-1000">≤ €1,000</option><option value="1000-2000">€1k–2k</option><option value="2000-3500">€2k–3.5k</option><option value="3500-">€3.5k+</option></select>
@@ -182,7 +191,10 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
           <Masked entityType="owner_email" entityId={p.owner.id} masked={p.owner.emailMasked} hasValue={p.owner.hasEmail} propertyId={p.id} />
         </td>
         <td style={{ ...tdS, fontSize: 12 }}>
-          <div style={{ fontWeight: 700, color: DTEXT }}>{p.location.town}</div>
+          <div style={{ fontWeight: 700, color: DTEXT, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>{p.location.town}</span>
+            <RentalModeBadges modes={p.rentalModes} availableUntil={p.availableUntil} />
+          </div>
           {p.location.street && <div style={{ color: DTEXT_FAINT, fontSize: 11, marginTop: 1 }}>{p.location.street}</div>}
           {p.location.apt && <div style={{ color: DTEXT_FAINT, fontSize: 10, marginTop: 1 }}>{p.location.apt}</div>}
         </td>
@@ -192,7 +204,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
           {p.prices.sale != null && <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 3 }}>{fmtMoney(p.prices.sale)} sale</div>}
         </td>
         <td style={{ ...tdS, textAlign: 'center', fontWeight: 800, fontSize: 15, color: DTEXT }}>{p.beds ?? '—'}<span style={{ color: DTEXT_FAINT, fontWeight: 300 }}>/</span>{p.baths ?? '—'}</td>
-        <td style={{ ...tdS, whiteSpace: 'nowrap' }}><Pill status={p.availableStatus} map={AVAIL} /><div style={{ fontSize: 10, color: DTEXT_FAINT, marginTop: 5, fontFamily: FM }}>{fmtDate(p.availableDate)}</div></td>
+        <td style={{ ...tdS, whiteSpace: 'nowrap' }}><Pill status={p.availableStatus} map={AVAIL} /><div style={{ fontSize: 10, color: DTEXT_FAINT, marginTop: 5, fontFamily: FM }}>{fmtDate(p.availableDate)}</div><UntilLine availableUntil={p.availableUntil} style={{ fontFamily: FM }} /></td>
         <td style={{ ...tdS, whiteSpace: 'nowrap' }}><Pill status={p.viewingStatus} map={VIEW} /></td>
         <td style={{ ...tdS, minWidth: 128 }}>
           <Bar pct={p.completeness} dark />
@@ -268,7 +280,7 @@ function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, o
                   ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE</span>
                   : <span style={{ fontSize: 9, background: DTRAY, border: `1px solid ${DBORDER}`, color: DTEXT_FAINT, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT, fontFamily: F, marginTop: 2 }}>{p.location.town} · {p.type}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT, fontFamily: F, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><span>{p.location.town} · {p.type}</span><RentalModeBadges modes={p.rentalModes} availableUntil={p.availableUntil} /></div>
               {p.location.street && <div style={{ fontSize: 10, color: DTEXT_FAINT, fontFamily: F, marginTop: 1 }}>{p.location.street}</div>}
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8, display: 'flex', alignItems: 'flex-start', gap: 8 }}>

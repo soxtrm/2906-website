@@ -3,6 +3,7 @@ import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, Masked, Pill, Bar, Heart, LocationSelect, AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useCrm, describe } from '@/lib/crm/ui'
+import { RentalModePicker, RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -20,6 +21,7 @@ function Detail({ id }: { id: number }) {
   const [d, setD] = useState<any>(null)
   const [acts, setActs] = useState<any[]>([])
   const [form, setForm] = useState<any>({})
+  const [initModes, setInitModes] = useState<string[]>([])   // modes as loaded — rental_modes is only PATCHed when this changed
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [agents, setAgents] = useState<any[]>([])
@@ -32,6 +34,7 @@ function Detail({ id }: { id: number }) {
   const load = () => crmFetch(`properties/${id}`).then((r) => {
     setD(r); setActs(r.activities || [])
     const p = r.property
+    setInitModes(p.rentalModes || ['long_let'])
     setForm({
       property_type: p.type || '', town: p.location.town || '', street: p.location.street || '', apt: p.location.apt || '',
       bedrooms: p.beds ?? '', bathrooms: p.baths ?? '', size_sqm: p.sizeSqm ?? '',
@@ -45,7 +48,12 @@ function Detail({ id }: { id: number }) {
       // Balcony/study/parking are agent-verified truth the match engine's
       // scorer reads directly — leave as '' (unknown) rather than guessing;
       // '' round-trips as null, never as a false yes/no.
-      lease_type: p.leaseType || 'long_let',
+      // Rental modes (2026-09-21) replace the single lease-type select: several may
+      // apply at once, and "Available until" (Bis) is edited right next to them.
+      // rental_modes is only SENT when the user actually changed the picker (see
+      // save()), so an untouched derived value never becomes an explicit one.
+      rental_modes: p.rentalModes || ['long_let'],
+      available_until: p.availableUntil ? String(p.availableUntil).slice(0, 10) : '',
       has_balcony: p.hasBalcony === true ? 'true' : p.hasBalcony === false ? 'false' : '',
       balcony_size: p.balconySize || '',
       has_study_room: p.hasStudyRoom === true ? 'true' : p.hasStudyRoom === false ? 'false' : '',
@@ -76,8 +84,11 @@ function Detail({ id }: { id: number }) {
   async function save() {
     setSaving(true); setMsg('')
     try {
+      const { rental_modes: pickedModes, ...restForm } = form
+      const modesChanged = JSON.stringify([...(pickedModes || [])].sort()) !== JSON.stringify([...initModes].sort())
       const payload = {
-        ...form,
+        ...restForm,
+        ...(modesChanged ? { rental_modes: pickedModes } : {}),
         has_balcony: triState(form.has_balcony),
         has_study_room: triState(form.has_study_room),
         parking_available: triState(form.parking_available),
@@ -154,6 +165,8 @@ function Detail({ id }: { id: number }) {
       <div style={{ padding: 26, fontFamily: F, maxWidth: 1000 }}>
         <div style={{ marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={() => router.push('/inventory')} style={{ background: '#F4F2EC', border: '1px solid #E8E4DA', borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: F, color: '#888', fontWeight: 600 }}>← Inventory</button>
+          {p && <RentalModeBadges modes={p.rentalModes} availableUntil={p.availableUntil} />}
+          {p?.availableUntil && <UntilLine availableUntil={p.availableUntil} style={{ marginTop: 0 }} />}
           {p?.exclusive && <span style={{ fontSize: 10, fontWeight: 700, color: A, background: AD, border: `1px solid ${AB}`, borderRadius: 5, padding: '3px 8px' }}>🔒 EXCLUSIVE until {fmtDate(p.exclusiveUntil)}</span>}
           {p && <span style={{ background: '#FFF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#888' }}><Heart propertyId={p.id} fav={p.fav} size={15} /> Favourite</span>}
           {msg && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#15803D', fontWeight: 600 }}>{msg}</span>}
@@ -194,6 +207,7 @@ function Detail({ id }: { id: number }) {
                     </select>
                   </Field>
                   <Field label="Available date"><input style={inp} type="date" value={form.available_date} onChange={e => set('available_date', e.target.value)} /></Field>
+                  <Field label="Available until (Bis)"><input data-testid="field-available-until" style={inp} type="date" value={form.available_until} onChange={e => set('available_until', e.target.value)} /></Field>
                   <Field label="Viewing status">
                     <select style={inp} value={form.viewing_status} onChange={e => set('viewing_status', e.target.value)}>
                       <option value="none">None</option><option value="requested">Requested</option><option value="scheduled">Scheduled</option><option value="done">Done</option>
@@ -222,13 +236,9 @@ function Detail({ id }: { id: number }) {
                     fallback rules — "Unverified" is a real, honest state,
                     never defaulted to yes or no. */}
                 <div style={{ marginTop: 14, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Field label="Lease type">
-                    <select style={inp} value={form.lease_type} onChange={e => set('lease_type', e.target.value)}>
-                      <option value="long_let">Long-let</option>
-                      <option value="winter_let">Winter-let ❄️</option>
-                      <option value="short_let">Short-let ❄️</option>
-                      <option value="flexible">Flexible</option>
-                    </select>
+                  <Field label="Rental modes">
+                    <RentalModePicker value={form.rental_modes || []} onChange={m => set('rental_modes', m)} />
+                    {!isAdmin && <div style={{ fontSize: 10, color: '#AAA', marginTop: 4 }}>A change is sent to an admin to confirm.</div>}
                   </Field>
                   <Field label="Balcony/terrace">
                     <select style={inp} value={form.has_balcony} onChange={e => set('has_balcony', e.target.value)}>
