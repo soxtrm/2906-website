@@ -16,7 +16,7 @@ import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Came
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
-import { TOWNS, townKey, townLabel, townCoord, spread } from '@/lib/crm/towns'
+import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
@@ -72,6 +72,8 @@ type Listing = {
   // Rental modes (2026-09-21): LONG / WINTER / SHORT let, several at once. Effective
   // modes from the backend — already derived for listings nobody classified yet.
   rentalModes?: string[] | null
+  // Canonical locality from the backend resolver (2026-09-22) — what the board pins and filters on
+  localityKey?: string | null; localityLabel?: string | null; localityLat?: number | null; localityLng?: number | null
   // Kev, 2026-08-31 (AV-date-confirm button) — "from when can this be
   // viewed", a separate fact from availableDate.
   viewingDate: string | null
@@ -546,7 +548,13 @@ function Board() {
       ? 'schedule-board/favourites'
       : `schedule-board/listings?${q.toString()}`
     crmFetch(path)
-      .then(d => { if (!alive) return; setRows(d.listings || []); setErr(null) })
+      .then(d => {
+        if (!alive) return
+        // canonical localities from the backend FIRST, so the pin / filter-chip / label lookups
+        // below (townKey, TOWNS[k], townLabel) resolve every listing the backend can resolve
+        registerCanonicalLocalities(d.listings)
+        setRows(d.listings || []); setErr(null)
+      })
       .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }

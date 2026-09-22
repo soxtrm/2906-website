@@ -58,6 +58,12 @@ export const TOWNS: Record<string, TownCoord> = {
   'balzan':          { label: 'Balzan',             lat: 35.8956, lng: 14.4531 },
   'birkirkara':      { label: 'Birkirkara',         lat: 35.8972, lng: 14.4611 },
   'bormla':          { label: 'Bormla',             lat: 35.8836, lng: 14.5297 },
+  // NEXUS LINK (2026-09-18): same two towns were missing from the backend's
+  // geoTowns.js twin of this file (Match Engine V4 pass, same day) -- added
+  // here too so NEXUS's mobility corridors and property pins agree with the
+  // backend instead of silently disagreeing on these two villages.
+  'burmarrad':       { label: 'Burmarrad',          lat: 35.9295, lng: 14.4130 },
+  'salina':          { label: 'Salina',             lat: 35.9331, lng: 14.4373 },
   'gharghur':        { label: 'Għargħur',           lat: 35.9231, lng: 14.4531 },
   'gzira':           { label: 'Gżira',              lat: 35.9042, lng: 14.4897 },
   'hamrun':          { label: 'Ħamrun',             lat: 35.8853, lng: 14.4842 },
@@ -99,8 +105,32 @@ export function townKey(raw?: string | null): string | null {
   if (!raw) return null
   const f = fold(raw)
   if (!f) return null
+  // The backend's canonical resolver wins (see registerCanonicalLocalities below).
+  const canon = CANONICAL_KEY[f]
+  if (canon && TOWNS[canon]) return canon
   const key = ALIASES[f] || f
   return TOWNS[key] ? key : null
+}
+
+// ── canonical localities from the backend (2026-09-22) ─────────────────────
+// This file is a hand-kept COPY of the backend's geoTowns table, and copies drift:
+// it had 41 towns against the backend's 76+, so Santa Venera (and 20+ other valid
+// localities) could not be pinned or filtered on the Agent Board. The board API now
+// sends each listing's canonical locality (key, label, lat, lng — from
+// services/localityResolver.js). Registering them here makes every existing
+// townKey / townLabel / townCoord / TOWNS[k] call site use that ONE canonical answer,
+// without a per-town patch. The static table above stays as the offline fallback.
+const CANONICAL_KEY: Record<string, string> = {}
+export function registerCanonicalLocalities(rows: Array<{
+  town?: string | null; localityKey?: string | null; localityLabel?: string | null
+  localityLat?: number | null; localityLng?: number | null
+}> | null | undefined) {
+  if (!rows) return
+  for (const r of rows) {
+    if (!r || !r.town || !r.localityKey || r.localityLat == null || r.localityLng == null) continue
+    if (!TOWNS[r.localityKey]) TOWNS[r.localityKey] = { label: r.localityLabel || r.localityKey, lat: r.localityLat, lng: r.localityLng }
+    CANONICAL_KEY[fold(r.town)] = r.localityKey
+  }
 }
 
 export function townLabel(raw?: string | null): string {
