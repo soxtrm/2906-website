@@ -102,6 +102,7 @@ function BookingsInner() {
                           <Link href={`/schedule-board?ref=${b.ref}`} className="text-[#E8B931] hover:underline">#{b.ref}</Link>
                           {b.town && <span className={DIM}> · {b.town}</span>}
                         </div>
+                        {b.attention && <div className="text-xs text-amber-300" data-overview-attention={b.id}>⚠ {b.attention.reason}</div>}
                         <div className={`text-xs truncate ${DIM}`}>
                           {b.appointmentLabel}
                           {b.party.label ? ` · ${b.party.label}` : b.party.ref ? ` · ${b.party.ref}` : ''}

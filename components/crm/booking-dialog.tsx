@@ -13,8 +13,11 @@
 //     BookDialog, which asks the owner) — never a confirmed slot.
 //   * Bookings reach every calendar via the backend (calendar_events trigger +
 //     ICS feeds); cancel/move here updates them all.
-//   * Dual-use listings (winter let = short let Apr–Nov): connect the
-//     Airbnb / Booking.com iCal so stays block viewing slots.
+//   * Owner-confirmed vs proposed: "Tuesday 4pm" confirms 16:00 only; the
+//     rest of the planning block is PROPOSED and books as "pending owner".
+//   * Dual-use listings (classified winter + short let): the Airbnb /
+//     Booking.com iCal is SHORTSTAY_OCCUPANCY — shown as a warning on slots,
+//     never a block on an owner-authorised viewing.
 // Nobody is scored on no-shows — this is coordination only.
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -64,7 +67,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
   const [f, setF] = useState({ clientName: '', groupSize: '', notes: '', agentId: '' })
   const [moving, setMoving] = useState<Booking | null>(null)
   const [showWindowForm, setShowWindowForm] = useState(false)
-  const [wf, setWf] = useState({ date: '', from: '16:00', to: '17:30', fromDate: '' })
+  const [wf, setWf] = useState({ date: '', from: '16:00', to: '17:30', fromDate: '', confirmation: 'start_only' as 'start_only' | 'full_window' })
   const [feedUrl, setFeedUrl] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -95,6 +98,14 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
     }
     return true
   }
+  // Is the current pick inside owner-confirmed time? A 20-min pick needs both boxes confirmed.
+  const pickInfo = useMemo(() => {
+    if (!pick || !v) return { proposed: false, occupied: false }
+    const w = v.windows.find(x => x.id === pick.windowId)
+    const t0 = new Date(pick.start).getTime()
+    const boxes = (w?.slots || []).filter(s => { const t = new Date(s.start).getTime(); return t >= t0 && t < t0 + dur * 60000 })
+    return { proposed: boxes.some(s => !s.confirmed) && !(boxes[0]?.confirmed && boxes[0]?.start === w?.start), occupied: boxes.some(s => s.occupied) }
+  }, [pick, v, dur])
   const picked = (w: number, s: Slot) => {
     if (!pick || pick.windowId !== w) return false
     const t = new Date(s.start).getTime(), p = new Date(pick.start).getTime()
@@ -144,7 +155,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
       if (!wf.fromDate && !wf.date) throw new Error('Pick the day of the viewing window.')
       const body = wf.fromDate
         ? { fromDate: wf.fromDate }
-        : { start: maltaToIso(wf.date, wf.from), end: maltaToIso(wf.date, wf.to) }
+        : { start: maltaToIso(wf.date, wf.from), end: maltaToIso(wf.date, wf.to), confirmation: wf.confirmation }
       const d = await crmJson(`${base}/viewing-window`, 'POST', { ...body, note: 'set on the board' })
       setV(prev => prev ? { ...prev, ...d.view } : d.view)
       setShowWindowForm(false)
@@ -268,6 +279,13 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                     <div>
                       <div className="text-sm font-bold text-navy">{dayLabel(w.start)} · {timeLabel(w.start)}–{timeLabel(w.end)}</div>
                       {w.evidence && <div className="text-[11px] text-navy/45 italic">Owner: “{w.evidence}”</div>}
+                      <div className="text-[11px] text-navy/55" data-window-confirmation-label={w.confirmation}>
+                        {w.confirmation === 'full_window'
+                          ? (v.standingPermission ? 'Standing permission — every slot owner-confirmed' : 'Owner confirmed the whole window')
+                          : w.confirmation === 'start_only'
+                            ? `Owner confirmed ${timeLabel(w.start)} only — later slots are our planning block (proposed, need the owner's OK)`
+                            : 'Approximate time — every slot is proposed until the owner confirms'}
+                      </div>
                     </div>
                     <button className="text-[10px] text-navy/35 hover:text-red-600" onClick={() => removeWindow(w.id)} title="Owner withdrew this window">remove window</button>
                   </div>
@@ -276,24 +294,31 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                       const b = s.bookingId ? bookingById.get(s.bookingId) : null
                       const ownMove = !!(moving && b && b.id === moving.id)
                       const selectable = (s.state === 'free' || ownMove) && canStartAt(w.slots, i, dur)
+                      const proposed = !s.confirmed
                       const sel = picked(w.id, s)
                       return (
-                        <button key={s.start} data-slot={s.start} data-slot-state={s.state}
+                        <button key={s.start} data-slot={s.start} data-slot-state={s.state} data-slot-confirmed={s.confirmed ? '1' : '0'} data-slot-occupied={s.occupied ? '1' : '0'}
                           disabled={!selectable && !sel}
                           onClick={() => setPick({ windowId: w.id, start: s.start })}
                           title={b ? `${b.agent.name} · ${b.appointmentLabel}${b.party.label ? ' · ' + b.party.label : ''}`
-                            : s.state === 'occupied' ? 'Guests in the property (connected calendar)' : s.state === 'past' ? 'Past' : 'Free'}
+                            : s.state === 'past' ? 'Past'
+                            : `${proposed ? 'Proposed — needs the owner\'s OK' : 'Owner-confirmed'}${s.occupied ? ' · short-stay guests in (warning only)' : ''}`}
                           className={cn('rounded-md px-1 py-2 text-[11px] font-semibold leading-tight text-center transition-colors ring-1',
                             sel ? 'bg-navy text-white ring-navy'
-                              : s.state === 'free' ? 'bg-white text-navy ring-navy/15 hover:ring-gold'
+                              : s.state === 'free' && proposed ? 'bg-white text-navy/60 ring-dashed ring-navy/25 border border-dashed border-navy/25 hover:ring-gold'
+                              : s.state === 'free' ? 'bg-emerald-50 text-navy ring-emerald-300 hover:ring-gold'
                               : s.state === 'booked' ? 'text-white ring-transparent'
-                              : s.state === 'occupied' ? 'bg-[repeating-linear-gradient(45deg,#eef0f3,#eef0f3_4px,#e2e5ea_4px,#e2e5ea_8px)] text-navy/40 ring-transparent'
                               : 'bg-off-white text-navy/25 ring-transparent',
+                            s.occupied && s.state !== 'booked' && 'bg-[repeating-linear-gradient(45deg,#fff7e6,#fff7e6_4px,#fdebc8_4px,#fdebc8_8px)]',
                             !selectable && !sel && s.state === 'free' && 'opacity-50')}
                           style={s.state === 'booked' && !sel ? { background: b?.agent.colorHex || '#64748b', opacity: ownMove ? 0.55 : 1 } : undefined}>
                           {timeLabel(s.start)}
-                          {b && <div className="text-[9px] font-medium truncate opacity-90">{b.agent.name}</div>}
-                          {s.state === 'occupied' && <div className="text-[9px] font-medium">stay</div>}
+                          {/* the booking's label sits on its FIRST box only; a 20-min
+                              booking's second box just reads as its continuation */}
+                          {b && (b.startsAt && new Date(b.startsAt).getTime() === new Date(s.start).getTime()
+                            ? <div className="text-[9px] font-medium truncate opacity-90" data-slot-booking-head={b.id}>{b.agent.name}</div>
+                            : <div className="text-[9px] font-medium opacity-60" data-slot-booking-cont={b.id}>↳ cont.</div>)}
+                          {!b && s.state === 'free' && <div className="text-[9px] font-medium opacity-70">{proposed ? 'proposed' : 'confirmed'}{s.occupied ? ' · guests' : ''}</div>}
                         </button>
                       )
                     })}
@@ -309,7 +334,17 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                     <div><label className={LABEL}>From</label><input type="time" step={600} className={FIELD} value={wf.from} onChange={e => setWf(s => ({ ...s, from: e.target.value }))} /></div>
                     <div><label className={LABEL}>To</label><input type="time" step={600} className={FIELD} value={wf.to} onChange={e => setWf(s => ({ ...s, to: e.target.value }))} /></div>
                   </div>
-                  <div className="text-[11px] text-navy/40">…or only a date (“viewings from 15 October”):</div>
+                  <div className="flex flex-wrap gap-3 text-[11px] text-navy/70" data-window-confirmation>
+                    <label className="flex items-center gap-1.5">
+                      <input type="radio" checked={wf.confirmation === 'start_only'} onChange={() => setWf(s => ({ ...s, confirmation: 'start_only' }))} />
+                      Owner confirmed only the start time (rest = proposed)
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input type="radio" checked={wf.confirmation === 'full_window'} onChange={() => setWf(s => ({ ...s, confirmation: 'full_window' }))} />
+                      Owner approved the whole range
+                    </label>
+                  </div>
+                  <div className="text-[11px] text-navy/40">…or only a date (“viewings from 15 October”) — no time is invented:</div>
                   <input type="date" className={FIELD} value={wf.fromDate} onChange={e => setWf(s => ({ ...s, fromDate: e.target.value }))} />
                   <div className="flex justify-end gap-2">
                     <button className={GHOST} onClick={() => setShowWindowForm(false)}>Cancel</button>
@@ -383,11 +418,11 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                   )}
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs text-navy/50">
-                      {pick ? `${dayLabel(pick.start)} · ${time12(pick.start)} · ${dur} min` : 'Pick a slot above'}
+                      {pick ? `${dayLabel(pick.start)} · ${time12(pick.start)} · ${dur} min${pickInfo.proposed ? ' · proposed (pending owner)' : ' · owner-confirmed'}${pickInfo.occupied ? ' · ⚠ guests in' : ''}` : 'Pick a slot above'}
                     </div>
                     <button className={PRIMARY} disabled={busy || !pick} onClick={book} data-booking-submit>
                       {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      {moving ? 'Move booking' : 'Book slot'}
+                      {moving ? 'Move booking' : pickInfo.proposed ? 'Reserve (proposed)' : 'Book slot'}
                     </button>
                   </div>
                 </div>
@@ -403,6 +438,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: b.agent.colorHex || '#64748b' }} />
                       <div className="grow min-w-0">
                         <div className="font-semibold text-navy truncate">{bookingLine(b)}</div>
+                        {b.attention && <div className="text-amber-700 whitespace-normal" data-booking-attention={b.id}>⚠ {b.attention.reason}</div>}
                         <div className="text-navy/45 truncate">
                           {b.appointmentLabel}{b.durationMin ? ` · ${b.durationMin} min` : ''}
                           {b.party.label ? ` · ${b.party.label}` : b.party.ref ? ` · ${b.party.ref}` : ''}
@@ -426,8 +462,9 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
             <div className="space-y-5">
               <div className="text-xs text-navy/55 leading-relaxed">
                 {v.dualUse
-                  ? <>This listing is <b>winter let + short let</b> (short let in season, April–November). Connect its Airbnb / Booking.com / VRBO calendar: stays block viewing slots and show here as occupied.</>
-                  : <>Connect any external calendar (Airbnb, Booking.com, VRBO, another agency). Stays block viewing slots.</>}
+                  ? <>Classified <b>winter let + short let</b> (Malta default: short let April–November). That is a classification only — short-stay availability, rates and booking permission are <b>not</b> confirmed by it. Connect its Airbnb / Booking.com / VRBO calendar to see guest stays.</>
+                  : <>Connect a short-stay channel calendar (Airbnb, Booking.com, VRBO, another agency) to see guest stays.</>}
+                <div className="mt-1 text-navy/45">Short-stay occupancy is shown on viewing slots as a warning — it never blocks a viewing the owner authorised. Viewing appointments are never exported as accommodation blocks.</div>
               </div>
               {v.canManageCalendars ? (
                 <>
@@ -455,14 +492,14 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                   </div>
                   {v.calendarExportUrl && (
                     <div>
-                      <div className={SECTION}>Export — give this link to Airbnb / Booking.com (“import calendar”)</div>
+                      <div className={SECTION}>Export — short-stay occupancy only, for Airbnb / Booking.com (“import calendar”)</div>
                       <div className="flex gap-2">
                         <input readOnly className={cn(FIELD, 'text-[11px]')} value={v.calendarExportUrl} onFocus={e => e.target.select()} />
                         <button className={GHOST} onClick={() => { navigator.clipboard?.writeText(v.calendarExportUrl || ''); setCopied(true); setTimeout(() => setCopied(false), 1500) }}>
                           <Copy className="w-3.5 h-3.5 inline" /> {copied ? 'copied' : 'copy'}
                         </button>
                       </div>
-                      <div className="text-[11px] text-navy/40 mt-1">Every stay from every connected channel, so the channels see each other. Add <code>?exclude=airbnb</code> for the Airbnb import.</div>
+                      <div className="text-[11px] text-navy/40 mt-1">Guest stays from every connected channel, so the channels see each other — never viewings or photo appointments. Add <code>?exclude=airbnb</code> for the Airbnb import.</div>
                     </div>
                   )}
                 </>
@@ -470,7 +507,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                 <div className="text-xs text-navy/50">Only the listing agent or an admin can connect calendars.</div>
               )}
               <div>
-                <div className={SECTION}>Occupied (next 120 days)</div>
+                <div className={SECTION}>Short-stay occupancy (next 120 days)</div>
                 {!v.occupied.length && <div className="text-xs text-navy/40">No stays from connected calendars.</div>}
                 <div className="flex flex-wrap gap-1.5">
                   {v.occupied.map(o => (

@@ -5,11 +5,15 @@
 // Every time an owner states is Malta wall-clock time, whatever timezone the
 // agent's browser is in — so formatting and input both go through Malta here.
 // ============================================================================
-export type SlotState = 'free' | 'booked' | 'occupied' | 'past'
-export type Slot = { start: string; end: string; state: SlotState; bookingId: number | null }
+export type SlotState = 'free' | 'booked' | 'past'
+// confirmed = inside what the OWNER confirmed; otherwise the slot is PROPOSED
+// (booking it reserves it as "pending owner"). occupied = short-stay guests in
+// the flat (connected Airbnb/Booking calendar) — a warning, never a block.
+export type Slot = { start: string; end: string; state: SlotState; bookingId: number | null; confirmed: boolean; occupied: boolean }
 export type BookingWindow = {
   id: number; kind: 'window'; start: string; end: string; label: string
   source: string; evidence: string | null; confidence: string; slots: Slot[]
+  confirmation: 'full_window' | 'start_only' | 'approximate'
 }
 export type Booking = {
   id: number; propertyId: number; ref: string | null; town: string | null
@@ -21,6 +25,8 @@ export type Booking = {
   agent: { id: number | null; name: string | null; colorHex: string | null }
   party: { label: string | null; ref: string | null; size: number | null }
   notes: string | null; canEdit: boolean
+  ownerConfirmed: boolean
+  attention: { reason: string; at: string; seen: boolean } | null
 }
 export type CalendarFeed = {
   id: number; source: string; active: boolean; host: string | null
@@ -36,7 +42,9 @@ export type BookingView = {
   appointmentTypes: { key: string; label: string }[]
   durations: number[]; slotMinutes: number
   rentalModes: string[]; dualUse: boolean
-  shortLetSeason: { fromMonth: number; toMonth: number }
+  // Malta default season for the winter→short CLASSIFICATION — never confirmed availability
+  defaultShortLetSeason: { fromMonth: number; toMonth: number }; seasonConfirmed: false
+  standingPermission: boolean
   canManageCalendars: boolean; calendarFeeds: CalendarFeed[]; calendarExportUrl: string | null
   canSetWindow: boolean
 }
@@ -71,7 +79,7 @@ export function maltaToIso(date: string, time: string) {
 }
 
 export const STATUS_LABEL: Record<string, string> = {
-  confirmed: 'Confirmed', pending: 'Pending owner', cancelled: 'Cancelled', done: 'Done', no_show: 'No show',
+  confirmed: 'Confirmed', pending: 'Proposed · pending owner', cancelled: 'Cancelled', done: 'Done', no_show: 'No show',
 }
 
 const hm12 = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
@@ -80,5 +88,5 @@ export const time12 = (iso: string) => hm12.format(new Date(iso))
 // "Agent XY · Tue 29 Sep 4:00 PM · Confirmed"
 export function bookingLine(b: Booking) {
   const when = b.startsAt ? `${dayLabel(b.startsAt)} ${time12(b.startsAt)}` : (b.label || b.date || '')
-  return `${b.agent.name || 'Agent'} · ${when} · ${STATUS_LABEL[b.status] || b.status}`
+  return `${b.attention ? '⚠ ' : ''}${b.agent.name || 'Agent'} · ${when} · ${STATUS_LABEL[b.status] || b.status}`
 }
