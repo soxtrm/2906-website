@@ -20,6 +20,8 @@ import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocaliti
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
+import { BookingDialog } from '@/components/crm/booking-dialog'
+import { type Booking, bookingLine } from '@/lib/crm/booking'
 import { SwipeLinkCreatedModal, SwipeModeChoiceModal, SwipeMultiLinksModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
@@ -32,6 +34,8 @@ const CARD = '#FFFDFA'
 // for a personal Favourite and not the red used for "rented" — three different
 // facts, three different colours, so a glance never confuses them.
 const HOT = '#C7391A'
+// Booking engine (Kev, 2026-09-23): "dann leuchtet der Book Button gelb"
+const BOOK_YELLOW = '#E8B931'
 
 // ── dark redesign, Kev 2026-09-11 ────────────────────────────────────────────
 // "erstmal darkmode, sehr clean und übersichtlicher... es bleibt nur FAV
@@ -129,6 +133,16 @@ type Listing = {
   // separately, so the card and the click handler can never disagree about
   // which step it is on.
   starStep?: number
+  // ── booking engine (2026-09-23) ──────────────────────────────────────────
+  // BOOKINGS POSSIBLE = the owner confirmed a viewing window (slots bookable)
+  // or a viewings-from date (requestable). Sorted first server-side.
+  bookingsPossible?: boolean
+  viewingWindow?: { start: string; end: string } | null
+  viewingsFrom?: string | null
+  // "Agent XY · Tue 29 Sep 4:00 PM · Confirmed" — upcoming, max 4
+  bookings?: Booking[]
+  // cats_only / small_only / no_dogs / case_by_case — owner's latest word
+  petsPolicy?: string | null
   // When THIS agent last exchanged a message in the relay chat on this
   // listing (any thread) — routes/crmScheduleBoard.js withCardFlags(). Lets
   // the Chat button read "2h ago" instead of every card looking identical, so
@@ -381,6 +395,8 @@ function Board() {
   const [focusRef, setFocusRef] = useState<string | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [booking, setBooking] = useState<Listing | null>(null)
+  // Owner viewing REQUEST (no confirmed window yet) — the pre-2026-09-23 BookDialog.
+  const [requesting, setRequesting] = useState<Listing | null>(null)
   const [asking, setAsking] = useState<Listing | null>(null)
   const [chatting, setChatting] = useState<Listing | null>(null)
   const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
@@ -1672,11 +1688,21 @@ function Board() {
 
       <AnimatePresence>
         {booking && (
-          <BookDialog
-            key="book"
+          <BookingDialog
+            key="booking"
             refId={booking.ref}
             town={booking.town}
-            onClose={() => setBooking(null)}
+            onClose={() => { setBooking(null); reload() }}
+            onDone={msg => showToast('ok', msg)}
+            onRequest={() => { setRequesting(booking); setBooking(null) }}
+          />
+        )}
+        {requesting && (
+          <BookDialog
+            key="book"
+            refId={requesting.ref}
+            town={requesting.town}
+            onClose={() => setRequesting(null)}
             onDone={msg => showToast('ok', msg)}
           />
         )}
@@ -3006,7 +3032,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // exact precedence (Hot beats a personal Favourite), so the frame reads
   // the same signal the star glyph does rather than re-deriving it.
   const step = starStepOf(r)
-  const frame = step === 2 ? HOT_GLOW : step === 1 ? FAV_GLOW : null
+  // Booking engine (Kev, 2026-09-23): an owner-confirmed viewing time puts the
+  // listing in the red top-properties frame, same as Hot.
+  const frame = (step === 2 || r.bookingsPossible) ? HOT_GLOW : step === 1 ? FAV_GLOW : null
   // Kev, 2026-09-04: "freshly updated" glow, first 48h — same fact
   // (routes/crmScheduleBoard.js's updatedAt, bumped by crm.js's PATCH
   // /properties/:id on every edit) already used to nudge these listings
@@ -3151,6 +3179,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         {r.isHotProperty && (
           <span style={{ position: 'absolute', top: 10, left: 44, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Hot
+          </span>
+        )}
+        {r.bookingsPossible && (
+          <span data-bookings-possible={r.ref}
+            title={r.viewingWindow ? 'Owner confirmed a viewing time — book a slot' : 'Owner confirmed a viewings-from date — request a time'}
+            style={{ position: 'absolute', top: 40, left: 10, background: BOOK_YELLOW, color: '#151C2C', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5, boxShadow: '0 1px 4px rgba(0,0,0,0.35)' }}>
+            Bookings possible
           </span>
         )}
         {r.isMine && !r.isHotProperty && (
@@ -3562,6 +3597,24 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           are already click-to-open. Every onClick/disabled condition below
           is the SAME one the previous three-row layout used; only where it
           lives changed. */}
+      {!!r.bookings?.length && (
+        <div data-card-bookings={r.ref} style={{
+          padding: '7px 12px', borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
+          background: dark ? DCARD : CARD, display: 'flex', flexDirection: 'column', gap: 3,
+        }}>
+          {r.bookings.slice(0, 2).map(b => (
+            <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: dark ? DTEXT_DIM : LTEXT_DIM, minWidth: 0 }}>
+              <span style={{ width: 7, height: 7, borderRadius: 7, background: b.agent.colorHex || '#64748b', flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {bookingLine(b)}<span style={{ color: dark ? DTEXT_FAINT : LTEXT_FAINT }}> · {b.appointmentLabel}</span>
+              </span>
+            </div>
+          ))}
+          {r.bookings.length > 2 && (
+            <span style={{ fontSize: 10, color: dark ? DTEXT_FAINT : LTEXT_FAINT }}>+{r.bookings.length - 2} more</span>
+          )}
+        </div>
+      )}
       <div style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
         padding: '9px 11px', position: 'relative',
@@ -3574,7 +3627,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           <button onClick={onChat} title="Chat with the owner" style={trayPrimaryBtn(dark)}>
             Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
           </button>
-          <button onClick={onBook} title="Book a viewing" style={trayPrimaryBtn(dark)}>
+          <button onClick={onBook} data-book-btn={r.ref}
+            title={r.bookingsPossible ? 'Bookings possible — owner-confirmed viewing time' : 'Book a viewing'}
+            style={r.bookingsPossible
+              ? { ...trayPrimaryBtn(dark), background: BOOK_YELLOW, borderColor: BOOK_YELLOW, color: '#151C2C', fontWeight: 700 }
+              : trayPrimaryBtn(dark)}>
             Book
           </button>
           <button

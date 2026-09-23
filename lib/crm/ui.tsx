@@ -199,7 +199,7 @@ export const useCrm = () => {
 
 const THEME_STORAGE_KEY = 'crm_theme_pref'
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory', 'bookings']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -327,6 +327,8 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'dashboard', icon: '▦', label: 'Dashboard', href: '/' },
   { key: 'inventory', icon: '≡', label: 'Inventory', href: '/inventory' },
   { key: 'board',     icon: '◈', label: 'Board',     href: '/schedule-board' },
+  // Booking engine (Kev, 2026-09-23): the team viewing diary — every agent, board-only included.
+  { key: 'bookings',  icon: '◷', label: 'Bookings',  href: '/bookings' },
   // Staff-only: who may sign in to the board. Board agents never see it —
   // their nav comes from the backend and contains 'board' and nothing else.
   { key: 'access',    icon: '◔', label: 'Board access', href: '/board-access' },
