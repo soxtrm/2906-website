@@ -38,6 +38,10 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
     const urlBeds     = searchParams.get('beds')
     const urlBaths    = searchParams.get('baths')
     const urlSqm      = searchParams.get('sqm')
+    // ARGUS property intelligence (2026-09-23)
+    const urlFeatureTags = searchParams.get('featureTags')
+    const urlLocalityIds = searchParams.get('localityIds')
+    const urlRentalModes = searchParams.get('rentalModes')
 
     fetchProperties({
       ...(category !== null && { category }),
@@ -47,6 +51,9 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
       bedrooms:  urlBeds     || undefined,
       bathrooms: urlBaths    || undefined,
       area:      urlSqm      || undefined,
+      featureTags: urlFeatureTags || undefined,
+      localityIds: urlLocalityIds || undefined,
+      rentalModes: urlRentalModes || undefined,
     })
       .then(data => {
         let result = data

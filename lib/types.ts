@@ -42,6 +42,12 @@ export interface Property {
   features: string[]
   availableFrom?: string
   featured: boolean
+  // ARGUS property intelligence (2026-09-23) — canonical, filterable
+  // versions of location/features/lease-length, alongside the existing
+  // free-text `location`/`features` above.
+  localityId?: number | null
+  featureTags?: string[] | null
+  rentalModes?: string[] | null
 }
 
 export interface Agent {
