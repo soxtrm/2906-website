@@ -1,17 +1,17 @@
 'use client'
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { crmGet, crmJson } from '@/lib/crm/api'
-import { CrmProvider, useCrm } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 
 // ── ARGUS / NEON design tokens ───────────────────────────────────────────────
-const BG = '#07070a'
-const PANEL = '#0d0d12'
-const PANEL2 = '#111116'
-const EDITOR = '#0a0a0d'
-const HAIRLINE = 'rgba(255,255,255,0.08)'
-const TEXT = '#EDEDF2'
-const MUTED = '#8A8A99'
-const FAINT = '#55555f'
+const BG = 'var(--crm-bg)'
+const PANEL = 'var(--crm-surface)'
+const PANEL2 = 'var(--crm-surface)'
+const EDITOR = 'var(--crm-raised)'
+const HAIRLINE = 'var(--crm-border)'
+const TEXT = 'var(--crm-text)'
+const MUTED = 'var(--crm-muted)'
+const FAINT = 'var(--crm-faint)'
 const F = "'Bricolage Grotesque', 'Inter', system-ui, sans-serif"
 const FM = "'JetBrains Mono', 'SF Mono', monospace"
 
@@ -120,7 +120,7 @@ function ArgusConsole() {
   const clock = useMaltaClock()
   const [accounts, setAccounts] = useState<Account[] | null>(null)
   const [error, setError] = useState('')
-  const [duplicates, setDuplicates] = useState<any[]>([])
+  const [duplicates, setDuplicates] = useState<any[] | null>(null)
   const [summary, setSummary] = useState<any>(null)
   // Templates are a global library (spec follow-up: "Saved Drafts" button) —
   // lifted here, not per-console, so saving one in DEFAULT's card makes it
@@ -152,7 +152,7 @@ function ArgusConsole() {
     try {
       const r = await crmGet('outreach/duplicates')
       setDuplicates(r.conflicts || [])
-    } catch { /* ignore */ }
+    } catch (e: any) { setError(e.message || 'Duplicate check failed'); setDuplicates(null) }
   }
 
   const connectedCount = accounts?.filter(a => a.connected).length ?? 0
@@ -166,19 +166,9 @@ function ArgusConsole() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: `radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(224,56,159,0.06), transparent), radial-gradient(ellipse 1000px 500px at 90% 0%, rgba(79,123,242,0.06), transparent), ${BG}`, color: TEXT, fontFamily: F, paddingBottom: 60 }}>
+    <CrmShell title="Outreach Planner" subtitle="Your accounts, queues and schedules." dark><div style={{ minHeight: '100vh', background: `radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(224,56,159,0.06), transparent), radial-gradient(ellipse 1000px 500px at 90% 0%, rgba(79,123,242,0.06), transparent), ${BG}`, color: TEXT, fontFamily: F, paddingBottom: 60 }}>
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ padding: '22px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, borderBottom: `1px solid ${HAIRLINE}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/" style={{ color: FAINT, fontSize: 11, textDecoration: 'none', marginRight: 4 }}>← CRM</a>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/argus-logo.png" alt="ARGUS / NEON" style={{ height: 40, width: 'auto', display: 'block' }} />
-          <div style={{ marginLeft: 18 }}>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>Outreach Planner</div>
-            <div style={{ fontSize: 11, color: MUTED }}>Plan · Schedule · Execute · Audit</div>
-          </div>
-        </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: '8px 14px' }}>
             <div style={{ fontSize: 9, color: FAINT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Connected Accounts</div>
@@ -196,7 +186,7 @@ function ArgusConsole() {
         </div>
       </div>
 
-      {error && <div style={{ padding: '10px 24px', color: '#f2597a', fontSize: 12 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 24px', color: 'var(--crm-danger)', fontSize: 12 }}>{error}</div>}
       {!accounts && !error && <div style={{ padding: 24, color: MUTED, fontSize: 12 }}>Loading…</div>}
 
       {/* ── PROFILE CONSOLES — horizontal scroll ──────────────────────── */}
@@ -229,8 +219,8 @@ function ArgusConsole() {
             <div style={{ fontSize: 12, fontWeight: 700 }}>Duplicate Audit</div>
             <button onClick={checkDuplicates} style={btnGhost}>Check Duplicates</button>
           </div>
-          {duplicates.length === 0
-            ? <div style={{ fontSize: 12, color: '#3ecf8e' }}>✓ No active cross-account conflicts</div>
+          {duplicates === null ? <div style={{fontSize:12,color:MUTED}}>Run a check to review cross-account conflicts.</div> : duplicates.length === 0
+            ? <div style={{ fontSize: 12, color: 'var(--crm-success)' }}>✓ No active cross-account conflicts</div>
             : duplicates.map((d: any) => (
               <div key={d.normalized_phone} style={{ fontSize: 12, padding: '6px 0', borderBottom: `1px solid ${HAIRLINE}` }}>
                 <div style={{ color: '#f2a53d', fontWeight: 700 }}>+{d.normalized_phone}</div>
@@ -239,7 +229,7 @@ function ArgusConsole() {
             ))}
         </div>
       </div>
-    </div>
+    </div></CrmShell>
   )
 }
 
@@ -490,7 +480,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       {/* editable queue */}
       {isCompleted ? (
         <div style={{ background: EDITOR, borderRadius: 12, padding: 16, opacity: 0.75 }}>
-          <div style={{ color: '#3ecf8e', fontWeight: 700, fontSize: 12.5 }}>✓ OUTREACH COMPLETED</div>
+          <div style={{ color: 'var(--crm-success)', fontWeight: 700, fontSize: 12.5 }}>✓ OUTREACH COMPLETED</div>
           <div style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>{s?.sent} sent · {s?.skip} skipped</div>
           {activePlan?.scheduled_at && <div style={{ fontSize: 11, color: FAINT, marginTop: 2 }}>Finished around {maltaHM(new Date(activePlan.scheduled_at))}</div>}
         </div>
@@ -583,7 +573,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             <input type="time" value={armTime} onChange={e => setArmTime(e.target.value)} style={{ ...inputSmall, flex: 1 }} />
             <button disabled={busy || activePlan?.armed} onClick={arm} style={btnPrimary(accent)}>ARM</button>
             <button disabled={busy || !activePlan?.armed} onClick={pause} style={btnGhost}>PAUSE</button>
-            <button disabled={busy} onClick={cancel} style={{ ...btnGhost, color: '#f2597a' }}>CANCEL</button>
+            <button disabled={busy} onClick={cancel} style={{ ...btnGhost, color: 'var(--crm-danger)' }}>CANCEL</button>
           </div>
           {activePlan?.scheduled_at && (
             <div style={{ fontSize: 11, color: MUTED }}>
@@ -598,7 +588,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
 function btnPrimary(accent: typeof ACCENTS[0]): React.CSSProperties {
   return {
-    background: `linear-gradient(135deg, ${accent.a}, ${accent.b})`, border: 'none', color: '#0a0a0d',
+    background: 'var(--crm-action)', border: '1px solid var(--crm-action)', color: 'var(--crm-inverse)',
     borderRadius: 8, padding: '8px 14px', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: F,
   }
 }

@@ -47,13 +47,13 @@ const BOOK_YELLOW = '#E8B931'
 // FAV/HOT are now the ONLY two border/glow states a card can carry (the old
 // Luxury-category gold border is gone — Kev's instruction was explicit that
 // nothing else earns an outline).
-const DCARD = '#141B29'          // card surface
-const DCARD_BORDER = 'rgba(255,255,255,0.09)'
-const DTRAY = '#0F1521'          // action tray, one shade darker than the card
-const DTEXT = '#EDEAE1'          // primary text on dark
-const DTEXT_DIM = '#8B93A6'      // secondary text on dark
-const DTEXT_FAINT = '#5C6478'    // tertiary / metadata on dark
-const DBORDER = 'rgba(255,255,255,0.10)'
+const DCARD = 'var(--crm-surface)'          // card surface
+const DCARD_BORDER = 'var(--crm-border)'
+const DTRAY = 'var(--crm-raised)'          // action tray, one shade darker than the card
+const DTEXT = 'var(--crm-text)'          // primary text on dark
+const DTEXT_DIM = 'var(--crm-muted)'      // secondary text on dark
+const DTEXT_FAINT = 'var(--crm-faint)'    // tertiary / metadata on dark
+const DBORDER = 'var(--crm-border)'
 const FAV_GLOW = { border: `1px solid rgba(184,149,63,0.55)`, glow: '0 0 0 1px rgba(184,149,63,0.22), 0 6px 20px rgba(184,149,63,0.20)' }
 const HOT_GLOW = { border: `1px solid rgba(199,57,26,0.6)`, glow: '0 0 0 1px rgba(199,57,26,0.25), 0 6px 20px rgba(199,57,26,0.22)' }
 // The Maps key normally arrives from the backend (GET schedule-board/config),
@@ -1392,7 +1392,7 @@ function Board() {
               Kev asked for it (2026-08-16). Admin only, and read-only for
               everybody else — an agent still benefits from seeing whether the
               robot is chasing owners before deciding to chase one himself. */}
-          <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)} style={{ ...chip, borderRadius: 8, borderColor: A, color: A, background: DCARD, fontWeight: 700 }}><Settings size={13} style={{ display: 'inline', marginRight: 6 }} />OPEN TO CHECK</button>
+          <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)} style={{ ...chip, borderRadius: 8, borderColor: A, color: 'var(--crm-accent)', background: DCARD, fontWeight: 700 }}><Settings size={13} style={{ display: 'inline', marginRight: 6 }} />OPEN TO CHECK</button>
           <ReachoutSwitch />
         </div>
 
@@ -2132,11 +2132,9 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
     return (
       <div style={{ ...mapBox, height, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 20 }}>
         <div>
-          <div style={{ fontFamily: F, fontWeight: 700, color: '#8A6412', fontSize: 14 }}>Map needs a Google Maps key</div>
-          <div style={{ fontSize: 12, marginTop: 6, maxWidth: 420, lineHeight: 1.5, color: '#999' }}>
-            Set <code style={{ fontFamily: FM }}>SCHEDULE_BOARD_MAPS_KEY</code> in the backend
-            <code style={{ fontFamily: FM }}> .env</code> and restart it — no frontend deploy needed.
-            Filters, villages and cards below all work without it.
+          <div style={{ fontFamily: F, fontWeight: 700, color: 'var(--crm-accent)', fontSize: 14 }}>Map temporarily unavailable</div>
+          <div style={{ fontSize: 12, marginTop: 6, maxWidth: 420, lineHeight: 1.5, color: 'var(--crm-muted)' }}>
+            You can still search, filter and open properties below. The map will return when the connection is restored.
           </div>
         </div>
       </div>
@@ -2391,7 +2389,7 @@ function daysUntilAvailable(iso: string | null | undefined): number | null {
 // this function's own namesake) has no status gate at all -- purely
 // date-based -- which is exactly the parity this file's own comment above
 // already promises and this status check was silently breaking.
-function isFarFuture(r: { availableStatus: string; availableDate: string | null }): boolean {
+function isFarFuture(r: { availableStatus: string | null; availableDate: string | null }): boolean {
   if (r.availableStatus === 'rented' || r.availableStatus === 'archived') return false
   const days = daysUntilAvailable(r.availableDate)
   return days != null && days > 100
@@ -3079,7 +3077,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       data-ref={r.ref}
       style={{
         background: DCARD,
-        borderRadius: 14,
+        borderRadius: 20,
         // Kev, 2026-09-12: the "..." popover (menuPanel below) is an
         // absolutely-positioned child of this card — with the card clipping
         // its own overflow and no stacking order of its own, the next card
@@ -3376,7 +3374,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {/* The street, where we have one. Number never shown, and only on your
             own listing — see streetWithoutNumber() on the server. */}
-        {r.streetName && <div style={{ fontSize: 11, color: A, opacity: 0.85, marginTop: 3 }}>{r.streetName}</div>}
+        {r.streetName && <div style={{ fontSize: 11, color: 'var(--crm-accent)', opacity: 0.85, marginTop: 3 }}>{r.streetName}</div>}
 
         {/* Sharing / pets, whenever the listing actually says. Nothing is
             drawn when it does not — see RuleIcon. */}
@@ -3471,7 +3469,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               <CalendarClock size={14} />
             </button>
           )}
-          {rowMsg && <span style={{ fontSize: 10.5, color: A, marginLeft: 2 }}>{rowMsg}</span>}
+          {rowMsg && <span style={{ fontSize: 10.5, color: 'var(--crm-accent)', marginLeft: 2 }}>{rowMsg}</span>}
         </div>
         {/* Kev, 2026-09-14 (spec item 1): an owner-confirmed future date means
             "still available?" is the wrong question to even offer — no button,
@@ -3738,7 +3736,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                   onClick={() => { onStatus('return-to-market'); setMenuOpen(false) }}
                   disabled={busy}
                   title="Reactivate — puts this back on the active board as available"
-                  style={{ ...menuGridBtn(dark), color: 'rgb(102,187,158)', fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
+                  style={{ ...menuGridBtn(dark), color: 'var(--crm-success)', fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
                   Reactivate
                 </button>
               ) : (
@@ -3747,7 +3745,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                     onClick={() => { onCheckIn(); setMenuOpen(false) }}
                     disabled={busy}
                     title={`Confirm it yourself without messaging the owner — ${fresh.label}${fresh.hours != null ? ` · last confirmed ${ago(r.lastConfirmedAvailableAt!)}` : ''}`}
-                    style={{ ...menuGridBtn(dark), color: 'rgb(102,187,158)', cursor: busy ? 'wait' : 'pointer' }}>
+                    style={{ ...menuGridBtn(dark), color: 'var(--crm-success)', cursor: busy ? 'wait' : 'pointer' }}>
                     Confirmed myself
                   </button>
                   <button
@@ -3813,7 +3811,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           padding: '9px 16px', borderTop: `1px solid ${DBORDER}`, background: DCARD,
           display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: 10.5, color: A, fontWeight: 600 }}>
+          <span style={{ fontSize: 10.5, color: 'var(--crm-accent)', fontWeight: 600 }}>
             {r.viewing
               ? `Viewing ${fmtDay(r.viewing.date)}${r.viewing.time ? ` at ${r.viewing.time}` : ''}`
               : 'Saved'}
@@ -3838,11 +3836,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           (Kev's redesign brief, 2026-08-22) rather than left-aligned — this
           reads as the card's closing stamp, not one more left-aligned row. */}
       <div style={{
-        background: '#0F0F0F', color: 'rgba(255,255,255,0.55)', fontFamily: FM, fontSize: 9.5,
+        background: DTRAY, color: DTEXT_DIM, fontFamily: FM, fontSize: 10.5,
         letterSpacing: '0.04em', padding: '7px 14px', display: 'flex', alignItems: 'center',
         justifyContent: 'center', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
       }}>
-        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}>REFERENCE {r.ref}</span>
+        <span style={{ color: DTEXT, fontWeight: 700 }}>REFERENCE {r.ref}</span>
         <span style={{ opacity: 0.4 }}>—</span>
         <span>
           {[r.beds != null ? `${r.beds}B` : '', r.baths != null ? `${r.baths}B` : ''].join('')} {townLabel(r.town)?.toUpperCase()}
@@ -4264,7 +4262,7 @@ function PendingChangesStack({ items, onResolve }: {
           background: CARD, borderRadius: 12, padding: 12,
           boxShadow: '0 10px 30px rgba(0,0,0,0.22)', fontFamily: F,
         }}>
-          <div style={{ fontFamily: FM, fontSize: 11, color: A, marginBottom: 4 }}>#{c.ref} · {FIELD_LABEL[c.field] || c.field}</div>
+          <div style={{ fontFamily: FM, fontSize: 11, color: 'var(--crm-accent)', marginBottom: 4 }}>#{c.ref} · {FIELD_LABEL[c.field] || c.field}</div>
           <div style={{ fontSize: 12.5, fontWeight: 600, color: '#222', marginBottom: 8 }}>
             {c.proposed_by_name || c.proposed_by_username} wants <b>{c.old_value}</b> → <b>{c.new_value}</b>
           </div>
@@ -4315,7 +4313,7 @@ function AgentRequestsPanel({ groups, loading, onClose, onDone }: {
         )}
         {!loading && groups.map(g => (
           <div key={g.agentId} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: A, marginBottom: 6 }}>{g.agentName}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--crm-accent)', marginBottom: 6 }}>{g.agentName}</div>
             {g.requests.map(r => (
               <div key={r.id} style={{
                 display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0',
@@ -4327,7 +4325,7 @@ function AgentRequestsPanel({ groups, loading, onClose, onDone }: {
                   <div style={{ fontSize: 10.5, color: '#B5AFA2' }}>{new Date(r.createdAt).toLocaleString()}</div>
                 </div>
                 <button onClick={() => onDone(r.id)} style={{
-                  ...btn, background: '#FFF', border: `1px solid ${AB}`, color: A, minHeight: 26, padding: '5px 9px',
+                  ...btn, background: '#FFF', border: `1px solid ${AB}`, color: 'var(--crm-accent)', minHeight: 26, padding: '5px 9px',
                 }}>
                   Done
                 </button>
@@ -4422,13 +4420,13 @@ const compactBtn: React.CSSProperties = {
 // interactive controls below.
 const LTEXT = '#1F2430'        // primary text on light
 const LTEXT_DIM = '#5B6472'    // secondary text on light
-const LTEXT_FAINT = '#8A8F9C'  // tertiary / metadata on light
+const LTEXT_FAINT = '#606a62'  // tertiary / metadata on light
 const LBORDER = 'rgba(15,20,30,0.14)'
 const LSURFACE = '#F1F0EA'     // button fill on light (matches the CRM's own light chrome)
 
 const iconRowBtn = (dark: boolean): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: 22, height: 22, padding: 0, background: 'none', border: 'none',
+  width: 34, height: 34, padding: 6, background: 'none', border: 'none',
   color: dark ? DTEXT_FAINT : LTEXT_FAINT, cursor: 'pointer', lineHeight: 0, flexShrink: 0,
 })
 // ── Kev's redesign, 2026-09-11 — "Chat, Book, Tag sind die nächst
@@ -4455,7 +4453,7 @@ const stillAvailableBtn = (dark: boolean): React.CSSProperties => ({
   padding: '8px 12px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
   fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
   border: '1px solid rgba(47,111,87,0.4)',
-  background: dark ? '#1B2333' : '#EAF5F0', color: 'rgb(76,150,124)',
+  background: dark ? '#1B2333' : '#EAF5F0', color: 'var(--crm-success)',
   flex: '1 1 0', minWidth: 0, textAlign: 'center',
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
 })
@@ -4509,7 +4507,7 @@ const subtleLink: React.CSSProperties = {
   textDecoration: 'underline', lineHeight: 1,
 }
 const chip: React.CSSProperties = {
-  padding: '6px 11px', borderRadius: 999, fontSize: 11, fontFamily: F,
+  padding: '8px 12px', borderRadius: 999, fontSize: 12, fontFamily: F,
   border: '1px solid', cursor: 'pointer', background: DCARD, minHeight: 32,
 }
 const mapBox: React.CSSProperties = {

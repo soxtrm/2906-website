@@ -1,7 +1,7 @@
 // Client-side fetch wrapper for the CRM. Talks to same-origin /api/crm/* which
 // proxies to the backend with the HTTP-only session cookie.
 export async function crmFetch(path: string, opts: RequestInit = {}): Promise<any> {
-  const res = await fetch(`/api/crm/${path}`, { credentials: 'same-origin', ...opts })
+  const res = await fetch(`/api/crm/${path}`, { credentials: 'same-origin', cache: 'no-store', ...opts })
   let data: any = null
   try { data = await res.json() } catch { /* non-json */ }
   if (!res.ok) {
@@ -14,11 +14,10 @@ export async function crmFetch(path: string, opts: RequestInit = {}): Promise<an
 }
 
 export async function crmGet(path: string) { return crmFetch(path) }
-export async function crmJson(path: string, method: string, body: any) {
+export async function crmJson(path: string, method: string, body?: unknown) {
   return crmFetch(path, {
     method,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    ...(body !== undefined && !['GET', 'HEAD'].includes(method.toUpperCase()) ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
   })
 }
 

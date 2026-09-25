@@ -26,8 +26,8 @@ import { crmFetch, crmJson } from '@/lib/crm/api'
 // inside an onClick handler. A dynamic import() is only evaluated at call
 // time, so it never enters the SSR bundle at all.
 
-const DPAGE = '#0B0F17'
-const DCARD2 = '#0F1521'
+const DPAGE = 'var(--crm-bg)'
+const DCARD2 = 'var(--crm-raised)'
 
 // Kev, 2026-09-17 ("das watermark oben links von 2906 also das logo, clean
 // und edel"): client-facing documents (invoice/contract) carry the 2906
@@ -206,7 +206,7 @@ function AgentProfilePage() {
   }, [a?.bank_iban, ibanRevealed])
 
   if (loading) return <div style={{ padding: 40, color: DTEXT_DIM }}>Loading profile…</div>
-  if (err || !bundle || !a) return <div style={{ padding: 40, color: '#F2597A' }}>{err || 'Profile not found'}</div>
+  if (err || !bundle || !a) return <div style={{ padding: 40, color: 'var(--crm-danger)' }}>{err || 'Profile not found'}</div>
 
   return (
     <div style={{ background: DPAGE, minHeight: '100%', padding: '20px 18px 60px', color: DTEXT, fontFamily: F }}>
@@ -264,7 +264,7 @@ function AgentProfilePage() {
               {a.bank_iban && (
                 <div style={{ color: DTEXT_DIM, display: 'flex', alignItems: 'center', gap: 6 }}>
                   🏦 {maskedIban}
-                  <span onClick={() => setIbanRevealed(v => !v)} style={{ cursor: 'pointer', color: A, fontSize: 11 }}>{ibanRevealed ? 'hide' : 'reveal'}</span>
+                  <span onClick={() => setIbanRevealed(v => !v)} style={{ cursor: 'pointer', color: 'var(--crm-accent)', fontSize: 11 }}>{ibanRevealed ? 'hide' : 'reveal'}</span>
                   <span onClick={() => navigator.clipboard?.writeText(a.bank_iban || '')} style={{ cursor: 'pointer', color: DTEXT_FAINT, fontSize: 11 }}>copy</span>
                 </div>
               )}
@@ -478,7 +478,7 @@ function WhatsAppConnectionPanel({ agentId, whatsapp, canSeeFull, onChange }: { 
       {canSeeFull && live.status === 'CONNECTED' && (
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={connect} disabled={busy} style={btnGhost()}>Reconnect</button>
-          <button onClick={disconnect} disabled={busy} style={{ ...btnGhost(), color: '#F2597A' }}>Disconnect</button>
+          <button onClick={disconnect} disabled={busy} style={{ ...btnGhost(), color: 'var(--crm-danger)' }}>Disconnect</button>
         </div>
       )}
 
@@ -582,7 +582,7 @@ function ScheduledMessagesPanel({ agentId }: { agentId: number }) {
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         <button onClick={() => sendNow(m.id)} style={btnGhost()}>Send Now</button>
-                        <button onClick={() => cancel(m.id)} style={{ ...btnGhost(), color: '#F2597A' }}>Cancel</button>
+                        <button onClick={() => cancel(m.id)} style={{ ...btnGhost(), color: 'var(--crm-danger)' }}>Cancel</button>
                       </div>
                     </div>
                   </div>
@@ -691,7 +691,7 @@ function NotificationEnginePanel({ agentId, bundle, onChange }: { agentId: numbe
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: bundle.agent.notifications_paused ? 'rgba(242,89,122,0.10)' : DCARD2, border: `1px solid ${bundle.agent.notifications_paused ? 'rgba(242,89,122,0.35)' : DBORDER}`, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
         <div style={{ fontSize: 11.5, color: DTEXT_DIM }}>
           {bundle.agent.notifications_paused
-            ? <span style={{ color: '#F2597A', fontWeight: 700 }}>⏸ All notifications paused</span>
+            ? <span style={{ color: 'var(--crm-danger)', fontWeight: 700 }}>⏸ All notifications paused</span>
             : <span>Notifications active — every saved search below can send</span>}
         </div>
         <button onClick={togglePause} disabled={pauseBusy} style={btnGhost()}>
@@ -705,7 +705,7 @@ function NotificationEnginePanel({ agentId, bundle, onChange }: { agentId: numbe
             : <span style={{ color: DTEXT_FAINT }}>none connected</span>}
         </div>
         {bundle.notificationEngine.channel
-          ? <button onClick={disconnectGroup} style={{ ...btnGhost(), color: '#F2597A' }}>Disconnect</button>
+          ? <button onClick={disconnectGroup} style={{ ...btnGhost(), color: 'var(--crm-danger)' }}>Disconnect</button>
           : <button onClick={() => setGroupForm(v => !v)} style={btnGhost()}>{groupForm ? 'Cancel' : '+ Create Group'}</button>}
       </div>
       {groupForm && !bundle.notificationEngine.channel && (
@@ -746,7 +746,7 @@ function NotificationEnginePanel({ agentId, bundle, onChange }: { agentId: numbe
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <Badge {...(s.enabled ? FEATURE_BADGE.active : FEATURE_BADGE.coming_soon)} label={s.enabled ? 'ACTIVE' : 'PAUSED'} />
                   <button onClick={() => toggle(s)} style={btnGhost()}>{s.enabled ? 'Pause' : 'Resume'}</button>
-                  <button onClick={() => remove(s)} style={{ ...btnGhost(), color: '#F2597A' }}>Delete</button>
+                  <button onClick={() => remove(s)} style={{ ...btnGhost(), color: 'var(--crm-danger)' }}>Delete</button>
                 </div>
               </div>
             ))}

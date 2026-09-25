@@ -167,7 +167,7 @@ function Detail({ id }: { id: number }) {
           <button onClick={() => router.push('/inventory')} style={{ background: '#F4F2EC', border: '1px solid #E8E4DA', borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: F, color: '#888', fontWeight: 600 }}>← Inventory</button>
           {p && <RentalModeBadges modes={p.rentalModes} availableUntil={p.availableUntil} />}
           {p?.availableUntil && <UntilLine availableUntil={p.availableUntil} style={{ marginTop: 0 }} />}
-          {p?.exclusive && <span style={{ fontSize: 10, fontWeight: 700, color: A, background: AD, border: `1px solid ${AB}`, borderRadius: 5, padding: '3px 8px' }}>🔒 EXCLUSIVE until {fmtDate(p.exclusiveUntil)}</span>}
+          {p?.exclusive && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--crm-accent)', background: AD, border: `1px solid ${AB}`, borderRadius: 5, padding: '3px 8px' }}>🔒 EXCLUSIVE until {fmtDate(p.exclusiveUntil)}</span>}
           {p && <span style={{ background: '#FFF', border: '1px solid #E8E4DA', borderRadius: 8, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#888' }}><Heart propertyId={p.id} fav={p.fav} size={15} /> Favourite</span>}
           {msg && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#15803D', fontWeight: 600 }}>{msg}</span>}
         </div>
@@ -271,7 +271,7 @@ function Detail({ id }: { id: number }) {
                 </div>
                 <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
                   <button onClick={save} disabled={saving} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: saving ? 'wait' : 'pointer' }}>{saving ? 'Saving…' : 'Save changes'}</button>
-                  <button onClick={notifyClients} disabled={notifying} style={{ background: AD, color: A, border: `1px solid ${AB}`, borderRadius: 9, padding: '11px 16px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: notifying ? 'wait' : 'pointer' }}>{notifying ? 'Checking…' : '📤 Notify matching clients'}</button>
+                  <button onClick={notifyClients} disabled={notifying} style={{ background: AD, color: 'var(--crm-accent)', border: `1px solid ${AB}`, borderRadius: 9, padding: '11px 16px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: notifying ? 'wait' : 'pointer' }}>{notifying ? 'Checking…' : '📤 Notify matching clients'}</button>
                   {(me?.role === 'admin' || p.listingAgents?.includes(me?.name)) && <button onClick={del} style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: 9, padding: '11px 16px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>Delete</button>}
                 </div>
               </div>
@@ -353,7 +353,7 @@ function Detail({ id }: { id: number }) {
                 {acts.map(h => (
                   <div key={h.id} style={{ display: 'flex', gap: 10, padding: '7px 0', borderBottom: '1px solid #F4F2EC', fontSize: 11.5, alignItems: 'flex-start' }}>
                     <span style={{ fontFamily: FM, fontSize: 9.5, color: '#CCC', minWidth: 96, flexShrink: 0 }}>{fmtDate(h.when)}</span>
-                    <span style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 6px', fontSize: 9.5, fontWeight: 700, flexShrink: 0 }}>{h.who || '—'}</span>
+                    <span style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 6px', fontSize: 9.5, fontWeight: 700, flexShrink: 0 }}>{h.who || '—'}</span>
                     <span style={{ color: '#555' }}>{describe(h)} {h.significant && <span style={{ color: A }}>●</span>}</span>
                   </div>
                 ))}

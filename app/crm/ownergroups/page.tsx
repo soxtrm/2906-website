@@ -6,9 +6,10 @@
 // crmOwnergroups.js), which reuses services/ownerAssistant.js/
 // ownerPreferenceProfile.js/scheduledOutreach.js verbatim.
 // ============================================================================
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
+import { GroupNavigation, GroupStats, crmPath } from '@/components/crm/group-navigation'
 import { crmFetch } from '@/lib/crm/api'
 
 type Ownergroup = {
@@ -51,33 +52,11 @@ function fmtTimeAgo(iso: string | null) {
 // conversation" dashboards without hunting through the sidebar — Kev's
 // explicit OG-5 ask ("Owner-Dashboard und Client-Dashboard über Tabs oben
 // umschaltbar").
-function DashboardTabs() {
-  const pathname = usePathname() || ''
-  const router = useRouter()
-  const tabs = [
-    { href: '/clientgroups', label: 'Clientgroups' },
-    { href: '/ownergroups', label: 'Ownergroups' },
-  ]
-  return (
-    <div className="flex gap-1 mb-4 border-b border-white/10">
-      {tabs.map(t => {
-        const active = pathname.startsWith(t.href)
-        return (
-          <button key={t.href} onClick={() => router.push(t.href)}
-            className={`px-4 py-2 text-xs font-semibold transition-colors border-b-2 -mb-px ${
-              active ? 'border-gold text-white' : 'border-transparent text-white/40 hover:text-white'
-            }`}>
-            {t.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
+const DashboardTabs = GroupNavigation
 
 function OwnergroupCard({ og, onOpen }: { og: Ownergroup; onOpen: () => void }) {
   return (
-    <div onClick={onOpen} className="rounded-lg border border-white/10 bg-[#141B29] p-4 cursor-pointer hover:border-gold/40 transition-colors">
+    <button type="button" onClick={onOpen} className="crm-group-card">
       <div className="flex items-start justify-between mb-2">
         <div>
           <div className="font-semibold text-sm text-white">{og.ownerName || og.ownerPhone || 'Unlinked owner'}</div>
@@ -98,51 +77,49 @@ function OwnergroupCard({ og, onOpen }: { og: Ownergroup; onOpen: () => void }) 
         {og.pendingViewingReminder && <span className="text-blue-400 font-semibold">⏰ viewing pending</span>}
       </div>
       <div className="text-[10px] text-white/30 mt-2">{og.lastAction ? `Last: ${og.lastAction} (${fmtTimeAgo(og.lastActionAt)})` : 'No action yet'}</div>
-    </div>
+    </button>
   )
 }
 
 function OwnergroupsInner() {
   const { me } = useCrm()
   const router = useRouter()
+  const pathname = usePathname() || '/'
   const [rows, setRows] = useState<Ownergroup[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
-
+  const [q, setQ] = useState('')
+  const [status, setStatus] = useState('all')
+  const [session, setSession] = useState('all')
+  const [sort, setSort] = useState('activity')
   const load = useCallback(() => {
     setLoading(true); setErr(null)
-    crmFetch('ownergroups').then(d => setRows(d.ownergroups || [])).catch(e => setErr(e?.data?.error || e?.message || 'Failed to load')).finally(() => setLoading(false))
+    crmFetch('ownergroups').then(d => setRows(d.ownergroups || [])).catch(e => setErr(e?.message || 'Unable to load ownergroups')).finally(() => setLoading(false))
   }, [])
-  useEffect(() => { load() }, [load])
-
-  if (me && me.role !== 'admin') {
-    return (
-      <CrmShell title="Ownergroups" subtitle="Admins only" dark>
-        <DashboardTabs />
-        <p className="text-sm text-white/40">This dashboard is admin-only.</p>
-      </CrmShell>
-    )
-  }
-
-  return (
-    <CrmShell title="Ownergroups" subtitle={`${rows.length} managed owner conversation${rows.length === 1 ? '' : 's'}`} dark>
-      <DashboardTabs />
-      {err && <div className="mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded p-2">{err}</div>}
-      {loading ? (
-        <p className="text-sm text-white/40">Loading…</p>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-white/40">No ownergroups yet — activate one with <code>!o</code> in an owner's chat.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {rows.map(og => <OwnergroupCard key={og.id} og={og} onOpen={() => router.push(`/crm/ownergroups/${og.id}`)} />)}
+  useEffect(() => { if (me?.role === 'admin') load(); else setLoading(false) }, [load, me?.role])
+  const filtered = rows.filter(row => {
+    const haystack = [row.ownerName, row.ownerPhone, row.session, ...row.propertyRefs].join(' ').toLocaleLowerCase()
+    return (!q.trim() || haystack.includes(q.trim().toLocaleLowerCase())) && (status === 'all' || (status === 'viewing' ? row.pendingViewingReminder : row.status === status)) && (session === 'all' || row.session === session)
+  }).sort((a,b) => sort === 'name' ? (a.ownerName || '').localeCompare(b.ownerName || '') : sort === 'properties' ? b.propertiesCount - a.propertiesCount : Date.parse(b.lastActionAt || b.updatedAt) - Date.parse(a.lastActionAt || a.updatedAt))
+  return <CrmShell title="Ownergroups" subtitle="Your owners, properties and conversations in one place." dark>
+    <div className="crm-group-workspace"><DashboardTabs />
+      {me?.role !== 'admin' ? <div className="crm-empty">This dashboard is available to admins.</div> : <>
+        <GroupStats items={[{label:'Owner conversations',value:rows.length},{label:'Managed properties',value:rows.reduce((n,r)=>n+r.propertiesCount,0)},{label:'Viewing reminders',value:rows.filter(r=>r.pendingViewingReminder).length}]} />
+        <div className="crm-group-toolbar">
+          <label className="crm-search">Find an owner or property<input type="search" placeholder="Name, reference, phone or account" value={q} onChange={e=>setQ(e.target.value)} /></label>
+          <label>Status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All statuses</option><option value="viewing">Viewing pending</option>{Array.from(new Set(rows.map(r=>r.status))).sort().map(v=><option key={v} value={v}>{v.replaceAll('_',' ')}</option>)}</select></label>
+          <label>Account<select value={session} onChange={e=>setSession(e.target.value)}><option value="all">All accounts</option>{Array.from(new Set(rows.map(r=>r.session))).sort().map(v=><option key={v}>{v}</option>)}</select></label>
+          <label>Sort by<select value={sort} onChange={e=>setSort(e.target.value)}><option value="activity">Recent activity</option><option value="name">Owner name</option><option value="properties">Most properties</option></select></label>
+          <button className="crm-button" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>
+          {(q || status !== 'all' || session !== 'all') && <button className="crm-button" onClick={()=>{setQ('');setStatus('all');setSession('all')}}>Clear filters</button>}
         </div>
-      )}
-      <div className="mt-6 rounded-lg border border-dashed border-white/15 p-4">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-white/40 mb-1">Warm reachout waves</h3>
-        <p className="text-xs text-white/30">Not built yet — the underlying wave engine is still two ad-hoc scripts (wave_send.js/wave_send_jasmine.js), parked pending a dedicated build. This section will surface real wave data once that exists.</p>
-      </div>
-    </CrmShell>
-  )
+        {err && <div role="alert" className="crm-error">{err} <button className="crm-button" onClick={load}>Try again</button></div>}
+        <p style={{color:'var(--crm-muted)',fontSize:12,marginBottom:14}} role="status">{loading ? 'Loading conversations…' : `${filtered.length} of ${rows.length} conversations`}</p>
+        {!loading && !err && !filtered.length && <div className="crm-empty">{rows.length ? 'No conversations match these filters.' : "No ownergroups yet. Activate one with !o in an owner’s chat."}</div>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">{filtered.map(og => <OwnergroupCard key={og.id} og={og} onOpen={() => router.push(crmPath(`/ownergroups/${og.id}`,pathname))} />)}</div>
+      </>}
+    </div>
+  </CrmShell>
 }
 
 export default function OwnergroupsPage() {

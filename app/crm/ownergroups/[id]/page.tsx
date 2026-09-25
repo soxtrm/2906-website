@@ -18,8 +18,9 @@
 // comes from the same GET /api/crm/schedule-board/config the board uses.
 // ============================================================================
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, usePathname } from 'next/navigation'
 import { CrmProvider, CrmShell, useCrm, MiniBtn, MiniFact, Card, SectionHead } from '@/lib/crm/ui'
+import { crmPath } from '@/components/crm/group-navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { TOWNS, townKey, spread } from '@/lib/crm/towns'
 
@@ -306,6 +307,7 @@ function PropertyMapTab({ properties }: { properties: any[] }) {
 
 function DetailContent({ id }: { id: number }) {
   const router = useRouter()
+  const pathname = usePathname() || '/'
   const [data, setData] = useState<any>(null)
   const [err, setErr] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('properties')
@@ -314,6 +316,7 @@ function DetailContent({ id }: { id: number }) {
   const [scheduling, setScheduling] = useState(false)
 
   const load = useCallback(() => {
+    setErr(null)
     crmFetch(`ownergroups/${id}`).then(setData).catch(e => setErr(e?.data?.error || e?.message || 'Failed to load'))
   }, [id])
   useEffect(() => { load() }, [load])
@@ -332,7 +335,7 @@ function DetailContent({ id }: { id: number }) {
     } finally { setScheduling(false) }
   }
 
-  if (err) return <div className="text-sm text-red-600">{err}</div>
+  if (err && !data) return <div role="alert" className="crm-error">{err} <button className="crm-button" onClick={load}>Try again</button></div>
   if (!data) return <p className="text-sm text-navy/40">Loading…</p>
 
   const properties: any[] = data.properties || []
@@ -342,7 +345,8 @@ function DetailContent({ id }: { id: number }) {
 
   return (
     <div>
-      <button className={GHOST + ' mb-3'} onClick={() => router.push('/ownergroups')}>← Back to Ownergroups</button>
+      <button className={GHOST + ' mb-3'} onClick={() => router.push(crmPath('/ownergroups', pathname))}>← Back to Ownergroups</button>
+      {err && <div className="crm-error" role="alert">{err}</div>}
       <h2 className="font-bold text-lg text-navy mb-1">{data.ownerContact?.name || data.state?.owner_phone || 'Owner'}</h2>
       <p className="text-xs text-navy/40 mb-4">{data.state?.session} · {data.state?.chat_id}</p>
 

@@ -21,16 +21,16 @@ async function proxy(req: NextRequest, segments: string[], method: string) {
   const ua = req.headers.get('user-agent')
   if (ua) headers['user-agent'] = ua
 
-  const body = method !== 'GET' && method !== 'DELETE'
+  const body = method !== 'GET' && method !== 'HEAD'
     ? Buffer.from(await req.arrayBuffer())
     : undefined
 
   try {
-    const vpsRes = await fetch(`${VPS}/${path}${search}`, { method, headers, body })
+    const vpsRes = await fetch(`${VPS}/${path}${search}`, { method, headers, body, cache: 'no-store', signal: AbortSignal.timeout(45000) })
     const buf = await vpsRes.arrayBuffer()
     return new NextResponse(Buffer.from(buf), {
       status: vpsRes.status,
-      headers: { 'content-type': vpsRes.headers.get('content-type') || 'application/json' },
+      headers: { 'content-type': vpsRes.headers.get('content-type') || 'application/json', 'cache-control': 'private, no-store', ...(vpsRes.headers.get('content-disposition') ? {'content-disposition': vpsRes.headers.get('content-disposition')!} : {}) },
     })
   } catch {
     return NextResponse.json({ error: 'Backend unavailable' }, { status: 503 })

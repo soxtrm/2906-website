@@ -14,33 +14,13 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useRouter as useNavRouter, usePathname } from 'next/navigation'
 import { CrmProvider, CrmShell, useCrm, MiniBtn, MiniFact, Card, SectionHead, Pill } from '@/lib/crm/ui'
+import { GroupNavigation, GroupStats, crmPath } from '@/components/crm/group-navigation'
 import { crmFetch, crmJson, crmGet } from '@/lib/crm/api'
 
 // Shared with /ownergroups (OG-5, 2026-09-04) — lets an agent jump between
 // the two "managed conversation" dashboards without hunting the sidebar.
-function DashboardTabs() {
-  const pathname = usePathname() || ''
-  const router = useNavRouter()
-  const tabs = [
-    { href: '/clientgroups', label: 'Clientgroups' },
-    { href: '/ownergroups', label: 'Ownergroups' },
-  ]
-  return (
-    <div className="flex gap-1 mb-4 border-b border-white/10">
-      {tabs.map(t => {
-        const active = pathname.startsWith(t.href)
-        return (
-          <button key={t.href} onClick={() => router.push(t.href)}
-            className={`px-4 py-2 text-xs font-semibold transition-colors border-b-2 -mb-px ${
-              active ? 'border-gold text-white' : 'border-transparent text-white/40 hover:text-white'
-            }`}>
-            {t.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
+const DashboardTabs = GroupNavigation
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { LocationSelector, type LocationSelectorValue } from '@/components/location-selector'
 import { NextIntlClientProvider } from 'next-intl'
 
@@ -190,7 +170,7 @@ function ClientgroupCard({ cg, onOpen }: { cg: Clientgroup; onOpen: () => void }
   const flags = nationalityFlags(cg.search.nationalities)
 
   return (
-    <div onClick={onOpen} className="cursor-pointer bg-[#141B29] rounded-lg border border-white/[0.09] hover:border-gold/40 hover:shadow-md transition-all p-4">
+    <button type="button" onClick={onOpen} className="crm-group-card">
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="font-bold text-white text-sm flex items-center gap-1.5">
@@ -216,14 +196,14 @@ function ClientgroupCard({ cg, onOpen }: { cg: Clientgroup; onOpen: () => void }
         <div className="text-[11px] text-white/60 mt-2 truncate">{searchBits.join(' · ')}</div>
       )}
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-        <span className="text-[10px] text-white/40">Last activity {fmtTimeAgo(cg.lastClientMessageAt || cg.lastAssistantMessageAt || cg.lastHumanMessageAt || cg.updatedAt)}</span>
+        <span className="text-[10px] text-white/40">Last activity {fmtTimeAgo([cg.lastClientMessageAt, cg.lastAssistantMessageAt, cg.lastHumanMessageAt, cg.updatedAt].filter(Boolean).sort((a,b)=>Date.parse(b!) - Date.parse(a!))[0] || null)}</span>
         <span className="text-[10px] font-semibold text-white/60">
           {cg.matches.total} match{cg.matches.total === 1 ? '' : 'es'}
           {cg.matches.unsent > 0 && <span className="text-gold ml-1">· {cg.matches.unsent} new</span>}
           {cg.hasQueuedAction && <span className="text-blue-400 ml-1">· queued</span>}
         </span>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -482,28 +462,17 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
     } finally { setSteerBusy(false) }
   }
 
-  if (!data) {
-    return (
-      <>
-        <div onClick={onClose} className="fixed inset-0 z-[199] bg-black/40 backdrop-blur-[3px]" />
-        <div className="fixed z-[200] bg-[#141B29] shadow-2xl rounded-xl p-6 inset-x-4 top-1/2 -translate-y-1/2 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[520px] text-sm text-white/50">
-          {err ? err : 'Loading…'}
-        </div>
-      </>
-    )
-  }
+  if (!data) return <Dialog open onOpenChange={open => { if (!open) onClose() }}><DialogContent style={{background:'var(--crm-surface)'}}><DialogTitle>Client conversation</DialogTitle><p role={err ? 'alert' : 'status'}>{err || 'Loading…'}</p>{err && <button className="crm-button" onClick={load}>Try again</button>}</DialogContent></Dialog>
 
   const s = data.state
   return (
-    <>
-      <div onClick={onClose} className="fixed inset-0 z-[199] bg-black/40 backdrop-blur-[3px]" />
-      <div className="fixed z-[200] bg-[#141B29] shadow-2xl flex flex-col inset-x-0 bottom-0 rounded-t-2xl max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[600px] sm:rounded-xl sm:max-h-[88vh]">
+    <Dialog open onOpenChange={open => { if (!open) onClose() }}><DialogContent showCloseButton={false} aria-describedby={undefined} className="p-0 gap-0 flex flex-col sm:max-w-[760px]" style={{background:'var(--crm-surface)',border:'1px solid var(--crm-border)',borderRadius:24,maxHeight:'90dvh'}}>
         <div className="flex items-start justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-white/10 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-white tracking-tight">C{s.id} · {data.client?.name || s.client_title || 'Unconfigured'}</h2>
+            <DialogTitle className="text-lg font-bold text-white tracking-tight">C{s.id} · {data.client?.name || s.client_title || 'Unconfigured'}</DialogTitle>
             <p className="text-xs text-white/40 mt-0.5">{s.chat_id} · {s.session}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded flex items-center justify-center bg-white/5 text-white/40 hover:text-white">✕</button>
+          <button aria-label="Close client conversation" onClick={onClose} className="w-8 h-8 rounded flex items-center justify-center bg-white/5 text-white/40 hover:text-white">✕</button>
         </div>
 
         <div className="px-5 sm:px-6 py-5 overflow-y-auto grow space-y-5">
@@ -879,8 +848,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
             </div>
           </details>
         </div>
-      </div>
-    </>
+    </DialogContent></Dialog>
   )
 }
 
@@ -889,39 +857,39 @@ function ClientgroupsInner() {
   const { me } = useCrm()
   const [rows, setRows] = useState<Clientgroup[]>([])
   const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState('')
   const [q, setQ] = useState('')
+  const [status, setStatus] = useState('all')
+  const [agent, setAgent] = useState('all')
+  const [sort, setSort] = useState('activity')
   const [openId, setOpenId] = useState<number | null>(null)
-
   const load = useCallback(() => {
-    setLoading(true)
-    crmFetch('clientgroups').then(d => setRows(d.clientgroups || [])).finally(() => setLoading(false))
+    setLoading(true); setErr('')
+    crmFetch('clientgroups').then(d => setRows(d.clientgroups || [])).catch(e => setErr(e.message || 'Unable to load clientgroups')).finally(() => setLoading(false))
   }, [])
   useEffect(() => { load() }, [load])
-
-  const filtered = useMemo(() => {
-    if (!q.trim()) return rows
-    const needle = q.toLowerCase()
-    return rows.filter(r => r.label.toLowerCase().includes(needle) || (r.agent || '').toLowerCase().includes(needle))
-  }, [rows, q])
-
-  return (
-    <CrmShell title="Clientgroups" subtitle={`${rows.length} managed conversation${rows.length === 1 ? '' : 's'}`} dark>
-      <DashboardTabs />
-      <div className="mb-4">
-        <input className={FIELD + ' max-w-xs'} placeholder="Search by label or agent…" value={q} onChange={e => setQ(e.target.value)} />
+  const filtered = useMemo(() => rows.filter(r => {
+    const haystack = [r.label, r.agent, r.shortCode, r.session, ...(r.search.locations || [])].join(' ').toLocaleLowerCase()
+    return (!q.trim() || haystack.includes(q.trim().toLocaleLowerCase())) && (agent === 'all' || (r.agent || 'Unassigned') === agent) && (status === 'all' || (status === 'new-matches' ? r.matches.unsent > 0 : status === 'auto' ? r.enabled && r.autoMode : r.status === status))
+  }).sort((a,b) => sort === 'name' ? a.label.localeCompare(b.label) : sort === 'matches' ? b.matches.unsent-a.matches.unsent : Date.parse(b.updatedAt)-Date.parse(a.updatedAt)), [rows,q,status,agent,sort])
+  return <CrmShell title="Clientgroups" subtitle="Keep each search, conversation and next step in view." dark>
+    <div className="crm-group-workspace"><DashboardTabs />
+      <GroupStats items={[{label:'Client conversations',value:rows.length},{label:'Auto mode active',value:rows.filter(r=>r.enabled && r.autoMode).length},{label:'New matches',value:rows.reduce((n,r)=>n+r.matches.unsent,0)}]} />
+      <div className="crm-group-toolbar">
+        <label className="crm-search">Find a conversation<input type="search" placeholder="Name, agent, location or group code" value={q} onChange={e=>setQ(e.target.value)} /></label>
+        <label>Status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All statuses</option><option value="new-matches">With new matches</option><option value="auto">Auto mode active</option>{Array.from(new Set(rows.map(r=>r.status))).sort().map(v=><option key={v} value={v}>{v.replaceAll('_',' ')}</option>)}</select></label>
+        <label>Agent<select value={agent} onChange={e=>setAgent(e.target.value)}><option value="all">All agents</option>{Array.from(new Set(rows.map(r=>r.agent || 'Unassigned'))).sort().map(v=><option key={v}>{v}</option>)}</select></label>
+        <label>Sort by<select value={sort} onChange={e=>setSort(e.target.value)}><option value="activity">Recently updated</option><option value="name">Client name</option><option value="matches">Most new matches</option></select></label>
+        <button className="crm-button" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>
+        {(q || status !== 'all' || agent !== 'all') && <button className="crm-button" onClick={()=>{setQ('');setStatus('all');setAgent('all')}}>Clear filters</button>}
       </div>
-      {loading ? (
-        <p className="text-sm text-white/40">Loading…</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-white/40">No clientgroups {me?.role === 'admin' ? 'yet' : 'assigned to you yet'}.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map(cg => <ClientgroupCard key={cg.id} cg={cg} onOpen={() => setOpenId(cg.id)} />)}
-        </div>
-      )}
-      {openId != null && <DetailSheet id={openId} onClose={() => setOpenId(null)} onChanged={load} />}
-    </CrmShell>
-  )
+      {err && <div role="alert" className="crm-error">{err} <button className="crm-button" onClick={load}>Try again</button></div>}
+      <p style={{color:'var(--crm-muted)',fontSize:12,marginBottom:14}} role="status">{loading ? 'Loading conversations…' : `${filtered.length} of ${rows.length} conversations`}</p>
+      {!loading && !err && !filtered.length && <div className="crm-empty">{rows.length ? 'No conversations match these filters.' : `No clientgroups ${me?.role === 'admin' ? 'yet' : 'assigned to you yet'}.`}</div>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">{filtered.map(cg => <ClientgroupCard key={cg.id} cg={cg} onOpen={() => setOpenId(cg.id)} />)}</div>
+      {openId != null && <DetailSheet key={openId} id={openId} onClose={() => setOpenId(null)} onChanged={load} />}
+    </div>
+  </CrmShell>
 }
 
 export default function ClientgroupsPage() {

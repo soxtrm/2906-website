@@ -76,7 +76,7 @@ function MlLearning() {
               {data.pendingApprovals.map(r => (
                 <div key={`${r.kind}-${r.id}`} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid #F4F2EC', fontSize: 12.5 }}>
                   <span style={{ fontFamily: FM, fontSize: 10, color: '#CCC', minWidth: 120, flexShrink: 0 }}>{fmt(r.created_at)}</span>
-                  <span style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                  <span style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
                     {r.kind === 'style_example' ? (r.session || 'style') : (r.purpose || 'phrasing')}
                   </span>
                   <span style={{ color: '#333', flex: 1 }}>&ldquo;{r.text}&rdquo;</span>

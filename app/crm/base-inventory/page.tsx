@@ -13,8 +13,8 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { CrmProvider, CrmShell, useCrm, DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, A, AD, F } from '@/lib/crm/ui'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 
-const DPAGE = '#0B0F17'
-const DCARD2 = '#0F1521'
+const DPAGE = 'var(--crm-bg)'
+const DCARD2 = 'var(--crm-raised)'
 
 type ProvEntry = { value: any; source: string; confidence: string; observed_at: string; note?: string }
 type Row = {
@@ -311,7 +311,7 @@ function ReviewDrawer({ row, onClose, onChange, isAdmin }: { row: Row; onClose: 
 
         {!row.promotion_eligible && row.promotion_blockers.length > 0 && row.import_status !== 'ACTIVE' && (
           <div style={{ background: 'rgba(242,89,122,0.10)', border: '1px solid rgba(242,89,122,0.35)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 11.5 }}>
-            <div style={{ fontWeight: 700, color: '#F2597A', marginBottom: 4 }}>Cannot promote to Agent Board:</div>
+            <div style={{ fontWeight: 700, color: 'var(--crm-danger)', marginBottom: 4 }}>Cannot promote to Agent Board:</div>
             {row.promotion_blockers.map((b, i) => <div key={i} style={{ color: DTEXT_DIM }}>· {b}</div>)}
           </div>
         )}
@@ -360,7 +360,7 @@ function ReviewDrawer({ row, onClose, onChange, isAdmin }: { row: Row; onClose: 
         {tab === 'source' && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: DTEXT_FAINT, marginBottom: 4 }}>Source URL</div>
-            <a href={row.source_url} target="_blank" rel="noreferrer" style={{ color: A, fontSize: 12, wordBreak: 'break-all' }}>{row.source_url}</a>
+            <a href={row.source_url} target="_blank" rel="noreferrer" style={{ color: 'var(--crm-accent)', fontSize: 12, wordBreak: 'break-all' }}>{row.source_url}</a>
             <div style={{ fontSize: 11, color: DTEXT_FAINT, margin: '12px 0 4px' }}>Original text</div>
             <div style={{ fontSize: 11, color: DTEXT_DIM, background: DCARD2, borderRadius: 8, padding: 10, maxHeight: 160, overflowY: 'auto' }}>{row.raw_source_text}</div>
             <div style={{ fontSize: 11, color: DTEXT_FAINT, margin: '12px 0 6px' }}>Source images ({row.source_images?.length || 0})</div>
@@ -413,7 +413,7 @@ function ReviewDrawer({ row, onClose, onChange, isAdmin }: { row: Row; onClose: 
                 Owner Profile view for this table is real follow-up work,
                 not something to fake here. */}
             {row.owner_phone && <a href={`https://wa.me/${row.owner_phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"><button style={btnGhost()}>Message Owner ({row.owner_name || row.owner_phone})</button></a>}
-            {isAdmin && <button onClick={() => act('archive')} disabled={busy} style={{ ...btnGhost(), color: '#F2597A' }}>Delete / Archive</button>}
+            {isAdmin && <button onClick={() => act('archive')} disabled={busy} style={{ ...btnGhost(), color: 'var(--crm-danger)' }}>Delete / Archive</button>}
           </div>
         </div>
       </div>

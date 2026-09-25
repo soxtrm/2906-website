@@ -49,7 +49,7 @@ function Dashboard() {
           {s?.recent?.map((a: any, i: number) => (
             <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${DBORDER}`, fontSize: 12 }}>
               <span style={{ fontFamily: FM, fontSize: 10, color: DTEXT_FAINT, minWidth: 120 }}>{fmtDate(a.when)}</span>
-              <span style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{a.who || '—'}</span>
+              <span style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{a.who || '—'}</span>
               <span style={{ color: DTEXT_DIM }}>
                 <strong style={{ color: DTEXT }}>{a.ref}</strong> · {a.town} — {(a.type || '').replace(/_/g, ' ')}
               </span>
@@ -64,7 +64,7 @@ function Dashboard() {
             than duplicated. */}
 
         {me?.role === 'admin' && (
-          <div onClick={() => router.push('/admin/ml-learning')} style={{ marginTop: 18, background: DCARD, borderRadius: 14, padding: '14px 20px', border: `1px solid ${DCARD_BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div onClick={() => router.push('/crm/admin/ml-learning')} style={{ marginTop: 18, background: DCARD, borderRadius: 14, padding: '14px 20px', border: `1px solid ${DCARD_BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT }}>🧠 Learning Overview</div>
               <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 2 }}>See what the style-learning system has actually picked up, in plain language.</div>

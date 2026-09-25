@@ -26,7 +26,7 @@ export default function CrmLogin() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#131313', fontFamily: F, padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 360, background: '#FFF', borderRadius: 18, padding: '38px 34px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
-        <div style={{ fontSize: 40, fontWeight: 800, color: A, letterSpacing: '-0.03em', lineHeight: 1 }}>2906</div>
+        <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--crm-accent)', letterSpacing: '-0.03em', lineHeight: 1 }}>2906</div>
         <div style={{ fontSize: 10, color: '#BBB', marginTop: 6, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Estate · Agent CRM</div>
 
         <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>

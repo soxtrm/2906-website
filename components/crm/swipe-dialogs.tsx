@@ -225,7 +225,7 @@ export function SwipeLinksPanel({
         <div style={head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
             {openId && (
-              <button onClick={() => setOpenId(null)} style={{ border: 0, background: 'none', cursor: 'pointer', color: A, fontWeight: 700, fontSize: 12, padding: 0 }}>← Back</button>
+              <button onClick={() => setOpenId(null)} style={{ border: 0, background: 'none', cursor: 'pointer', color: 'var(--crm-accent)', fontWeight: 700, fontSize: 12, padding: 0 }}>← Back</button>
             )}
             <Link2 size={16} color={A} /> {openId ? (detail?.title || 'Swipe link') : 'Your swipe links'}
           </div>
@@ -421,7 +421,7 @@ export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: strin
           {!shareUrl ? (
             <button onClick={share} disabled={!!shareBusy} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8,
-              border: `1px solid ${A}`, background: '#FFF', color: A, fontWeight: 700, fontSize: 12, fontFamily: F,
+              border: `1px solid ${A}`, background: '#FFF', color: 'var(--crm-accent)', fontWeight: 700, fontSize: 12, fontFamily: F,
               cursor: shareBusy ? 'wait' : 'pointer',
             }}>
               <Link2 size={13} /> {shareBusy ? 'Getting link…' : 'Get share link for this listing'}

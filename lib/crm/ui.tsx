@@ -1,5 +1,9 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
+import Link from 'next/link'
+import { Star, Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut } from 'lucide-react'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
 import { crmFetch, crmJson, type Me, type NavKey, type Reveals } from './api'
 
@@ -120,13 +124,13 @@ export function Pill({ status, map, small }: { status: string; map: Record<strin
 // full-width Tailwind PRIMARY/GHOST/DANGER buttons) can match it exactly
 // instead of drifting into a second visual language for the same kind of
 // "start/stop/pause this automation" control.
-export const Card: React.CSSProperties = { background: '#FFF', borderRadius: 16, padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }
-export const SectionHead: React.CSSProperties = { fontSize: 9, fontWeight: 700, color: '#B0AA9C', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }
+export const Card: React.CSSProperties = { background: 'var(--crm-surface)', border: '1px solid var(--crm-border)', borderRadius: 18, padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }
+export const SectionHead: React.CSSProperties = { fontSize: 9, fontWeight: 700, color: 'var(--crm-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }
 export function MiniFact({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5 }}>
-      <span style={{ color: '#B0AA9C' }}>{label}</span>
-      <span style={{ color: warn ? '#A16207' : '#555', fontWeight: 600 }}>{value}</span>
+      <span style={{ color: 'var(--crm-muted)' }}>{label}</span>
+      <span style={{ color: warn ? 'var(--crm-accent)' : 'var(--crm-text)', fontWeight: 600 }}>{value}</span>
     </div>
   )
 }
@@ -134,12 +138,12 @@ export function MiniBtn({ children, onClick, disabled, busy, tone }: { children:
   const palette = tone === 'danger'
     ? { bg: '#FEE2E2', color: '#B91C1C', border: '#FCA5A5' }
     : tone === 'muted'
-    ? { bg: '#F6F4EF', color: '#888', border: '#E8E4DA' }
-    : { bg: AD, color: A, border: AB }
+    ? { bg: 'var(--crm-raised)', color: 'var(--crm-muted)', border: 'var(--crm-border)' }
+    : { bg: 'var(--crm-accent-soft)', color: 'var(--crm-accent)', border: 'var(--crm-border)' }
   return (
     <button onClick={onClick} disabled={disabled || busy} style={{
       background: palette.bg, color: palette.color, border: `1px solid ${palette.border}`, borderRadius: 7,
-      padding: '5px 9px', fontSize: 10.5, fontWeight: 700, fontFamily: F,
+      minHeight: 36, padding: '8px 11px', fontSize: 12, fontWeight: 700, fontFamily: F,
       cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
     }}>{busy ? '…' : children}</button>
   )
@@ -188,7 +192,7 @@ type CrmCtx = {
   // toggled at least once, that explicit choice wins everywhere, on every
   // CRM page, until they toggle again.
   theme: 'dark' | 'light' | null
-  toggleTheme: () => void
+  toggleTheme: (currentDark?: boolean) => void
 }
 const Ctx = createContext<CrmCtx | null>(null)
 export const useCrm = () => {
@@ -219,9 +223,9 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       return v === 'dark' || v === 'light' ? v : null
     } catch { return null }
   })
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = useCallback((currentDark = false) => {
     setTheme(prev => {
-      const next = prev === 'light' ? 'dark' : 'light'
+      const next = (prev === null ? currentDark : prev === 'dark') ? 'light' : 'dark'
       try { localStorage.setItem(THEME_STORAGE_KEY, next) } catch {}
       return next
     })
@@ -374,16 +378,16 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
 // other CRM screen keeps its current look until it asks for this too. Only
 // the header / reveal banners / filter bar / content backdrop change here;
 // the sidebar was already navy and needs nothing.
-export const DARK_BG = '#0E1420', DARK_SURFACE = '#151C2C', DARK_BORDER = 'rgba(255,255,255,0.08)'
+export const DARK_BG = 'var(--crm-bg)', DARK_SURFACE = 'var(--crm-surface)', DARK_BORDER = 'var(--crm-border)'
 // Card-level dark tokens — Schedule Board originated these page-scoped, then
 // Inventory and the Owner Profile picked up the same look (Kev, 2026-09-11:
 // "inventory und owner profile bzw komplettes dashboard im gleichen style").
 // Centralised here once three pages wanted the identical five colours rather
 // than tripling the same consts across files.
-export const DCARD = '#141B29', DCARD_BORDER = 'rgba(255,255,255,0.09)'
-export const DTRAY = '#0F1521'
-export const DTEXT = '#EDEAE1', DTEXT_DIM = '#8B93A6', DTEXT_FAINT = '#5C6478'
-export const DBORDER = 'rgba(255,255,255,0.10)'
+export const DCARD = 'var(--crm-surface)', DCARD_BORDER = 'var(--crm-border)'
+export const DTRAY = 'var(--crm-raised)'
+export const DTEXT = 'var(--crm-text)', DTEXT_DIM = 'var(--crm-muted)', DTEXT_FAINT = 'var(--crm-faint)'
+export const DBORDER = 'var(--crm-border)'
 
 // ── "lights" — the ARGUS/NEON glow palette, reused ───────────────────────────
 // Kev, 2026-09-11: "mit lights meine ich diese verschickten Farbverlaufkonturen
@@ -416,192 +420,59 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
+const NAV_ICONS = { dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database }
+
 export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: darkDefault }:
   { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean }) {
-  const isMobile = useIsMobile()
   const pathname = usePathname() || '/'
-  const router = useRouter()
   const { me, reveals, nav, logout, theme, toggleTheme } = useCrm()
-  // Kev, 2026-09-16 ("lightmode button"): the page's own `dark` prop is
-  // just its DEFAULT (schedule-board says true, most other CRM pages say
-  // nothing i.e. false) -- once the viewer has actually clicked the
-  // toggle at least once, that explicit per-browser choice overrides every
-  // page's own default, everywhere, until they toggle again.
   const dark = theme != null ? theme === 'dark' : !!darkDefault
-  const active = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
-  // A board-only agent has no reveal budget because there is nothing for them
-  // to reveal — hide the meter rather than show a meaningless 0/0.
-  const hasReveals = reveals.limit > 0
-  const warn = hasReveals && reveals.used >= 40 && reveals.used < reveals.limit
-  const pct = Math.min(100, Math.round((reveals.used / Math.max(1, reveals.limit)) * 100))
-  // The server decides what this account may see. Filtering here is cosmetic —
-  // the routes themselves refuse a board token — but a menu that offers a
-  // door you cannot open is a bug in its own right.
+  const normalizedPath = pathname.replace(/^\/crm(?=\/|$)/, '') || '/'
+  const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
-  const roleLabel = me?.role === 'admin' ? 'Admin'
-    : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
-  // Kev, 2026-09-07: the mobile bottom nav was cramming up to 7 clickable
-  // items (admin's own nav) into one row — "wird etwas viel". Board-only
-  // agents (nav = ['board']) never hit this, so the threshold only changes
-  // behaviour for accounts that actually have enough items to crowd it.
   const [moreOpen, setMoreOpen] = useState(false)
-  const MOBILE_PRIMARY_COUNT = 4
-  const showMore = items.length > MOBILE_PRIMARY_COUNT
-  const primaryItems = showMore ? items.slice(0, MOBILE_PRIMARY_COUNT) : items
-  const moreItems = showMore ? items.slice(MOBILE_PRIMARY_COUNT) : []
-
-  return (
-    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: '#F6F4EF', fontFamily: F, color: '#1A1A1A', overflow: 'hidden', fontSize: 13 }}>
-      {!isMobile && (
-        <aside style={{ width: 190, background: NAVY, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-          {/* Gold hairline under the logo (Kev's redesign brief, 2026-08-22) —
-              was a navy-on-navy border, nearly invisible; this is the first
-              accent a user sees, so it should actually read as one. */}
-          <div style={{ padding: '26px 22px 19px', borderBottom: `1px solid rgba(184,149,63,0.35)` }}>
-            {/* Kev, 2026-09-02: the logo had no click behaviour at all —
-                "wenn man drauf klickt, dass es geht". router.push, not a
-                plain <a href>, so it's an in-app navigation (no full
-                reload) straight to the dashboard, same target and same
-                mechanism the sidebar's own nav items below already use. */}
-            {/* Kev, 2026-09-16: swapped to the Argus wordmark, CRM-only —
-                white-on-transparent artwork, made for this dark navy
-                sidebar specifically. The loading screen just below (light
-                background) deliberately keeps the old /logo-wide.png — the
-                white version would be invisible there. */}
-            <img src="/argus-logo-wide.png" alt="Argus" onClick={() => router.push('/')}
-              style={{ width: 108, display: 'block', cursor: 'pointer' }} />
-          </div>
-          <nav style={{ padding: '12px 0', flex: 1 }}>
-            {items.map(item => {
-              const on = active(item.href)
-              return (
-                <div key={item.label} onClick={() => !item.disabled && router.push(item.href)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 22px', cursor: item.disabled ? 'default' : 'pointer', background: on ? AD : 'transparent', borderLeft: on ? `2px solid ${A}` : '2px solid transparent', color: item.disabled ? 'rgba(255,255,255,0.22)' : on ? A : 'rgba(255,255,255,0.62)', fontSize: 12, fontWeight: on ? 700 : 400, letterSpacing: '0.05em', textTransform: 'uppercase', transition: 'all 0.12s' }}>
-                  <span style={{ fontSize: 15, opacity: on ? 1 : 0.5 }}>{item.icon}</span>{item.label}
-                  {item.disabled && <span style={{ fontSize: 8, marginLeft: 'auto', color: 'rgba(255,255,255,0.22)' }}>soon</span>}
-                </div>
-              )
-            })}
-          </nav>
-          <div style={{ padding: '16px 22px', borderTop: `1px solid ${NAVY_LIGHT}` }}>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Signed in</div>
-            <div style={{ color: A, fontSize: 13, fontWeight: 700, marginTop: 3 }}>{me?.name || me?.username} · {roleLabel}</div>
-            {hasReveals && (
-              <>
-                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ flex: 1, height: 2, background: NAVY_LIGHT, borderRadius: 1 }}><div style={{ width: `${pct}%`, height: '100%', background: warn ? '#EF4444' : A, borderRadius: 1 }} /></div>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: FM }}>{reveals.used}/{reveals.limit}</span>
-                </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>reveals today</div>
-              </>
-            )}
-            {/* Kev, 2026-09-16 ("lightmode button"): a plain white pill so
-                it visibly reads as "the light one" against this navy rail
-                regardless of which theme is currently active -- the label
-                itself always says what clicking it switches TO. */}
-            <button onClick={toggleTheme} style={{
-              marginTop: 14, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              background: '#FFFFFF', color: '#1A1A1A', border: 'none', borderRadius: 8,
-              padding: '8px 10px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
-              textTransform: 'uppercase', cursor: 'pointer', fontFamily: F,
-            }}>
-              {dark ? '☀ Light mode' : '● Dark mode'}
-            </button>
-            <div onClick={logout} style={{ marginTop: 12, fontSize: 10, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}>↩ Sign out</div>
-          </div>
-        </aside>
-      )}
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header style={{ background: dark ? DARK_SURFACE : '#FFF', borderBottom: `1px solid ${dark ? DARK_BORDER : '#EDEBE5'}`, padding: isMobile ? '12px 16px' : '16px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div>
-            {/* Kev's redesign brief (2026-08-22): bumped 22→28 with tighter
-                tracking — the page title is the one place a bit of scale
-                actually earns its keep instead of reading as "just another
-                label the same size as everything else". */}
-            {/* Kev, 2026-08-22: 800→600. Bricolage at 800 reads heavy/blocky
-                at 28px; Airbnb's own page titles sit at semibold. */}
-            <h1 style={{ fontFamily: F, fontSize: isMobile ? 20 : 28, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', color: dark ? '#F3F1EA' : '#222222' }}>{title}</h1>
-            {subtitle && <div style={{ fontSize: 11.5, color: dark ? 'rgba(243,241,234,0.42)' : '#A39D8F', marginTop: 4, letterSpacing: '0.01em' }}>{subtitle}</div>}
-          </div>
-          {onAdd && <button onClick={onAdd} style={{ background: dark ? A : '#0F0F0F', color: dark ? '#151C2C' : '#FFF', border: 'none', borderRadius: 9, padding: isMobile ? '9px 14px' : '10px 18px', fontSize: isMobile ? 11 : 12, cursor: 'pointer', fontFamily: F, fontWeight: 700, letterSpacing: '0.03em' }}>+ Add</button>}
-        </header>
-
-        {warn && (
-          <div style={{ background: '#FEF3C7', color: '#92400E', fontSize: 11, padding: '6px 26px', fontFamily: F, fontWeight: 600 }}>
-            ⚠ You have used {reveals.used} of {reveals.limit} reveals today. Approaching daily limit.
-          </div>
-        )}
-        {hasReveals && reveals.used >= reveals.limit && (
-          <div style={{ background: '#FEE2E2', color: '#B91C1C', fontSize: 11, padding: '6px 26px', fontFamily: F, fontWeight: 700 }}>
-            Reveal limit reached. Contact admin to raise your limit.
-          </div>
-        )}
-
-        {filterBar !== undefined && (
-          <div style={{ background: dark ? DARK_SURFACE : '#FFF', borderBottom: `1px solid ${dark ? DARK_BORDER : '#EDEBE5'}`, padding: isMobile ? '8px 14px' : '10px 26px', display: 'flex', gap: 7, flexShrink: 0, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', alignItems: 'center' }}>
-            {filterBar}
-          </div>
-        )}
-
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: dark ? DARK_BG : '#FAFAF7', paddingBottom: isMobile ? 76 : 0 }}>
-          {children}
-        </div>
+  const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
+  const hasReveals = reveals.limit > 0
+  useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
+  useEffect(() => { setMoreOpen(false) }, [pathname])
+  const navItem = (item: typeof NAV[number]) => {
+    const Icon = NAV_ICONS[item.key]
+    return item.disabled
+      ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
+      : <Link key={item.key} className="crm-nav-item" href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
+  }
+  return <div className="crm-workspace">
+    <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
+    <aside className="crm-sidebar">
+      <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><img src="/argus-logo-wide.png" alt="Argus" /><small>2906</small></Link>
+      <nav aria-label="Main navigation">{items.map(navItem)}</nav>
+      <div className="crm-account">
+        <strong>{me?.name || me?.username} <small>· {roleLabel}</small></strong>
+        {hasReveals && <><progress aria-label="Contact reveals used today" value={reveals.used} max={reveals.limit} /><small>{reveals.used} / {reveals.limit} reveals today</small></>}
+        <button className="crm-nav-item" style={{ marginTop: 8 }} onClick={logout}><LogOut size={16} aria-hidden />Sign out</button>
       </div>
-
-      {isMobile && moreOpen && (
-        <div onClick={() => setMoreOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 199 }}>
-          <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 62, left: 0, right: 0, background: '#FFF', borderTopLeftRadius: 14, borderTopRightRadius: 14, boxShadow: '0 -8px 28px rgba(0,0,0,0.18)', paddingBottom: 'env(safe-area-inset-bottom,0px)', maxHeight: '60vh', overflowY: 'auto' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: '#EDEBE5', margin: '10px auto 4px' }} />
-            {moreItems.map(item => {
-              const on = active(item.href)
-              return (
-                <div key={item.label} onClick={() => { if (!item.disabled) { setMoreOpen(false); router.push(item.href) } }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: item.disabled ? 'default' : 'pointer', color: item.disabled ? '#CCC' : on ? A : '#1A1A1A' }}>
-                  <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{item.icon}</span>
-                  <span style={{ fontSize: 13, fontFamily: F, fontWeight: on ? 700 : 500 }}>{item.label}</span>
-                  {item.disabled && <span style={{ fontSize: 9, marginLeft: 'auto', color: '#CCC', textTransform: 'uppercase' }}>soon</span>}
-                </div>
-              )
-            })}
-            {/* Kev, 2026-09-16 ("lightmode button", hamburger-menu placement) —
-                same toggle as the desktop sidebar's bottom, same persisted
-                per-browser preference either way. */}
-            <div onClick={() => { toggleTheme(); setMoreOpen(false) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: 'pointer', color: '#1A1A1A', borderTop: '1px solid #EDEBE5', marginTop: 4 }}>
-              <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{dark ? '☀' : '●'}</span>
-              <span style={{ fontSize: 13, fontFamily: F, fontWeight: 500 }}>{dark ? 'Light mode' : 'Dark mode'}</span>
-            </div>
-            <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', cursor: 'pointer', color: '#B91C1C', borderTop: '1px solid #EDEBE5' }}>
-              <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>↩</span>
-              <span style={{ fontSize: 13, fontFamily: F, fontWeight: 500 }}>Sign out</span>
-            </div>
-          </div>
+    </aside>
+    <div className="crm-main">
+      <header className="crm-header"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
+        <div className="crm-header-actions">
+          <span className="crm-icon-button crm-nexus" role="img" aria-label="Nexus Link — connection coming later" title="Nexus Link — connection coming later"><Star size={20} aria-hidden /></span>
+          <button className="crm-icon-button" onClick={() => toggleTheme(dark)} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Light mode' : 'Dark mode'}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
+          {onAdd && <button onClick={onAdd} className="crm-button primary">+ Add</button>}
         </div>
-      )}
-
-      {isMobile && (
-        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFF', borderTop: '1px solid #EDEBE5', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom,0px)', boxShadow: '0 -4px 20px rgba(0,0,0,0.07)' }}>
-          {primaryItems.map(item => {
-            const on = active(item.href)
-            return (
-              <button key={item.label} onClick={() => !item.disabled && router.push(item.href)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0 8px', border: 'none', cursor: 'pointer', background: 'transparent', color: item.disabled ? '#DDD' : on ? A : NAVY + '66' }}>
-                <span style={{ fontSize: 19, lineHeight: 1 }}>{item.icon}</span>
-                <span style={{ fontSize: 9, marginTop: 4, fontFamily: F, fontWeight: on ? 700 : 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{item.label}</span>
-                {on && <div style={{ width: 4, height: 4, borderRadius: '50%', background: A, marginTop: 3 }} />}
-              </button>
-            )
-          })}
-          {showMore && (
-            <button onClick={() => setMoreOpen(o => !o)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0 8px', border: 'none', cursor: 'pointer', background: 'transparent', color: moreOpen ? A : NAVY + '66' }}>
-              <span style={{ fontSize: 19, lineHeight: 1 }}>☰</span>
-              <span style={{ fontSize: 9, marginTop: 4, fontFamily: F, fontWeight: moreOpen ? 700 : 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>More</span>
-            </button>
-          )}
-        </nav>
-      )}
+      </header>
+      {hasReveals && reveals.used >= 40 && <div className="crm-notice" role="status">{reveals.used >= reveals.limit ? 'Reveal limit reached. Contact admin to raise your limit.' : `You have used ${reveals.used} of ${reveals.limit} contact reveals today.`}</div>}
+      {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
+      <main id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
-  )
+    <nav className="crm-bottom-nav" aria-label="Mobile navigation">
+      {items.filter(i => !i.disabled).slice(0, 4).map(item => { const Icon = NAV_ICONS[item.key]; return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined}><Icon size={20} aria-hidden /><span>{item.label}</span></Link> })}
+      <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation"><Menu size={20} aria-hidden /><span>More</span></button>
+    </nav>
+    <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="crm-text" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', borderRadius: 24, maxHeight: '85dvh', overflowY: 'auto' }}>
+      <DialogTitle>Workspace</DialogTitle><nav className="crm-mobile-menu" aria-label="All navigation">{items.map(navItem)}</nav>
+      <button className="crm-button" onClick={logout}><LogOut size={16} />Sign out</button>
+    </DialogContent></Dialog>
+  </div>
 }
 
 export const useMobile = useIsMobile
@@ -661,7 +532,7 @@ export function LocationSelect({ value, onChange }: { value: string; onChange: (
         ))}
       </select>
       {me?.role === 'admin' && (
-        <button onClick={addNew} title="Add new location" style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 8, padding: '0 12px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: F }}>+</button>
+        <button onClick={addNew} title="Add new location" style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 8, padding: '0 12px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: F }}>+</button>
       )}
     </div>
   )
@@ -738,7 +609,7 @@ export function OwnerPanel({ ownerId, onClose }: { ownerId: number; onClose: () 
                 <div key={l.id} onClick={() => router.push(`/property/${l.id}`)} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #F4F2EC', cursor: 'pointer' }}>
                   <Thumbs images={l.images} count={l.imageCount} exclusive={l.exclusive} w={60} h={40} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: A, fontFamily: FM }}>{l.ref}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--crm-accent)', fontFamily: FM }}>{l.ref}</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#1A1A1A', marginTop: 1, fontFamily: F }}>{l.location.town} · {l.type}</div>
                     <div style={{ marginTop: 4 }}><Pill status={l.availableStatus} map={AVAIL} small /></div>
                   </div>

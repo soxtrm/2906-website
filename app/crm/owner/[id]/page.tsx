@@ -418,7 +418,7 @@ function OverviewPanel({ d, onGoto }: { d: any; onGoto: (t: TabKey) => void }) {
         <div style={CARD}>
           <div style={{ ...HEAD, display: 'flex', justifyContent: 'space-between' }}>
             <span>Properties at a glance</span>
-            <span onClick={() => onGoto('properties')} style={{ color: A, cursor: 'pointer', textTransform: 'none', fontWeight: 700 }}>View all →</span>
+            <span onClick={() => onGoto('properties')} style={{ color: 'var(--crm-accent)', cursor: 'pointer', textTransform: 'none', fontWeight: 700 }}>View all →</span>
           </div>
           {!props.length && <EmptyRow text="No real, listable properties yet." />}
           {props.slice(0, 4).map(p => <PropertyRow key={p.id} p={p} compact />)}
@@ -445,7 +445,7 @@ function OverviewPanel({ d, onGoto }: { d: any; onGoto: (t: TabKey) => void }) {
         <div style={CARD}>
           <div style={{ ...HEAD, display: 'flex', justifyContent: 'space-between' }}>
             <span>What this owner usually allows</span>
-            <span onClick={() => onGoto('insights')} style={{ color: A, cursor: 'pointer', textTransform: 'none', fontWeight: 700 }}>All →</span>
+            <span onClick={() => onGoto('insights')} style={{ color: 'var(--crm-accent)', cursor: 'pointer', textTransform: 'none', fontWeight: 700 }}>All →</span>
           </div>
           {!generalPrefs.length && <EmptyRow text="No general preferences captured yet." />}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -531,7 +531,7 @@ function PropertyCard({ p, router }: { p: any; router: any }) {
       </div>
       <div style={{ padding: '13px 15px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: A, fontFamily: FM }}>{p.ref}</span>
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--crm-accent)', fontFamily: FM }}>{p.ref}</span>
           <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>{p.prices.longlet ? `${fmtMoney(p.prices.longlet)}/mo` : (p.prices.sale ? fmtMoney(p.prices.sale) : '—')}</span>
         </div>
         <div style={{ fontSize: 13, fontWeight: 700, color: INK, marginTop: 2 }}>{p.location.town} · {p.type}</div>
@@ -578,7 +578,7 @@ function PropertyRow({ p, compact }: { p: any; compact?: boolean }) {
     <div onClick={() => router.push(`/crm/property/${p.id}`)} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${HAIRLINE}`, cursor: 'pointer' }}>
       <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} w={54} h={38} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: A, fontFamily: FM }}>{p.ref}</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--crm-accent)', fontFamily: FM }}>{p.ref}</div>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: INK }}>{p.location.town} · {p.type}</div>
       </div>
       <StatusPill p={p} small />
@@ -638,7 +638,7 @@ function InsightsPanel({ d, owner, onSaved, setMsg }: { d: any; owner: any; onSa
           </div>
           {byProperty.map((grp: any) => (
             <div key={grp.propertyId} style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${HAIRLINE}` }}>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: A, fontFamily: FM, marginBottom: 6 }}>Specific to #{grp.propertyRef}</div>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--crm-accent)', fontFamily: FM, marginBottom: 6 }}>Specific to #{grp.propertyRef}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {grp.preferences.filter((p: any) => !p.contextOnly).map((p: any) => <PreferencePill key={p.id} p={p} />)}
               </div>
@@ -807,8 +807,8 @@ function FlowsPanel({ d, ownerId, onSaved, setMsg, onGoto }: { d: any; ownerId: 
               <div style={{ fontSize: 16 }}>{f.icon}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: active ? A : INK, marginTop: 4 }}>{f.title}</div>
               <div style={{ fontSize: 9.5, color: MUTED, marginTop: 3, lineHeight: 1.4 }}>{f.desc}</div>
-              {active && <div style={{ fontSize: 8.5, fontWeight: 700, color: A, marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>● Active now</div>}
-              {clickHint && <div style={{ fontSize: 8.5, color: A, marginTop: 5, fontWeight: 600 }}>→ {clickHint}</div>}
+              {active && <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--crm-accent)', marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>● Active now</div>}
+              {clickHint && <div style={{ fontSize: 8.5, color: 'var(--crm-accent)', marginTop: 5, fontWeight: 600 }}>→ {clickHint}</div>}
             </div>
           )
         })}
@@ -969,7 +969,7 @@ function DocumentsPanel({ ownerId, documents, properties, onSaved, me }: { owner
           <button onClick={getLink} style={actBtnLight}>🔗 Owner self-upload link</button>
         </div>
         {link && (
-          <div onClick={e => e.stopPropagation()} style={{ marginTop: 10, fontSize: 11, fontFamily: FM, color: A, background: AD, borderRadius: 8, padding: '8px 12px', wordBreak: 'break-all' }}>{link}</div>
+          <div onClick={e => e.stopPropagation()} style={{ marginTop: 10, fontSize: 11, fontFamily: FM, color: 'var(--crm-accent)', background: AD, borderRadius: 8, padding: '8px 12px', wordBreak: 'break-all' }}>{link}</div>
         )}
       </div>
 
@@ -999,7 +999,7 @@ function DocumentsPanel({ ownerId, documents, properties, onSaved, me }: { owner
     </div>
   )
 }
-const linkBtn: React.CSSProperties = { fontSize: 10.5, fontWeight: 700, color: A, cursor: 'pointer', textDecoration: 'none' }
+const linkBtn: React.CSSProperties = { fontSize: 10.5, fontWeight: 700, color: 'var(--crm-accent)', cursor: 'pointer', textDecoration: 'none' }
 
 // ══════════════════════════════════════════════════════════════════════════
 // HISTORY — merged timeline

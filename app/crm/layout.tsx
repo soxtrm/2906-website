@@ -1,3 +1,4 @@
+import './crm.css'
 import type { Metadata } from 'next'
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google'
 
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
 export default function CrmRootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${bricolage.variable} ${jetbrains.variable}`}>
-      <body style={{ margin: 0, background: '#F6F4EF' }}>{children}</body>
+      <body className="crm-root" style={{ margin: 0, background: '#F6F4EF' }}>{children}</body>
     </html>
   )
 }

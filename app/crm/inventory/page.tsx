@@ -174,11 +174,11 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: p.published ? A : DTEXT_FAINT, fontFamily: FM, cursor: 'pointer' }} onClick={() => onOpen(p.id)}>{p.ref}</span>
                 {p.published
-                  ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE ↗</span>
+                  ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE ↗</span>
                   : <span style={{ fontSize: 9, background: DTRAY, border: `1px solid ${DBORDER}`, color: DTEXT_FAINT, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
-                {p.exclusive && <span style={{ fontSize: 9, fontWeight: 700, color: A, background: AD, border: `1px solid ${AB}`, borderRadius: 4, padding: '2px 6px' }}>🔒 EXCL</span>}
+                {p.exclusive && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--crm-accent)', background: AD, border: `1px solid ${AB}`, borderRadius: 4, padding: '2px 6px' }}>🔒 EXCL</span>}
                 {incomplete && <span style={{ fontSize: 9, fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 4, padding: '2px 6px' }}>INCOMPLETE</span>}
               </div>
             </div>
@@ -200,7 +200,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
         </td>
         <td style={{ ...tdS, whiteSpace: 'nowrap' }}>
           {p.prices.longlet != null && <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em', color: DTEXT }}>{fmtMoney(p.prices.longlet)}<span style={{ fontSize: 10, color: DTEXT_FAINT, fontWeight: 400 }}>/mo</span></div>}
-          {p.prices.shortlet && <div style={{ fontSize: 11, color: A, marginTop: 3, fontWeight: 600 }}>↗ Shortlet</div>}
+          {p.prices.shortlet && <div style={{ fontSize: 11, color: 'var(--crm-accent)', marginTop: 3, fontWeight: 600 }}>↗ Shortlet</div>}
           {p.prices.sale != null && <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 3 }}>{fmtMoney(p.prices.sale)} sale</div>}
         </td>
         <td style={{ ...tdS, textAlign: 'center', fontWeight: 800, fontSize: 15, color: DTEXT }}>{p.beds ?? '—'}<span style={{ color: DTEXT_FAINT, fontWeight: 300 }}>/</span>{p.baths ?? '—'}</td>
@@ -216,7 +216,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
         </td>
         <td style={tdS}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <button onClick={() => onOpen(p.id)} style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 7, padding: '5px 11px', fontSize: 10, cursor: 'pointer', fontFamily: F, fontWeight: 700 }}>Edit</button>
+            <button onClick={() => onOpen(p.id)} style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 7, padding: '5px 11px', fontSize: 10, cursor: 'pointer', fontFamily: F, fontWeight: 700 }}>Edit</button>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 6, padding: '3px 8px', display: 'inline-flex' }}><Heart propertyId={p.id} fav={p.fav} size={13} /></span>
               {[['⏱', 'History'], ['⚑', 'Report']].map(([ico, tip]) => (
@@ -240,7 +240,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
             {acts?.map((h: any) => (
               <div key={h.id} style={{ display: 'flex', gap: 18, padding: '6px 0', borderBottom: `1px solid ${DBORDER}`, fontSize: 12, alignItems: 'center' }}>
                 <span style={{ fontFamily: FM, fontSize: 10, color: DTEXT_FAINT, minWidth: 150, flexShrink: 0 }}>{fmtDate(h.when)}</span>
-                <span style={{ background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700, minWidth: 46, textAlign: 'center' }}>{h.who || '—'}</span>
+                <span style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700, minWidth: 46, textAlign: 'center' }}>{h.who || '—'}</span>
                 <span style={{ color: DTEXT_DIM }}>{describe(h)}</span>
                 {h.significant && <span style={{ marginLeft: 'auto', fontSize: 9, color: A }}>●</span>}
               </div>
@@ -275,9 +275,9 @@ function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, o
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: A, fontFamily: FM }}>{p.ref}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--crm-accent)', fontFamily: FM }}>{p.ref}</span>
                 {p.published
-                  ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: A, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE</span>
+                  ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE</span>
                   : <span style={{ fontSize: 9, background: DTRAY, border: `1px solid ${DBORDER}`, color: DTEXT_FAINT, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT, fontFamily: F, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><span>{p.location.town} · {p.type}</span><RentalModeBadges modes={p.rentalModes} availableUntil={p.availableUntil} /></div>
@@ -294,7 +294,7 @@ function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, o
           <div style={{ display: 'flex', gap: 5, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <Pill status={p.availableStatus} map={AVAIL} small />
             {p.viewingStatus !== 'none' && <Pill status={p.viewingStatus} map={VIEW} small />}
-            {p.exclusive && <span style={{ fontSize: 9, color: A, fontWeight: 700, background: AD, border: `1px solid ${AB}`, borderRadius: 4, padding: '2px 6px' }}>🔒 EXCL</span>}
+            {p.exclusive && <span style={{ fontSize: 9, color: 'var(--crm-accent)', fontWeight: 700, background: AD, border: `1px solid ${AB}`, borderRadius: 4, padding: '2px 6px' }}>🔒 EXCL</span>}
           </div>
           <div style={{ display: 'flex', gap: 12, marginTop: 7, fontSize: 10, color: DTEXT_FAINT, fontFamily: F, alignItems: 'center' }}>
             <span style={{ fontWeight: 600, color: DTEXT_DIM }}>🛏 {p.beds ?? '—'} · 🚿 {p.baths ?? '—'}</span>

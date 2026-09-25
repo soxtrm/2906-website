@@ -189,7 +189,7 @@ function BoardAccess() {
               {busy ? 'Adding…' : 'Add'}
             </button>
           </div>
-          {note && <div style={{ marginTop: 10, fontSize: 12, color: A, fontWeight: 600 }}>{note}</div>}
+          {note && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--crm-accent)', fontWeight: 600 }}>{note}</div>}
         </div>
 
         {/* Facebook cookie uploader — replaces pasting a cookie export into

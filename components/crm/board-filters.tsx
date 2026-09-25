@@ -204,12 +204,12 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         </span>
       </button>
 
-      <div className={cn('flex-col lg:flex-row lg:items-center gap-2 lg:gap-3 w-full',
+      <div className={cn('flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-3 w-full',
         mobileOpen ? 'flex mt-3' : 'hidden lg:flex')}>
 
         {/* Search — ref, town or area. The board's own listings are local, so
             this filters instantly rather than round-tripping. */}
-        <div className="relative flex-1 lg:max-w-[260px]">
+        <div className="relative flex-1 min-w-[220px] lg:max-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-navy/30 pointer-events-none" />
           <input
             type="text"
