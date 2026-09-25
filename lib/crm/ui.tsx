@@ -455,7 +455,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
     <div className="crm-main">
       <header className="crm-header"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
         <div className="crm-header-actions">
-          <span className="crm-icon-button crm-nexus" role="img" aria-label="Nexus Link — connection coming later" title="Nexus Link — connection coming later"><Star size={20} aria-hidden /></span>
+          <a className="crm-icon-button crm-nexus" href="http://178.104.162.193/" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><Star size={20} aria-hidden /></a>
           <button className="crm-icon-button" onClick={() => toggleTheme(dark)} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Light mode' : 'Dark mode'}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
           {onAdd && <button onClick={onAdd} className="crm-button primary">+ Add</button>}
         </div>
