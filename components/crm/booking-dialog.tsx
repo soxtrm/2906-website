@@ -64,7 +64,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
   const [pick, setPick] = useState<{ windowId: number; start: string } | null>(null)
   const [dur, setDur] = useState<10 | 20>(10)
   const [type, setType] = useState('first_view')
-  const [f, setF] = useState({ clientName: '', groupSize: '', notes: '', agentId: '' })
+  const [f, setF] = useState({ clientName: '', groupSize: '', notes: '', agentId: '', clientCountry: '', clientGroupType: '', clientJob: '' })
   const [moving, setMoving] = useState<Booking | null>(null)
   const [showWindowForm, setShowWindowForm] = useState(false)
   const [wf, setWf] = useState({ date: '', from: '16:00', to: '17:30', fromDate: '', confirmation: 'start_only' as 'start_only' | 'full_window' })
@@ -127,9 +127,11 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
           startsAt: pick.start, durationMin: dur, appointmentType: type,
           clientName: f.clientName.trim(), groupSize: f.groupSize ? Number(f.groupSize) : undefined,
           notes: f.notes || undefined, agentId: f.agentId ? Number(f.agentId) : undefined,
+          clientCountry: f.clientCountry.trim() || undefined, clientGroupType: f.clientGroupType || undefined,
+          clientJob: f.clientJob.trim() || undefined,
         })
         onDone(d.message || 'Booked.')
-        setF({ clientName: '', groupSize: '', notes: '', agentId: '' })
+        setF({ clientName: '', groupSize: '', notes: '', agentId: '', clientCountry: '', clientGroupType: '', clientJob: '' })
       }
       setPick(null)
       await load()
@@ -399,6 +401,27 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                         <div>
                           <label className={LABEL}>People</label>
                           <input type="number" min={1} className={FIELD} value={f.groupSize} onChange={e => setF(s => ({ ...s, groupSize: e.target.value }))} placeholder="2" />
+                        </div>
+                      </div>
+                      {/* Used in the owner's "can we add another viewing?" message (Kev 2026-09-25) */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className={LABEL}>Type</label>
+                          <select className={cn(FIELD, 'appearance-none')} data-client-group-type value={f.clientGroupType} onChange={e => setF(s => ({ ...s, clientGroupType: e.target.value }))}>
+                            <option value="">—</option>
+                            <option value="single">Single</option>
+                            <option value="couple">Couple</option>
+                            <option value="family">Family</option>
+                            <option value="friends">Friends</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={LABEL}>From (country)</label>
+                          <input className={FIELD} data-client-country value={f.clientCountry} onChange={e => setF(s => ({ ...s, clientCountry: e.target.value }))} placeholder="Italy" />
+                        </div>
+                        <div>
+                          <label className={LABEL}>Job</label>
+                          <input className={FIELD} data-client-job value={f.clientJob} onChange={e => setF(s => ({ ...s, clientJob: e.target.value }))} placeholder="nurse" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
