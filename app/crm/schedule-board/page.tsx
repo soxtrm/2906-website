@@ -21,6 +21,8 @@ import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/component
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
+import dynamic from 'next/dynamic'
+const NexusCheckWorkbench = dynamic(() => import('@/components/crm/nexus-check-workbench').then(m => m.NexusCheckWorkbench), { ssr: false })
 import { type Booking, bookingLine } from '@/lib/crm/booking'
 import { SwipeLinkCreatedModal, SwipeModeChoiceModal, SwipeMultiLinksModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
@@ -431,6 +433,7 @@ function Board() {
   // gestureHandling below). Open by default so existing behaviour is
   // unsurprising; agents who only use the town chips can now hide it.
   const [mapOpen, setMapOpen] = useState(true)
+  const [openToCheck, setOpenToCheck] = useState(false)
 
   const showToast = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
     setToast({ kind, text })
@@ -1389,6 +1392,7 @@ function Board() {
               Kev asked for it (2026-08-16). Admin only, and read-only for
               everybody else — an agent still benefits from seeing whether the
               robot is chasing owners before deciding to chase one himself. */}
+          <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)} style={{ ...chip, borderRadius: 8, borderColor: A, color: A, background: DCARD, fontWeight: 700 }}><Settings size={13} style={{ display: 'inline', marginRight: 6 }} />OPEN TO CHECK</button>
           <ReachoutSwitch />
         </div>
 
@@ -1686,6 +1690,7 @@ function Board() {
         />
       )}
 
+      {openToCheck && <NexusCheckWorkbench onClose={() => setOpenToCheck(false)} onChanged={reload} />}
       <AnimatePresence>
         {booking && (
           <BookingDialog
