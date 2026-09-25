@@ -6,6 +6,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from './vendor/meshopt_decoder.mjs';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { ORIGINAL, DEFAULT_PLACEMENT, sanitizePlacement, coordinates, offsets, footprint, groundSamples, platformLevels } from './placement.mjs';
+const mobileRuntime=matchMedia('(max-width:760px), (pointer:coarse)').matches;
 
 document.body.insertAdjacentHTML('beforeend', `
 <header class="masthead"><div class="brand">NEXUS</div><div class="eyebrow">Malta · The landmark collection</div></header>
@@ -478,7 +479,7 @@ function installModels(){
   if(!asset.model||map.getLayer('nexus-'+asset.key))continue;
   map.addLayer({id:'nexus-'+asset.key,type:'custom',renderingMode:'3d',onAdd(map,gl){
     this.scene=new THREE.Scene();this.scene.add(asset.model);lighting(this.scene);this.camera=new THREE.Camera();
-    if(!modelRenderer){modelRenderer=new THREE.WebGLRenderer({canvas:map.getCanvas(),context:gl,antialias:true});modelRenderer.autoClear=false;}
+    if(!modelRenderer){modelRenderer=new THREE.WebGLRenderer({canvas:map.getCanvas(),context:gl,antialias:!mobileRuntime,powerPreference:mobileRuntime?'low-power':'high-performance'});modelRenderer.autoClear=false;}
     this.renderer=modelRenderer;
     // Compile before first visibility; the renderer and programs are shared by the collection.
     asset.compiled=this.renderer.compileAsync(this.scene,this.camera).catch(error=>console.warn('Model warmup:',error.message));
@@ -546,7 +547,7 @@ addEventListener('resize',resizeViewer);
 $('material').onclick=()=>{gold=!gold;active.gold=gold;const mats=new Set();model.traverse(o=>{if(o.isMesh)mats.add(o.material);});mats.forEach(m=>{if(!m.userData.original)m.userData.original=m.color.clone();if(gold)m.color.copy(m.userData.original);else if(m.name==='Champagne limestone')m.color.set('#e5e3d9');else if(m.name==='V supports gold')m.color.set('#d9b327');else if(m.name==='Facade bronze')m.color.set('#5b8d79');});$('material').textContent='Material: '+(gold?'Champagne':'Limestone');map.triggerRepaint();};
 const partDefaultsPromise=fetch('parts-defaults.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
 let loadingCount=0,arrivalPreload=null;
-MeshoptDecoder.useWorkers(2);
+MeshoptDecoder.useWorkers(mobileRuntime?1:2);
 try{
  const response=await fetch('landmarks.geojson',{cache:'no-store'});if(!response.ok)throw new Error('Location data unavailable');features=(await response.json()).features;
  catalog=setupCatalog({map,features,assets,markers,select,list,status});document.addEventListener('nexus-materials',updateLighting);catalog.restore();
@@ -570,7 +571,7 @@ function loadNearby(){
  if(!cinemaPreload){
   const resident=assets.filter(a=>a.model),bounds=map.getBounds();
   const removable=resident.filter(a=>a!==active&&!bounds.contains(coordinates(a.placement.east,a.placement.north,a.origin))&&performance.now()-(a.lastViewed||0)>30000).sort((a,b)=>(a.lastViewed||0)-(b.lastViewed||0));
-  while(resident.length>24&&removable.length){
+  while(resident.length>(mobileRuntime?8:24)&&removable.length){
    const a=removable.shift(),layerId='nexus-'+a.key,custom=map.getLayer(layerId);
    if(map.getLayer(layerId))map.removeLayer(layerId);
    const geometries=new Set(),materials=new Set();a.model.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});
@@ -580,10 +581,10 @@ function loadNearby(){
    resident.splice(resident.indexOf(a),1);queueMicrotask(updateFootprint);
   }
  }
- if(loadingCount>=2||!catalog||!map.getLayer('nexus-buildings-main'))return;
+ const loadLimit=mobileRuntime?1:2;if(loadingCount>=loadLimit||!catalog||!map.getLayer('nexus-buildings-main'))return;
  const center=map.getCenter(),bounds=map.getBounds();
  const candidates=assets.filter(a=>!a.model&&!a.loading&&(!a.failedAt||Date.now()-a.failedAt>15000)&&(cinemaPreload||arrivalPreload?.has(a)||a===active||(map.getZoom()>=14.5&&inStreamingView(a,bounds)))).sort((a,b)=>a===active?-1:b===active?1:Math.hypot(a.origin[0]-center.lng,a.origin[1]-center.lat)-Math.hypot(b.origin[0]-center.lng,b.origin[1]-center.lat));
- for(const asset of candidates){if(loadingCount>=2)break;asset.loading=true;loadingCount++;
+ for(const asset of candidates){if(loadingCount>=loadLimit)break;asset.loading=true;loadingCount++;
  (async()=>{const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(asset.file+'?v=packed-lossless-1');asset.model=gltf.scene;asset.parts=[];
  let savedParts={};
  try{const defaults=await partDefaultsPromise;savedParts=defaults[asset.key]||defaults[({'scirocco-18':'ta-monita-28','scirocco-19':'ta-monita-29'})[asset.key]]||{};}catch{}
@@ -631,7 +632,7 @@ export const nexusModels = {
   async prewarm(){
     // Warm the arrival chunk, not every parsed model on the island.
     const bounds=map.getBounds(),center=map.getCenter();
-    const required=assets.filter(a=>a===active||bounds.contains(coordinates(a.placement.east,a.placement.north,a.origin))).sort((a,b)=>a===active?-1:b===active?1:Math.hypot(a.origin[0]-center.lng,a.origin[1]-center.lat)-Math.hypot(b.origin[0]-center.lng,b.origin[1]-center.lat)).slice(0,6);
+    const required=assets.filter(a=>a===active||bounds.contains(coordinates(a.placement.east,a.placement.north,a.origin))).sort((a,b)=>a===active?-1:b===active?1:Math.hypot(a.origin[0]-center.lng,a.origin[1]-center.lat)-Math.hypot(b.origin[0]-center.lng,b.origin[1]-center.lat)).slice(0,mobileRuntime?3:6);
     arrivalPreload=new Set(required);
     loadNearby();
     await new Promise(resolve=>{const poll=setInterval(()=>{if(required.every(a=>a.model||a.failedAt)){clearInterval(poll);resolve();}},150);});

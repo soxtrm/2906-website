@@ -7,7 +7,7 @@ export const IMPORTANCE = [['required','Required'],['important','Important'],['n
 export const GROUPS = [['single','Just me','A space of your own','person'],['couple','Couple','Two lives, one home','couple'],['family','Family','Room for everyone','family'],['sharing','Sharing','A place to share','group']];
 export const PRIORITIES = [['quiet','Quiet surroundings','leaf'],['beach','Beach & swimming','waves'],['restaurants','Cafés & restaurants','coffee'],['walkable','Walkable essentials','walk'],['sport','Sport & outdoors','sun'],['luxuryArea','Premium neighbourhood','sparkle']];
 export const REQUIREMENTS = ['budget','bedrooms','bathrooms','balcony','pets','sharing','propertyType','locations','duration','moveIn','outdoor','luxuryProperty','subletting'];
-export function blankProfile(){return {household:null,people:null,requirements:Object.fromEntries(REQUIREMENTS.map(key=>[key,{value:['locations','propertyType'].includes(key)?[]:null,importance:'important'}])),anchors:[],transport:null,homeOffice:null,nightlife:null,priorities:{},allowOutside:false};}
+export function blankProfile(){return {household:null,people:null,requirements:Object.fromEntries(REQUIREMENTS.map(key=>[key,{value:['locations','propertyType'].includes(key)?[]:null,importance:'important'}])),anchors:[],transport:null,homeOffice:null,nightlife:null,priorities:{},favoriteTowns:[],allowOutside:false};}
 export function normalizePlace(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’'`.-]/g,'').toLowerCase().replace(/\s+/g,' ').trim().replace(/^saint /,'st ').replace(/^st julian$/,'st julians');}
 export function restoreProfile(value){
  const p=blankProfile();if(!value||typeof value!=='object')return p;
@@ -26,6 +26,7 @@ export function restoreProfile(value){
  if(['remote','hybrid','onsite'].includes(value.homeOffice))p.homeOffice=value.homeOffice;
  if(['often','weekly','rarely'].includes(value.nightlife))p.nightlife=value.nightlife;
  for(const [key] of PRIORITIES)if(IMPORTANCE.some(i=>i[0]===value.priorities?.[key]))p.priorities[key]=value.priorities[key];
+ p.favoriteTowns=Array.isArray(value.favoriteTowns)?[...new Set(value.favoriteTowns.map(x=>PLACES.includes(x)?x:resolveLocality(x)?.label).filter(Boolean))].slice(0,12):[];
  p.allowOutside=value.allowOutside===true;return p;
 }
 export const DEVELOPMENTS = [

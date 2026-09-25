@@ -35,6 +35,7 @@ const euro=n=>new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',max
 export function matchSearch(properties,rawFilters,profile=blankProfile(),developments=[],localities=[]){
  const f=restoreSearchFilters(rawFilters),requirements=activeRequirements(profile),queryPlace=resolveLocality(f.query);
  const locations=profile.requirements.locations.importance==='any'?[]:profile.requirements.locations.value;
+ const favoriteTownKeys=new Set((profile.favoriteTowns||[]).map(localKey));
  const groups=[locations,...(queryPlace?[[queryPlace.label]]:[])].filter(g=>g.length);
  const budgetRequirement=requirements.find(([key])=>key==='budget')?.[1];
  const monthlyBudget=f.market!=='sales'?budgetRequirement?.value:0;
@@ -80,9 +81,10 @@ export function matchSearch(properties,rawFilters,profile=blankProfile(),develop
   }
   if(rejected)continue;
   const kind=reasons.length?'alternative':'direct';
-  seen.add(p.id);result.push({...p,searchMatch:{kind,reasons,extraBudget:extra,nearbyDistance,unknown},match:{...p.match,category:kind==='direct'?'best':'alternative',checks:[...(p.match?.checks||[]).filter(c=>!['budget','locations',...checks.map(x=>x.key)].includes(c.key)),...checks],unknown:unknown.length,reason:reasons.length?reasons.join(' · '):'Matches your selected search criteria.',fit:kind==='direct'?'Direct match':'Alternative match'}});
+  const favoriteTown=favoriteTownKeys.has(localKey(p.area));
+  seen.add(p.id);result.push({...p,searchMatch:{kind,reasons,extraBudget:extra,nearbyDistance,unknown,favoriteTown},match:{...p.match,category:kind==='direct'?'best':'alternative',checks:[...(p.match?.checks||[]).filter(c=>!['budget','locations',...checks.map(x=>x.key)].includes(c.key)),...checks],unknown:unknown.length,reason:favoriteTown?'Favourite town · '+(reasons.length?reasons.join(' · '):'Matches your selected search criteria.'):reasons.length?reasons.join(' · '):'Matches your selected search criteria.',fit:kind==='direct'?'Direct match':'Alternative match'}});
  }
- return result.sort((a,b)=>(a.searchMatch.kind==='alternative')-(b.searchMatch.kind==='alternative')||a.searchMatch.extraBudget-b.searchMatch.extraBudget||a.searchMatch.nearbyDistance-b.searchMatch.nearbyDistance||a.rent-b.rent);
+ return result.sort((a,b)=>(b.searchMatch.favoriteTown===true)-(a.searchMatch.favoriteTown===true)||(a.searchMatch.kind==='alternative')-(b.searchMatch.kind==='alternative')||a.searchMatch.extraBudget-b.searchMatch.extraBudget||a.searchMatch.nearbyDistance-b.searchMatch.nearbyDistance||a.rent-b.rent);
 }
 
 // Invalidating a search also invalidates in-flight requests, so Back cannot revive old filters.
