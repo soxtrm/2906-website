@@ -1,0 +1,34 @@
+[
+  {
+    "id": "osm-way:24361088",
+    "name": "Portomaso Marina",
+    "category": "marinas",
+    "coordinates": [
+      14.494358390163937,
+      35.9214323442623
+    ],
+    "source": "User-supplied OpenStreetMap footprints",
+    "sourcePath": "Nexus-3D-Map/portomaso-footprints.json",
+    "tags": [
+      "Mapped location",
+      "Access unverified"
+    ],
+    "image": "./Nexus-3D-Map/references/portomaso/aerial.jpg",
+    "imageLabel": "PORTOMASO AREA IMAGE"
+  },
+  {
+    "id": "osm-way:224006941",
+    "name": "Diamonds International",
+    "category": "shopping",
+    "coordinates": [
+      14.491679799999998,
+      35.920860825000005
+    ],
+    "source": "User-supplied OpenStreetMap footprints",
+    "sourcePath": "Nexus-3D-Map/portomaso-footprints.json",
+    "tags": [
+      "Mapped location",
+      "Access unverified"
+    ]
+  }
+]

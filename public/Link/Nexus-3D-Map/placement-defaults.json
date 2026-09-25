@@ -1,0 +1,275 @@
+{
+  "oneoneo": {
+    "east": 11.569534038106015,
+    "north": 3.411807833892624,
+    "heading": 17,
+    "lift": -6.1,
+    "heightReference": "platform-v2"
+  },
+  "fort-cambridge": {
+    "east": -4.2249897164617884,
+    "north": -11.901770532898581,
+    "heading": 132,
+    "lift": -2.9,
+    "heightReference": "platform-v2"
+  },
+  "portomaso-hilton": {
+    "east": 2.2702418199161793,
+    "north": 1.7645399674267992,
+    "heading": 0,
+    "lift": 11,
+    "heightReference": "platform-v2"
+  },
+  "laguna-portomaso": {
+    "east": -0.033802999906311394,
+    "north": 1.1424733032075096,
+    "heading": 0,
+    "lift": 5,
+    "heightReference": "platform-v2"
+  },
+  "mercury-tower": {
+    "east": -4.493098694974612,
+    "north": 2.1685374833975857,
+    "heading": -76,
+    "lift": -3.3,
+    "heightReference": "platform-v2"
+  },
+  "mercury-suites": {
+    "east": -8.080357318927188,
+    "north": 20.618874833358802,
+    "heading": -12,
+    "lift": -7.5,
+    "heightReference": "platform-v2"
+  },
+  "ora-west": {
+    "east": 0,
+    "north": 0,
+    "heading": 27,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "ora-east": {
+    "east": 0,
+    "north": 0,
+    "heading": 27,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "hard-rock-hotel": {
+    "east": 0,
+    "north": 0,
+    "heading": 27,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "creekville-10": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "creekville-11": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -2.9,
+    "heightReference": "platform-v2"
+  },
+  "balluta-terraces": {
+    "east": 0,
+    "north": 0,
+    "heading": 6,
+    "lift": -4.3,
+    "heightReference": "platform-v2"
+  },
+  "balluta-buildings": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -7.5,
+    "heightReference": "platform-v2"
+  },
+  "fortina": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "tigne-15": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -4.3,
+    "heightReference": "platform-v2"
+  },
+  "tigne-16": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "tigne-17": {
+    "east": 0.7838365558187599,
+    "north": -0.020864413797880843,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "tigne-18": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "madliena-village": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -8.4,
+    "heightReference": "platform-v2"
+  },
+  "verdala-terraces": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "ivory-suites": {
+    "east": 4.707078513412517,
+    "north": -16.22901324031261,
+    "heading": 4,
+    "lift": -1.6,
+    "heightReference": "platform-v2"
+  },
+  "shoreline": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -4.3,
+    "heightReference": "platform-v2"
+  },
+  "ta-monita-28": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -4.3,
+    "heightReference": "platform-v2"
+  },
+  "ta-monita-29": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -9.4,
+    "heightReference": "platform-v2"
+  },
+  "southridge": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -10.3,
+    "heightReference": "platform-v2"
+  },
+  "scirocco": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -7,
+    "heightReference": "platform-v2"
+  },
+  "st-angelo": {
+    "east": -2.6907248840458253,
+    "north": 2.2166625350740787,
+    "heading": 2,
+    "lift": -9.4,
+    "heightReference": "platform-v2"
+  },
+  "tas-sellum": {
+    "east": 0,
+    "north": 0,
+    "heading": 2,
+    "lift": -20,
+    "heightReference": "platform-v2"
+  },
+  "pendergardens": {
+    "east": -1.0263740057453345,
+    "north": 3.47757889325095,
+    "heading": 0,
+    "lift": -6.1,
+    "heightReference": "platform-v2"
+  },
+  "14east": {
+    "east": 1.0826892952355285,
+    "north": -3.913417649444,
+    "heading": -20,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "fort-manoel": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -10.3,
+    "heightReference": "platform-v2"
+  },
+  "valletta-dome": {
+    "east": 5.166457603723958,
+    "north": 1.2881717036339069,
+    "heading": 0,
+    "lift": -5.6,
+    "heightReference": "platform-v2"
+  },
+  "paola-church": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -3.8,
+    "heightReference": "platform-v2"
+  },
+  "mosta": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  },
+  "towns-end": {
+    "east": -1.8909311250041658,
+    "north": -2.1684725632371737,
+    "heading": 0,
+    "lift": -6.1,
+    "heightReference": "platform-v2"
+  },
+  "doubletree": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": -8,
+    "heightReference": "platform-v2"
+  },
+  "phoenicia": {
+    "east": 4.543314155595968,
+    "north": 9.603106102641163,
+    "heading": 1,
+    "lift": -0.6,
+    "heightReference": "platform-v2"
+  },
+  "valletta-gate": {
+    "east": 22.43551218784902,
+    "north": 21.835753395334905,
+    "heading": 83,
+    "lift": -15,
+    "heightReference": "platform-v2"
+  },
+  "ihg": {
+    "east": 0,
+    "north": 0,
+    "heading": 0,
+    "lift": 0.4,
+    "heightReference": "platform-v2"
+  }
+}

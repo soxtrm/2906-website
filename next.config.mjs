@@ -4,6 +4,12 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    return [
+      { source: '/Link', destination: '/Link/index.html' },
+      { source: '/Link/map-view', destination: '/Link/map-view/index.html' },
+    ]
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

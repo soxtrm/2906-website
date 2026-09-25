@@ -1,0 +1,1162 @@
+{
+  "mercury-suites": {
+    "tower": {
+      "east": 13.170493658475642,
+      "north": 2.440728195787427,
+      "heading": -46,
+      "lift": 0
+    },
+    "connector": {
+      "east": -11.731293288042629,
+      "north": -17.494134269682604,
+      "heading": 23,
+      "lift": 5.4
+    },
+    "passage": {
+      "east": 26.985546708873162,
+      "north": -35.44988327109932,
+      "heading": 0,
+      "lift": 0
+    },
+    "wing-0": {
+      "east": 59.750679013680504,
+      "north": -18.925406465418327,
+      "heading": 27,
+      "lift": 0
+    },
+    "wing-1": {
+      "east": 69.56742103911424,
+      "north": 7.471481544233992,
+      "heading": 90,
+      "lift": 3.4
+    },
+    "wing-2": {
+      "east": 12.69219414025647,
+      "north": -3.4476877823215695,
+      "heading": -1,
+      "lift": 0
+    },
+    "wing-3": {
+      "east": 6.218239752311373,
+      "north": -2.5616415191412933,
+      "heading": 0,
+      "lift": -0.1
+    },
+    "wing-4": {
+      "east": 4.4326025221007725,
+      "north": -4.106521146143374,
+      "heading": 170,
+      "lift": 6.9
+    },
+    "wing-5": {
+      "east": -2.5662493425452766,
+      "north": 1.0188286875322454,
+      "heading": 1,
+      "lift": 6.4
+    }
+  },
+  "ora-west": {
+    "tower": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "ora-east": {
+    "tower": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "hard-rock-hotel": {
+    "hotel-0": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "hotel-1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "hotel-2": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "hotel-3": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "arcade": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "pools": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "creekville-10": {
+    "south": {
+      "east": 0,
+      "north": 0,
+      "heading": 6,
+      "lift": -1.1
+    },
+    "east": {
+      "east": 1.739973490650367,
+      "north": 0.6879837186664801,
+      "heading": -4,
+      "lift": -1.6
+    },
+    "courtyard": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -5.6
+    }
+  },
+  "creekville-11": {
+    "north": {
+      "east": 0,
+      "north": 0,
+      "heading": -1,
+      "lift": 0
+    },
+    "west": {
+      "east": 0,
+      "north": 0,
+      "heading": -2,
+      "lift": 0
+    },
+    "west-tip": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 1.4
+    }
+  },
+  "balluta-terraces": {
+    "building": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "balluta-buildings": {
+    "building": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "fortina": {
+    "left-low": {
+      "east": -18.20409442772988,
+      "north": 3.910215678544649,
+      "heading": -12,
+      "lift": 0
+    },
+    "left-mid": {
+      "east": -21.408012239630956,
+      "north": -9.159084516641002,
+      "heading": 169,
+      "lift": 0
+    },
+    "left-high": {
+      "east": -24.711112686132793,
+      "north": -1.5854041621255055,
+      "heading": -9,
+      "lift": 0
+    },
+    "rear": {
+      "east": -11.422280962129683,
+      "north": 10.159517089175974,
+      "heading": 0,
+      "lift": 0
+    },
+    "right": {
+      "east": -9.2276082179635,
+      "north": 11.978375569518017,
+      "heading": 12,
+      "lift": 0
+    },
+    "plaza": {
+      "east": -9.357519930621201,
+      "north": 6.961151431219102,
+      "heading": 0,
+      "lift": -5.1
+    }
+  },
+  "tigne-15": {
+    "T4P": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "T4B": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "T4F": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "T5F": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "T5B": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "piazza": {
+      "east": 6.087462258681427,
+      "north": -3.095411941264331,
+      "heading": 0,
+      "lift": -2.6
+    }
+  },
+  "tigne-16": {
+    "T7F": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "T6F": {
+      "east": 1.1974808385856583,
+      "north": 0.3251491891100713,
+      "heading": 0,
+      "lift": -1.1
+    },
+    "T7B": {
+      "east": 0,
+      "north": 0,
+      "heading": -1,
+      "lift": 0
+    },
+    "T6B": {
+      "east": -0.5230988857499028,
+      "north": -0.3283319942322578,
+      "heading": 4,
+      "lift": 0
+    }
+  },
+  "tigne-17": {
+    "T8B": {
+      "east": -1.0264585713307426,
+      "north": 12.883523346902379,
+      "heading": 0,
+      "lift": 1.4
+    },
+    "T9F": {
+      "east": 3.8958990522588315,
+      "north": -3.649784895345647,
+      "heading": -6,
+      "lift": 0
+    },
+    "T8F": {
+      "east": -0.8401544796016616,
+      "north": -0.29727975992959443,
+      "heading": 0,
+      "lift": 0
+    },
+    "T9P": {
+      "east": 0.598311530354593,
+      "north": -1.2155015253546608,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "tigne-18": {
+    "T10": {
+      "east": -1.0728832478281873,
+      "north": -2.210980818457635,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "madliena-village": {
+    "rear-north": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -8.1
+    },
+    "rear-middle": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -5.1
+    },
+    "rear-south": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -2.6
+    },
+    "rear-tip": {
+      "east": 2.0493205809935735,
+      "north": 3.147342877216772,
+      "heading": 0,
+      "lift": -0.6
+    },
+    "front-north": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -6.6
+    },
+    "front-middle": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -5.1
+    },
+    "front-west": {
+      "east": 1.9624991611480525,
+      "north": 0.7977866073667919,
+      "heading": 0,
+      "lift": -2.1
+    },
+    "front-south": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 5.9
+    },
+    "pool": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 1.4
+    },
+    "gardens": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "verdala-terraces": {
+    "west": {
+      "east": 1.1424999707422572,
+      "north": 1.0917497990931224,
+      "heading": 0,
+      "lift": 0
+    },
+    "central": {
+      "east": 0.35669442382895244,
+      "north": -0.03959373332427685,
+      "heading": 4,
+      "lift": 0
+    },
+    "south": {
+      "east": 8.628903445832384,
+      "north": 3.13548886843364,
+      "heading": 0,
+      "lift": -1.1
+    },
+    "north": {
+      "east": -78.83015217773986,
+      "north": -16.86069569836763,
+      "heading": 0,
+      "lift": -20
+    },
+    "residents-pool": {
+      "east": 13.156909605461081,
+      "north": -19.04793809434483,
+      "heading": -12,
+      "lift": -6.1
+    },
+    "hotel-pool": {
+      "east": 15.166531285854106,
+      "north": -16.090134323002133,
+      "heading": -35,
+      "lift": -6.6
+    },
+    "north-pool": {
+      "east": -25.96244145159657,
+      "north": -67.00794447167112,
+      "heading": 0,
+      "lift": 0
+    },
+    "gardens": {
+      "east": -2.1293965110297464,
+      "north": -13.54158918993223,
+      "heading": 0,
+      "lift": -6.6
+    }
+  },
+  "ivory-suites": {
+    "building": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "terrace": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "shoreline": {
+    "rear": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "north": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "south": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "court": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "skylight": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "pool": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "pavilion": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "southridge": {
+    "wing-0": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "wing-1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "wing-2": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "wing-3": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "scirocco": {
+    "west": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "court-wing": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "garden": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "st-angelo": {
+    "west": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "waterfront": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "east": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "annex": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "tas-sellum": {
+    "413911600": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 2.4
+    },
+    "413911601": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 1.9
+    },
+    "413911602": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 5.9
+    },
+    "413911603": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 5.9
+    },
+    "413911604": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 4.9
+    },
+    "pool-court": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "pendergardens": {
+    "block-10": {
+      "east": 15.796583515572241,
+      "north": 34.06196686515917,
+      "heading": -120,
+      "lift": 0
+    },
+    "block-11": {
+      "east": -10.884404086028205,
+      "north": 29.145944892360188,
+      "heading": -27,
+      "lift": 0
+    },
+    "block-12": {
+      "east": -29.893700560638536,
+      "north": 22.04109295224191,
+      "heading": -27,
+      "lift": 0
+    },
+    "block-13": {
+      "east": -31.18419163071023,
+      "north": 2.7226186471067635,
+      "heading": -36,
+      "lift": 0
+    },
+    "block-14": {
+      "east": -24.803651213637224,
+      "north": 43.583958970792196,
+      "heading": 125,
+      "lift": 0
+    },
+    "block-15": {
+      "east": 13.33487588480573,
+      "north": -23.549767836621882,
+      "heading": -7,
+      "lift": 0
+    },
+    "tower-1": {
+      "east": 0.7251210157650192,
+      "north": 10.52716171048882,
+      "heading": 180,
+      "lift": 0
+    },
+    "tower-2": {
+      "east": -35.25472675591976,
+      "north": 11.56513166423938,
+      "heading": 6,
+      "lift": 0
+    },
+    "piazza": {
+      "east": 5.313821728434402,
+      "north": 4.449499017466662,
+      "heading": -141,
+      "lift": 0
+    }
+  },
+  "14east": {
+    "tower": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "annex": {
+      "east": 4.227352344413704,
+      "north": 6.232931349547381,
+      "heading": 0,
+      "lift": 0
+    },
+    "connector": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "fort-manoel": {
+    "ramparts": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "ravelin": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "outerworks": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "barracks-793975328": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "barracks-153030257": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "barracks-153030263": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "barracks-153030290": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "chapel": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "magazine": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "gate": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "valletta-dome": {
+    "church": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "drum": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "dome": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "lantern": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "bell-tower": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "paola-church": {
+    "base": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "vaults": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "small-domes": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "central-dome": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "tower--1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "tower-1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "portico": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "mosta": {
+    "rotunda": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "drum": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "dome": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "portico": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "tower--1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "tower-1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "forecourt": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "towns-end": {
+    "west-0": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "west-1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "west-2": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "east-0": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "east-1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "east-2": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "north": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "south": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "courtyard": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "pools": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "doubletree": {
+    "main": {
+      "east": 0.10054650281295707,
+      "north": 0.5815206332037306,
+      "heading": 0,
+      "lift": -5.1
+    },
+    "entrance-wing": {
+      "east": -2.1846153510612867,
+      "north": 1.3092839894018056,
+      "heading": 0,
+      "lift": -0.6
+    },
+    "lobby": {
+      "east": -4.500152541159732,
+      "north": 2.4127126020123413,
+      "heading": 0,
+      "lift": 0
+    },
+    "north-annex": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -2.1
+    },
+    "gardens": {
+      "east": 1.7077181475649894,
+      "north": -16.184429861936792,
+      "heading": -9,
+      "lift": -0.6
+    },
+    "garden-pools": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -0.6
+    },
+    "beach-club": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -4.6
+    },
+    "sea-pools": {
+      "east": -4.85372699942063,
+      "north": 7.4531067625986935,
+      "heading": 0,
+      "lift": -4.6
+    }
+  },
+  "phoenicia": {
+    "hotel": {
+      "east": -0.19813586519870263,
+      "north": 0.17481798919714775,
+      "heading": 0,
+      "lift": 0.4
+    },
+    "roof": {
+      "east": -0.673654524437195,
+      "north": -0.27951572386786383,
+      "heading": 1,
+      "lift": 0
+    },
+    "entrance": {
+      "east": -1.2264650198582672,
+      "north": -2.533922571328799,
+      "heading": 2,
+      "lift": -1.1
+    },
+    "terrace": {
+      "east": -5.033629997984233,
+      "north": -53.08370250401441,
+      "heading": 62,
+      "lift": -1.1
+    },
+    "gardens": {
+      "east": 51.1276937965689,
+      "north": -39.854475671550006,
+      "heading": 0,
+      "lift": -14.5
+    },
+    "pool": {
+      "east": 122.11371121619254,
+      "north": 141.72400929315734,
+      "heading": -90,
+      "lift": 2.4
+    }
+  },
+  "ihg": {
+    "street-front": {
+      "east": 14.920689751814995,
+      "north": -0.3873024447382569,
+      "heading": -4,
+      "lift": -16.5
+    },
+    "east-wing": {
+      "east": 4.406097186245319,
+      "north": -4.710945661391854,
+      "heading": -4,
+      "lift": -7.1
+    },
+    "rear-wing": {
+      "east": -0.3478053111154473,
+      "north": -0.2796163195793042,
+      "heading": -2,
+      "lift": -10
+    },
+    "north-wing": {
+      "east": 1.330350515168952,
+      "north": -2.822772567687707,
+      "heading": -7,
+      "lift": -13
+    },
+    "glass-crowns": {
+      "east": 1.1494386824106932,
+      "north": -4.909292647173913,
+      "heading": -4,
+      "lift": -0.6
+    },
+    "main-pool-deck": {
+      "east": -5.892168530667238,
+      "north": -7.25583787561035,
+      "heading": -4,
+      "lift": -14.5
+    },
+    "main-pool": {
+      "east": -0.33478466794265893,
+      "north": -9.253466949223812,
+      "heading": 0,
+      "lift": -14.5
+    },
+    "garden-court": {
+      "east": 9.278206490850753,
+      "north": -3.4332086801665014,
+      "heading": -9,
+      "lift": -15.5
+    },
+    "sky-deck": {
+      "east": -2.1830859529690834,
+      "north": -6.588865342827972,
+      "heading": -9,
+      "lift": -0.1
+    },
+    "sky-pool": {
+      "east": 0.528086865003079,
+      "north": -1.0952638355128954,
+      "heading": 9,
+      "lift": -0.1
+    },
+    "entrance": {
+      "east": 15.656360461898498,
+      "north": -1.4883686096157023,
+      "heading": 177,
+      "lift": -17
+    },
+    "lights": {
+      "east": 44.03310707579139,
+      "north": -34.57953420400504,
+      "heading": 0,
+      "lift": -13.5
+    }
+  },
+  "valletta-gate": {
+    "parliament-0": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "parliament-1": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "parliament-2": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -4.6
+    },
+    "bridges": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -8.6
+    },
+    "city-gate": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -12
+    }
+  },
+  "ta-monita-28": {
+    "a": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "b": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "c": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "d": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  },
+  "ta-monita-29": {
+    "e": {
+      "east": 20.617749727952184,
+      "north": 0.7444919402472809,
+      "heading": 0,
+      "lift": 0
+    },
+    "f": {
+      "east": 22.430796112156163,
+      "north": -0.4826496935046265,
+      "heading": 0,
+      "lift": 0
+    },
+    "g": {
+      "east": 21.018121730038956,
+      "north": -2.1020481613867545,
+      "heading": 0,
+      "lift": 0
+    },
+    "pool-north": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": -1.6
+    },
+    "pool-east": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    },
+    "pool-south": {
+      "east": 0,
+      "north": 0,
+      "heading": 0,
+      "lift": 0
+    }
+  }
+}

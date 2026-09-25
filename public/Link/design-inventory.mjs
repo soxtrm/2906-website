@@ -1,0 +1,7 @@
+import {DEVELOPMENTS} from './data.mjs';
+// Temporary, deterministic design fixtures. Remove this import / disable the flag once CRM categories arrive.
+// No fixture is an offer from 2906 and no precise real property location is asserted.
+export const DESIGN_PROPERTIES=DEVELOPMENTS.slice(0,15).map((place,i)=>{
+ const sale=i<8,price=sale?[395000,680000,925000,540000,720000,1150000,475000,1350000][i]:[1200,1800,2400,3200,1450,2800,3900][i-8];
+ return {id:`design-${sale?'sale':'commercial'}-${i+1}`,market:sale?'sales':'commercials',title:sale?['A different outlook.','Space for what comes next.','Above the everyday.','Make room for tomorrow.'][i%4]:['Your next headquarters.','Room to build something.','A new address for business.'][i%3],area:place.area,developmentId:null,coordinates:place.coordinates,rent:price,currency:'EUR',rentPeriod:sale?'sale':'month',propertyType:sale?['apartment','penthouse','townhouse','detached-villa'][i%4]:['office','store','warehouse'][i%3],bedrooms:sale?2+i%3:null,bathrooms:1+i%3,size:sale?90+i*16:75+(i-8)*55,images:[['coastal','terrace','urban'][i%3],['terrace','urban','coastal'][i%3]],features:[],pets:null,sharing:null,subletting:null,balcony:null,outdoor:null,minMonths:null,maxMonths:null,status:'available',availableFrom:'2026-09-01',availableUntil:null,lifestyle:{},mobility:null,demo:true,designOnly:true,description:'Temporary design example. Illustrative images, price and placement; not an available 2906 listing.',editorial:'Design preview only. Real inventory for this category is coming from 2906.'};
+});

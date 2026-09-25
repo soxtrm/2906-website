@@ -1,0 +1,16 @@
+{
+  "origin": [
+    14.425812961376323,
+    35.910033850204385
+  ],
+  "parts": [
+    "rotunda",
+    "drum",
+    "dome",
+    "portico",
+    "tower--1",
+    "tower-1",
+    "forecourt"
+  ],
+  "note": "Detailed simplified model from supplied photographs, OSM placement; estimated heights."
+}

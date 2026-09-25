@@ -1,0 +1,17 @@
+{
+  "origin": [
+    14.418394836142596,
+    35.95436252913633
+  ],
+  "parts": [
+    "main",
+    "entrance-wing",
+    "lobby",
+    "north-annex",
+    "gardens",
+    "garden-pools",
+    "beach-club",
+    "sea-pools"
+  ],
+  "note": "OSM building and pool outlines; six floors and balcony facade estimated from supplied Dolmen / DoubleTree photographs."
+}

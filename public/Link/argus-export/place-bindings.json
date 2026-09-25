@@ -1,0 +1,1465 @@
+{
+ "meta": {
+  "generated_at": "2026-09-25T14:08:56.271Z",
+  "source": "ARGUS properties (read) → nexus_link_index (derived)",
+  "taxonomy": "NEXUS LINK — Interface, Places & Living Facts v1.0.0",
+  "coordinate_policy": "locality centroid only",
+  "firewall_leaks": []
+ },
+ "bindings": [
+  {
+   "argus_village_id": 1,
+   "argus_code": "attard",
+   "argus_label": "Attard",
+   "contract_key": "malta:attard",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4425,
+    35.8917
+   ]
+  },
+  {
+   "argus_village_id": 2,
+   "argus_code": "balzan",
+   "argus_label": "Balzan",
+   "contract_key": "malta:balzan",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4531,
+    35.8956
+   ]
+  },
+  {
+   "argus_village_id": 3,
+   "argus_code": "birkirkara",
+   "argus_label": "Birkirkara",
+   "contract_key": "malta:birkirkara",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4611,
+    35.8972
+   ]
+  },
+  {
+   "argus_village_id": 4,
+   "argus_code": "fleur-de-lys",
+   "argus_label": "Fleur-de-lys (Birkirkara)",
+   "contract_key": "malta:fleur-de-lys",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4611,
+    35.8972
+   ]
+  },
+  {
+   "argus_village_id": 5,
+   "argus_code": "gwardamanga",
+   "argus_label": "Gwardamanga (Pieta)",
+   "contract_key": "malta:gwardamanga",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4939,
+    35.8933
+   ]
+  },
+  {
+   "argus_village_id": 6,
+   "argus_code": "gzira",
+   "argus_label": "Gzira",
+   "contract_key": "malta:gzira",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-east",
+    "central-west"
+   ],
+   "public_coordinates": [
+    14.4897,
+    35.9042
+   ]
+  },
+  {
+   "argus_village_id": 7,
+   "argus_code": "hamrun",
+   "argus_label": "Hamrun",
+   "contract_key": "malta:hamrun",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east",
+    "south"
+   ],
+   "public_coordinates": [
+    14.4842,
+    35.8853
+   ]
+  },
+  {
+   "argus_village_id": 8,
+   "argus_code": "iklin",
+   "argus_label": "Iklin",
+   "contract_key": "malta:iklin",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4525,
+    35.9058
+   ]
+  },
+  {
+   "argus_village_id": 9,
+   "argus_code": "kappara",
+   "argus_label": "Kappara",
+   "contract_key": "malta:kappara",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-west"
+   ],
+   "public_coordinates": [
+    14.4744,
+    35.9019
+   ]
+  },
+  {
+   "argus_village_id": 10,
+   "argus_code": "lija",
+   "argus_label": "Lija",
+   "contract_key": "malta:lija",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4453,
+    35.9008
+   ]
+  },
+  {
+   "argus_village_id": 11,
+   "argus_code": "mriehel",
+   "argus_label": "Mriehel",
+   "contract_key": "malta:mriehel",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.461,
+    35.8915
+   ]
+  },
+  {
+   "argus_village_id": 12,
+   "argus_code": "msida",
+   "argus_label": "Msida",
+   "contract_key": "malta:msida",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4842,
+    35.8956
+   ]
+  },
+  {
+   "argus_village_id": 13,
+   "argus_code": "paceville",
+   "argus_label": "Paceville",
+   "contract_key": "malta:paceville",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-west"
+   ],
+   "public_coordinates": [
+    14.4894,
+    35.9186
+   ]
+  },
+  {
+   "argus_village_id": 14,
+   "argus_code": "pieta",
+   "argus_label": "Pieta",
+   "contract_key": "malta:pieta",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4939,
+    35.8933
+   ]
+  },
+  {
+   "argus_village_id": 15,
+   "argus_code": "san-gwann",
+   "argus_label": "San Gwann",
+   "contract_key": "malta:san-gwann",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-west"
+   ],
+   "public_coordinates": [
+    14.4783,
+    35.9075
+   ]
+  },
+  {
+   "argus_village_id": 16,
+   "argus_code": "santa-venera",
+   "argus_label": "Santa Venera",
+   "contract_key": "malta:santa-venera",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4783,
+    35.8894
+   ]
+  },
+  {
+   "argus_village_id": 17,
+   "argus_code": "sliema",
+   "argus_label": "Sliema",
+   "contract_key": "malta:sliema",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.5019,
+    35.9122
+   ]
+  },
+  {
+   "argus_village_id": 19,
+   "argus_code": "swatar",
+   "argus_label": "Swatar (Birkirkara)",
+   "contract_key": "malta:swatar",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4692,
+    35.8944
+   ]
+  },
+  {
+   "argus_village_id": 20,
+   "argus_code": "ta-xbiex",
+   "argus_label": "Ta Xbiex",
+   "contract_key": "malta:ta-xbiex",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.4931,
+    35.8992
+   ]
+  },
+  {
+   "argus_village_id": 21,
+   "argus_code": "tigne",
+   "argus_label": "Tigne",
+   "contract_key": "malta:tigne",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-east"
+   ],
+   "public_coordinates": [
+    14.5089,
+    35.9114
+   ]
+  },
+  {
+   "argus_village_id": 22,
+   "argus_code": "pembroke",
+   "argus_label": "Pembroke",
+   "contract_key": "malta:pembroke",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "central-west",
+    "north"
+   ],
+   "public_coordinates": [
+    14.4767,
+    35.928
+   ]
+  },
+  {
+   "argus_village_id": 23,
+   "argus_code": "swieqi",
+   "argus_label": "Swieqi",
+   "contract_key": "malta:swieqi",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "central-west",
+    "north"
+   ],
+   "public_coordinates": [
+    14.4808,
+    35.9203
+   ]
+  },
+  {
+   "argus_village_id": 24,
+   "argus_code": "ta-ibragg",
+   "argus_label": "Ta Ibragg (Swieqi)",
+   "contract_key": "malta:ta-ibragg",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "central-west",
+    "north"
+   ],
+   "public_coordinates": null
+  },
+  {
+   "argus_village_id": 25,
+   "argus_code": "bahar-ic-caghaq",
+   "argus_label": "Bahar ic-Caghaq",
+   "contract_key": "malta:bahar-ic-caghaq",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "north"
+   ],
+   "public_coordinates": [
+    14.4586,
+    35.9384
+   ]
+  },
+  {
+   "argus_village_id": 26,
+   "argus_code": "bahrija",
+   "argus_label": "Bahrija",
+   "contract_key": "malta:bahrija",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3644,
+    35.8814
+   ]
+  },
+  {
+   "argus_village_id": 27,
+   "argus_code": "bidnija",
+   "argus_label": "Bidnija",
+   "contract_key": "malta:bidnija",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4128,
+    35.9236
+   ]
+  },
+  {
+   "argus_village_id": 28,
+   "argus_code": "birguma",
+   "argus_label": "Birguma (Naxxar)",
+   "contract_key": "malta:birguma",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4433,
+    35.9139
+   ]
+  },
+  {
+   "argus_village_id": 29,
+   "argus_code": "bugibba",
+   "argus_label": "Bugibba",
+   "contract_key": "malta:bugibba",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4166,
+    35.9489
+   ]
+  },
+  {
+   "argus_village_id": 30,
+   "argus_code": "burmarrad",
+   "argus_label": "Burmarrad",
+   "contract_key": "malta:burmarrad",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.413,
+    35.9295
+   ]
+  },
+  {
+   "argus_village_id": 31,
+   "argus_code": "dingli",
+   "argus_label": "Dingli",
+   "contract_key": "malta:dingli",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3822,
+    35.8608
+   ]
+  },
+  {
+   "argus_village_id": 32,
+   "argus_code": "ghadira",
+   "argus_label": "Ghadira",
+   "contract_key": "malta:ghadira",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3567,
+    35.9673
+   ]
+  },
+  {
+   "argus_village_id": 33,
+   "argus_code": "ghajn-tuffieha",
+   "argus_label": "Ghajn Tuffieha",
+   "contract_key": "malta:ghajn-tuffieha",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.344,
+    35.926
+   ]
+  },
+  {
+   "argus_village_id": 34,
+   "argus_code": "gharghur",
+   "argus_label": "Gharghur",
+   "contract_key": "malta:gharghur",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4531,
+    35.9231
+   ]
+  },
+  {
+   "argus_village_id": 35,
+   "argus_code": "madliena",
+   "argus_label": "Madliena",
+   "contract_key": "malta:madliena",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "north"
+   ],
+   "public_coordinates": [
+    14.4772,
+    35.9264
+   ]
+  },
+  {
+   "argus_village_id": 36,
+   "argus_code": "maghtab",
+   "argus_label": "Maghtab",
+   "contract_key": "malta:maghtab",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4381,
+    35.9395
+   ]
+  },
+  {
+   "argus_village_id": 37,
+   "argus_code": "manikata",
+   "argus_label": "Manikata",
+   "contract_key": "malta:manikata",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3733,
+    35.9358
+   ]
+  },
+  {
+   "argus_village_id": 38,
+   "argus_code": "mdina",
+   "argus_label": "Mdina",
+   "contract_key": "malta:mdina",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4034,
+    35.8858
+   ]
+  },
+  {
+   "argus_village_id": 39,
+   "argus_code": "mellieha",
+   "argus_label": "Mellieha",
+   "contract_key": "malta:mellieha",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3625,
+    35.9564
+   ]
+  },
+  {
+   "argus_village_id": 40,
+   "argus_code": "mgarr",
+   "argus_label": "Mgarr",
+   "contract_key": "malta:mgarr",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3661,
+    35.9192
+   ]
+  },
+  {
+   "argus_village_id": 41,
+   "argus_code": "mosta",
+   "argus_label": "Mosta",
+   "contract_key": "malta:mosta",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4256,
+    35.9092
+   ]
+  },
+  {
+   "argus_village_id": 42,
+   "argus_code": "mtarfa",
+   "argus_label": "Mtarfa",
+   "contract_key": "malta:mtarfa",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "north"
+   ],
+   "public_coordinates": [
+    14.3976,
+    35.8905
+   ]
+  },
+  {
+   "argus_village_id": 43,
+   "argus_code": "mtarleb",
+   "argus_label": "Mtarleb",
+   "contract_key": "malta:mtarleb",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4433,
+    35.9139
+   ]
+  },
+  {
+   "argus_village_id": 44,
+   "argus_code": "naxxar",
+   "argus_label": "Naxxar",
+   "contract_key": "malta:naxxar",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4433,
+    35.9139
+   ]
+  },
+  {
+   "argus_village_id": 45,
+   "argus_code": "qawra",
+   "argus_label": "Qawra",
+   "contract_key": "malta:qawra",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4197,
+    35.9539
+   ]
+  },
+  {
+   "argus_village_id": 46,
+   "argus_code": "rabat",
+   "argus_label": "Rabat",
+   "contract_key": "malta:rabat",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3983,
+    35.8811
+   ]
+  },
+  {
+   "argus_village_id": 47,
+   "argus_code": "salina",
+   "argus_label": "Salina",
+   "contract_key": "malta:salina",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4373,
+    35.9331
+   ]
+  },
+  {
+   "argus_village_id": 48,
+   "argus_code": "san-pawl-tat-targa",
+   "argus_label": "San Pawl tat-Targa (Naxxar)",
+   "contract_key": "malta:san-pawl-tat-targa",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4433,
+    35.9139
+   ]
+  },
+  {
+   "argus_village_id": 50,
+   "argus_code": "wardija",
+   "argus_label": "Wardija",
+   "contract_key": "malta:wardija",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3833,
+    35.9375
+   ]
+  },
+  {
+   "argus_village_id": 51,
+   "argus_code": "xemxija",
+   "argus_label": "Xemxija",
+   "contract_key": "malta:xemxija",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.3839,
+    35.9497
+   ]
+  },
+  {
+   "argus_village_id": 52,
+   "argus_code": "birgu",
+   "argus_label": "Birgu (Vittoriosa)",
+   "contract_key": "malta:birgu",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5228,
+    35.8886
+   ]
+  },
+  {
+   "argus_village_id": 53,
+   "argus_code": "bormla",
+   "argus_label": "Bormla (Cospicua)",
+   "contract_key": "malta:bormla",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5297,
+    35.8836
+   ]
+  },
+  {
+   "argus_village_id": 54,
+   "argus_code": "fgura",
+   "argus_label": "Fgura",
+   "contract_key": "malta:fgura",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5108,
+    35.8747
+   ]
+  },
+  {
+   "argus_village_id": 55,
+   "argus_code": "floriana",
+   "argus_label": "Floriana",
+   "contract_key": "malta:floriana",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "central-east",
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5044,
+    35.8953
+   ]
+  },
+  {
+   "argus_village_id": 56,
+   "argus_code": "isla",
+   "argus_label": "Isla (Senglea)",
+   "contract_key": "malta:isla",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5178,
+    35.8875
+   ]
+  },
+  {
+   "argus_village_id": 57,
+   "argus_code": "kalkara",
+   "argus_label": "Kalkara",
+   "contract_key": "malta:kalkara",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5325,
+    35.8894
+   ]
+  },
+  {
+   "argus_village_id": 58,
+   "argus_code": "marsa",
+   "argus_label": "Marsa",
+   "contract_key": "malta:marsa",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.4931,
+    35.8764
+   ]
+  },
+  {
+   "argus_village_id": 59,
+   "argus_code": "marsaskala",
+   "argus_label": "Marsaskala",
+   "contract_key": "malta:marsaskala",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5661,
+    35.8622
+   ]
+  },
+  {
+   "argus_village_id": 60,
+   "argus_code": "marsaxlokk",
+   "argus_label": "Marsaxlokk",
+   "contract_key": "malta:marsaxlokk",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5442,
+    35.8419
+   ]
+  },
+  {
+   "argus_village_id": 61,
+   "argus_code": "paola",
+   "argus_label": "Paola",
+   "contract_key": "malta:paola",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.4989,
+    35.8722
+   ]
+  },
+  {
+   "argus_village_id": 62,
+   "argus_code": "tarxien",
+   "argus_label": "Tarxien",
+   "contract_key": "malta:tarxien",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5147,
+    35.8667
+   ]
+  },
+  {
+   "argus_village_id": 63,
+   "argus_code": "valletta",
+   "argus_label": "Valletta",
+   "contract_key": "malta:valletta",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "central-east",
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5146,
+    35.8989
+   ]
+  },
+  {
+   "argus_village_id": 64,
+   "argus_code": "vittoriosa",
+   "argus_label": "Vittoriosa",
+   "contract_key": "malta:birgu",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5228,
+    35.8886
+   ]
+  },
+  {
+   "argus_village_id": 65,
+   "argus_code": "xghajra",
+   "argus_label": "Xghajra",
+   "contract_key": "malta:xghajra",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.545,
+    35.8853
+   ]
+  },
+  {
+   "argus_village_id": 66,
+   "argus_code": "zabbar",
+   "argus_label": "Zabbar",
+   "contract_key": "malta:zabbar",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5361,
+    35.8756
+   ]
+  },
+  {
+   "argus_village_id": 67,
+   "argus_code": "zejtun",
+   "argus_label": "Zejtun",
+   "contract_key": "malta:zejtun",
+   "island": "MALTA",
+   "contract_presets": [
+    "south-east"
+   ],
+   "public_coordinates": [
+    14.5308,
+    35.8558
+   ]
+  },
+  {
+   "argus_village_id": 68,
+   "argus_code": "birzebbuga",
+   "argus_label": "Birzebbuga",
+   "contract_key": "malta:birzebbuga",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.5267,
+    35.8244
+   ]
+  },
+  {
+   "argus_village_id": 69,
+   "argus_code": "ghaxaq",
+   "argus_label": "Ghaxaq",
+   "contract_key": "malta:ghaxaq",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.5203,
+    35.8386
+   ]
+  },
+  {
+   "argus_village_id": 70,
+   "argus_code": "gudja",
+   "argus_label": "Gudja",
+   "contract_key": "malta:gudja",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.501,
+    35.8492
+   ]
+  },
+  {
+   "argus_village_id": 71,
+   "argus_code": "hal-far",
+   "argus_label": "Hal Far",
+   "contract_key": "malta:hal-far",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.5233,
+    35.825
+   ]
+  },
+  {
+   "argus_village_id": 72,
+   "argus_code": "hal-farrug",
+   "argus_label": "Hal Farrug",
+   "contract_key": "malta:hal-farrug",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.479,
+    35.842
+   ]
+  },
+  {
+   "argus_village_id": 73,
+   "argus_code": "imqabba",
+   "argus_label": "Mqabba",
+   "contract_key": "malta:mqabba",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.4664,
+    35.8497
+   ]
+  },
+  {
+   "argus_village_id": 74,
+   "argus_code": "kirkop",
+   "argus_label": "Kirkop",
+   "contract_key": "malta:kirkop",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.4917,
+    35.8508
+   ]
+  },
+  {
+   "argus_village_id": 75,
+   "argus_code": "luqa",
+   "argus_label": "Luqa",
+   "contract_key": "malta:luqa",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.4886,
+    35.8578
+   ]
+  },
+  {
+   "argus_village_id": 76,
+   "argus_code": "qajjenza",
+   "argus_label": "Qajjenza",
+   "contract_key": "malta:qajjenza",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.536,
+    35.8298
+   ]
+  },
+  {
+   "argus_village_id": 77,
+   "argus_code": "qormi",
+   "argus_label": "Qormi",
+   "contract_key": "malta:qormi",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "south"
+   ],
+   "public_coordinates": [
+    14.4728,
+    35.8781
+   ]
+  },
+  {
+   "argus_village_id": 78,
+   "argus_code": "qrendi",
+   "argus_label": "Qrendi",
+   "contract_key": "malta:qrendi",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.4589,
+    35.8386
+   ]
+  },
+  {
+   "argus_village_id": 79,
+   "argus_code": "safi",
+   "argus_label": "Safi",
+   "contract_key": "malta:safi",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.4914,
+    35.8342
+   ]
+  },
+  {
+   "argus_village_id": 80,
+   "argus_code": "santa-lucia",
+   "argus_label": "Santa Lucia",
+   "contract_key": "malta:santa-lucia",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.5069,
+    35.8629
+   ]
+  },
+  {
+   "argus_village_id": 81,
+   "argus_code": "siggiewi",
+   "argus_label": "Siggiewi",
+   "contract_key": "malta:siggiewi",
+   "island": "MALTA",
+   "contract_presets": [
+    "south"
+   ],
+   "public_coordinates": [
+    14.4364,
+    35.8558
+   ]
+  },
+  {
+   "argus_village_id": 82,
+   "argus_code": "zebbug-malta",
+   "argus_label": "Zebbug",
+   "contract_key": "malta:zebbug",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "south"
+   ],
+   "public_coordinates": [
+    14.4406,
+    35.8686
+   ]
+  },
+  {
+   "argus_village_id": 83,
+   "argus_code": "zurrieq",
+   "argus_label": "Zurrieq",
+   "contract_key": "malta:zurrieq",
+   "island": "MALTA",
+   "contract_presets": [
+    "central-surroundings",
+    "south"
+   ],
+   "public_coordinates": [
+    14.4772,
+    35.8375
+   ]
+  },
+  {
+   "argus_village_id": 84,
+   "argus_code": "gozo-rabat",
+   "argus_label": "Gozo - Rabat (Victoria)",
+   "contract_key": "gozo:victoria",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.3983,
+    35.8811
+   ]
+  },
+  {
+   "argus_village_id": 85,
+   "argus_code": "gozo-fontana",
+   "argus_label": "Gozo - Fontana",
+   "contract_key": "gozo:fontana",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2385,
+    36.0378
+   ]
+  },
+  {
+   "argus_village_id": 86,
+   "argus_code": "gozo-ghajnsielem",
+   "argus_label": "Gozo - Ghajnsielem",
+   "contract_key": "gozo:ghajnsielem",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2814,
+    36.0264
+   ]
+  },
+  {
+   "argus_village_id": 87,
+   "argus_code": "gozo-gharb",
+   "argus_label": "Gozo - Gharb",
+   "contract_key": "gozo:gharb",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2119,
+    36.0611
+   ]
+  },
+  {
+   "argus_village_id": 88,
+   "argus_code": "gozo-ghasri",
+   "argus_label": "Gozo - Ghasri",
+   "contract_key": "gozo:ghasri",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2219,
+    36.0575
+   ]
+  },
+  {
+   "argus_village_id": 89,
+   "argus_code": "gozo-kercem",
+   "argus_label": "Gozo - Kercem",
+   "contract_key": "gozo:kercem",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2242,
+    36.0389
+   ]
+  },
+  {
+   "argus_village_id": 90,
+   "argus_code": "gozo-munxar",
+   "argus_label": "Gozo - Munxar",
+   "contract_key": "gozo:munxar",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2286,
+    36.0208
+   ]
+  },
+  {
+   "argus_village_id": 91,
+   "argus_code": "gozo-nadur",
+   "argus_label": "Gozo - Nadur",
+   "contract_key": "gozo:nadur",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2892,
+    36.0453
+   ]
+  },
+  {
+   "argus_village_id": 92,
+   "argus_code": "gozo-qala",
+   "argus_label": "Gozo - Qala",
+   "contract_key": "gozo:qala",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.3011,
+    36.0289
+   ]
+  },
+  {
+   "argus_village_id": 93,
+   "argus_code": "gozo-san-lawrenz",
+   "argus_label": "Gozo - San Lawrenz",
+   "contract_key": "gozo:san-lawrenz",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2119,
+    36.0611
+   ]
+  },
+  {
+   "argus_village_id": 94,
+   "argus_code": "gozo-sannat",
+   "argus_label": "Gozo - Sannat",
+   "contract_key": "gozo:sannat",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2358,
+    36.0169
+   ]
+  },
+  {
+   "argus_village_id": 95,
+   "argus_code": "gozo-xaghra",
+   "argus_label": "Gozo - Xaghra",
+   "contract_key": "gozo:xaghra",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2647,
+    36.0511
+   ]
+  },
+  {
+   "argus_village_id": 96,
+   "argus_code": "gozo-xewkija",
+   "argus_label": "Gozo - Xewkija",
+   "contract_key": "gozo:xewkija",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2622,
+    36.0356
+   ]
+  },
+  {
+   "argus_village_id": 97,
+   "argus_code": "gozo-zebbug",
+   "argus_label": "Gozo - Zebbug (Gozo)",
+   "contract_key": "gozo:zebbug",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.4406,
+    35.8686
+   ]
+  },
+  {
+   "argus_village_id": 98,
+   "argus_code": "gozo-xlendi",
+   "argus_label": "Gozo - Xlendi",
+   "contract_key": "gozo:xlendi",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2144,
+    36.0219
+   ]
+  },
+  {
+   "argus_village_id": 99,
+   "argus_code": "gozo-marsalforn",
+   "argus_label": "Gozo - Marsalforn",
+   "contract_key": "gozo:marsalforn",
+   "island": "GOZO",
+   "contract_presets": [
+    "gozo"
+   ],
+   "public_coordinates": [
+    14.2578,
+    36.0642
+   ]
+  },
+  {
+   "argus_village_id": 18,
+   "argus_code": "st-julians",
+   "argus_label": "St Julian's",
+   "contract_key": "malta:st-julian-s",
+   "island": "MALTA",
+   "contract_presets": [
+    "central",
+    "central-coast",
+    "central-surroundings",
+    "central-west"
+   ],
+   "public_coordinates": [
+    14.4894,
+    35.9186
+   ]
+  },
+  {
+   "argus_village_id": 49,
+   "argus_code": "st-pauls-bay",
+   "argus_label": "St Paul's Bay",
+   "contract_key": "malta:st-paul-s-bay",
+   "island": "MALTA",
+   "contract_presets": [
+    "north"
+   ],
+   "public_coordinates": [
+    14.4014,
+    35.95
+   ]
+  }
+ ],
+ "registry_keys_without_argus_village": []
+}

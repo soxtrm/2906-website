@@ -1,0 +1,826 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 1,
+      "properties": {
+        "id": 1,
+        "name": "OneOneO",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.499647,
+          35.908036
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2,
+      "properties": {
+        "id": 2,
+        "name": "Fort Cambridge",
+        "model": "reference-model",
+        "modelGroup": "fort-cambridge",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.509704,
+          35.908347
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 3,
+      "properties": {
+        "id": 3,
+        "name": "Fort Cambridge",
+        "model": "reference-model",
+        "modelGroup": "fort-cambridge",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.509504,
+          35.908541
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 4,
+      "properties": {
+        "id": 4,
+        "name": "Portomaso",
+        "model": "reference-model",
+        "modelGroup": "portomaso-hilton",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.492102,
+          35.921164
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 5,
+      "properties": {
+        "id": 5,
+        "name": "Laguna Portomaso",
+        "model": "reference-model",
+        "modelGroup": "laguna-portomaso",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.49428,
+          35.920282
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 6,
+      "properties": {
+        "id": 6,
+        "name": "Mercury",
+        "model": "reference-model",
+        "modelGroup": "mercury-tower",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.489162,
+          35.92308
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 7,
+      "properties": {
+        "id": 7,
+        "name": "Mercury Suites",
+        "model": "reference-model",
+        "modelGroup": "mercury-suites",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.489296,
+          35.922391
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 8,
+      "properties": {
+        "id": 8,
+        "name": "ORA Residences West",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.489795,
+          35.928126
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 9,
+      "properties": {
+        "id": 9,
+        "name": "ORA Residences East",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.489483,
+          35.928298
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 10,
+      "properties": {
+        "id": 10,
+        "name": "Creekville",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.481929,
+          35.919422
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 11,
+      "properties": {
+        "id": 11,
+        "name": "Creekville",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.481795,
+          35.919725
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 12,
+      "properties": {
+        "id": 12,
+        "name": "Balluta Terraces",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.492676,
+          35.91317
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 13,
+      "properties": {
+        "id": 13,
+        "name": "Balluta Buildings",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.494306,
+          35.913681
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 14,
+      "properties": {
+        "id": 14,
+        "name": "Fortina",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.509559,
+          35.906914
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 15,
+      "properties": {
+        "id": 15,
+        "name": "Tigné Point",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.511136,
+          35.906657
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 16,
+      "properties": {
+        "id": 16,
+        "name": "Tigné Point",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.511883,
+          35.906533
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 17,
+      "properties": {
+        "id": 17,
+        "name": "Tigné Point",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.512354,
+          35.906802
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 18,
+      "properties": {
+        "id": 18,
+        "name": "Tigné Point",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.512607,
+          35.90695
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 19,
+      "properties": {
+        "id": 19,
+        "name": "Parkview Mansions",
+        "model": "marker-only",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.493412,
+          35.897416
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 20,
+      "properties": {
+        "id": 20,
+        "name": "Swieqi High Ridge · Villa Area",
+        "model": "marker-only",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.469842,
+          35.924311
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 21,
+      "properties": {
+        "id": 21,
+        "name": "Madliena · Villa Area",
+        "model": "marker-only",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.463686,
+          35.927162
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 22,
+      "properties": {
+        "id": 22,
+        "name": "Madliena Village",
+        "model": "madliena-village.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.46205,
+          35.92735
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 23,
+      "properties": {
+        "id": 23,
+        "name": "Ivory Suites / INNSiDE Bugibba",
+        "model": "ivory-suites.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.41451,
+          35.952005
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 24,
+      "properties": {
+        "id": 24,
+        "name": "Santa Marija · Mellieħa",
+        "model": "marker-only",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.3688,
+          35.966635
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 25,
+      "properties": {
+        "id": 25,
+        "name": "Santa Marija · Mellieħa",
+        "model": "marker-only",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.365813,
+          35.964692
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 26,
+      "properties": {
+        "id": 26,
+        "name": "Verdala Terraces",
+        "model": "verdala-terraces.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4035,
+          35.87812
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 27,
+      "properties": {
+        "id": 27,
+        "name": "Shoreline Kalkara",
+        "model": "shoreline.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.5415,
+          35.892
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 28,
+      "properties": {
+        "id": 28,
+        "name": "Ta Monita Marsaskala",
+        "model": "ta-monita-28.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.5653,
+          35.86647
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 29,
+      "properties": {
+        "id": 29,
+        "name": "Ta Monita Marsaskala",
+        "model": "ta-monita-29.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.56483,
+          35.86597
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 30,
+      "properties": {
+        "id": 30,
+        "name": "Southridge",
+        "model": "southridge.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.365355,
+          35.95302
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 31,
+      "properties": {
+        "id": 31,
+        "name": "Scirocco Heights",
+        "model": "scirocco.glb",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.530496,
+          35.833892
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 32,
+      "properties": {
+        "id": 32,
+        "name": "St Angelo Mansions",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.519540586645206,
+          35.890563592091496
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 33,
+      "properties": {
+        "id": 33,
+        "name": "Tas-Sellum Residences",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.364328,
+          35.966726
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 34,
+      "properties": {
+        "id": 34,
+        "name": "Pendergardens",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.488595,
+          35.921875
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 35,
+      "properties": {
+        "id": 35,
+        "name": "Pendergardens",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.489002,
+          35.921471
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 36,
+      "properties": {
+        "id": 36,
+        "name": "Pendergardens",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.488467,
+          35.921404
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 37,
+      "properties": {
+        "id": 37,
+        "name": "Hard Rock Hotel",
+        "model": "reference-model",
+        "category": "housing"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.488753,
+          35.928045
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 38,
+      "properties": {
+        "id": 38,
+        "name": "14east",
+        "category": "housing",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.493732067295127,
+          35.90449520322797
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 39,
+      "properties": {
+        "id": 39,
+        "name": "fortmanoel",
+        "category": "highlight",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.505225194086961,
+          35.9028677061595
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 40,
+      "properties": {
+        "id": 40,
+        "name": "marijavvalletta",
+        "category": "highlight",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.512345610343289,
+          35.90028569680575
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 41,
+      "properties": {
+        "id": 41,
+        "name": "paolachurch",
+        "category": "highlight",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.508076011469,
+          35.87163798479244
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 42,
+      "properties": {
+        "id": 42,
+        "name": "mosta dome",
+        "category": "highlight",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.425812961376323,
+          35.910033850204385
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 43,
+      "properties": {
+        "id": 43,
+        "name": "townsend",
+        "category": "housing",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.371495251781056,
+          35.95429192821524
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 44,
+      "properties": {
+        "id": 44,
+        "name": "doubleteee",
+        "category": "hotel",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.418394836142596,
+          35.95436252913633
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 45,
+      "properties": {
+        "id": 45,
+        "name": "phoenican",
+        "category": "hotel",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.50693305861003,
+          35.89550242380332
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 46,
+      "properties": {
+        "id": 46,
+        "name": "valletta mauers",
+        "category": "highlight",
+        "model": "reference-model"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.509527549913798,
+          35.895998947782246
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 47,
+      "properties": {
+        "id": 47,
+        "name": "valleta",
+        "category": "highlight",
+        "model": "valletta-walls"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.511310141903294,
+          35.897846802057174
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 48,
+      "properties": {
+        "id": 48,
+        "name": "ihg",
+        "category": "hotel"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.48794863297249,
+          35.92378744134112
+        ]
+      }
+    }
+  ]
+}

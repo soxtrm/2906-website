@@ -1,0 +1,24 @@
+{
+  "origin": [
+    14.48794863297249,
+    35.92378744134112
+  ],
+  "mainPoolHeight": 32.0,
+  "streetFloors": 10,
+  "floorHeightEstimate": 3.2,
+  "parts": [
+    "street-front",
+    "east-wing",
+    "rear-wing",
+    "north-wing",
+    "glass-crowns",
+    "main-pool-deck",
+    "main-pool",
+    "garden-court",
+    "sky-deck",
+    "sky-pool",
+    "entrance",
+    "lights"
+  ],
+  "note": "User photo references and OSM pool outlines; estimated massing, not surveyed. Garden elevation and rear floors estimated."
+}

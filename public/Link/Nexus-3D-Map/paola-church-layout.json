@@ -1,0 +1,16 @@
+{
+  "origin": [
+    14.508076011469,
+    35.87163798479244
+  ],
+  "parts": [
+    "base",
+    "vaults",
+    "small-domes",
+    "central-dome",
+    "tower--1",
+    "tower-1",
+    "portico"
+  ],
+  "note": "OSM outline, simplified proportions from user photographs."
+}

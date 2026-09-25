@@ -5,6 +5,7 @@ import { Check, MapPin, RefreshCw, Search, Settings2 } from 'lucide-react'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import taxonomy from '@/lib/nexus-bridge/taxonomy.json'
+import { NexusPlaceEditor } from '@/components/crm/nexus-place-editor'
 
 type Place = { id: number; key: string | null; label: string; coordinates: [number, number] | null; precision: string }
 type Settings = Record<string, string | number | boolean | string[] | null>
@@ -116,6 +117,7 @@ export function NexusCheckWorkbench({ onClose, onChanged }: { onClose: () => voi
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
+  const [workspace, setWorkspace] = useState<'properties' | 'places'>('properties')
   const reload = useCallback(() => setRevision(r => r + 1), [])
   useEffect(() => {
     const controller = new AbortController()
@@ -129,9 +131,9 @@ export function NexusCheckWorkbench({ onClose, onChanged }: { onClose: () => voi
   }, [all, query, offset, revision])
   const saved = (listing: Listing) => { setSelected(listing); reload(); onChanged() }
   return <Dialog open onOpenChange={open => { if (!open) navigate(onClose) }}><DialogContent className="flex h-[92dvh] w-[min(1280px,96vw)] max-w-[96vw] flex-col gap-0 overflow-hidden border-white/15 bg-[#141b29] p-0 text-[#edeae1] sm:max-w-[1280px]">
-    <header className="shrink-0 border-b border-white/10 px-5 py-4 pr-12"><DialogTitle className="flex items-center gap-2"><Settings2 size={20} className="text-[#b8953f]" /> OPEN TO CHECK</DialogTitle><DialogDescription className="mt-2 text-[#adb5c6]">Review missing facts, correct property settings and place each listing on its canonical map location.</DialogDescription></header>
+    <header className="shrink-0 border-b border-white/10 px-5 py-4 pr-12"><DialogTitle className="flex items-center gap-2"><Settings2 size={20} className="text-[#b8953f]" /> OPEN TO CHECK</DialogTitle><DialogDescription className="mt-2 text-[#adb5c6]">Review inventory facts and build the internal Nexus Places Intelligence map.</DialogDescription><nav className="mt-4 flex gap-2" aria-label="Open to Check workspace"><button className={`${button} ${workspace==='properties'?'border-[#b8953f] bg-[#b8953f]/10 text-[#f4d58b]':''}`} onClick={()=>navigate(()=>setWorkspace('properties'))}>Property settings</button><button className={`${button} ${workspace==='places'?'border-[#b8953f] bg-[#b8953f]/10 text-[#f4d58b]':''}`} onClick={()=>navigate(()=>setWorkspace('places'))}><MapPin size={15}/>Places Intelligence</button></nav></header>
     {pendingNavigation && <div role="alert" className="flex shrink-0 flex-wrap items-center gap-3 border-b border-amber-300/30 bg-amber-300/10 px-5 py-3"><p className="flex-1 text-sm">You have unsaved property settings.</p><button className={button} onClick={() => setPendingNavigation(null)}>Keep editing</button><button className={button} onClick={() => { const action = pendingNavigation; setPendingNavigation(null); editState.current = { dirty: false, busy: false }; action() }}>Discard changes and continue</button></div>}
-    <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[300px_1fr]">
+    {workspace==='places'?<NexusPlaceEditor/>:<div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[300px_1fr]">
       <aside className={`${selected ? 'hidden md:flex' : 'flex'} min-h-0 flex-col border-r border-white/10`}>
         <div className="space-y-3 border-b border-white/10 p-4"><label className="flex items-center gap-2"><Search size={16} /><input aria-label="Search listing reference or locality" className={input} placeholder="Reference or locality" value={query} onChange={e => { setQuery(e.target.value); setOffset(0) }} /></label><div className="flex items-center justify-between gap-2"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={all} onChange={e => { setAll(e.target.checked); setOffset(0) }} />All properties</label><button className={button} aria-label="Refresh review list" onClick={() => { navigate(() => { setSelected(null); reload() }) }}><RefreshCw size={14} /></button></div><p aria-live="polite" className="text-xs text-[#adb5c6]">{data ? `${data.reviewTotal} need checking · ${data.total} in this view` : 'Loading inventory…'}</p></div>
         {error && <p role="alert" className="p-4 text-sm text-red-200">{error}</p>}
@@ -139,6 +141,6 @@ export function NexusCheckWorkbench({ onClose, onChanged }: { onClose: () => voi
         <div className="flex justify-between border-t border-white/10 p-3"><button className={button} disabled={offset === 0 || loading} onClick={() => setOffset(o => Math.max(0, o - 100))}>Previous</button><button className={button} disabled={!data || offset + 100 >= data.total || loading} onClick={() => setOffset(o => o + 100)}>Next</button></div>
       </aside>
       <main className={`${selected ? 'block' : 'hidden md:block'} min-h-0 overflow-y-auto p-5 md:p-7`}>{selected && data ? <><button className={`${button} mb-4 md:hidden`} onClick={() => { navigate(() => setSelected(null)) }}>← Review list</button><SettingsEditor key={selected.id} listing={selected} data={data} onSaved={saved} editState={editState} /></> : <div className="flex h-full min-h-48 items-center justify-center text-center text-[#adb5c6]"><p>Choose a listing to review its facts,<br />Nexus pillars and map position.</p></div>}</main>
-    </div>
+    </div>}
   </DialogContent></Dialog>
 }

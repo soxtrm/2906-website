@@ -1,0 +1,15 @@
+{
+  "origin": [
+    14.50693305861003,
+    35.89550242380332
+  ],
+  "parts": [
+    "hotel",
+    "roof",
+    "entrance",
+    "terrace",
+    "gardens",
+    "pool"
+  ],
+  "note": "OSM hotel footprint; architectural details and garden/pool terrace positions estimated from user references. Pool is separately adjustable."
+}

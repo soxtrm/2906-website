@@ -1,0 +1,14 @@
+{
+  "origin": [
+    14.512345610343289,
+    35.90028569680575
+  ],
+  "parts": [
+    "church",
+    "drum",
+    "dome",
+    "lantern",
+    "bell-tower"
+  ],
+  "note": "OSM church footprint; architectural proportions estimated from user reference photographs."
+}

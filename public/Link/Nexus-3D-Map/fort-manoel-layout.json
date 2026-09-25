@@ -1,0 +1,19 @@
+{
+  "origin": [
+    14.505225194086961,
+    35.9028677061595
+  ],
+  "source": "OpenStreetMap fort perimeter and building footprints; heights estimated from user photos",
+  "parts": [
+    "ramparts",
+    "ravelin",
+    "outerworks",
+    "barracks-793975328",
+    "barracks-153030257",
+    "barracks-153030263",
+    "barracks-153030290",
+    "chapel",
+    "magazine",
+    "gate"
+  ]
+}

@@ -1,0 +1,15 @@
+.masthead,.top-actions,.panel,.controls,.status,.model-modal,.move-handle,.mapboxgl-ctrl-top-left,.mapboxgl-marker:not(.link-marker){display:none!important}
+.mapboxgl-ctrl-bottom-left,.mapboxgl-ctrl-bottom-right{z-index:50!important}
+.mapboxgl-ctrl-attrib{background:#091321d9!important;color:#b2c1d9!important;font:11px sans-serif!important}
+.mapboxgl-ctrl-attrib a{color:#b2c1d9!important}
+.link-marker{z-index:40!important;pointer-events:auto}
+.area-pin{border:1px solid #e2c38e;background:#101d30;color:#fff4dc;border-radius:50%;height:43px;width:43px;font:18px Georgia,serif;box-shadow:0 0 24px #edc77930;cursor:pointer;position:absolute}
+.area-pin::after{content:'';position:absolute;left:50%;top:100%;height:24px;width:1px;background:#eacc91;box-shadow:0 0 9px #ffd485}
+.area-pin span{position:absolute;left:50%;top:76px;transform:translateX(-50%);white-space:nowrap;font:11px sans-serif;letter-spacing:2px;text-transform:uppercase;text-shadow:0 2px 6px #000}
+.area-pin.selected{background:#e6c88e;color:#07111e;box-shadow:0 0 30px #ffd78755}
+.anchor-pin{width:22px;height:22px;background:#edb178;border:4px solid #fff2d4;border-radius:50%;box-shadow:0 0 0 9px #e5b58033,0 0 28px #ffc280;cursor:grab}
+.anchor-pin:focus-visible,.area-pin:focus-visible{outline:3px solid #fff;outline-offset:5px}
+.area-pin.property{width:auto;padding:0 13px;border-radius:5px;font:13px sans-serif;background:#f8f7f0;color:#263232;min-width:68px}
+.area-pin.development{font-size:28px;color:#ffe0a2;background:#192836;border-color:#d4b87c;box-shadow:0 0 24px #ebc06844}
+
+.is-touch-orbit:after{content:"ORBIT · GLIDE TO TURN";position:absolute;left:50%;top:95px;transform:translateX(-50%);pointer-events:none;border-radius:20px;background:#112f43a6;color:#d6edff;padding:9px 16px;font:9px system-ui;letter-spacing:.16em;backdrop-filter:blur(12px)}

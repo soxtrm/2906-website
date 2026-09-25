@@ -1867,9 +1867,9 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
     const s = document.createElement('script')
     s.id = 'gmaps-js'
     s.async = true
-    // No `libraries=drawing`: that library's DrawingManager is gone since 3.65
-    // and the rectangle below is drawn from pointer events instead.
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}`
+    // Places powers the internal Nexus amenities/workplace suggestion editor.
+    // No `libraries=drawing`: DrawingManager is gone since 3.65.
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}&libraries=places`
     s.onload = () => setReady(true)
     s.onerror = () => setLoadErr('load-failed')
     document.head.appendChild(s)

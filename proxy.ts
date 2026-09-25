@@ -22,6 +22,10 @@ export default function proxy(req: NextRequest) {
   const host = (req.headers.get('host') || '').toLowerCase()
   const { pathname } = req.nextUrl
 
+  // Nexus Link is a same-origin static application mounted at /Link.
+  // Keep it out of both locale routing and the CRM subdomain rewrite.
+  if (pathname === '/Link' || pathname.startsWith('/Link/')) return NextResponse.next()
+
   if (host.startsWith('crm.')) {
     if (pathname.startsWith('/crm')) return NextResponse.next()
     const url = req.nextUrl.clone()

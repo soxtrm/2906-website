@@ -1,7 +1,7 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Star, Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -455,7 +455,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
     <div className="crm-main">
       <header className="crm-header"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
         <div className="crm-header-actions">
-          <a className="crm-icon-button crm-nexus" href="http://178.104.162.193/" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><Star size={20} aria-hidden /></a>
+          <a className="crm-icon-button crm-nexus" href="https://2906.estate/Link" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><svg width="20" height="20" viewBox="0 0 100 100" aria-hidden><path d="M3 3C26 22 38 33 50 33S74 22 97 3C78 26 67 38 67 50S78 74 97 97C74 78 62 67 50 67S26 78 3 97C22 74 33 62 33 50S22 26 3 3Z" fill="currentColor" /></svg></a>
           <button className="crm-icon-button" onClick={() => toggleTheme(dark)} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Light mode' : 'Dark mode'}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
           {onAdd && <button onClick={onAdd} className="crm-button primary">+ Add</button>}
         </div>

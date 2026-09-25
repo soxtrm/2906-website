@@ -1,0 +1,19 @@
+{
+  "origin": [
+    14.371495251781056,
+    35.95429192821524
+  ],
+  "parts": [
+    "west-0",
+    "west-1",
+    "west-2",
+    "east-0",
+    "east-1",
+    "east-2",
+    "north",
+    "south",
+    "courtyard",
+    "pools"
+  ],
+  "note": "OSM perimeter with courtyard and two rooftop pools interpreted from user annotated aerial; simplified reference facade."
+}
