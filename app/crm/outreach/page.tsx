@@ -29,7 +29,10 @@ const ACCENTS = [
 ]
 function accentFor(index: number) { return ACCENTS[index % ACCENTS.length] }
 
-type Account = { id: number; sessionName: string; phone: string; label: string; connected: boolean; lastOutreachAt: string | null }
+type Account = {
+  id: number; sessionName: string; phone: string; label: string; connected: boolean; lastOutreachAt: string | null
+  pool: 'top' | 'bottom'; outreachVolumePercent: number; outreachVolumeUntil: string | null
+}
 type Template = { id: number; label: string; text: string; created_at: string }
 type Entry = {
   id: number; normalized_phone: string; display_name: string | null
@@ -42,6 +45,12 @@ type Plan = {
   label: 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | string
   stats: { total: number; eligible: number; hot: number; cold: number; skip: number; sent: number }
   entries?: Entry[]
+}
+type DueReminder = {
+  id: number; owner_name: string | null; phone_last4: string | null; note: string
+  contact_due_date: string; contact_classification: 'owner' | 'friend' | 'unknown'
+  auto_send_status: string; auto_send_block_reason: string | null
+  assigned_session: string | null; auto_send_for: string | null
 }
 
 function useMaltaClock() {
@@ -122,6 +131,7 @@ function ArgusConsole() {
   const [error, setError] = useState('')
   const [duplicates, setDuplicates] = useState<any[] | null>(null)
   const [summary, setSummary] = useState<any>(null)
+  const [dueReminders, setDueReminders] = useState<{ rows: DueReminder[]; perAccount: any[] }>({ rows: [], perAccount: [] })
   // Templates are a global library (spec follow-up: "Saved Drafts" button) —
   // lifted here, not per-console, so saving one in DEFAULT's card makes it
   // immediately available in every other account's card too.
@@ -130,12 +140,14 @@ function ArgusConsole() {
 
   const load = useCallback(async () => {
     try {
-      const [accRes, sumRes] = await Promise.all([
+      const [accRes, sumRes, dueRes] = await Promise.all([
         crmGet('outreach/accounts'),
         crmGet('outreach/today-summary').catch(() => null),
+        crmGet('outreach/due-reminders').catch(() => ({ rows: [], perAccount: [] })),
       ])
       setAccounts(accRes.accounts)
       setSummary(sumRes)
+      setDueReminders(dueRes)
       setError('')
     } catch (e: any) {
       setError(e?.message || 'Failed to load accounts')
@@ -189,6 +201,8 @@ function ArgusConsole() {
       {error && <div style={{ padding: '10px 24px', color: 'var(--crm-danger)', fontSize: 12 }}>{error}</div>}
       {!accounts && !error && <div style={{ padding: 24, color: MUTED, fontSize: 12 }}>Loading…</div>}
 
+      {accounts && <DueReminderLane data={dueReminders} />}
+
       {/* ── PROFILE CONSOLES — horizontal scroll ──────────────────────── */}
       {accounts && (
         <div ref={scrollerRef} style={{ display: 'flex', gap: 18, overflowX: 'auto', padding: '20px 24px', scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
@@ -233,6 +247,56 @@ function ArgusConsole() {
   )
 }
 
+function DueReminderLane({ data }: { data: { rows: DueReminder[]; perAccount: any[] } }) {
+  const queued = data.rows.filter(r => r.auto_send_status === 'queued').length
+  const blocked = data.rows.filter(r => r.auto_send_status === 'blocked' || r.contact_classification === 'friend').length
+  const suppressed = data.rows.filter(r => r.auto_send_status === 'suppressed_recent').length
+  const review = data.rows.filter(r => r.auto_send_status === 'review').length
+  return (
+    <section style={{ margin: '18px 24px 2px', border: `1px solid ${HAIRLINE}`, borderRadius: 18, background: PANEL, overflow: 'hidden' }}>
+      <div style={{ padding: '16px 18px', display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', flexWrap: 'wrap', borderBottom: `1px solid ${HAIRLINE}` }}>
+        <div>
+          <div style={{ fontSize: 10, color: '#35d6c4', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 800 }}>Due Reminder Queue</div>
+          <div style={{ fontSize: 18, fontWeight: 760, marginTop: 3 }}>Tomorrow’s owner follow-ups</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Distributed across Kevin-persona accounts. Argus1 stays bridge-only.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <span style={metricPill('#35d6c4')}>{queued} queued</span>
+          <span style={metricPill('#8fa0b8')}>{suppressed} contacted ≤10d</span>
+          <span style={metricPill('#f2a53d')}>{review} review</span>
+          <span style={metricPill('#e26b78')}>{blocked} friend · no send</span>
+        </div>
+      </div>
+      <div style={{ padding: '12px 18px', display: 'flex', gap: 8, overflowX: 'auto', borderBottom: `1px solid ${HAIRLINE}` }}>
+        {data.perAccount.map((row: any) => (
+          <span key={`${row.session_name}-${row.auto_send_status}`} style={{ whiteSpace: 'nowrap', border: `1px solid ${HAIRLINE}`, borderRadius: 999, padding: '6px 10px', color: MUTED, fontSize: 10.5 }}>
+            {row.session_name} · {row.auto_send_status} {row.count}
+          </span>
+        ))}
+      </div>
+      <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+        {data.rows.map(row => {
+          const isFriend = row.contact_classification === 'friend'
+          const isQueued = row.auto_send_status === 'queued'
+          const stateLabel = isFriend ? 'FRIEND · NO SEND' : isQueued ? (row.assigned_session || 'UNASSIGNED') : row.auto_send_status.replaceAll('_', ' ').toUpperCase()
+          const stateColor = isQueued ? '#35d6c4' : row.auto_send_status === 'suppressed_recent' ? '#8fa0b8' : isFriend ? '#e26b78' : '#f2a53d'
+          const when = row.auto_send_for ? new Date(row.auto_send_for).toLocaleString('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Review'
+          return <div key={row.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(130px,1fr) minmax(180px,2fr) minmax(120px,1fr)', gap: 12, padding: '11px 18px', borderBottom: `1px solid ${HAIRLINE}`, alignItems: 'center' }}>
+            <div><div style={{ fontSize: 12, fontWeight: 700 }}>{row.owner_name || `Contact ···${row.phone_last4 || ''}`}</div><div style={{ fontSize: 10, color: FAINT }}>R#{row.id} · due {String(row.contact_due_date).slice(0, 10)}</div></div>
+            <div style={{ fontSize: 11, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.note || 'No reminder context stored'}</div>
+            <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: stateColor, fontWeight: 750 }}>{stateLabel}</div><div style={{ fontSize: 10, color: FAINT }}>{isQueued ? when : row.auto_send_block_reason || 'manual review'}</div></div>
+          </div>
+        })}
+        {!data.rows.length && <div style={{ padding: 18, color: FAINT, fontSize: 12 }}>No due reminders.</div>}
+      </div>
+    </section>
+  )
+}
+
+function metricPill(color: string) {
+  return { border: `1px solid ${color}55`, background: `${color}14`, color, borderRadius: 999, padding: '7px 11px', fontSize: 10.5, fontWeight: 800 } as const
+}
+
 function accountsColor(accounts: Account[], sessionName: string) {
   const idx = accounts.findIndex(a => a.sessionName === sessionName)
   return idx >= 0 ? accentFor(idx).a : MUTED
@@ -262,6 +326,10 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [armTime, setArmTime] = useState('14:15')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [volume, setVolume] = useState(account.outreachVolumePercent || 100)
+  const [volumeBusy, setVolumeBusy] = useState(false)
+
+  useEffect(() => { setVolume(account.outreachVolumePercent || 100) }, [account.outreachVolumePercent])
 
   const loadPlans = useCallback(async () => {
     const r = await crmGet(`outreach/plans?accountId=${account.id}`)
@@ -424,6 +492,15 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function pause() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/pause`, 'POST', {}); await refresh() } finally { setBusy(false) } }
   async function cancel() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/cancel`, 'POST', {}); await refresh() } finally { setBusy(false) } }
 
+  async function saveVolume(days: number | null = null) {
+    setVolumeBusy(true); setNote('')
+    try {
+      await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { percent: volume, days })
+      setNote(days ? `Volume ${volume}% for ${days} days.` : `Volume ${volume}% saved.`)
+      onChanged()
+    } catch (e: any) { setNote(e?.message || 'Failed to save volume') } finally { setVolumeBusy(false) }
+  }
+
   const s = activePlan?.stats
   const isCompleted = activePlan?.status === 'completed'
   const initials = account.label.slice(0, 1).toUpperCase()
@@ -456,6 +533,21 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
               : '—'}
           </div>
         </div>
+      </div>
+
+      <div style={{ background: EDITOR, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: '10px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 9, color: FAINT, letterSpacing: '.1em', fontWeight: 800 }}>OUTREACH VOLUME · {account.pool === 'bottom' ? 'Z→A' : 'A→Z'}</div>
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{volume}% · {volume === 100 ? 'normal pace' : `${(100 / volume).toFixed(1)}× slower`}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            <button disabled={volumeBusy} onClick={() => saveVolume(null)} style={btnGhost}>Save</button>
+            <button disabled={volumeBusy} onClick={() => saveVolume(3)} style={{ ...btnGhost, borderColor: accent.a, color: accent.a }}>3 days</button>
+          </div>
+        </div>
+        <input aria-label={`${account.label} outreach volume`} type="range" min={10} max={100} step={1} value={volume} onChange={e => setVolume(Number(e.target.value))} style={{ width: '100%', marginTop: 8, accentColor: accent.a }} />
+        {account.outreachVolumeUntil && <div style={{ fontSize: 9.5, color: FAINT }}>Temporary pace until {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(account.outreachVolumeUntil))}</div>}
       </div>
 
       {/* day tabs */}
