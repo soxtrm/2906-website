@@ -54,7 +54,7 @@
   import('./neon-pin.mjs').then(module=>{pinFactory=module.createNeonPin;if(mapReady)installPinSprites();});
   function installPinSprites(){if(!pinFactory||pinSprites.length)return;for(const [key,housing,accent] of [['nexus-housing',true],['nexus-alternative',true,'#e7bd79'],['nexus-muted',false,'#8f9b9f'],['nexus-landmark',false,'#e7bd79'],['nexus-super',true,'#ffda8a']]){const sprite=pinFactory(housing,accent);map.addImage(key,sprite.draw(0),{pixelRatio:2});pinSprites.push({key,sprite});}}
   setInterval(()=>{if(!mapReady||step!==5||document.hidden)return;const now=reduced.matches?0:performance.now()/1000;for(const {key,sprite} of pinSprites)map.updateImage(key,sprite.draw(now));if(map.getLayer(labelId))map.setLayoutProperty(labelId,'icon-size',['case',['==',['get','kind'],'development'],.34+(reduced.matches?0:Math.sin(now*1.15)*.018),1]);models?.illuminate();},mobile?220:100);
-  let orbitFrame=0,ambientFrame=0,ambientResume=0,flightEnd=null,tourSelection=null,focusedCoordinates=null,focusZoom=null,orbitCamera=null,paddingBlend=null;
+  let orbitFrame=0,ambientFrame=0,ambientResume=0,flightEnd=null,tourSelection=null,focusedCoordinates=null,focusZoom=null,orbitCamera=null,paddingBlend=null,lastValidCamera={center:[14.498,35.907],zoom:overview.zoom,pitch:overview.pitch,bearing:overview.bearing};
   map.jumpTo({center:[14.4942,35.9208],zoom:16.4,pitch:64,bearing:-23,padding:0});
   map.scrollZoom.disable();
   import('./Nexus-3D-Map/link-runtime.js').then(module=>{models=module.nexusModels;if(mapReady)updatePlaces();}).catch(()=>send('model-unavailable'));
@@ -131,7 +131,7 @@
     tourSelection={kind:item.kind,id:item.id,markerId:item.markerId,name:primeQuotes?.primeEstimate(item.markerId)?.name||item.name||'Your place',includeUpcoming:value.includeUpcoming};
     send('selection-start',tourSelection);
     if(model)models.prepare(model.ids[0]);
-    focusZoom=item.kind==='area'?15.3:Math.min(model?.zoom||16.7,17.5);
+    focusZoom=item.kind==='area'?15.3:Math.min(model?.zoom||16.7,17.5);lastValidCamera={center:[...center],zoom:focusZoom,pitch:52,bearing:map.getBearing()};
     const padding=framePadding(innerHeight*(innerWidth<760?.52:.54)),usableHeight=Math.max(180,innerHeight-padding.top-padding.bottom);
     const camera={center,zoom:focusZoom-.25+Math.min(0,Math.log2(usableHeight/400)*.5),pitch:52,padding,bearing:map.getBearing()};orbitCamera=camera;paddingBlend=null;
     if(reduced.matches){map.jumpTo(camera);endTour();return;}
@@ -189,7 +189,9 @@
     if(data.type==='day-toggle')toggleDay();
     if(data.type==='joystick'&&step===5)joystick(data);
     if(data.type==='view'&&step===5){endArrival();endTour();map.stop();map.jumpTo({...Number.isFinite(data.zoom)&&{zoom:Math.max(10,Math.min(19,data.zoom))},...Number.isFinite(data.pitch)&&{pitch:Math.max(0,Math.min(70,data.pitch))}});}
-    if(data.type==='focus-area'&&Array.isArray(data.coordinates)){endArrival();endTour();map.flyTo({center:data.coordinates,zoom:14.8,pitch:42,padding:0,duration:reduced.matches?0:1700});}
+    if(data.type==='focus-area'&&Array.isArray(data.coordinates)){endArrival();endTour();lastValidCamera={center:[...data.coordinates],zoom:14.8,pitch:42,bearing:map.getBearing()};map.flyTo({...lastValidCamera,padding:0,duration:reduced.matches?0:1700});}
+    if(data.type==='mini-pan'&&Array.isArray(data.coordinates)){endArrival();endTour(false);stopAmbient();map.stop();map.jumpTo({center:data.coordinates,padding:0});if(!data.active)scheduleAmbientResume();}
+    if(data.type==='return-last-location'&&lastValidCamera){endArrival();endTour(false);focusedCoordinates=[...lastValidCamera.center];focusZoom=lastValidCamera.zoom;easeIntoAmbient({...lastValidCamera,padding:0},reduced.matches?0:1050);}
     if(data.type==='day-restart')startDay();
     if(data.type==='zoom'){endTour();map.zoomTo(map.getZoom()+(data.delta>0?1:-1),{duration:reduced.matches?0:300});}
     if(data.type==='overview'){endArrival();endTour();const points=(lastState.properties||[]).map(p=>p.coordinates).filter(c=>Array.isArray(c)&&c.every(Number.isFinite));const bounds=points.length?points.reduce((b,p)=>b.extend(p),new mapboxgl.LngLatBounds(points[0],points[0])):[[14.17,35.79],[14.59,36.09]],camera=map.cameraForBounds(bounds,{padding:70,maxZoom:14.7})||overview;focusedCoordinates=null;easeIntoAmbient({...camera,pitch:30,bearing:map.getBearing(),padding:{top:70,bottom:70,left:70,right:70}},1500);}
@@ -207,7 +209,7 @@
   map.on('click',event=>{
     if(step!==5||touchOrbit?.isClickSuppressed())return;
     if(activityMap?.click(event))return;
-    if(lastState.placeMode){const place=map.getLayer('link-locality-points')&&map.queryRenderedFeatures(event.point,{layers:['link-locality-points','link-locality-labels']})[0];if(place){const key=place.properties.key,coordinates=place.geometry.coordinates,now=performance.now();if(localityTap?.key===key&&now-localityTap.at<360){clearTimeout(localityTap.timer);localityTap=null;send('locality-priority-toggle',{key});easeIntoAmbient({center:coordinates,zoom:mobile?16.6:16.1,pitch:50,bearing:map.getBearing()+22,padding:0},mobile?950:1250);}else{const timer=setTimeout(()=>{send('locality-toggle',{key});easeIntoAmbient({center:coordinates,zoom:mobile?16.35:15.9,pitch:48,bearing:map.getBearing()+16,padding:0},mobile?900:1200);localityTap=null;},250);localityTap={key,at:now,timer};}}return;}
+    if(lastState.placeMode){const place=map.getLayer('link-locality-points')&&map.queryRenderedFeatures(event.point,{layers:['link-locality-points','link-locality-labels']})[0];if(place){const key=place.properties.key,coordinates=place.geometry.coordinates,now=performance.now();lastValidCamera={center:[...coordinates],zoom:mobile?16.35:15.9,pitch:48,bearing:map.getBearing()+16};if(localityTap?.key===key&&now-localityTap.at<360){clearTimeout(localityTap.timer);localityTap=null;send('locality-priority-toggle',{key});lastValidCamera={...lastValidCamera,zoom:mobile?16.6:16.1,pitch:50,bearing:map.getBearing()+22};easeIntoAmbient({...lastValidCamera,padding:0},mobile?950:1250);}else{const timer=setTimeout(()=>{send('locality-toggle',{key});easeIntoAmbient({...lastValidCamera,padding:0},mobile?900:1200);localityTap=null;},250);localityTap={key,at:now,timer};}}return;}
     const hit=map.queryRenderedFeatures(event.point,{layers:[pointId]})[0]||map.queryRenderedFeatures(event.point,{layers:[labelId],filter:['!=',['get','kind'],'development']})[0];
     if(hit){selectPlace(hit.properties);return;}
     // Empty map clicks are navigation gestures. Only a pin can open an offer.

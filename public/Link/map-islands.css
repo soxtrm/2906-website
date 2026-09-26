@@ -189,6 +189,14 @@
 @media(max-width:760px){.malta-overview{left:12px;bottom:calc(var(--sheet-height,76px) + 18px);width:91px;padding:7px;border-radius:17px}.overview-expand{font-size:6px;min-height:22px}.overview-key{font-size:6px}.map-birds{top:24%}.sheet-raised .sheet-cards .property-card{--arrival-x:-16px}}
 @media(prefers-reduced-motion:reduce){.malta-overview{transition:none}.sheet-raised .sheet-cards .property-card,.sheet-heading strong.name-arriving{animation:none}.map-birds{display:none}}
 
+/* The overview is a real navigation surface: drag/tap it to move the main camera. */
+.malta-overview svg{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.malta-overview svg:active{cursor:grabbing}
+.joystick-control{position:relative;flex:none}
+.joystick-return{position:absolute;right:-7px;bottom:-7px;width:37px;height:37px;border-radius:50%;border:1px solid #a9c9d9;background:#f7fcff;color:#315c76;font-size:24px;font-weight:300;line-height:1;box-shadow:0 6px 18px #173c532f;display:grid;place-items:center;touch-action:manipulation}
+.joystick-return:hover,.joystick-return:focus-visible{background:#dff3fc;color:#173f58}
+.joystick-layout p b{font-size:12px;color:#315c76}
+
 .search-market-open .search-market-thumb{opacity:0}.map-portal[data-market=sales] .sheet-grip{background:linear-gradient(90deg,#baa274,#e8d8ae)}.map-portal[data-market=commercials] .sheet-grip{background:linear-gradient(90deg,#77799c,#bdc6df)}.map-portal[data-market=stays] .sheet-grip{background:linear-gradient(90deg,#73a0a4,#bce9df)}.map-portal[data-market=sales] .sheet-heading strong{color:#72603f}.map-portal[data-market=commercials] .sheet-heading strong{color:#53576e}.map-portal[data-market=stays] .sheet-heading strong{color:#2b666d}
 
 .prime-estimate-card{margin:6px 0 20px;padding:17px 20px;border:1px solid #d9d7cd;background:linear-gradient(120deg,#f4f3ed,#fff);border-radius:18px;display:grid;gap:7px;animation:place-name-arrival 1.2s ease both}.prime-estimate-card>span{font-size:8px;color:#8c7c5e;letter-spacing:.15em}.prime-estimate-card>strong{font-size:25px;letter-spacing:-.04em;font-weight:500;color:#344759}.prime-estimate-card>small{font-size:9px;color:#849099;line-height:1.5}
