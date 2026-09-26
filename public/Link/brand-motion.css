@@ -234,3 +234,23 @@
 
 /* Stable hand-off: the destination logo is stationary while the centre star docks. */
 .header.intro-target-ready .brand-link{transition:none!important}.brand-intro.is-preparing .intro-skip{opacity:0;pointer-events:none;transition:opacity .2s}.brand-intro.is-leaving{opacity:0;transform:none;background:transparent;transition:opacity .88s cubic-bezier(.35,0,.25,1)}.brand-intro.is-leaving::backdrop{background:transparent}.intro-nexus-star{will-change:transform,opacity}
+
+/* One short website load. The cinematic World → Malta sequence belongs to the map only. */
+.brand-intro{background:#f8faf9;color:#102c4d;transition:opacity .42s ease!important}
+.brand-intro::backdrop{background:#f8faf9;transition:background-color .42s ease!important}
+.brand-intro .brand-sequence{position:absolute;inset:0;width:142px;height:142px;margin:auto;display:block}
+.brand-intro .intro-nexus-star{position:absolute;left:21px;top:20px;width:100px;height:103px;color:#102c4d;filter:drop-shadow(0 13px 28px #17334a1d);animation:nexus-loader-star .82s cubic-bezier(.22,.72,.2,1) both!important}
+.brand-intro .intro-nexus-satellite{position:absolute;left:102px;top:13px;width:25px;height:26px;color:#102c4d;opacity:0;filter:drop-shadow(0 5px 10px #17334a20);animation:nexus-loader-satellite .82s cubic-bezier(.22,.72,.2,1) both}
+.brand-intro.is-leaving{opacity:0!important;background:#f8faf9!important;transform:none!important}
+.brand-intro.is-leaving::backdrop{background:#f8faf9!important}
+@keyframes nexus-loader-star{0%{opacity:0;transform:rotate(-55deg) scale(.72)}58%{opacity:1;transform:rotate(35deg) scale(1.035)}100%{opacity:1;transform:rotate(45deg) scale(1)}}
+@keyframes nexus-loader-satellite{0%,26%{opacity:0;transform:translate(-12px,10px) rotate(0) scale(.3)}62%{opacity:1;transform:translate(2px,-2px) rotate(40deg) scale(1.08)}100%{opacity:.82;transform:translate(0,0) rotate(45deg) scale(.82)}}
+
+.map-dock-poster{position:absolute;inset:0;z-index:2;display:grid;place-items:center;background:radial-gradient(circle at 50% 42%,#f8faf8 0,#e7ece8 56%,#ced9d5 100%);color:#17313d;pointer-events:none}
+.map-dock-poster>span{position:relative;display:grid;place-items:center;width:58px;height:58px}
+.map-dock-poster .nexus-mark{width:50px;height:50px;filter:drop-shadow(0 8px 16px #18374425);transform:rotate(45deg)}
+.map-dock-poster>i{position:absolute;width:7px;height:7px;border-radius:50%;background:#bca269;transform:translate(34px,-31px);box-shadow:0 0 0 4px #ffffff90}
+.map-dock-poster>small{position:absolute;top:18px;font-size:6px;letter-spacing:.28em;color:#6f827f}
+.map-portal[open] .map-dock-poster,.map-portal.has-place-preview:not([open]) .map-dock-poster{display:none}
+.map-portal:not([open]) .nexus-map-loader{display:none!important}
+@media(prefers-reduced-motion:reduce){.brand-intro .intro-nexus-star,.brand-intro .intro-nexus-satellite{animation:none!important;opacity:1;transform:rotate(45deg)}}

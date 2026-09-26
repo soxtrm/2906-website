@@ -12,7 +12,7 @@ import {GROUPS,PLACES,PRIORITIES,IMPORTANCE,DEVELOPMENTS,blankProfile,restorePro
 import {COMMERCIAL_TYPES} from './discovery.mjs';
 import {candidateProfile,matchSearch,resetSearch,restoreSearchFilters,createSearchCache} from './search-matching.mjs';
 import {adapter} from './adapter.mjs?v=discovery-4';
-import {createMapExperience} from './map-experience.mjs?v=nexus-cards-3';
+import {createMapExperience} from './map-experience.mjs?v=nexus-cards-4';
 import {installWorkplaceSearch} from './workplace-search.mjs';
 import {buildMobilityReality,mobilityFallback} from './mobility-reality.mjs?v=mobility-3';
 
