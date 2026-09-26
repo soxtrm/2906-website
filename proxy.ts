@@ -24,7 +24,15 @@ export default function proxy(req: NextRequest) {
 
   // Nexus Link has a fast marketplace at /link and the deeper Matrix at
   // /link-matrix. Keep both static surfaces out of locale and CRM rewriting.
-  if (pathname === '/link' || pathname.startsWith('/link/') || pathname === '/link-matrix' || pathname.startsWith('/link-matrix/') || pathname.startsWith('/link-marketplace/') || pathname === '/Link' || pathname.startsWith('/Link/')) return NextResponse.next()
+  // The legacy scorecard still lives in public/Link for /link-matrix. Its
+  // physical directory wins over a normal rewrite on case-sensitive hosts,
+  // so force the exact historical /Link entry URL to the marketplace here.
+  if (pathname === '/Link' || pathname === '/Link/') {
+    const url = req.nextUrl.clone()
+    url.pathname = '/link-marketplace/index.html'
+    return NextResponse.rewrite(url)
+  }
+  if (pathname === '/link' || pathname.startsWith('/link/') || pathname === '/link-matrix' || pathname.startsWith('/link-matrix/') || pathname.startsWith('/link-marketplace/') || pathname.startsWith('/Link/')) return NextResponse.next()
 
   if (host.startsWith('crm.')) {
     if (pathname.startsWith('/crm')) return NextResponse.next()
