@@ -232,6 +232,11 @@
    white gap and overlapping cards during mobile scrolling. */
 .scroll-profile .intro .map-dock-wrap{bottom:auto}
 
+/* The complete Housing intro is taller than a desktop viewport. Keeping that
+   whole column sticky trapped the inline map between scroll positions and made
+   it appear to jump. Let the editorial column move in normal document flow. */
+.scroll-profile .intro{position:relative;top:auto;transform:none}
+
 /* Stable hand-off: the destination logo is stationary while the centre star docks. */
 .header.intro-target-ready .brand-link{transition:none!important}.brand-intro.is-preparing .intro-skip{opacity:0;pointer-events:none;transition:opacity .2s}.brand-intro.is-leaving{opacity:0;transform:none;background:transparent;transition:opacity .88s cubic-bezier(.35,0,.25,1)}.brand-intro.is-leaving::backdrop{background:transparent}.intro-nexus-star{will-change:transform,opacity}
 
