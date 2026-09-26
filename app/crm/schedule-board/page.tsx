@@ -1393,6 +1393,7 @@ function Board() {
               everybody else — an agent still benefits from seeing whether the
               robot is chasing owners before deciding to chase one himself. */}
           <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)} style={{ ...chip, borderRadius: 8, borderColor: A, color: 'var(--crm-accent)', background: DCARD, fontWeight: 700 }}><Settings size={13} style={{ display: 'inline', marginRight: 6 }} />OPEN TO CHECK</button>
+          <a href="/nexus-map" style={{ ...chip, borderRadius: 8, borderColor: '#64B9D7', color: '#BDEBFA', background: '#183044', fontWeight: 700, textDecoration: 'none' }}><Link2 size={13} style={{ display: 'inline', marginRight: 6 }} />NEXUS MAP</a>
           <ReachoutSwitch />
         </div>
 
