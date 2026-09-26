@@ -1,4 +1,4 @@
-export async function setupValletta(map,onChange){
+async function createValletta(map,onChange){
  const [data,boundary,defaults]=await Promise.all([fetch('valletta-layer.geojson?v=2').then(r=>r.json()),fetch('valletta-boundary.json').then(r=>r.json()),fetch('valletta-state.json').then(r=>r.ok?r.json():{}).catch(()=>({}))]);
  let state={enabled:true,detached:[],hidden:[],...defaults};try{state={...state,...JSON.parse(localStorage.getItem('nexus-valletta-v1')||'{}')};}catch{}
  state.placement={east:0,north:0,heading:0,lift:0,...state.placement};
@@ -50,4 +50,10 @@ export async function setupValletta(map,onChange){
  document.addEventListener('nexus-theme-applied',()=>queueMicrotask(theme));
  document.addEventListener('input',e=>{if(e.target.id==='timeSlider')theme();});document.addEventListener('click',e=>{if(e.target.closest('.theme-btn'))theme();});
  applyPlacement();refresh();theme();onChange();return {selectWalls(fly=true){placement.hidden=false;handle.hidden=false;if(!state.enabled){state.enabled=true;save();}$('valletta-pick').checked=true;ui.querySelector('details').open=true;if(fly)focus();},leaveSelection(){placement.hidden=true;handle.hidden=true;$('valletta-pick').checked=false;ui.querySelector('details').open=false;},focus,state:()=>state,boundary,enabled:()=>state.enabled,setExclusions(value){exclusions=value;refresh();}};
+}
+
+const setupByMap=new WeakMap();
+export function setupValletta(map,onChange){
+ if(!setupByMap.has(map))setupByMap.set(map,createValletta(map,onChange).catch(error=>{setupByMap.delete(map);throw error;}));
+ return setupByMap.get(map);
 }

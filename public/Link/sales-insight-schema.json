@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "purpose": "Evidence-backed Sales intelligence. Signals support a decision and never become an automatic valuation.",
+  "confidence": ["LIVE", "OBSERVED", "HISTORICAL", "MODELLED", "LOCAL PRIOR", "UNKNOWN"],
+  "signals": [
+    "asking_price_history",
+    "verified_comparable_sales",
+    "time_on_market",
+    "negotiation_evidence",
+    "tenure_and_ground_rent",
+    "finish_and_condition",
+    "building_and_common_parts",
+    "permit_and_planning_evidence",
+    "known_nearby_development",
+    "parking_and_access",
+    "recurring_ownership_costs",
+    "rental_demand_evidence",
+    "mobility_reality"
+  ],
+  "requiredEvidenceFields": [
+    "signal", "value", "unit", "sourceType", "sourceReference", "observedAt",
+    "geographyPrecision", "confidence", "visibility"
+  ],
+  "visibility": ["PUBLIC", "CLIENT", "INTERNAL"],
+  "rules": [
+    "Keep asking price, observed sale evidence and modelled values separate.",
+    "Do not infer a valuation from one comparable or one locality average.",
+    "Do not expose owner identity, private address or private negotiation notes.",
+    "UNKNOWN is a valid value and is never treated as zero.",
+    "Mobility time, money, reliability and comfort remain separate dimensions."
+  ]
+}

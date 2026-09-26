@@ -82,8 +82,13 @@
   "derived": [
     {"key":"pillar_fit","type":"DERIVED_INTELLIGENCE","requires":["explicit_preference","supported_fact","method_version","coverage"],"unknownScore":null},
     {"key":"commute_minutes","type":"DERIVED_INTELLIGENCE","pillars":["connectivity"],"requires":["routing_evidence","origin_precision","destination_precision"]},
-    {"key":"monthly_life_cost","type":"DERIVED_INTELLIGENCE","pillars":["value_life_cost"],"requires":["rent","separate_mobility_estimate"]}
+    {"key":"monthly_life_cost","type":"DERIVED_INTELLIGENCE","pillars":["value_life_cost"],"requires":["rent","separate_mobility_estimate"]},
+    {"key":"mobility_time","type":"DERIVED_INTELLIGENCE","pillars":["connectivity"],"requires":["route_evidence","origin_precision","destination_precision","confidence"]},
+    {"key":"mobility_money","type":"DERIVED_INTELLIGENCE","pillars":["value_life_cost"],"requires":["price_evidence","journey_frequency","confidence"]},
+    {"key":"mobility_reliability","type":"DERIVED_INTELLIGENCE","pillars":["connectivity","wellbeing"],"requires":["service_or_pickup_evidence","time_context","confidence"]},
+    {"key":"mobility_friction","type":"DERIVED_INTELLIGENCE","pillars":["connectivity","wellbeing"],"requires":["walking_transfers_crowding_or_parking_evidence","confidence"]},
+    {"key":"sales_value_signal","type":"DERIVED_INTELLIGENCE","pillars":["value_life_cost"],"requires":["source_reference","observed_at","geography_precision","confidence"]}
   ],
-  "policy": {"unknownIsFalse":false,"imageInferenceIsFact":false,"inferSensitiveIdentity":false,"publicPinPrecision":"locality","profileSource":"explicit_user_input","behaviorTrackingDefault":false},
+  "policy": {"unknownIsFalse":false,"imageInferenceIsFact":false,"inferSensitiveIdentity":false,"publicPinPrecision":"locality","profileSource":"explicit_user_input","behaviorTrackingDefault":false,"mobilityDimensions":["time","money","reliability","comfort_friction"],"preferredTransportIsOrderingOnly":true,"salesSignalsAreAutomaticValuation":false},
   "agencyFee": {"status":"deferred","automaticDeduction":false}
 }

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "capacity": 10000,
+  "observations": [],
+  "fields": [
+    "originArea", "destinationArea", "direction", "weekday", "hour", "season",
+    "distanceMetres", "durationMinutes", "quotedPrice", "actualPrice", "pickupMinutes",
+    "outcome", "observedAt"
+  ],
+  "outcomes": ["accepted", "cancelled", "failed", "unknown"],
+  "confidence": ["LIVE", "OBSERVED", "HISTORICAL", "MODELLED", "LOCAL PRIOR", "UNKNOWN"],
+  "localPriors": [
+    {
+      "id": "north-ferry-central-evening-crowding",
+      "mode": "bus",
+      "origin": "Mellieha / northern ferry corridor",
+      "destination": "Central Malta",
+      "hours": [17, 18],
+      "season": "busy tourist periods",
+      "confidence": "LOCAL PRIOR",
+      "message": "High crowding risk at peak tourist times — allow extra time."
+    }
+  ]
+}

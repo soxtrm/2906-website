@@ -8,9 +8,9 @@ function normalizePlace(raw){
  return {placeId:clean(raw.placeId||raw.id||raw.googlePlaceId),name:clean(raw.name||raw.displayName?.text||raw.displayName),address:clean(raw.address||raw.formattedAddress||raw.name),coordinates};
 }
 
-export function installWorkplaceSearch(host,{getAnchor,onSelect,onClear}){
+export function installWorkplaceSearch(host,{getAnchor,onSelect,onClear,label='place'}){
  if(!host)return {destroy(){}};
- const input=host.querySelector('[data-workplace-query]'),results=host.querySelector('[data-workplace-results]'),status=host.querySelector('[data-workplace-status]');
+ const input=host.querySelector('[data-workplace-query],[data-place-query]'),results=host.querySelector('[data-workplace-results],[data-place-results]'),status=host.querySelector('[data-workplace-status],[data-place-status]');
  let timer=0,controller=null;
  const selected=getAnchor();
  if(selected?.coordinates){status.innerHTML=`<span aria-hidden="true">●</span><strong>Pin connected</strong><small>${esc(selected.address||selected.location)}</small>`;host.classList.add('has-pin');}
@@ -25,9 +25,9 @@ export function installWorkplaceSearch(host,{getAnchor,onSelect,onClear}){
    if(!response.ok||payload?.status!=='CONNECTED')throw new Error(payload?.reason||'GOOGLE_PLACES_UNAVAILABLE');
    const places=(payload.records||payload.places||payload.results||payload.suggestions||[]).map(normalizePlace).filter(p=>p.placeId&&p.coordinates?.length===2).slice(0,5);
    if(!places.length){status.textContent='No precise Google pin found. Try a company name plus locality.';return;}
-   status.textContent='Choose the correct workplace pin.';
-   results.innerHTML=places.map((p,i)=>`<button type="button" data-workplace-result="${i}"><span aria-hidden="true">⌖</span><span><strong>${esc(p.name)}</strong><small>${esc(p.address)}</small></span></button>`).join('');
-   results.onclick=event=>{const button=event.target.closest('[data-workplace-result]');if(!button)return;const place=places[Number(button.dataset.workplaceResult)];onSelect(place);input.value=place.name||place.address;results.innerHTML='';host.classList.add('has-pin');status.innerHTML=`<span aria-hidden="true">●</span><strong>Pin connected</strong><small>${esc(place.address)}</small>`;};
+   status.textContent=`Choose the correct ${label} pin.`;
+   results.innerHTML=places.map((p,i)=>`<button type="button" data-place-result="${i}"><span aria-hidden="true">⌖</span><span><strong>${esc(p.name)}</strong><small>${esc(p.address)}</small></span></button>`).join('');
+   results.onclick=event=>{const button=event.target.closest('[data-place-result]');if(!button)return;const place=places[Number(button.dataset.placeResult)];onSelect(place);input.value=place.name||place.address;results.innerHTML='';host.classList.add('has-pin');status.innerHTML=`<span aria-hidden="true">●</span><strong>Pin connected</strong><small>${esc(place.address)}</small>`;};
   }catch(error){if(error.name==='AbortError')return;status.textContent='Google Places is not connected right now. This step stays locked rather than guessing a pin.';}
  };
  input.addEventListener('input',()=>{onClear(input.value);host.classList.remove('has-pin');clearTimeout(timer);timer=setTimeout(search,320);});
