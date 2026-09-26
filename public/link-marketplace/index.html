@@ -1,12 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <base href="/link-marketplace/">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f4f3ee">
-  <meta name="description" content="Explore live Malta property listings and contact the right person through Nexus SmartTunnel.">
-  <title>Nexus Link — Malta property marketplace</title>
+  <meta name="description" content="Explore live Malta homes in Nexus Housing, the first layer of the future Nexus Marketplace.">
+  <title>Nexus Housing — Malta homes</title>
   <link rel="icon" href="/Link/assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/Link/fonts.css">
   <link rel="stylesheet" href="/link-marketplace/marketplace.css?v=3">
@@ -14,21 +13,21 @@
 <body>
   <a class="skip-link" href="#market-grid">Skip to homes</a>
   <header class="market-header">
-    <a class="market-brand" href="/link" aria-label="Nexus Link marketplace"><span class="nexus-star" aria-hidden="true"></span><span><b>NEXUS</b><strong>LINK.</strong></span></a>
+    <a class="market-brand" href="/link" aria-label="Nexus Housing"><span class="nexus-star" aria-hidden="true"></span><span><b>NEXUS</b><strong>HOUSING.</strong></span></a>
     <label class="global-search"><span aria-hidden="true">⌕</span><input id="query" type="search" autocomplete="off" placeholder="Search homes or villages…" aria-label="Search homes or villages"><small>Apply with Show homes</small></label>
-    <nav aria-label="Marketplace navigation"><a href="#saved">♡ <span>Saved</span></a><button type="button" data-open-tunnel>↗ <span>SmartTunnel</span></button><a class="matrix-nav" href="/link-matrix">✦ <span>Matrix</span></a></nav>
+    <nav aria-label="Housing navigation"><a href="#saved">♡ <span>Saved</span></a><button type="button" data-open-tunnel>↗ <span>SmartTunnel</span></button><a class="matrix-nav" href="/link-matrix">✦ <span>Nexus Link</span></a></nav>
   </header>
 
   <main>
     <section class="matrix-banner" aria-labelledby="matrix-title">
-      <div><span>POWERED BY LINK MATRIX</span><h1 id="matrix-title">Smart Matrix Matcher.</h1><p>Tell Nexus how you live. Matrix compares homes, daily routes, real mobility friction and places around you.</p></div>
+      <div><span>NEXUS LINK · SMART MATRIX</span><h1 id="matrix-title">Go deeper than a listing.</h1><p>Nexus Housing makes homes easy to browse. Nexus Link compares them with daily routes, real mobility friction and the places around you.</p></div>
       <a href="/link-matrix">Build my detailed match <b>↗</b></a>
       <div class="matrix-orbit" aria-hidden="true"><i></i><i></i><i></i><span class="nexus-star"></span></div>
     </section>
 
     <section class="market-shell">
       <aside class="filter-panel" aria-label="Property filters">
-        <div class="filter-head"><span>MARKETPLACE FILTERS</span><button type="button" id="reset-filters">Reset</button></div>
+        <div class="filter-head"><span>HOUSING FILTERS</span><button type="button" id="reset-filters">Reset</button></div>
         <fieldset><legend>What are you looking for?</legend><div class="market-modes" id="market-modes">
           <button type="button" data-market="longlets" aria-pressed="true">Rent</button><button type="button" data-market="sales" aria-pressed="false">Buy</button><button type="button" data-market="stays" aria-pressed="false">Shortlets</button><button type="button" data-market="commercials" aria-pressed="false">Commercial</button>
         </div></fieldset>
@@ -37,7 +36,7 @@
         <fieldset><legend>Available</legend><div class="availability-tree" id="availability-tree"><button type="button" data-available="any" aria-pressed="true"><i></i>Any time</button><button type="button" data-available="now" aria-pressed="false"><i></i>Move now</button><button type="button" data-available="7" aria-pressed="false"><i></i>Within 7 days</button><button type="button" data-available="30" aria-pressed="false"><i></i>Within 30 days</button></div></fieldset>
         <p class="filter-state" id="filter-state"><i></i><span>Change filters, then press Show homes.</span></p>
         <button class="apply-filters" id="apply-filters" type="button">Show homes <span>↗</span></button>
-        <a class="deep-search" href="/link-matrix"><span>Need a smarter match?</span><strong>Open Link Matrix</strong><b>✦</b></a>
+        <a class="deep-search" href="/link-matrix"><span>Need a deeper match?</span><strong>Continue in Nexus Link</strong><b>✦</b></a>
       </aside>
 
       <section class="market-content">
@@ -54,7 +53,7 @@
   <dialog class="village-drawer" id="village-drawer" aria-labelledby="village-title"><div id="village-content"></div></dialog>
   <dialog class="tunnel-dialog" id="tunnel-dialog" aria-labelledby="tunnel-title"><div id="tunnel-content"></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <footer><span class="nexus-star"></span><p><b>Nexus Link</b><small>People. Places. Possibilities.</small></p><a href="/link-matrix">Powered by Link Matrix ↗</a></footer>
-  <script type="module" src="/link-marketplace/marketplace.js?v=2"></script>
+  <footer><span class="nexus-star"></span><p><b>Nexus Housing</b><small>The first layer of Nexus Marketplace.</small></p><a href="/link-matrix">Go deeper with Nexus Link ↗</a></footer>
+  <script type="module" src="/link-marketplace/marketplace.js?v=3"></script>
 </body>
 </html>

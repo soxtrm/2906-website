@@ -52,6 +52,7 @@ const makeProperty = (index, market = 'longlets') => ({
 
   await page.goto(base, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.listing-card')
+  assert.equal(await page.title(), 'Nexus Housing — Malta homes')
   let state = await page.evaluate(() => ({
     cards: document.querySelectorAll('.listing-card').length,
     sales: [...document.querySelectorAll('.listing-card')].some(card => /420,000/.test(card.textContent)),
