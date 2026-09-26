@@ -20,8 +20,12 @@
 .header.search-shell .search-form input,.map-portal .immersive-top.search-shell .search-form input{font-size:14px!important;font-weight:450;letter-spacing:-.025em;color:#18232b;min-width:0;padding:0 4px;background:none;border:0;outline:none}
 .search-shell .search-form input::placeholder{color:#7d878e;font-weight:400}
 .search-shell .search-submit{background:transparent!important;color:#53616c!important;box-shadow:none!important;width:28px!important;min-width:28px!important;height:34px!important;border:0;font-size:19px;border-radius:50%}
-.header.search-shell .search-markets,.map-portal .immersive-top.search-shell .search-markets{display:grid!important;order:1!important;grid-template-columns:repeat(4,34px)!important;width:140px!important;flex:0 0 140px!important;flex-basis:140px!important;margin:0!important;padding:2px!important;gap:0;border:0!important;border-radius:21px;background:#e8eded77!important}
+.header.search-shell .search-markets,.map-portal .immersive-top.search-shell .search-markets{display:grid!important;order:1!important;grid-template-columns:34px!important;width:38px!important;flex:0 0 38px!important;flex-basis:38px!important;margin:0!important;padding:2px!important;gap:0;border:0!important;border-radius:21px;background:#e8eded77!important;overflow:hidden;transition:width .38s var(--shell-ease),flex-basis .38s var(--shell-ease),background .25s}
+.header.search-shell .search-markets.market-picker-open,.map-portal .immersive-top.search-shell .search-markets.market-picker-open{grid-template-columns:repeat(4,34px)!important;width:140px!important;flex-basis:140px!important;background:#e8ededcc!important}
 .header.search-shell .search-markets button,.map-portal .immersive-top.search-shell .search-markets button{min-height:34px!important;height:34px;padding:7px!important;border:0!important;border-radius:50%;color:#77848c;display:grid;place-items:center;position:relative;transition:color .25s,transform .3s}
+.search-shell .search-markets:not(.market-picker-open) button:not([aria-pressed=true]){display:none!important}
+.search-shell .search-markets:not(.market-picker-open) button[aria-pressed=true]{grid-column:1!important}
+.search-shell .search-markets.market-picker-open button{animation:market-choice-in .3s var(--shell-ease) both}
 .search-shell .search-markets button svg{width:19px;height:19px}
 .search-shell .search-markets button[aria-pressed=true]{color:#1b303e!important}
 .search-shell .search-markets button:hover{transform:translateY(-2px);color:#172b37}
@@ -42,6 +46,7 @@
 .search-shell .search-panel-heading span{font-size:10px;letter-spacing:0;text-transform:none}
 @keyframes search-symbol-swing{0%{transform:rotate(0);opacity:1}45%{transform:rotate(-65deg) scale(.85);opacity:.5}100%{transform:rotate(-45deg);opacity:.8}}
 @keyframes search-results-arrive{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes market-choice-in{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(0)}}
 @media(min-width:761px){.map-portal .immersive-top.search-shell[data-compact-panel]{width:min(760px,calc(100% - 100px))!important}.header.search-shell{width:min(760px,calc(100% - 100px))}}
 @media(max-width:760px){
  .header.search-shell,.map-portal .immersive-top.search-shell{height:58px;min-height:58px;width:calc(100% - 28px)!important;margin-left:auto;margin-right:auto;border-radius:30px}
@@ -49,7 +54,8 @@
  .map-portal .immersive-top.search-shell:not([data-compact-panel]) .immersive-brand{left:24px}
  .header.search-shell[data-compact-panel] .brand-link,.map-portal .immersive-top.search-shell[data-compact-panel] .immersive-brand{left:23px}
  .header.search-shell .header-search,.map-portal .immersive-top.search-shell .map-search{padding:8px 40px 8px 44px!important;gap:2px!important}
- .header.search-shell .search-markets,.map-portal .immersive-top.search-shell .search-markets{grid-template-columns:repeat(4,27px)!important;width:112px!important;flex:0 0 112px!important;flex-basis:112px!important}
+ .header.search-shell .search-markets,.map-portal .immersive-top.search-shell .search-markets{grid-template-columns:27px!important;width:31px!important;flex:0 0 31px!important;flex-basis:31px!important}
+ .header.search-shell .search-markets.market-picker-open,.map-portal .immersive-top.search-shell .search-markets.market-picker-open{grid-template-columns:repeat(4,27px)!important;width:112px!important;flex-basis:112px!important}
  .header.search-shell .search-markets button,.map-portal .immersive-top.search-shell .search-markets button{padding:5px!important;height:30px;min-height:30px!important}
  .search-shell .search-markets button svg{width:17px;height:17px}
  .header.search-shell .search-form input,.map-portal .immersive-top.search-shell .search-form input{font-size:12px!important}

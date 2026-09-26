@@ -46,13 +46,14 @@ export function createDiscoverySearch(host,{id,getFilters,getInventory,getMatche
  const categoryIcons={longlets:'M3 11 12 3l9 8M5 10v11h14V10M10 21v-7h4v7',sales:'M3 5h11l7 7-9 9-9-9V5Zm5 3h.01',stays:'M3 18V7m18 11V9M3 15h18M6 11h5V7H6v4m5 0h10v4',commercials:'M4 21V7h9v14M13 11h7v10M7 10h3m-3 4h3m6 0h1M7 18h3'};
  host.querySelectorAll('[data-search-market]').forEach(button=>{const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${categoryIcons[button.dataset.searchMarket]}"/></svg><span class="market-label">${label}</span>`;});
  const input=host.querySelector('input'),panel=host.querySelector('.search-popover'),types=host.querySelector('.search-types'),toggle=host.querySelector('.search-types-toggle');
- let results=[],loading=false,loadError='',loadGeneration=0,drag=null,suppressClick=false;
+ let results=[],loading=false,loadError='',loadGeneration=0,drag=null,suppressClick=false,marketMenuOpen=false;
  const marketTrack=host.querySelector('.search-markets'),marketButtons=[...host.querySelectorAll('[data-search-market]')];
  function setThumb(index){marketTrack.style.setProperty('--market-index',String(index));}
- function close(){panel.hidden=true;toggle.setAttribute('aria-expanded','false');}
+ function syncMarketMenu(){marketTrack.classList.toggle('market-picker-open',marketMenuOpen);marketTrack.setAttribute('aria-expanded',String(marketMenuOpen));}
+ function close(){panel.hidden=true;toggle.setAttribute('aria-expanded','false');marketMenuOpen=false;syncMarketMenu();}
  function render(){
   const filters=getFilters();if(document.activeElement!==input)input.value=filters.query;
-  host.classList.toggle('search-market-open',filters.market==='all');host.querySelectorAll('[data-search-market]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.searchMarket===filters.market)));
+  host.classList.toggle('search-market-open',filters.market==='all');host.querySelectorAll('[data-search-market]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.searchMarket===filters.market)));syncMarketMenu();
   if(!drag)setThumb(SEARCH_MARKETS.findIndex(([key])=>key===filters.market));
   toggle.querySelector('span').textContent=filters.types.length?String(filters.types.length):'+';
   const options=typesForMarket(filters.market);
@@ -68,9 +69,9 @@ export function createDiscoverySearch(host,{id,getFilters,getInventory,getMatche
  async function load(){const generation=++loadGeneration;loading=true;loadError='';host.classList.add('search-is-loading');render();try{await onLoad();}catch{if(generation===loadGeneration)loadError='Could not load properties. Please try again.';}finally{if(generation===loadGeneration){loading=false;host.classList.remove('search-is-loading');render();}}}
  function selectMarket(value){if(value===getFilters().market)return;const allowed=typesForMarket(value).map(t=>t[0]);onChange({...getFilters(),market:value,maxPrice:0,types:getFilters().types.filter(t=>allowed.includes(t))});close();load();}
  // The thumb follows the finger, and commits once on release rather than fetching every crossed tab.
- marketTrack.addEventListener('pointerdown',event=>{if(event.button!==0||drag)return;const bounds=marketTrack.getBoundingClientRect();drag={id:event.pointerId,x:event.clientX,bounds,moved:false,index:SEARCH_MARKETS.findIndex(([key])=>key===getFilters().market),clicked:event.target.closest('[data-search-market]')?.dataset.searchMarket};marketTrack.setPointerCapture(event.pointerId);});
+ marketTrack.addEventListener('pointerdown',event=>{if(!marketMenuOpen||event.button!==0||drag)return;const bounds=marketTrack.getBoundingClientRect();drag={id:event.pointerId,x:event.clientX,bounds,moved:false,index:SEARCH_MARKETS.findIndex(([key])=>key===getFilters().market),clicked:event.target.closest('[data-search-market]')?.dataset.searchMarket};marketTrack.setPointerCapture(event.pointerId);});
  marketTrack.addEventListener('pointermove',event=>{if(!drag||event.pointerId!==drag.id)return;if(Math.abs(event.clientX-drag.x)>4)drag.moved=true;if(!drag.moved)return;marketTrack.classList.add('is-dragging');const index=Math.max(0,Math.min(3,(event.clientX-drag.bounds.left-4)/(drag.bounds.width-8)*4-.5));drag.index=Math.round(index);setThumb(index);});
- marketTrack.addEventListener('pointerup',event=>{if(!drag||event.pointerId!==drag.id)return;const value=drag;drag=null;marketTrack.classList.remove('is-dragging');marketTrack.releasePointerCapture(event.pointerId);if(value.moved||value.clicked){suppressClick=true;selectMarket(value.moved?SEARCH_MARKETS[value.index][0]:value.clicked);setTimeout(()=>suppressClick=false,0);}render();});
+ marketTrack.addEventListener('pointerup',event=>{if(!drag||event.pointerId!==drag.id)return;const value=drag;drag=null;marketTrack.classList.remove('is-dragging');marketTrack.releasePointerCapture(event.pointerId);if(value.moved||value.clicked){suppressClick=true;const market=value.moved?SEARCH_MARKETS[value.index][0]:value.clicked;if(market===getFilters().market){marketMenuOpen=false;syncMarketMenu();}else selectMarket(market);setTimeout(()=>suppressClick=false,0);}render();});
  marketTrack.addEventListener('pointercancel',()=>{drag=null;marketTrack.classList.remove('is-dragging');render();});
  marketTrack.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const current=SEARCH_MARKETS.findIndex(([key])=>key===getFilters().market);const index=event.key==='Home'?0:event.key==='End'?3:(current+(event.key==='ArrowRight'?1:3))%4;selectMarket(SEARCH_MARKETS[index][0]);marketButtons[index].focus();});
  function show(){panel.hidden=false;render();}
@@ -83,7 +84,7 @@ export function createDiscoverySearch(host,{id,getFilters,getInventory,getMatche
  host.addEventListener('change',event=>{if(!event.target.matches('.search-type-options input')||event.target.closest('.property-type-tree'))return;const selected=new Set(getFilters().types);event.target.checked?selected.add(event.target.value):selected.delete(event.target.value);onChange({...getFilters(),types:[...selected]});});
  host.addEventListener('click',event=>{
   const market=event.target.closest('[data-search-market]');
-  if(market&&!suppressClick)selectMarket(market.dataset.searchMarket);
+  if(market&&!suppressClick){if(!marketMenuOpen){marketMenuOpen=true;syncMarketMenu();}else{marketMenuOpen=false;selectMarket(market.dataset.searchMarket);syncMarketMenu();}}
   const result=event.target.closest('[data-search-result]');if(result)browse(results[Number(result.dataset.searchResult)]);
  });
  host.addEventListener('keydown',event=>{
