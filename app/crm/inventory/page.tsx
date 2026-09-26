@@ -26,6 +26,7 @@ function Inventory() {
   const [locations, setLocations] = useState<string[]>([])
   const [ownerPanel, setOwnerPanel] = useState<number | null>(null)
   const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false, sublet: false, rental: '' })
+  const [inventoryView, setInventoryView] = useState<'live' | 'drafts' | 'all'>('live')
   // Kev, 2026-09-04: ~50 empty/ref-less listings went out again -- admins
   // need to clear bad inventory in bulk, not one property-detail-page at a
   // time. Reuses the SAME DELETE /properties/:id the single-property page
@@ -87,9 +88,19 @@ function Inventory() {
   useEffect(() => { load() }, [load])
 
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }))
+  const liveRows = rows.filter(p => p.published)
+  const draftRows = rows.filter(p => !p.published)
+  const visibleRows = inventoryView === 'live' ? liveRows : inventoryView === 'drafts' ? draftRows : rows
+  const changeInventoryView = (next: 'live' | 'drafts' | 'all') => { setInventoryView(next); setSelected(new Set()) }
 
   const filterBar = (
     <>
+      <div style={{ display: 'inline-flex', padding: 3, gap: 3, borderRadius: 9, border: `1px solid ${DBORDER}`, background: DTRAY }} aria-label="Inventory sections">
+        {([['live', 'Live', liveRows.length], ['drafts', 'Drafts', draftRows.length], ['all', 'All', rows.length]] as const).map(([key, label, count]) => {
+          const active = inventoryView === key
+          return <button key={key} type="button" aria-pressed={active} onClick={() => changeInventoryView(key)} style={{ border: 0, borderRadius: 6, padding: '5px 9px', background: active ? A : 'transparent', color: active ? '#151C2C' : DTEXT_DIM, fontFamily: F, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label} <span style={{ opacity: .72 }}>{count}</span></button>
+        })}
+      </div>
       <RentalTabs value={f.rental} onChange={v => set('rental', v)} dark />
       <select style={sel} value={f.town} onChange={e => set('town', e.target.value)}><option value="">Location</option>{locations.map(l => <option key={l} value={l}>{l}</option>)}</select>
       <select style={sel} value={f.beds} onChange={e => set('beds', e.target.value)}><option value="">Bedrooms</option>{[1, 2, 3, 4, 5].map(b => <option key={b} value={b}>{b} bed</option>)}</select>
@@ -110,7 +121,7 @@ function Inventory() {
   )
 
   return (
-    <CrmShell title="Property Inventory" subtitle={`${rows.length} shown · ${total} total`} onAdd={() => router.push('/property/new')} filterBar={filterBar} dark>
+    <CrmShell title="Property Inventory" subtitle={`${visibleRows.length} ${inventoryView === 'live' ? 'live' : inventoryView} shown · ${rows.length} loaded · ${total} total`} onAdd={() => router.push('/property/new')} filterBar={filterBar} dark>
       {ownerPanel != null && <OwnerPanel ownerId={ownerPanel} onClose={() => setOwnerPanel(null)} />}
       {isAdmin && selected.size > 0 && (
         <div style={{ position: 'sticky', top: 0, zIndex: 6, display: 'flex', alignItems: 'center', gap: 10, background: DTRAY, borderBottom: `1px solid ${DBORDER}`, color: DTEXT, padding: '9px 16px', fontFamily: F, fontSize: 12 }}>
@@ -123,8 +134,8 @@ function Inventory() {
         </div>
       )}
       {isMobile
-        ? <div style={{ padding: '12px 14px' }}>{rows.map(p => <MobileCard key={p.id} p={p} isAdmin={isAdmin} selected={selected.has(p.id)} onToggleSelect={() => toggleSelect(p.id)} onDelete={() => deleteOne(p.id)} onOwner={setOwnerPanel} onOpen={() => router.push(`/property/${p.id}`)} />)}{!rows.length && <Empty />}</div>
-        : <DesktopTable rows={rows} isAdmin={isAdmin} selected={selected} onToggleSelect={toggleSelect} onDelete={deleteOne} onOwner={setOwnerPanel} onOpen={(id) => router.push(`/property/${id}`)} />}
+        ? <div style={{ padding: '12px 14px' }}>{visibleRows.map(p => <MobileCard key={p.id} p={p} isAdmin={isAdmin} selected={selected.has(p.id)} onToggleSelect={() => toggleSelect(p.id)} onDelete={() => deleteOne(p.id)} onOwner={setOwnerPanel} onOpen={() => router.push(`/property/${p.id}`)} />)}{!visibleRows.length && <Empty />}</div>
+        : <DesktopTable rows={visibleRows} isAdmin={isAdmin} selected={selected} onToggleSelect={toggleSelect} onDelete={deleteOne} onOwner={setOwnerPanel} onOpen={(id) => router.push(`/property/${id}`)} />}
     </CrmShell>
   )
 }
