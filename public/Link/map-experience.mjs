@@ -105,7 +105,6 @@ export function createMapExperience({developments,onHome,onSearchBack,onDevelopm
  mapCompact=compactNavigation(island,mapSearch,{onSettings:()=>{mapInstruments.toggle();},onHome:()=>{setIsland(false);},onClose:()=>mapInstruments.close(),onBack:searchBack});
  siteCompact=compactNavigation(siteHeader,siteHeader.querySelector('.header-search'),{onSettings:()=>{siteInstruments.toggle();loadSearch();},onClose:()=>siteInstruments.close(),onBack:searchBack});
  siteHeader.querySelector('.brand-link').addEventListener('click',event=>{event.preventDefault();siteHeader.querySelector('[data-compact="search"]').click();});
- for(const root of [siteHeader,island])root.addEventListener('click',event=>{if(event.target===root)root.querySelector('[data-compact="search"]').click();});
  portal.insertAdjacentHTML('beforeend',`<button class="map-customize" type="button" aria-label="Customize map">${controlIcon('settings')}<span>Customize</span></button><button class="map-price-entry" type="button">${controlIcon('layers')}<span>Places & prices</span></button>`);
  portal.querySelector('.map-customize').onclick=()=>{mapCompact.close();mapInstruments.toggle('view');};
  portal.querySelector('.map-price-entry').onclick=()=>{mapCompact.close();mapInstruments.toggle('prices');};
