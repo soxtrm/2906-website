@@ -22,9 +22,9 @@ export default function proxy(req: NextRequest) {
   const host = (req.headers.get('host') || '').toLowerCase()
   const { pathname } = req.nextUrl
 
-  // Nexus Link is a same-origin static application mounted at /Link.
-  // Keep it out of both locale routing and the CRM subdomain rewrite.
-  if (pathname === '/Link' || pathname.startsWith('/Link/')) return NextResponse.next()
+  // Nexus Link has a fast marketplace at /link and the deeper Matrix at
+  // /link-matrix. Keep both static surfaces out of locale and CRM rewriting.
+  if (pathname === '/link' || pathname.startsWith('/link/') || pathname === '/link-matrix' || pathname.startsWith('/link-matrix/') || pathname.startsWith('/link-marketplace/') || pathname === '/Link' || pathname.startsWith('/Link/')) return NextResponse.next()
 
   if (host.startsWith('crm.')) {
     if (pathname.startsWith('/crm')) return NextResponse.next()

@@ -6,7 +6,9 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 const nextConfig = {
   async rewrites() {
     return [
-      { source: '/Link', destination: '/Link/index.html' },
+      { source: '/link', destination: '/link-marketplace/index.html' },
+      { source: '/Link', destination: '/link-marketplace/index.html' },
+      { source: '/link-matrix', destination: '/Link/index.html' },
       { source: '/Link/map-view', destination: '/Link/map-view/index.html' },
     ]
   },

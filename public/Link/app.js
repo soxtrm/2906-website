@@ -103,7 +103,12 @@ function updateHeader(){const page=(location.hash.slice(1).split('/')[0]||'profi
 function loading(label='Finding your next chapter…'){document.body.dataset.page='results';$('#content').innerHTML=`<section class="loading-state"><span class="loading-star">✦</span><h1>${label}</h1><p>Connecting your preferences to the available homes.</p></section>`;}
 async function renderRoute(){updateHeader();const route=location.hash.slice(1)||'profile';if(route==='profile'||route==='content'){state.request++;renderProfile();}else await renderDestination(route);attachMapDock();}
 async function getCandidates(){const response=await searchCache.get();state.results=response;state.displayProperties=response.properties;mapExperience.setProperties(response.properties);placesControl?.render();if(adapter.mode==='argus'&&response.generatedAt){let label=document.querySelector('.inventory-freshness');if(!label&&document.querySelector('.intro-foot')){label=document.createElement('p');label.className='inventory-freshness';document.querySelector('.intro-foot').before(label);}if(label)label.textContent='2906 collection · '+(response.mode==='live'?'Live · ':'Snapshot · ')+new Date(response.generatedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+' · '+response.properties.filter(p=>!p.designOnly).length+' public offers';}return response;}
-async function getResults(){const response=await getCandidates();return {...response,properties:matchSearch(response.properties,mapExperience.getFilters(),state.profile,DEVELOPMENTS)};}
+async function getResults(){const response=await getCandidates(),filters=mapExperience.getFilters();
+ // The chosen entry mode is authoritative. A fresh map starts with the legacy
+ // `all` filter, which previously let sale listings leak into a rental journey.
+ const market=filters.market==='all'?(state.intentMarket||'longlets'):filters.market;
+ return {...response,properties:matchSearch(response.properties,{...filters,market},state.profile,DEVELOPMENTS)};
+}
 async function renderDestination(route){
  const request=++state.request;loading();
  try{

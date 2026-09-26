@@ -122,7 +122,7 @@ function cinemaFraming(asset){
 }
 function updateCinemaReadiness(){
  const ready=assets.filter(a=>a.model).length;
- $('cinema').title='Orbit: 7 Sekunden / Grosse Anlagen: Detailflug / Tag-Nacht: 12 Sekunden / Modelle bereit: '+ready+'/'+assets.length;
+ $('cinema').title='Orbit: 14 Sekunden / Grosse Anlagen: Detailflug / Tag-Nacht: 12 Sekunden / Modelle bereit: '+ready+'/'+assets.length;
 }
 function prewarmCinema(asset){
  if(!asset?.model||!map.getLayer('nexus-buildings-main'))return;
@@ -156,8 +156,8 @@ function beginCinema(){
    const travel=cinemaInitial.transition,elapsed=(now-travel.start)/1000;
    const breathing=(1-Math.cos(seconds*Math.PI*2/5.8))*.5;
    let focus=mid,desiredZoom=zoom-.25+.43*breathing,desiredPitch=58+9*Math.sin(seconds*Math.PI*2/13);
-   let bearing=cinemaInitial.bearing+seconds/7*360;
-   const progress=Math.min(1,elapsed/(tour?2.2:1.5)),blend=progress*progress*(3-2*progress);
+   let bearing=cinemaInitial.bearing+seconds/14*360;
+   const progress=Math.min(1,elapsed/(tour?3.6:3)),blend=progress*progress*(3-2*progress);
    if(tour){
     // Arc-length sampling keeps the speed even around corners and across the loop seam.
     const phase=(elapsed/tour.duration)%1;
@@ -184,7 +184,7 @@ function beginCinema(){
 addEventListener('resize',()=>{cinemaTarget=null;});
 $('toggle-panel').addEventListener('click',()=>{cinemaTarget=null;});
 document.addEventListener('input',e=>{if(cinema&&e.isTrusted&&e.target.id==='timeSlider'){cinemaHourStart=Number(e.target.value);cinemaTimeStart=performance.now();}});
-$('cinema').title='Orbit: 7 Sekunden / Grosse Anlagen: Detailflug / Tag-Nacht: 12 Sekunden';
+$('cinema').title='Orbit: 14 Sekunden / Grosse Anlagen: Detailflug / Tag-Nacht: 12 Sekunden';
 
 $('cinema').onclick=()=>cinema?stopCinema():beginCinema();
 map.getCanvas().addEventListener('pointerdown',()=>{if(cinema)stopCinema();});
@@ -215,7 +215,7 @@ function select(id, fly=true){
   if(moveHandle){moveHandle.getElement().hidden=!(active&&editMode);if(active){moveHandle.setLngLat(activeCoordinates());moveHandle.getElement().setAttribute('aria-label','Drag to move '+active.name);}}
   if(active&&active.ids.length>1)$('placement-editor').insertAdjacentHTML('beforebegin','<p class="group-note">Markers '+active.ids.join(' + ')+' · gemeinsame Anlage · Bauteile einzeln anpassbar</p>');
   if(cinema){if(active)beginCinema();else stopCinema();}
-  else if(fly)map.flyTo({center:active?activeCoordinates():f.geometry.coordinates,zoom:active?active.zoom:16.6,pitch:64,bearing:active?(active.viewBearing??14)-placement.heading:14,duration:prefersReducedMotion?0:1500,padding:{top:0,bottom:0,left:0,right:innerWidth>700?310:0},retainPadding:false});
+  else if(fly)map.flyTo({center:active?activeCoordinates():f.geometry.coordinates,zoom:active?active.zoom:16.6,pitch:64,bearing:active?(active.viewBearing??14)-placement.heading:14,duration:prefersReducedMotion?0:3000,padding:{top:0,bottom:0,left:0,right:innerWidth>700?310:0},retainPadding:false});
 }
 function renderEditor(){
   $('edit-model').setAttribute('aria-pressed',String(editMode));
