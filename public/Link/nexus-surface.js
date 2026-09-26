@@ -27,28 +27,43 @@
    }
   }
  };
- // Decorative canopies only within mapped green land; never seed streets or building footprints.
- function growCanopies(){
-  if(map.getZoom()<14.5||!map.isStyleLoaded())return;
-  const layers=map.getStyle().layers||[],green=layers.filter(l=>l.type==='fill'&&/landuse|park|grass|wood/.test(l.id)&&!l.id.startsWith('nexus-')).map(l=>l.id);
-  if(!green.length)return;
-  const blocked=layers.filter(l=>/building|road|street/.test(l.id)&&['fill','fill-extrusion','line'].includes(l.type)).map(l=>l.id);
-  const bounds=map.getBounds(),features=[],step=Math.max(.00022,Math.sqrt((bounds.getEast()-bounds.getWest())*(bounds.getNorth()-bounds.getSouth())/500));
-  const circle=(lng,lat,r)=>Array.from({length:13},(_,i)=>{const a=i/12*Math.PI*2;return [lng+Math.cos(a)*r/90000,lat+Math.sin(a)*r/111320];});
-  let count=0,attempts=0;
-  for(let lat=Math.ceil(bounds.getSouth()/step)*step;lat<bounds.getNorth()&&count<180&&attempts<600;lat+=step){
-   for(let lng=Math.ceil(bounds.getWest()/step)*step;lng<bounds.getEast()&&count<180&&attempts<600;lng+=step){
-    attempts++;const point=map.project([lng,lat]);if(point.x<0||point.y<0||point.x>map.getCanvas().clientWidth||point.y>map.getCanvas().clientHeight)continue;
-    const land=map.queryRenderedFeatures(point,{layers:green});if(!land.some(f=>['park','grass','wood','forest','recreation_ground'].includes(f.properties.class)))continue;
-    if(blocked.length&&map.queryRenderedFeatures([[point.x-3,point.y-3],[point.x+3,point.y+3]],{layers:blocked}).length)continue;
-    const seed=Math.abs(Math.sin(lng*14321+lat*43212)),height=5+seed*3;
-    for(const [radius,base,top,color]of [[.35,0,3,'#665b49'],[2.1,2.5,height*.7,'#345e48'],[2.8,height*.45,height*.86,'#427556'],[1.8,height*.78,height,'#568364']])features.push({type:'Feature',properties:{base,top,color},geometry:{type:'Polygon',coordinates:[circle(lng,lat,radius)]}});
-    count++;
-   }
+ // Only mapped OSM trees are rendered. The previous procedural scatter could
+ // imply trees on streets and private plots where no source data existed.
+ let vegetation=[],treeTimer;
+ const circle=(lng,lat,r)=>Array.from({length:11},(_,i)=>{const a=i/10*Math.PI*2;return [lng+Math.cos(a)*r/(90000*Math.cos(lat*Math.PI/180)),lat+Math.sin(a)*r/111320];});
+ const inBounds=(point,bounds)=>point[0]>=bounds.getWest()&&point[0]<=bounds.getEast()&&point[1]>=bounds.getSouth()&&point[1]<=bounds.getNorth();
+ function rowPoints(line){
+  const points=[];
+  for(let i=1;i<line.length;i++){
+   const a=line[i-1],b=line[i],north=(b[1]-a[1])*111320,east=(b[0]-a[0])*90000*Math.cos(a[1]*Math.PI/180),steps=Math.max(1,Math.floor(Math.hypot(east,north)/12));
+   for(let step=0;step<steps;step++){const t=step/steps;points.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}
+  }
+  if(line.length)points.push(line.at(-1));return points;
+ }
+ function treeBody(point,height,id,estimated){
+  const [lng,lat]=point,h=Math.max(3,Math.min(18,height||6)),properties={osm_id:id,height:h,height_estimated:estimated};
+  return [[.28,0,Math.min(2.7,h*.42),'#665b49'],[1.8,h*.30,h*.72,'#345e48'],[2.35,h*.48,h*.88,'#427556'],[1.55,h*.76,h,'#568364']].map(([radius,base,top,color])=>({type:'Feature',properties:{...properties,base,top,color},geometry:{type:'Polygon',coordinates:[circle(lng,lat,radius)]}}));
+ }
+ function renderMappedVegetation(){
+  if(map.getZoom()<14.5||!map.isStyleLoaded()||!vegetation.length)return;
+  const bounds=map.getBounds(),mobile=matchMedia('(max-width: 760px)').matches,limit=mobile?90:220,features=[];let trees=0;
+  for(const feature of vegetation){
+   if(trees>=limit)break;const kind=feature.properties?.kind,geometry=feature.geometry;
+   const points=kind==='tree'?[geometry.coordinates]:kind==='tree_row'?rowPoints(geometry.coordinates):[];
+   for(const point of points){if(trees>=limit)break;if(!inBounds(point,bounds))continue;features.push(...treeBody(point,feature.properties.height,feature.properties.osm_id,!feature.properties.height));trees++;}
   }
   const data={type:'FeatureCollection',features};
   if(map.getSource('nexus-green-canopies'))map.getSource('nexus-green-canopies').setData(data);
-  else{map.addSource('nexus-green-canopies',{type:'geojson',data});map.addLayer({id:'nexus-green-canopies',type:'fill-extrusion',source:'nexus-green-canopies',minzoom:14.5,paint:{'fill-extrusion-color':['get','color'],'fill-extrusion-base':['get','base'],'fill-extrusion-height':['get','top'],'fill-extrusion-opacity':.95}});}
+  else{map.addSource('nexus-green-canopies',{type:'geojson',data});map.addLayer({id:'nexus-green-canopies',type:'fill-extrusion',source:'nexus-green-canopies',minzoom:14.5,paint:{'fill-extrusion-color':['get','color'],'fill-extrusion-base':['get','base'],'fill-extrusion-height':['get','top'],'fill-extrusion-opacity':.92}});}
  }
- let treeTimer;map.on('moveend',()=>{clearTimeout(treeTimer);treeTimer=setTimeout(growCanopies,500);});map.once('idle',growCanopies);
+ async function loadMappedVegetation(){
+  try{
+   const response=await fetch('../assets/malta-osm-vegetation.geojson',{cache:'force-cache'});if(!response.ok)throw new Error('HTTP '+response.status);
+   const data=await response.json();vegetation=data.features||[];
+   const woodland={type:'FeatureCollection',features:vegetation.filter(feature=>feature.properties?.kind==='woodland')};
+   if(woodland.features.length&&!map.getSource('nexus-osm-woodland')){map.addSource('nexus-osm-woodland',{type:'geojson',data:woodland});map.addLayer({id:'nexus-osm-woodland',type:'fill',source:'nexus-osm-woodland',minzoom:11,paint:{'fill-color':'#315e43','fill-opacity':['interpolate',['linear'],['zoom'],11,.12,16,.32]}});}
+   renderMappedVegetation();
+  }catch(error){console.warn('Mapped vegetation unavailable:',error.message);}
+ }
+ map.on('moveend',()=>{clearTimeout(treeTimer);treeTimer=setTimeout(renderMappedVegetation,450);});map.once('idle',loadMappedVegetation);
 })();

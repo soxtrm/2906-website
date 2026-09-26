@@ -1,0 +1,14 @@
+{
+  "region": "Malta, Gozo and Comino",
+  "runtimeCrs": "EPSG:4326",
+  "tooling": [
+    {
+      "name": "FieldCalc",
+      "url": "https://fieldcalc.app/tools",
+      "role": "Interactive measurement and conversion tools",
+      "dataset": false,
+      "relevantCapabilities": ["coordinate conversion", "area and distance measurement", "elevation profile", "KML/GeoJSON conversion", "sunrise and sunset"]
+    }
+  ],
+  "note": "FieldCalc exposes calculators, not a Malta geometry dataset. Runtime vegetation and building geometry is sourced from OpenStreetMap and kept separately attributed."
+}
