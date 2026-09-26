@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {buildMobilityReality,modeOrder,normalizeMobilityObservation} from '../public/Link/mobility-reality.mjs';
 
 assert.deepEqual(modeOrder('bus'),['bus','bolt','walk','car']);
@@ -27,4 +28,11 @@ assert.equal(unknown.modes[0].confidence,'UNKNOWN');
 assert.equal(unknown.monthly.money.length,0);
 
 assert.equal(normalizeMobilityObservation({originArea:'A',destinationArea:'B',outcome:'rejected'}).outcome,'unknown');
+const paid=buildMobilityReality({area:'Swieqi',mobilityObservations:[{originArea:'Swieqi',destinationArea:'Kalkara',direction:'outbound',durationMinutes:25,actualPrice:33.88,additionalCharges:.62,totalPaid:34.5,outcome:'accepted'}]},{transport:'bolt',anchors:[{type:'work',person:'You',location:'Kalkara',days:1,time:'11:00'}]})[0];
+assert.equal(paid.modes[0].costExpected,34.5);
+assert.equal(paid.modes[0].costDetail.low,null);
+const registry=JSON.parse(readFileSync(new URL('../public/Link/mobility-observations.json',import.meta.url),'utf8'));
+assert.equal(registry.observations.length,5);
+assert.ok(registry.observations.every(item=>!('address' in item)&&!('driverName' in item)));
+assert.equal(registry.observations[0].actualPrice,null);
 console.log('mobility reality tests passed');

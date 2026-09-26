@@ -2,7 +2,7 @@ export const MOBILITY_CONFIDENCE=Object.freeze(['LIVE','OBSERVED','HISTORICAL','
 export const MOBILITY_MODES=Object.freeze(['walk','bus','bolt','car']);
 
 const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[ħĦ]/g,'h').replace(/[żŻ]/g,'z').replace(/[ġĠ]/g,'g').replace(/[ċĊ]/g,'c').replace(/[’'`.-]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
-const finite=value=>Number.isFinite(Number(value))?Number(value):null;
+const finite=value=>value===null||value===undefined||value===''?null:Number.isFinite(Number(value))?Number(value):null;
 const confidence=value=>MOBILITY_CONFIDENCE.includes(String(value||'').toUpperCase())?String(value).toUpperCase():'UNKNOWN';
 const percentile=(values,p=.5)=>{const sorted=values.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);if(!sorted.length)return null;const index=(sorted.length-1)*p,lo=Math.floor(index),hi=Math.ceil(index);return sorted[lo]+(sorted[hi]-sorted[lo])*(index-lo);};
 const minutes=value=>Number.isFinite(value)?`${Math.max(1,Math.round(value))} min`:'UNKNOWN';
@@ -11,7 +11,7 @@ const range=(low,high,format)=>Number.isFinite(low)&&Number.isFinite(high)?`${fo
 
 export const MOBILITY_OBSERVATION_FIELDS=Object.freeze([
  'originArea','destinationArea','direction','weekday','hour','season','distanceMetres','durationMinutes',
- 'quotedPrice','actualPrice','pickupMinutes','outcome','observedAt'
+ 'quotedPrice','actualPrice','additionalCharges','totalPaid','pickupMinutes','outcome','observedAt','sourceType','sourceReference'
 ]);
 
 export function normalizeMobilityObservation(value){
@@ -23,7 +23,8 @@ export function normalizeMobilityObservation(value){
   weekday:Number.isInteger(value.weekday)&&value.weekday>=0&&value.weekday<=6?value.weekday:null,
   hour:Number.isInteger(value.hour)&&value.hour>=0&&value.hour<=23?value.hour:null,season:String(value.season||'').slice(0,40),
   distanceMetres:finite(value.distanceMetres),durationMinutes:finite(value.durationMinutes),quotedPrice:finite(value.quotedPrice),
-  actualPrice:finite(value.actualPrice),pickupMinutes:finite(value.pickupMinutes),outcome,observedAt:String(value.observedAt||'')
+  actualPrice:finite(value.actualPrice),additionalCharges:finite(value.additionalCharges),totalPaid:finite(value.totalPaid),pickupMinutes:finite(value.pickupMinutes),outcome,observedAt:String(value.observedAt||''),
+  sourceType:String(value.sourceType||'').slice(0,40),sourceReference:String(value.sourceReference||'').slice(0,120)
  };
 }
 
@@ -35,9 +36,9 @@ function routeFor(property,anchor,mode){
 function observationSummary(records,origin,destination,direction='outbound'){
  const matching=(Array.isArray(records)?records:[]).map(normalizeMobilityObservation).filter(Boolean).filter(item=>sameCorridor(item,origin,destination)&&item.direction===direction);
  if(!matching.length)return null;
- const prices=matching.map(item=>item.actualPrice??item.quotedPrice).filter(Number.isFinite),durations=matching.map(item=>item.durationMinutes).filter(Number.isFinite),pickups=matching.map(item=>item.pickupMinutes).filter(Number.isFinite);
+ const prices=matching.map(item=>item.totalPaid??item.actualPrice??item.quotedPrice).filter(Number.isFinite),durations=matching.map(item=>item.durationMinutes).filter(Number.isFinite),pickups=matching.map(item=>item.pickupMinutes).filter(Number.isFinite);
  const outcomes=matching.filter(item=>item.outcome!=='unknown'),accepted=outcomes.filter(item=>item.outcome==='accepted').length;
- return {count:matching.length,priceLow:percentile(prices,.2),priceExpected:percentile(prices,.5),priceHigh:percentile(prices,.8),durationLow:percentile(durations,.2),durationHigh:percentile(durations,.8),pickup:percentile(pickups,.5),acceptance:outcomes.length?accepted/outcomes.length:null};
+ return {count:matching.length,priceLow:prices.length>=2?percentile(prices,.2):null,priceExpected:percentile(prices,.5),priceHigh:prices.length>=2?percentile(prices,.8):null,durationLow:percentile(durations,.2),durationHigh:percentile(durations,.8),pickup:percentile(pickups,.5),acceptance:outcomes.length?accepted/outcomes.length:null};
 }
 function busPrior(origin,destination,time){
  const north=/mellieha|cirkewwa|marfa|ferry|armier|mgarr/.test(clean(origin));
