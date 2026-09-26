@@ -227,5 +227,10 @@
 @keyframes nexus-star-arrive{from{opacity:0;transform:scale(.72) rotate(-12deg)}to{opacity:1;transform:scale(1) rotate(0)}}
 @media(prefers-reduced-motion:reduce){.brand-intro .intro-nexus-star{animation:none;transition:none}.brand-intro.is-leaving .intro-nexus-star{transform:none;opacity:0}}
 
+/* Keep the inline map preview in normal document flow. Earlier offsets moved the
+   card visually while leaving its layout slot behind, which created a large
+   white gap and overlapping cards during mobile scrolling. */
+.scroll-profile .intro .map-dock-wrap{bottom:auto}
+
 /* Stable hand-off: the destination logo is stationary while the centre star docks. */
 .header.intro-target-ready .brand-link{transition:none!important}.brand-intro.is-preparing .intro-skip{opacity:0;pointer-events:none;transition:opacity .2s}.brand-intro.is-leaving{opacity:0;transform:none;background:transparent;transition:opacity .88s cubic-bezier(.35,0,.25,1)}.brand-intro.is-leaving::backdrop{background:transparent}.intro-nexus-star{will-change:transform,opacity}
