@@ -1,4 +1,4 @@
-import {createArgusInventoryAdapter} from './argus-inventory.mjs';
+import {createArgusInventoryAdapter} from './argus-inventory.mjs?v=area-reality-1';
 import {DESIGN_PROPERTIES} from './design-inventory.mjs';
 import {DEMO_PROPERTIES,DEVELOPMENTS,evaluateDemo} from './data.mjs';
 export class IntegrationUnavailable extends Error {constructor(message='This action needs the 2906 / ARGUS connection.'){super(message);this.name='IntegrationUnavailable';}}
@@ -8,7 +8,7 @@ const safeRead=()=>{try{return JSON.parse(localStorage.getItem('nexus-link-demo-
 const previewProperties=()=>[...DEMO_PROPERTIES,...(config.designInventory===false?[]:DESIGN_PROPERTIES)];
 let demoFavorites=safeRead(),activitySeed;
 export const demoAdapter={mode:'demo',
- async getActivities(){activitySeed||=fetch('./assets/activity-seed.json').then(r=>{if(!r.ok)throw new Error('Activity data unavailable');return r.json();}).catch(error=>{activitySeed=null;throw error;});return {records:await activitySeed,coverage:'partial'};},
+ async getActivities(){activitySeed||=fetch('./assets/activity-seed.json').then(r=>{if(!r.ok)throw new Error('Activity data unavailable');return r.json();}).catch(error=>{activitySeed=null;throw error;});return {records:await activitySeed,intelligence:{},coverage:'partial'};},
  async getMatches(profile){await delay();return evaluateDemo(profile,previewProperties());},
  async getProperty(id){await delay();const p=previewProperties().find(p=>p.id===id);if(!p)throw new Error('This property could not be found.');return {...p};},
  async getDevelopment(id){const d=DEVELOPMENTS.find(d=>d.id===id);if(!d)throw new Error('Development not found.');return {...d,properties:DEMO_PROPERTIES.filter(p=>p.developmentId===id)};},
