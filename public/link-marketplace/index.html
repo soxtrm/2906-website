@@ -8,7 +8,7 @@
   <title>Nexus Housing — Malta homes</title>
   <link rel="icon" href="/Link/assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/Link/fonts.css">
-  <link rel="stylesheet" href="/link-marketplace/marketplace.css?v=3">
+  <link rel="stylesheet" href="/link-marketplace/marketplace.css?v=4">
 </head>
 <body>
   <a class="skip-link" href="#market-grid">Skip to homes</a>
@@ -20,8 +20,8 @@
 
   <main>
     <section class="matrix-banner" aria-labelledby="matrix-title">
-      <div><span>NEXUS LINK · SMART MATRIX</span><h1 id="matrix-title">Go deeper than a listing.</h1><p>Nexus Housing makes homes easy to browse. Nexus Link compares them with daily routes, real mobility friction and the places around you.</p></div>
-      <a href="/link-matrix">Build my detailed match <b>↗</b></a>
+      <div><span>NEXUS LINK · SMART MATRIX</span><h1 id="matrix-title">Your life, matched to a home.</h1><p>Compare daily routes, real mobility friction and what surrounds every listing.</p></div>
+      <a href="/link-matrix">Open Matrix <b>↗</b></a>
       <div class="matrix-orbit" aria-hidden="true"><i></i><i></i><i></i><span class="nexus-star"></span></div>
     </section>
 
@@ -34,16 +34,16 @@
         <label>Village<select id="place"><option value="">Anywhere in Malta</option></select></label>
         <div class="filter-pair"><label>Bedrooms<select id="beds"><option value="0">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></label><label>Budget up to<select id="budget"><option value="0">Open</option><option value="1000">€1,000</option><option value="1500">€1,500</option><option value="2000">€2,000</option><option value="2500">€2,500</option><option value="3000">€3,000</option><option value="5000">€5,000</option></select></label></div>
         <fieldset><legend>Available</legend><div class="availability-tree" id="availability-tree"><button type="button" data-available="any" aria-pressed="true"><i></i>Any time</button><button type="button" data-available="now" aria-pressed="false"><i></i>Move now</button><button type="button" data-available="7" aria-pressed="false"><i></i>Within 7 days</button><button type="button" data-available="30" aria-pressed="false"><i></i>Within 30 days</button></div></fieldset>
-        <p class="filter-state" id="filter-state"><i></i><span>Change filters, then press Show homes.</span></p>
+        <p class="filter-state" id="filter-state"><i></i><span>Change filters, then press Show.</span></p>
         <button class="apply-filters" id="apply-filters" type="button">Show homes <span>↗</span></button>
-        <a class="deep-search" href="/link-matrix"><span>Need a deeper match?</span><strong>Continue in Nexus Link</strong><b>✦</b></a>
+        <a class="deep-search" href="/link-matrix" aria-label="Continue in Nexus Link">✦</a>
       </aside>
 
       <section class="market-content">
-        <div class="results-head"><div><span id="result-kicker">LIVE RENTALS</span><h2 id="result-title">Homes ready to explore.</h2><p id="result-meta" role="status">Connecting the live 2906 inventory…</p></div><div class="view-actions"><button type="button" id="compact-view" aria-pressed="false" aria-label="Compact cards">▦</button><button type="button" id="roomy-view" aria-pressed="true" aria-label="Roomy cards">▥</button></div></div>
+        <div class="results-head"><div><span id="result-kicker">LIVE RENTALS</span><h2 id="result-title">Browse homes.</h2><p id="result-meta" role="status">Connecting the live 2906 inventory…</p></div></div>
         <div class="active-filters" id="active-filters" aria-label="Applied filters"></div>
         <div class="skeleton-grid" id="skeleton-grid" aria-label="Loading homes"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <div class="listing-grid" id="market-grid"></div>
+        <div class="listing-rows" id="market-grid"></div>
         <button class="load-more" id="load-more" type="button" hidden>Show more homes <span>↓</span></button>
       </section>
     </section>
@@ -54,6 +54,6 @@
   <dialog class="tunnel-dialog" id="tunnel-dialog" aria-labelledby="tunnel-title"><div id="tunnel-content"></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <footer><span class="nexus-star"></span><p><b>Nexus Housing</b><small>The first layer of Nexus Marketplace.</small></p><a href="/link-matrix">Go deeper with Nexus Link ↗</a></footer>
-  <script type="module" src="/link-marketplace/marketplace.js?v=3"></script>
+  <script type="module" src="/link-marketplace/marketplace.js?v=4"></script>
 </body>
 </html>
