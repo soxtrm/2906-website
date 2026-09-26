@@ -1,5 +1,13 @@
 export const MOBILITY_CONFIDENCE=Object.freeze(['LIVE','OBSERVED','HISTORICAL','MODELLED','LOCAL PRIOR','UNKNOWN']);
 export const MOBILITY_MODES=Object.freeze(['walk','bus','bolt','car']);
+export const MALTA_OVERVIEW_ANCHORS=Object.freeze([
+ {type:'everyday',person:'Malta overview',label:'Landmark',location:'Valletta Gate',placeId:'malta-overview-valletta-gate',coordinates:[14.5107,35.8968],overview:true},
+ {type:'everyday',person:'Malta overview',label:'Landmark',location:'Mdina',placeId:'malta-overview-mdina',coordinates:[14.4033,35.8868],overview:true},
+ {type:'everyday',person:'Malta overview',label:'Landmark',location:'Portomaso · St Julian’s',placeId:'malta-overview-portomaso',coordinates:[14.4928,35.9221],overview:true},
+ {type:'everyday',person:'Malta overview',label:'Landmark',location:'Tigné Point · Sliema',placeId:'malta-overview-tigne-point',coordinates:[14.5148,35.9074],overview:true},
+ {type:'everyday',person:'Malta overview',label:'Landmark',location:'Golden Bay',placeId:'malta-overview-golden-bay',coordinates:[14.3447,35.9344],overview:true},
+ {type:'everyday',person:'Malta overview',label:'Landmark',location:'Ċirkewwa',placeId:'malta-overview-cirkewwa',coordinates:[14.3290,35.9874],overview:true}
+]);
 
 const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[ħĦ]/g,'h').replace(/[żŻ]/g,'z').replace(/[ġĠ]/g,'g').replace(/[ċĊ]/g,'c').replace(/[’'`.-]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 const finite=value=>value===null||value===undefined||value===''?null:Number.isFinite(Number(value))?Number(value):null;
@@ -31,6 +39,7 @@ export function normalizeMobilityObservation(value){
 function sameCorridor(observation,origin,destination){return clean(observation.originArea)===clean(origin)&&clean(observation.destinationArea)===clean(destination);}
 function routeFor(property,anchor,mode){
  const routes=Array.isArray(property.mobilityRoutes)?property.mobilityRoutes:[];
+ if(anchor.overview)return routes.find(route=>route&&route.mode===mode&&route.anchorPlaceId===anchor.placeId)||null;
  return routes.find(route=>route&&route.mode===mode&&(!route.anchorPlaceId||route.anchorPlaceId===anchor.placeId))||null;
 }
 function observationSummary(records,origin,destination,direction='outbound'){
@@ -100,7 +109,10 @@ export function mobilityFallback(preferred){
  return ({bus:'Need to be somewhere on time? Compare Bolt.',bolt:'Bus remains visible, including known service friction.',car:'Compare Bolt, bus and walking when they are practical.',walk:'Bolt stays available for weather, night, urgency or luggage.',mixed:'Every realistic option stays visible.'})[preferred]||'Every realistic option stays visible.';
 }
 export function buildMobilityReality(property,profile,{observations=property.mobilityObservations||[]}={}){
- const anchors=(Array.isArray(profile?.anchors)?profile.anchors:[]).filter(anchor=>anchor?.location||anchor?.address).slice(0,6);
+ const selected=(Array.isArray(profile?.anchors)?profile.anchors:[]).filter(anchor=>anchor?.location||anchor?.address).slice(0,6);
+ const island=clean(property?.island),area=clean(property?.area),latitude=Array.isArray(property?.coordinates)?finite(property.coordinates[1]):null;
+ const gozo=island==='gozo'||Number.isFinite(latitude)&&latitude>=36.025||/victoria|rabats gozo|xaghra|nadur|ghajnsielem|xewkija|zebbug gozo|qala|sannat|kerċem|kercem|munxar|fontana|g[aħh]arb|g[aħh]asri/.test(area);
+ const anchors=selected.length?selected:gozo?[]:MALTA_OVERVIEW_ANCHORS;
  const origin=property.area||'';
  return anchors.map(anchor=>{
   const destination=anchor.location||anchor.address;const modes=modeOrder(profile.transport).map(mode=>buildMode(mode,{property,anchor,origin,destination,observations}));

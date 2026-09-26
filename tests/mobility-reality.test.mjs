@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildMobilityReality,modeOrder,normalizeMobilityObservation} from '../public/Link/mobility-reality.mjs';
+import {buildMobilityReality,MALTA_OVERVIEW_ANCHORS,modeOrder,normalizeMobilityObservation} from '../public/Link/mobility-reality.mjs';
 
 assert.deepEqual(modeOrder('bus'),['bus','bolt','walk','car']);
 assert.deepEqual(modeOrder('car'),['car','bolt','bus','walk']);
@@ -25,6 +25,13 @@ assert.equal(journey.monthly.time.length,1);
 const unknown=buildMobilityReality({area:'Rabat'},{transport:'walk',anchors:[{type:'work',person:'You',location:'Mosta',days:3,time:'09:00'}]})[0];
 assert.equal(unknown.modes[0].time,'UNKNOWN');
 assert.equal(unknown.modes[0].confidence,'UNKNOWN');
+
+const overview=buildMobilityReality({area:'Sliema',coordinates:[14.50,35.91]},{transport:null,anchors:[]});
+assert.equal(overview.length,6);
+assert.deepEqual(overview.map(item=>item.anchor.location),MALTA_OVERVIEW_ANCHORS.map(item=>item.location));
+assert.ok(overview.every(item=>item.anchor.overview===true));
+assert.equal(buildMobilityReality({area:'Victoria',island:'GOZO',coordinates:[14.24,36.04]},{transport:null,anchors:[]}).length,0);
+assert.equal(buildMobilityReality({area:'Sliema'},{transport:null,anchors:[{type:'gym',location:'A gym'}]}).length,1);
 assert.equal(unknown.monthly.money.length,0);
 
 assert.equal(normalizeMobilityObservation({originArea:'A',destinationArea:'B',outcome:'rejected'}).outcome,'unknown');

@@ -46,6 +46,24 @@ const assert = require('node:assert/strict')
   const relevantErrors = errors.filter(error => !/favicon|Failed to load resource.*404/i.test(error))
   assert.deepEqual(relevantErrors, [])
   await page.screenshot({ path: 'mobility-mobile-smoke.png', fullPage: true })
+
+  const overviewPage = await browser.newPage()
+  await overviewPage.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 })
+  await overviewPage.setRequestInterception(true)
+  overviewPage.on('request', request => {
+    if (/\/Link\/config\.js/.test(request.url())) return request.respond({ contentType: 'text/javascript', body: "window.NEXUS_CONFIG={mode:'demo',designInventory:false};" })
+    request.continue()
+  })
+  await overviewPage.goto(`${base}#property/demo-sliema-01`, { waitUntil: 'networkidle0' })
+  await overviewPage.waitForSelector('.mobility-overview-list')
+  const overview = await overviewPage.evaluate(() => ({
+    names: [...document.querySelectorAll('.mobility-overview-list article>strong')].map(node => node.textContent),
+    columns: [...document.querySelectorAll('.mobility-overview-list article')].every(row => row.children.length === 3),
+    overflow: document.documentElement.scrollWidth - innerWidth
+  }))
+  assert.deepEqual(overview.names, ['Valletta Gate', 'Mdina', 'Portomaso · St Julian’s', 'Tigné Point · Sliema', 'Golden Bay', 'Ċirkewwa'])
+  assert.equal(overview.columns, true)
+  assert.ok(overview.overflow <= 1, `mobility overview overflowed by ${overview.overflow}px`)
   await browser.close()
   console.log('link mobility mobile smoke passed')
 })().catch(error => { console.error(error); process.exitCode = 1 })
