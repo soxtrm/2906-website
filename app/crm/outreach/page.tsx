@@ -328,6 +328,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [note, setNote] = useState('')
   const [volume, setVolume] = useState(account.outreachVolumePercent || 100)
   const [volumeBusy, setVolumeBusy] = useState(false)
+  const pickedInitialPlan = useRef(false)
 
   useEffect(() => { setVolume(account.outreachVolumePercent || 100) }, [account.outreachVolumePercent])
 
@@ -337,6 +338,21 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   }, [account.id])
 
   useEffect(() => { loadPlans() }, [loadPlans])
+
+  // Opening an account on an empty TODAY tab made prepared outreach look as
+  // if it had disappeared. On the first load only, reveal the nearest plan
+  // that is armed or already contains work. Manual tab changes remain sticky.
+  useEffect(() => {
+    if (!plans?.length || pickedInitialPlan.current) return
+    pickedInitialPlan.current = true
+    const current = plans.find(p => p.label === activeLabel)
+    if (current && (current.armed || current.stats.total > 0 || current.message_template)) return
+    const prepared = plans.find(p => p.armed || p.status === 'ready')
+      || plans.find(p => p.stats.total > 0 || Boolean(p.message_template))
+    if (prepared && ['TODAY', 'TOMORROW', 'IN_2_DAYS'].includes(prepared.label)) {
+      setActiveLabel(prepared.label as 'TODAY' | 'TOMORROW' | 'IN_2_DAYS')
+    }
+  }, [plans, activeLabel])
 
   const activePlan = plans?.find(p => p.label === activeLabel) || null
 
