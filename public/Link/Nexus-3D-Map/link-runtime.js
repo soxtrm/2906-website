@@ -100,7 +100,7 @@ let cinemaPreload=false;
 const warmedViews=new Set();
 let cinema=false, cinemaFrame=0, cinemaStart=0, cinemaInitial=null,cinemaTarget=null,cinemaTimeStart=0,cinemaHourStart=21,cinemaLastTime=0;
 document.querySelector('.top-actions').insertAdjacentHTML('beforeend','<button class="action secondary" id="cinema" aria-label="Kamerafahrt starten" aria-pressed="false">▶ Play</button>');
-function stopCinema(){cinema=false;cancelAnimationFrame(cinemaFrame);$('cinema').textContent='▶ Play';$('cinema').setAttribute('aria-label','Kamerafahrt starten');$('cinema').setAttribute('aria-pressed','false');}
+function stopCinema(){cinema=false;cinemaPreload=false;cancelAnimationFrame(cinemaFrame);$('cinema').textContent='▶ Play';$('cinema').setAttribute('aria-label','Kamerafahrt starten');$('cinema').setAttribute('aria-pressed','false');loadNearby();}
 function cinemaFraming(asset){
  const bounds=new THREE.Box3();asset.model.updateMatrixWorld(true);
  asset.model.traverse(o=>{if(!o.isMesh||o.material?.userData.exteriorBeam)return;if(o.isInstancedMesh){if(!o.boundingBox)o.computeBoundingBox();bounds.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld));}else{if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();bounds.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
@@ -126,6 +126,7 @@ function updateCinemaReadiness(){
  $('cinema').title='Orbit: 7 Sekunden / Grosse Anlagen: Detailflug / Tag-Nacht: 12 Sekunden / Modelle bereit: '+ready+'/'+assets.length;
 }
 function prewarmCinema(asset){
+ if(mobileRuntime)return;
  if(!asset?.model||!map.getLayer('nexus-buildings-main'))return;
  const key=[asset.key,innerWidth,innerHeight,...Object.values(asset.placement)].join(':');
  if(warmedViews.has(key))return;warmedViews.add(key);
@@ -139,11 +140,14 @@ function prewarmCinema(asset){
 }
 function beginCinema(){
  if(cinema||!active)return;
- cancelAnimationFrame(cinemaFrame);map.stop();cinema=true;cinemaStart=performance.now();cinemaTimeStart=cinemaStart;cinemaHourStart=Number($('timeSlider').value);cinemaLastTime=0;cinemaTarget=null;cinemaPreload=true;loadNearby();prewarmCinema(active);updateCinemaReadiness();
+ cancelAnimationFrame(cinemaFrame);map.stop();cinema=true;cinemaStart=performance.now();cinemaTimeStart=cinemaStart;cinemaHourStart=Number($('timeSlider').value);cinemaLastTime=0;cinemaTarget=null;cinemaPreload=false;loadNearby();prewarmCinema(active);updateCinemaReadiness();
  cinemaInitial={asset:null,bearing:map.getBearing(),transition:null};
  $('cinema').textContent='Pause';$('cinema').setAttribute('aria-label','Kamerafahrt pausieren');$('cinema').setAttribute('aria-pressed','true');
+ let lastMobileFrame=0;
  const frame=now=>{
   if(!cinema)return;
+  if(mobileRuntime&&now-lastMobileFrame<32){cinemaFrame=requestAnimationFrame(frame);return;}
+  lastMobileFrame=now;
   if(active?.model){
    if(!cinemaTarget||cinemaTarget.asset!==active)cinemaTarget=cinemaFraming(active);
    const {mid,zoom,padding,tour}=cinemaTarget,angle=active.placement.heading*Math.PI/180;
@@ -173,7 +177,7 @@ function beginCinema(){
     bearing,pitch:mix(travel.pitch,desiredPitch),zoom:mix(travel.zoom,desiredZoom),
     padding:Object.fromEntries(Object.entries(padding).map(([key,value])=>[key,mix(travel.padding[key],value)]))});
   }
-  if(now-cinemaLastTime>=50){
+  if(now-cinemaLastTime>=(mobileRuntime?100:50)){
    cinemaLastTime=now;
    $('timeSlider').value=((cinemaHourStart+(now-cinemaTimeStart)/12000*24)%24).toFixed(2);
    $('timeSlider').dispatchEvent(new Event('input',{bubbles:true}));
@@ -525,7 +529,7 @@ function openModel(){
  $('model-title').textContent=active.name+', in detail.';$('model-eyebrow').textContent='Landmark study / '+active.ids.join(' + ');$('download-model').href=active.file;$('material').disabled=!!(active.highlight||active.hotel);$('material').textContent='Material: '+(active.hotel?'Hotel night':active.highlight?'White light':active.gold?'Champagne':'Limestone');
  opener=document.activeElement;$('model-modal').classList.add('open');$('close-model').focus();
  if(!viewerRenderer){
-   viewerRenderer=new THREE.WebGLRenderer({antialias:true});viewerRenderer.setPixelRatio(Math.min(devicePixelRatio,2));$('viewer').append(viewerRenderer.domElement);viewerRenderer.domElement.setAttribute('aria-label','Interactive OneOneO 3D model');
+   viewerRenderer=new THREE.WebGLRenderer({antialias:!mobileRuntime,powerPreference:mobileRuntime?'low-power':'high-performance'});viewerRenderer.setPixelRatio(mobileRuntime?1:Math.min(devicePixelRatio,2));$('viewer').append(viewerRenderer.domElement);viewerRenderer.domElement.setAttribute('aria-label','Interactive OneOneO 3D model');
    viewerScene=new THREE.Scene();viewerScene.background=new THREE.Color('#091216');lighting(viewerScene);
 
    const ground=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x101e25,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.1;viewerScene.add(ground);
@@ -571,7 +575,7 @@ function loadNearby(){
  if(!cinemaPreload){
   const resident=assets.filter(a=>a.model),bounds=map.getBounds();
   const removable=resident.filter(a=>a!==active&&!bounds.contains(coordinates(a.placement.east,a.placement.north,a.origin))&&performance.now()-(a.lastViewed||0)>30000).sort((a,b)=>(a.lastViewed||0)-(b.lastViewed||0));
-  while(resident.length>(mobileRuntime?8:24)&&removable.length){
+   while(resident.length>(mobileRuntime?4:24)&&removable.length){
    const a=removable.shift(),layerId='nexus-'+a.key,custom=map.getLayer(layerId);
    if(map.getLayer(layerId))map.removeLayer(layerId);
    const geometries=new Set(),materials=new Set();a.model.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});
@@ -632,7 +636,7 @@ export const nexusModels = {
   async prewarm(){
     // Warm the arrival chunk, not every parsed model on the island.
     const bounds=map.getBounds(),center=map.getCenter();
-    const required=assets.filter(a=>a===active||bounds.contains(coordinates(a.placement.east,a.placement.north,a.origin))).sort((a,b)=>a===active?-1:b===active?1:Math.hypot(a.origin[0]-center.lng,a.origin[1]-center.lat)-Math.hypot(b.origin[0]-center.lng,b.origin[1]-center.lat)).slice(0,mobileRuntime?3:6);
+    const required=assets.filter(a=>a===active||bounds.contains(coordinates(a.placement.east,a.placement.north,a.origin))).sort((a,b)=>a===active?-1:b===active?1:Math.hypot(a.origin[0]-center.lng,a.origin[1]-center.lat)-Math.hypot(b.origin[0]-center.lng,b.origin[1]-center.lat)).slice(0,mobileRuntime?1:6);
     arrivalPreload=new Set(required);
     loadNearby();
     await new Promise(resolve=>{const poll=setInterval(()=>{if(required.every(a=>a.model||a.failedAt)){clearInterval(poll);resolve();}},150);});
