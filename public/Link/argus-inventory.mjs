@@ -4,6 +4,7 @@ import {LOCALITIES} from './places-registry.mjs';
 import {PROPERTY_TYPE_KEYS} from './property-options.mjs';
 import {validCoordinates} from './activity-intelligence.mjs';
 import {propertyPillars} from './nexus-semantics.mjs';
+import {HERO_PHOTOS} from './hero-collection.mjs';
 
 let nexusTaxonomy=null;
 export function setNexusTaxonomy(taxonomy){nexusTaxonomy=taxonomy;}
@@ -43,7 +44,7 @@ export function normalizeArgusInventory(payload){
   const modes=Array.isArray(raw.rentalModes)?raw.rentalModes:[];
   const market=modes.length===1&&modes[0]==='SHORT_LET'?'stays':'longlets';
   const coordinates=raw.locationDisclosure==='locality'&&validCoordinates(raw.coordinates)?approximateCoordinates(raw.coordinates,raw.id):null;
-  const images=(raw.images||[]).filter(url=>typeof url==='string'&&/^https:\/\//i.test(url)).slice(0,25);if(!images.length)continue;
+  const images=(raw.images||[]).filter(url=>typeof url==='string'&&/^https:\/\//i.test(url)).slice(0,25);if(!images.length)continue;const reviewed=HERO_PHOTOS.find(photo=>photo.propertyId===String(raw.id)&&images.includes(photo.image));if(reviewed)images.splice(0,0,...images.splice(images.indexOf(reviewed.image),1));
   const facts=raw.featureFacts||{},get=key=>confirmed(facts[key]),pet=get('pets');
   const propertyType=PROPERTY_TYPE_KEYS.has(raw.propertyType)?raw.propertyType:null;
   const ref=String(raw.id),typeLabel=propertyType?.replaceAll('-',' ')||'Property';

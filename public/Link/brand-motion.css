@@ -237,6 +237,16 @@
    it appear to jump. Let the editorial column move in normal document flow. */
 .scroll-profile .intro{position:relative;top:auto;transform:none}
 
+/* Small living Nexus moments. They breathe, rotate once, fade and return;
+   motion stays quiet enough to preserve the editorial scorecard. */
+.intro>.eyebrow{position:relative;width:max-content}
+.intro>.eyebrow .tiny-star{display:inline-block;animation:nexus-copy-star 4.2s cubic-bezier(.45,0,.2,1) infinite!important}
+.intro>.eyebrow:after,.marketplace-kicker:after{content:"✦";display:inline-block;margin-left:9px;color:#68bfd2;opacity:.2;animation:nexus-copy-satellite 4.2s -2.1s ease-in-out infinite}
+.marketplace-kicker{position:relative;width:max-content;max-width:100%}
+@keyframes nexus-copy-star{0%,68%,100%{opacity:.48;transform:rotate(0) scale(.9)}78%{opacity:1;transform:rotate(45deg) scale(1.18);text-shadow:0 0 14px #5fcde6}90%{opacity:.18;transform:rotate(90deg) scale(.72)}}
+@keyframes nexus-copy-satellite{0%,100%{opacity:.12;transform:translateY(3px) rotate(0) scale(.65)}45%{opacity:.85;transform:translateY(-3px) rotate(45deg) scale(1)}70%{opacity:.24;transform:translateY(0) rotate(90deg) scale(.78)}}
+@media(prefers-reduced-motion:reduce){.intro>.eyebrow .tiny-star,.intro>.eyebrow:after,.marketplace-kicker:after{animation:none!important}}
+
 /* Stable hand-off: the destination logo is stationary while the centre star docks. */
 .header.intro-target-ready .brand-link{transition:none!important}.brand-intro.is-preparing .intro-skip{opacity:0;pointer-events:none;transition:opacity .2s}.brand-intro.is-leaving{opacity:0;transform:none;background:transparent;transition:opacity .88s cubic-bezier(.35,0,.25,1)}.brand-intro.is-leaving::backdrop{background:transparent}.intro-nexus-star{will-change:transform,opacity}
 

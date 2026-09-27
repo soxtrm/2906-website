@@ -54,18 +54,30 @@ const makeProperty = (index, market = 'longlets') => ({
   await page.waitForSelector('.listing-card')
   assert.equal(await page.title(), 'Nexus Housing — Malta homes')
   let state = await page.evaluate(() => ({
-    cards: document.querySelectorAll('.listing-card').length,
+    cards: document.querySelectorAll('.listing-rail')[0]?.querySelectorAll('.listing-card').length,
     sales: [...document.querySelectorAll('.listing-card')].some(card => /420,000/.test(card.textContent)),
     overflow: document.documentElement.scrollWidth - innerWidth,
-    columns: getComputedStyle(document.querySelector('.listing-grid')).gridTemplateColumns.split(' ').length
+    cardWidth: document.querySelector('.listing-card')?.getBoundingClientRect().width,
+    smartData: document.querySelector('.card-smart')?.textContent
   }))
   assert.equal(state.cards, 12)
   assert.equal(state.sales, false, 'sale listing leaked into the default rental market')
   assert.ok(state.overflow <= 1, `mobile marketplace overflowed by ${state.overflow}px`)
-  assert.equal(state.columns, 2)
+  assert.ok(state.cardWidth >= 280, `marketplace cards are too narrow at ${state.cardWidth}px`)
+  assert.match(state.smartData, /NEXUS SMART DATA/)
+  const wheelScroll = await page.$eval('.listing-rail', async rail => {
+    rail.style.scrollBehavior = 'auto'
+    rail.scrollLeft = 5
+    const before = rail.scrollLeft
+    const event = new WheelEvent('wheel', { deltaY: 180, bubbles: true, cancelable: true })
+    rail.dispatchEvent(event)
+    await new Promise(resolve => setTimeout(resolve, 350))
+    return { before, after: rail.scrollLeft, width: rail.clientWidth, scrollWidth: rail.scrollWidth, prevented: event.defaultPrevented }
+  })
+  assert.ok(wheelScroll.after > wheelScroll.before, `mouse wheel did not move the hovered property rail horizontally: ${JSON.stringify(wheelScroll)}`)
 
   await page.type('#query', 'no listing can match this')
-  assert.equal(await page.$$eval('.listing-card', cards => cards.length), 12, 'draft filter applied before Show homes')
+  assert.equal(await page.$eval('.listing-rail', rail => rail.querySelectorAll('.listing-card').length), 12, 'draft filter applied before Show homes')
   await page.click('#apply-filters')
   await page.waitForFunction(() => document.querySelectorAll('.listing-card').length === 0)
   assert.match(await page.$eval('#filter-state span', node => node.textContent), /Showing applied/)
@@ -73,10 +85,10 @@ const makeProperty = (index, market = 'longlets') => ({
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.listing-card')
   assert.equal(await page.$eval('#query', input => input.value), '')
-  assert.equal(await page.$$eval('.listing-card', cards => cards.length), 12, 'reload did not reset marketplace filters')
+  assert.equal(await page.$eval('.listing-rail', rail => rail.querySelectorAll('.listing-card').length), 12, 'reload did not reset marketplace filters')
 
   await page.click('[data-market="sales"]')
-  await page.waitForFunction(() => document.querySelectorAll('.listing-card').length === 1)
+  await page.waitForFunction(() => document.querySelector('.listing-rail')?.querySelectorAll('.listing-card').length === 1)
   assert.match(await page.$eval('.listing-card', card => card.textContent), /€420,000/)
 
   await page.click('[data-market="longlets"]')
