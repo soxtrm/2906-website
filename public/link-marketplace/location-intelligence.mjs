@@ -42,7 +42,7 @@ export function buildLocationIntelligence(property,records,{radius=5000}={}){
   });
   const connectors=CONNECTORS.map(connector=>{let selected=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const aTime=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bTime=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return aTime-bTime||a.distance-b.distance;});if(connector.key==='swimming'){const beach=selected.find(place=>place.kind==='beach'||place.publicBeach===true),swim=selected.filter(place=>place!==beach).slice(0,2);selected=[...swim,...(beach?[beach]:[])];}return {...connector,places:selected.slice(0,18)};});
   const tiers=Object.fromEntries(SEARCH_RADII.map(value=>[value,deduped.filter(place=>place.distance<=value).length]));
-  return {origin,precision,radius,tiers,places:deduped.slice(0,80),connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
+  return {origin,precision,radius,tiers,places:[...new Map([...deduped.slice(0,80),...connectors.flatMap(connector=>connector.places)].map(place=>[place.id,place])).values()],connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
 }
 
 export function placeTravelEvidence(place){
