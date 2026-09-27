@@ -1,0 +1,7 @@
+[Unit]
+Description=Warm routes for current public Nexus inventory
+After=nexus-routing.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/node /opt/nexus-routing/warm.cjs
+MemoryMax=128M

@@ -1,0 +1,17 @@
+[Unit]
+Description=Nexus property walking and driving routes
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/nexus-routing
+ExecStart=/usr/bin/node /opt/nexus-routing/server.cjs
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

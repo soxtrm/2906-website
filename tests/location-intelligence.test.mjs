@@ -19,7 +19,7 @@ assert.deepEqual(SEARCH_RADII,[250,500,1000,2000,5000]);
 assert.equal(intelligence.connectors.find(item=>item.key==='daily').places[0].connection.origin_id,'2906-test');
 assert.equal(intelligence.connectors.find(item=>item.key==='daily').places[0].connection.straight_line_m>0,true);
 assert.deepEqual(placeTravelEvidence(records[0]),{walk:'UNKNOWN',drive:'UNKNOWN',confidence:'UNKNOWN'});
-assert.deepEqual(placeTravelEvidence(records[2]),{walk:'7 min',drive:'3 min',confidence:'LIVE / ROUTED'});
+assert.deepEqual(placeTravelEvidence(records[2]),{walk:'7 min',drive:'3 min',confidence:'MODELLED / ROUTED'});
 assert.deepEqual(placeTravelEvidence({walkableRoute:true,walkingDistanceMetres:500}),{walk:'7 min',drive:'UNKNOWN',confidence:'MODELLED · 4.5 KM/H'});
 assert.deepEqual(mapPosition(property.coordinates,property.coordinates),{x:50,y:50});
 assert.equal(propertyLocationPrecision({coordinates:null,locationDisclosure:'exact'}),'AREA_ONLY');

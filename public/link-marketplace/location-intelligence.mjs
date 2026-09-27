@@ -18,7 +18,7 @@ const precisionValue=value=>{
 
 const KIND_CATEGORY={beach:'swimming',swimming:'swimming',promenade:'promenades',gym:'gyms',outdoor_gym:'gyms',sport:'sports',restaurant:'restaurants',cafe:'restaurants',bar:'nightlife',nightclub:'nightlife',grocery:'shopping',supermarket:'shopping',convenience:'shopping',pharmacy:'shopping',medical:'shopping',healthcare:'shopping',atm:'shopping',shopping:'shopping',bus_stop:'transport',ferry:'transport',park:'parks',wellness:'wellness'};
 
-const connectorFor=place=>CONNECTORS.find(connector=>connector.categories.includes(place.category)||connector.kinds?.includes(place.kind))?.key||null;
+const connectorFor=place=>place.category==='transport'?'mobility':['atm','pharmacy','medical','healthcare','grocery','shopping'].includes(place.kind)?'daily':CONNECTORS.find(connector=>connector.categories.includes(place.category)||connector.kinds?.includes(place.kind))?.key||null;
 
 export function propertyLocationPrecision(property){
   if(!validCoordinates(property?.coordinates))return 'AREA_ONLY';
@@ -48,7 +48,7 @@ export function buildLocationIntelligence(property,records,{radius=5000}={}){
 export function placeTravelEvidence(place){
   if(!place?.routeVerified){if(place?.walkableRoute===true&&Number.isFinite(place.walkingDistanceMetres)&&place.walkingDistanceMetres>=0)return {walk:`${Math.max(1,Math.round(place.walkingDistanceMetres/75))} min`,drive:'UNKNOWN',confidence:'MODELLED · 4.5 KM/H'};return {walk:'UNKNOWN',drive:'UNKNOWN',confidence:'UNKNOWN'};}
   const minutes=seconds=>Number.isFinite(seconds)?`${Math.max(1,Math.round(seconds/60))} min`:'UNKNOWN';
-  return {walk:minutes(place.walkingSeconds),drive:minutes(place.drivingSeconds),confidence:'LIVE / ROUTED'};
+  return {walk:minutes(place.walkingSeconds),drive:minutes(place.drivingSeconds),confidence:place.routeConfidence||'MODELLED / ROUTED'};
 }
 
 export function mapPosition(origin,coordinates,radius=2500){

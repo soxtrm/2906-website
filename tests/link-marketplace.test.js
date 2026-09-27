@@ -29,9 +29,9 @@ const makeProperty = (index, market = 'longlets') => ({
   const base = process.env.MARKET_BASE || 'http://127.0.0.1:4174/link-marketplace/'
   const inventory = [...Array.from({ length: 12 }, (_, index) => makeProperty(index + 1)), makeProperty(90, 'sales')]
   const places = [
-    { name: 'Daily Market', kind: 'grocery', coordinates: [14.501, 35.912] },
-    { name: 'ATM', kind: 'atm', coordinates: [14.502, 35.913] },
-    { name: 'Sports Centre', kind: 'sport', coordinates: [14.503, 35.914] }
+    { id:'nexus-place:1', name: 'Daily Market', kind: 'grocery', coordinates: [14.501, 35.912] },
+    { id:'nexus-place:2', name: 'ATM', kind: 'atm', coordinates: [14.502, 35.913] },
+    { id:'nexus-place:3', name: 'Sports Centre', kind: 'sport', coordinates: [14.503, 35.914] }
   ]
   let savedRequest = null
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
@@ -42,6 +42,7 @@ const makeProperty = (index, market = 'longlets') => ({
     const url = request.url()
     if (url.endsWith('/api/nexus/inventory')) return request.respond({ contentType: 'application/json', body: JSON.stringify({ meta: { firewall_leaks: [] }, properties: inventory }) })
     if (url.endsWith('/api/nexus/places')) return request.respond({ contentType: 'application/json', body: JSON.stringify({ records: places }) })
+    if (url.includes('/api/nexus/property-routing?')) return request.respond({contentType:'application/json',body:JSON.stringify(url.includes('&place=')?{status:'CONNECTED',geometry:{type:'LineString',coordinates:[[14.501,35.912],[14.502,35.913]]}}:{status:'CONNECTED',publicCoordinates:[14.501,35.912],precision:'APPROXIMATE',originBasis:'PRIVATE_VERIFIED_LOCATION',places:places.map(p=>({id:p.id,routeVerified:true,walkingSeconds:420,walkingDistanceMetres:580,drivingSeconds:180,drivingDistanceMetres:840,routeConfidence:'MODELLED',routeSource:'OSRM / OpenStreetMap'}))})})
     if (url.endsWith('/api/nexus/interest') && request.method() === 'POST') {
       savedRequest = JSON.parse(request.postData())
       return request.respond({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
@@ -64,7 +65,7 @@ const makeProperty = (index, market = 'longlets') => ({
   assert.equal(state.sales, false, 'sale listing leaked into the default rental market')
   assert.ok(state.overflow <= 1, `mobile marketplace overflowed by ${state.overflow}px`)
   assert.ok(state.cardWidth >= 280, `marketplace cards are too narrow at ${state.cardWidth}px`)
-  assert.match(state.smartData, /NEXUS SMART DATA/)
+  assert.equal(state.smartData, undefined, 'front cards must stay free of smart-data blocks')
   const wheelScroll = await page.$eval('.listing-rail', async rail => {
     rail.style.scrollBehavior = 'auto'
     rail.scrollLeft = 5
@@ -97,7 +98,7 @@ const makeProperty = (index, market = 'longlets') => ({
   const intelligence = await page.evaluate(() => ({
     world: Boolean(document.querySelector('.property-world')),
     connectors: document.querySelectorAll('[data-connector]').length,
-    precision: document.querySelector('.property-anchor span')?.textContent,
+    precision: document.querySelector('.property-anchor-label')?.textContent,
     matrixHref: document.querySelector('.world-bridges a')?.getAttribute('href'),
     fit: document.querySelector('.fit-section')?.textContent
   }))
@@ -105,14 +106,18 @@ const makeProperty = (index, market = 'longlets') => ({
   assert.equal(intelligence.connectors, 5)
   assert.match(intelligence.precision, /APPROXIMATE/)
   assert.match(intelligence.matrixHref, /\/link-matrix#\/property\/2906-longlets-/)
-  assert.match(intelligence.fit, /CONNECTIVITYUNKNOWN/, 'missing route evidence was presented as known')
+  assert.match(intelligence.fit, /Powered by Nexus Link/)
   await page.click('[data-connector="daily"]')
   await new Promise(resolve => setTimeout(resolve, 750))
   assert.equal(await page.$eval('.intelligence-map', map => map.dataset.activeConnector), 'daily')
   assert.match(await page.$eval('[data-connector-results]', node => node.textContent), /Daily Market/)
-  const dailyPins = await page.$$eval('.intel-pin[data-pin-connector="daily"]', pins => pins.map(pin => ({ opacity: getComputedStyle(pin).opacity, x: pin.style.getPropertyValue('--pin-x'), y: pin.style.getPropertyValue('--pin-y') })))
-  assert.equal(dailyPins.length, 2)
-  assert.ok(dailyPins.every(pin => Number(pin.opacity) > .9), JSON.stringify(dailyPins))
+  await page.waitForFunction(()=>document.querySelector('[data-connector-results]')?.textContent.includes('7 min walk'))
+  assert.match(await page.$eval('[data-connector-results]',node=>node.textContent), /0.58 km/)
+  await page.waitForSelector('.leaflet-container')
+  await page.click('[data-map-place="nexus-place:1"]')
+  await page.waitForFunction(()=>document.querySelector('[data-map-route-note]')?.textContent.includes('Walking route'))
+  await page.click('[data-route-mode="car"]')
+  await page.waitForFunction(()=>document.querySelector('[data-map-route-note]')?.textContent.includes('Driving route'))
   await page.screenshot({ path: 'marketplace-property-mobile-smoke.png', fullPage: false })
   await page.click('[data-connector="mobility"]')
   assert.match(await page.$eval('[data-connector-results]', node => node.textContent), /9 individual observations/)
