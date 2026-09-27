@@ -1,11 +1,16 @@
 import {categoryForPoi,distanceMetres,validCoordinates} from '../Link/activity-intelligence.mjs';
 
 export const CONNECTORS=[
-  {key:'swimming',label:'Swimming',icon:'≈',radius:5000,categories:['swimming','promenades']},
-  {key:'daily',label:'Daily life',icon:'▢',radius:2000,categories:['shopping','transport'],kinds:['grocery','supermarket','convenience','pharmacy','atm','medical','healthcare']},
-  {key:'social',label:'Food / social',icon:'◇',radius:2000,categories:['restaurants','nightlife']},
-  {key:'wellbeing',label:'Wellbeing',icon:'◌',radius:5000,categories:['gyms','sports','parks','wellness','family']},
-  {key:'mobility',label:'Mobility',icon:'↗',radius:2000,categories:['transport']}
+ {key:'swimming',label:'Swimming',icon:'≈',radius:5000,categories:['swimming','promenades'],limit:3},
+ {key:'daily',label:'Mini-markets',icon:'▢',radius:2000,categories:[],kinds:['grocery','supermarket','convenience','shopping'],limit:2},
+ {key:'health',label:'Health',icon:'✚',radius:3000,categories:[],kinds:['pharmacy','medical','healthcare','hospital','doctor'],limit:2},
+ {key:'atm',label:'ATM',icon:'€',radius:2000,categories:[],kinds:['atm'],limit:2},
+ {key:'social',label:'Food & cafés',icon:'◇',radius:2000,categories:['restaurants'],limit:6},
+ {key:'nightlife',label:'Bars',icon:'✧',radius:2000,categories:['nightlife'],limit:4},
+ {key:'gym',label:'Gyms',icon:'◉',radius:5000,categories:['gyms'],limit:3},
+ {key:'sport',label:'Sport',icon:'◎',radius:5000,categories:['sports'],limit:3},
+ {key:'wellbeing',label:'Parks & wellness',icon:'♧',radius:5000,categories:['parks','wellness','family'],limit:3},
+ {key:'mobility',label:'Bus & ferry',icon:'↗',radius:2000,categories:['transport'],limit:2}
 ];
 export const SEARCH_RADII=Object.freeze([250,500,1000,2000,5000]);
 
@@ -18,7 +23,7 @@ const precisionValue=value=>{
 
 const KIND_CATEGORY={beach:'swimming',swimming:'swimming',promenade:'promenades',gym:'gyms',outdoor_gym:'gyms',sport:'sports',restaurant:'restaurants',cafe:'restaurants',bar:'nightlife',nightclub:'nightlife',grocery:'shopping',supermarket:'shopping',convenience:'shopping',pharmacy:'shopping',medical:'shopping',healthcare:'shopping',atm:'shopping',shopping:'shopping',bus_stop:'transport',ferry:'transport',park:'parks',wellness:'wellness'};
 
-const connectorFor=place=>place.category==='transport'?'mobility':['atm','pharmacy','medical','healthcare','grocery','shopping'].includes(place.kind)?'daily':CONNECTORS.find(connector=>connector.categories.includes(place.category)||connector.kinds?.includes(place.kind))?.key||null;
+const connectorFor=place=>CONNECTORS.find(c=>c.kinds?.includes(place.kind))?.key||CONNECTORS.find(c=>c.categories.includes(place.category))?.key||null;
 
 export function propertyLocationPrecision(property){
   if(!validCoordinates(property?.coordinates))return 'AREA_ONLY';
@@ -40,9 +45,9 @@ export function buildLocationIntelligence(property,records,{radius=5000}={}){
     const key=`${place.connector}:${String(place.name).trim().toLowerCase()}`;
     if(seen.has(key))return false;seen.add(key);return true;
   });
-  const connectors=CONNECTORS.map(connector=>{let selected=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const aTime=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bTime=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return aTime-bTime||a.distance-b.distance;});if(connector.key==='swimming'){const beach=selected.find(place=>place.kind==='beach'||place.publicBeach===true),swim=selected.filter(place=>place!==beach).slice(0,2);selected=[...swim,...(beach?[beach]:[])];}return {...connector,places:selected.slice(0,18)};});
+  const connectors=CONNECTORS.map(connector=>{let selected=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const aTime=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bTime=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return aTime-bTime||a.distance-b.distance;});if(connector.key==='swimming'){const beach=selected.find(place=>place.kind==='beach'||place.publicBeach===true),swim=selected.filter(place=>place!==beach).slice(0,2);selected=[...swim,...(beach?[beach]:[])];}return {...connector,places:selected.slice(0,connector.limit||3)};});
   const tiers=Object.fromEntries(SEARCH_RADII.map(value=>[value,deduped.filter(place=>place.distance<=value).length]));
-  return {origin,precision,radius,tiers,places:[...new Map([...deduped.slice(0,80),...connectors.flatMap(connector=>connector.places)].map(place=>[place.id,place])).values()],connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
+  return {origin,precision,radius,tiers,places:connectors.flatMap(connector=>connector.places),connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
 }
 
 export function placeTravelEvidence(place){

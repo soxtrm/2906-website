@@ -24,3 +24,16 @@ assert.deepEqual(placeTravelEvidence({walkableRoute:true,walkingDistanceMetres:5
 assert.deepEqual(mapPosition(property.coordinates,property.coordinates),{x:50,y:50});
 assert.equal(propertyLocationPrecision({coordinates:null,locationDisclosure:'exact'}),'AREA_ONLY');
 console.log('property location intelligence passed');
+
+const services=buildLocationIntelligence(property,[
+ ...Array.from({length:15},(_,i)=>({id:'atm'+i,name:'ATM '+i,kind:'atm',coordinates:[14.5001+i*.0001,35.91],routeVerified:true,walkingSeconds:900-i*30})),
+ {id:'pharmacy',name:'Pharmacy',kind:'pharmacy',coordinates:[14.501,35.91]},
+ {id:'gym2',name:'Gym',kind:'gym',coordinates:[14.501,35.91]},
+ {id:'sport2',name:'Court',kind:'sport',coordinates:[14.501,35.91]}
+]);
+assert.deepEqual(services.connectors.find(c=>c.key==='atm').places.map(p=>p.id),['atm14','atm13']);
+assert.equal(services.connectors.find(c=>c.key==='health').places[0].id,'pharmacy');
+assert.equal(services.connectors.find(c=>c.key==='daily').places.length,0);
+assert.equal(services.connectors.find(c=>c.key==='gym').places[0].id,'gym2');
+assert.equal(services.connectors.find(c=>c.key==='sport').places[0].id,'sport2');
+assert.equal(services.places.filter(p=>p.kind==='atm').length,2);
