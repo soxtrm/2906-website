@@ -42,6 +42,7 @@ const makeProperty = (index, market = 'longlets') => ({
     const url = request.url()
     if (url.endsWith('/api/nexus/inventory')) return request.respond({ contentType: 'application/json', body: JSON.stringify({ meta: { firewall_leaks: [] }, properties: inventory }) })
     if (url.endsWith('/api/nexus/places')) return request.respond({ contentType: 'application/json', body: JSON.stringify({ records: places }) })
+    if (url.includes('/api/nexus/property-routing?') && url.includes('mode=bus')) return request.respond({contentType:'application/json',body:JSON.stringify({status:'CONNECTED',durationMinutes:26,distanceMetres:6064,walkingMinutes:12,transfers:0,cost:null,services:[{line:'13A'}],requestedAt:'2026-09-27T06:04:46Z'})})
     if (url.includes('/api/nexus/property-routing?')) return request.respond({contentType:'application/json',body:JSON.stringify(url.includes('&place=')?{status:'CONNECTED',geometry:{type:'LineString',coordinates:[[14.501,35.912],[14.502,35.913]]}}:{status:'CONNECTED',publicCoordinates:[14.501,35.912],precision:'APPROXIMATE',originBasis:'PRIVATE_VERIFIED_LOCATION',places:places.map(p=>({id:p.id,routeVerified:true,walkingSeconds:420,walkingDistanceMetres:580,drivingSeconds:180,drivingDistanceMetres:840,routeConfidence:'MODELLED',routeSource:'OSRM / OpenStreetMap'}))})})
     if (url.endsWith('/api/nexus/interest') && request.method() === 'POST') {
       savedRequest = JSON.parse(request.postData())
@@ -154,6 +155,10 @@ const makeProperty = (index, market = 'longlets') => ({
   await page.waitForSelector('.leaflet-container')
   await page.click('[data-map-place="nexus-place:1"]')
   await page.waitForFunction(()=>document.querySelector('[data-map-route-note]')?.textContent.includes('Walking route'))
+  await page.click('[data-bus-journey]')
+  await page.waitForFunction(()=>document.querySelector('[data-bus-result]')?.textContent.includes('13A'))
+  assert.match(await page.$eval('[data-bus-result]',n=>n.textContent),/Fare UNKNOWN/)
+  assert.match(await page.$eval('[data-bus-result]',n=>n.textContent),/reliability UNKNOWN/)
   await page.click('[data-route-mode="car"]')
   await page.waitForFunction(()=>document.querySelector('[data-map-route-note]')?.textContent.includes('Driving route'))
   await page.screenshot({ path: 'marketplace-property-mobile-smoke.png', fullPage: false })

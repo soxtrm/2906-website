@@ -7,6 +7,8 @@ const {createHash}=require('node:crypto');
 const run=promisify(execFile);
 const overviewAnchors=require('./anchors.json');
 const {currentTraffic}=require('./google-traffic.cjs');
+const {transitRoute}=require('./google-transit.cjs');
+const fs=require('node:fs');
 const cache=new Map();let snapshot=null,loading=null;
 const valid=c=>Array.isArray(c)&&c.length===2&&c.every(Number.isFinite)&&c[0]>=14.1&&c[0]<=14.7&&c[1]>=35.7&&c[1]<=36.2;
 const distance=(a,b)=>{const r=Math.PI/180;return 6371000*2*Math.asin(Math.min(1,Math.sqrt(Math.sin((b[1]-a[1])*r/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin((b[0]-a[0])*r/2)**2)));};
@@ -84,6 +86,15 @@ const server=http.createServer(async(req,res)=>{
   if(url.searchParams.get('traffic')==='1'){res.setHeader('Cache-Control','no-store');const data=await sources(),property=data.properties.find(p=>p.id===ref);if(!property||!valid(property.coordinates))throw Object.assign(Error('LOCATION_UNRESOLVED'),{status:404});const exact=data.private.find(p=>p.ref===ref&&p.precision==='exact'&&valid(p.coordinates));res.end(JSON.stringify(await currentTraffic(exact?.coordinates||property.coordinates,overviewAnchors,ref)));return;}
    if(!inflight.has(ref))inflight.set(ref,compute(ref).finally(()=>inflight.delete(ref)));
    const value=await inflight.get(ref),place=url.searchParams.get('place');
+   if(place&&url.searchParams.get('mode')==='bus'){
+    res.setHeader('Cache-Control','no-store');
+    const data=await sources(),destination=[...data.places,...overviewAnchors].find(p=>p.id===place);
+    if(!destination||!value.places.some(p=>p.id===place)||!valid(value.publicCoordinates))throw Object.assign(Error('PLACE_NOT_CONNECTED'),{status:404});
+    let key;try{key=fs.readFileSync('/opt/nexus-routing/google-routes.key','utf8').trim();}catch{}
+    const requestKey='bus:'+ref+':'+place;
+    if(!inflight.has(requestKey))inflight.set(requestKey,transitRoute(value.publicCoordinates,destination.coordinates,{key}).finally(()=>inflight.delete(requestKey)));
+    res.end(JSON.stringify({...await inflight.get(requestKey),originBasis:'PUBLIC_APPROXIMATE_PIN'}));return;
+   }
    res.end(JSON.stringify(place?await geometry(value,place,url.searchParams.get('mode')==='car'?'car':'walk'):value));
   }finally{active--;}
  }catch(e){res.statusCode=e.status||503;res.end(JSON.stringify({status:'UNKNOWN',reason:e.status?e.message:'ROUTING_UNAVAILABLE'}));}
