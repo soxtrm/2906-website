@@ -32,6 +32,7 @@ function accentFor(index: number) { return ACCENTS[index % ACCENTS.length] }
 type Account = {
   id: number; sessionName: string; phone: string; label: string; connected: boolean; lastOutreachAt: string | null
   pool: 'top' | 'bottom'; outreachVolumePercent: number; outreachVolumeUntil: string | null
+  active?: boolean; outreachEnabled?: boolean; outreachEligible?: boolean
 }
 type Template = { id: number; label: string; text: string; created_at: string }
 type Entry = {
@@ -76,15 +77,40 @@ function maltaHM(d: Date) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
 }
 
+const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
+function isArgusManager(account: Account) {
+  return /argus\s*1|argus[_-]?1/i.test(`${account.label} ${account.sessionName}`)
+}
+function accountDisplayName(account: Account) {
+  return /^(default|primary)$/i.test(account.sessionName) || /primary/i.test(account.label) ? 'Kev Default' : account.label
+}
+function accountPriority(account: Account) {
+  if (isArgusManager(account)) return -20
+  const session = account.sessionName.toLowerCase()
+  if (session === 'default') return -15
+  if (session === 'kevsecond') return -14
+  if (session === 'kevthirdd') return -13
+  if (session === 'argus2') return -5
+  if (session.includes('cedric')) return -4
+  if (session.includes('gabri')) return -3
+  return 10
+}
+function cooldownState(account: Account) {
+  if (!account.lastOutreachAt) return { ready: true, label: 'Ready · no previous outreach' }
+  const readyAt = new Date(new Date(account.lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS)
+  const ready = readyAt.getTime() <= Date.now()
+  return { ready, label: ready ? 'Ready after 24h 15m check' : `Protected until ${maltaHM(readyAt)}` }
+}
+
 // Kev, 2026-09-11: "checkt wann der letzte !outreach gemacht wurde und
-// versucht immer auto +30min zu setzen" — the PRIMARY suggestion is always
-// +30min from the real last send for this account (from outreach_log —
+// setzt das naechste Fenster mindestens 24h15 nach dem echten letzten Send.
+// The real last send comes from outreach_log —
 // covers a manual !outreach typed straight into WhatsApp too, not just
 // ARGUS's own plans). Only falls back to chaining off a previous ARGUS day
 // (+20min, spec point 19) when there's no real send history at all yet.
 function suggestTime(plans: Plan[] | null, label: string, lastOutreachAt: string | null): string {
   if (lastOutreachAt) {
-    return maltaHM(new Date(new Date(lastOutreachAt).getTime() + 30 * 60_000))
+    return maltaHM(new Date(new Date(lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS))
   }
   const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS']
   const idx = order.indexOf(label)
@@ -148,7 +174,8 @@ function ArgusConsole() {
   // lifted here, not per-console, so saving one in DEFAULT's card makes it
   // immediately available in every other account's card too.
   const [templates, setTemplates] = useState<Template[]>([])
-  const scrollerRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<'tools' | 'reminders'>('tools')
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -182,6 +209,13 @@ function ArgusConsole() {
   }
 
   const connectedCount = accounts?.filter(a => a.connected).length ?? 0
+  const orderedAccounts = useMemo(() => [...(accounts || [])].sort((a, b) => accountPriority(a) - accountPriority(b) || a.id - b.id), [accounts])
+  const outreachAccounts = useMemo(() => orderedAccounts.filter(account => account.outreachEligible !== false && !isArgusManager(account)), [orderedAccounts])
+  const selectedAccount = outreachAccounts.find(account => account.id === selectedAccountId) || outreachAccounts[0] || null
+
+  useEffect(() => {
+    if (outreachAccounts.length && !outreachAccounts.some(account => account.id === selectedAccountId)) setSelectedAccountId(outreachAccounts[0].id)
+  }, [outreachAccounts, selectedAccountId])
 
   if (me && me.role !== 'admin') {
     return (
@@ -212,20 +246,39 @@ function ArgusConsole() {
         </div>
       </div>
 
+      <nav className="outreach-main-tabs" aria-label="Outreach workspace">
+        <button aria-pressed={activeTab === 'tools'} onClick={() => setActiveTab('tools')}>Outreach tools <span>{outreachAccounts.length}</span></button>
+        <button aria-pressed={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')}>Outreach reminders <span>{dueReminders.rows.length + rechecks.tasks.length}</span></button>
+      </nav>
+
       {error && <div style={{ padding: '10px 24px', color: 'var(--crm-danger)', fontSize: 12 }}>{error}</div>}
       {!accounts && !error && <div style={{ padding: 24, color: MUTED, fontSize: 12 }}>Loading…</div>}
 
-      {accounts && <OwnerRecheckLane data={rechecks} onChanged={load} />}
-      {accounts && <DueReminderLane data={dueReminders} />}
+      {accounts && activeTab === 'reminders' && <>
+        <OwnerRecheckLane data={rechecks} onChanged={load} />
+        <DueReminderLane data={dueReminders} />
+      </>}
 
-      {/* ── PROFILE CONSOLES — horizontal scroll ──────────────────────── */}
-      {accounts && (
-        <div ref={scrollerRef} style={{ display: 'flex', gap: 18, overflowX: 'auto', padding: '20px 24px', scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
-          {accounts.map((acc, i) => (
-            <ProfileConsole key={acc.id} account={acc} accent={accentFor(i)} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
-          ))}
+      {accounts && activeTab === 'tools' && <>
+        <section className="outreach-account-overview">
+          <header><div><span>ACCOUNT CONTROL</span><h2>Every line, one clean view.</h2></div><p>Argus 1 keeps the system running. Outreach identities stay separate and use the real last-send timestamp.</p></header>
+          <div className="outreach-account-grid">
+            {orderedAccounts.map((account, index) => {
+              const manager = isArgusManager(account), rotating = account.outreachEligible !== false && !manager, selected = selectedAccount?.id === account.id, cooldown = cooldownState(account)
+              return <button key={account.id} type="button" disabled={!rotating} aria-pressed={selected} onClick={() => setSelectedAccountId(account.id)} className={`outreach-account-tile${manager ? ' is-manager' : ''}${!rotating ? ' is-support' : ''}${selected ? ' is-selected' : ''}`} style={{ '--account-accent': accentFor(index).a } as React.CSSProperties}>
+                <i aria-hidden>{manager ? '⌘' : rotating ? '↗' : '◇'}</i><span><b>{accountDisplayName(account)}</b><small>{manager ? 'SYSTEM MANAGER · NOT IN ROTATION' : rotating ? `${account.pool === 'bottom' ? 'Z→A' : 'A→Z'} OUTREACH` : 'SUPPORT · NOT IN ROTATION'}</small></span>
+                <em className={account.connected ? 'is-online' : ''}>{account.connected ? 'ONLINE' : 'OFFLINE'}</em>
+                <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{rotating && <strong className={cooldown.ready ? 'is-ready' : ''}>{cooldown.label}</strong>}</footer>
+              </button>
+            })}
+          </div>
+        </section>
+
+        {selectedAccount && <div className="outreach-active-console">
+          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Prepare lists and drafts here. The final owner and contact checks still run immediately before send.</small></div>
+          <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
         </div>
-      )}
+        }
 
       {/* ── GLOBAL PANELS ──────────────────────────────────────────────── */}
       <div style={{ padding: '4px 24px', display: 'flex', gap: 18, flexWrap: 'wrap' }}>
@@ -258,6 +311,7 @@ function ArgusConsole() {
             ))}
         </div>
       </div>
+      </>}
     </div></CrmShell>
   )
 }
@@ -607,7 +661,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
   const s = activePlan?.stats
   const isCompleted = activePlan?.status === 'completed'
-  const initials = account.label.slice(0, 1).toUpperCase()
+  const displayName = accountDisplayName(account)
+  const initials = displayName.slice(0, 1).toUpperCase()
 
   return (
     <div style={{
@@ -621,7 +676,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 42, height: 42, borderRadius: '50%', background: `linear-gradient(135deg, ${accent.a}, ${accent.b})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, flexShrink: 0 }}>{initials}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.04em' }}>{account.label.toUpperCase()}</div>
+          <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.04em' }}>{displayName.toUpperCase()}</div>
           <div style={{ fontSize: 11, color: MUTED, fontFamily: FM }}>+{account.phone}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
@@ -629,8 +684,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: account.connected ? '#3ecf8e' : '#f2597a' }} />
             {account.connected ? 'CONNECTED' : 'DISCONNECTED'}
           </div>
-          {/* Kev, 2026-09-11: real last-send time from outreach_log — same
-              source suggestTime() bases its +30min suggestion on. */}
+          {/* Real last-send time from outreach_log; the next window observes
+              the shared 24h15 account cooldown. */}
           <div style={{ fontSize: 9.5, color: FAINT, textAlign: 'right' }}>
             Last outreach: {account.lastOutreachAt
               ? `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} · ${maltaHM(new Date(account.lastOutreachAt))}`

@@ -37,6 +37,31 @@ html[data-crm-theme="dark"] .crm-brand img { filter: none; }
 .crm-account strong { display: block; margin-bottom: 8px; }
 .crm-account small { color: var(--crm-muted); }
 .crm-account progress { width: 100%; height: 4px; accent-color: var(--crm-accent); }
+
+/* Outreach control deck */
+.outreach-main-tabs{display:flex;gap:6px;padding:14px 24px 0;border-bottom:1px solid var(--crm-border)}
+.outreach-main-tabs button{display:flex;align-items:center;gap:9px;padding:12px 16px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--crm-muted);font:700 12px 'Bricolage Grotesque','Inter',sans-serif;cursor:pointer}
+.outreach-main-tabs button[aria-pressed=true]{border-color:#35d6c4;color:var(--crm-text)}
+.outreach-main-tabs span{display:grid;min-width:21px;height:21px;place-items:center;border:1px solid var(--crm-border);border-radius:999px;color:var(--crm-faint);font-size:9px}
+.outreach-account-overview{margin:18px 24px;padding:18px;border:1px solid var(--crm-border);border-radius:20px;background:linear-gradient(145deg,rgba(53,214,196,.04),var(--crm-surface) 36%)}
+.outreach-account-overview>header{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:15px}
+.outreach-account-overview>header span,.outreach-active-caption>span{color:#35d6c4;font:800 9px 'JetBrains Mono',monospace;letter-spacing:.14em}
+.outreach-account-overview h2{margin:4px 0 0;color:var(--crm-text);font-size:24px;letter-spacing:-.025em}
+.outreach-account-overview>header p{max-width:470px;margin:0;color:var(--crm-muted);font-size:11px;line-height:1.5;text-align:right}
+.outreach-account-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.outreach-account-tile{--account-accent:#35d6c4;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:9px;align-items:center;min-width:0;padding:11px;border:1px solid var(--crm-border);border-radius:13px;background:var(--crm-raised);color:var(--crm-text);text-align:left;cursor:pointer;transition:.2s ease}
+.outreach-account-tile:hover,.outreach-account-tile.is-selected{border-color:color-mix(in srgb,var(--account-accent) 65%,transparent);transform:translateY(-1px);box-shadow:0 9px 24px color-mix(in srgb,var(--account-accent) 12%,transparent)}
+.outreach-account-tile>i{display:grid;width:30px;height:30px;place-items:center;border:1px solid color-mix(in srgb,var(--account-accent) 45%,transparent);border-radius:9px;background:color-mix(in srgb,var(--account-accent) 12%,transparent);color:var(--account-accent);font-style:normal}
+.outreach-account-tile>span{display:grid;gap:2px;min-width:0}.outreach-account-tile b{overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.outreach-account-tile small{overflow:hidden;color:var(--crm-faint);font:700 7px 'JetBrains Mono',monospace;letter-spacing:.06em;text-overflow:ellipsis;white-space:nowrap}
+.outreach-account-tile>em{color:#f2597a;font:800 7px 'JetBrains Mono',monospace;font-style:normal}.outreach-account-tile>em.is-online{color:#3ecf8e}
+.outreach-account-tile footer{grid-column:1/-1;display:grid;gap:4px;padding-top:8px;border-top:1px solid var(--crm-border);color:var(--crm-muted);font-size:8px}.outreach-account-tile footer strong{color:#f2a53d;font-weight:700}.outreach-account-tile footer strong.is-ready{color:#3ecf8e}
+.outreach-account-tile.is-manager{opacity:1;cursor:default;background:linear-gradient(135deg,rgba(79,123,242,.11),var(--crm-raised));border-color:rgba(79,123,242,.32)}
+.outreach-account-tile.is-manager:hover{transform:none;box-shadow:none}.outreach-account-tile:disabled{color:var(--crm-text)}
+.outreach-active-console{display:grid;grid-template-columns:minmax(190px,.34fr) minmax(340px,1fr);gap:14px;padding:2px 24px 20px;align-items:start}
+.outreach-active-caption{display:grid;gap:7px;padding:18px;border:1px solid var(--crm-border);border-radius:17px;background:var(--crm-surface);position:sticky;top:14px}.outreach-active-caption>b{font-size:24px}.outreach-active-caption>small{color:var(--crm-muted);font-size:11px;line-height:1.55}
+.outreach-active-console>div:last-child{width:100%;max-width:none;box-sizing:border-box}
+@media(max-width:1180px){.outreach-account-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.outreach-main-tabs{padding-inline:14px}.outreach-main-tabs button{flex:1;justify-content:center;padding-inline:8px}.outreach-account-overview{margin:14px;padding:14px}.outreach-account-overview>header{display:block}.outreach-account-overview>header p{margin-top:8px;text-align:left}.outreach-account-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.outreach-active-console{grid-template-columns:1fr;padding:0 14px 18px}.outreach-active-caption{position:static}.outreach-account-tile{grid-template-columns:26px minmax(0,1fr)}.outreach-account-tile>i{width:26px;height:26px}.outreach-account-tile>em{grid-column:2}.outreach-account-tile footer{font-size:7.5px}}
 .crm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .crm-header { padding: 24px 28px 20px; display: flex; align-items: center; gap: 16px; justify-content: space-between; background: var(--crm-surface); border-bottom: 1px solid var(--crm-border); }
 .crm-header h1 { font-size: clamp(23px, 2.2vw, 32px); letter-spacing: -.045em; line-height: 1.15; font-weight: 600; margin: 0; }
