@@ -199,6 +199,8 @@ type AvNotification = {
   price: number | null; image: string | null; status: string; statusLabel: string
 }
 
+const AV_NOTIFICATION_TTL_MS = 10_000
+
 type PendingPropertyChange = {
   id: number; property_id: number; ref: string; field: string
   old_value: string | null; new_value: string | null
@@ -457,8 +459,14 @@ function Board() {
         setAvNotifications(prev => {
           const known = new Set(prev.map((n: AvNotification) => n.id))
           const fresh = (d.notifications as AvNotification[]).filter(n => !known.has(n.id))
-          return fresh.length ? [...prev, ...fresh] : prev
+          return fresh.length ? [...fresh, ...prev] : prev
         })
+        for (const n of d.notifications as AvNotification[]) {
+          window.setTimeout(() => {
+            setAvNotifications(prev => prev.filter(x => x.id !== n.id))
+            crmJson(`schedule-board/notifications/${n.id}/seen`, 'POST', {}).catch(() => {})
+          }, AV_NOTIFICATION_TTL_MS)
+        }
       } catch { /* a missed poll just tries again next interval */ }
     }
     poll()

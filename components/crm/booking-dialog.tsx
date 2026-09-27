@@ -70,6 +70,8 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
   const [wf, setWf] = useState({ date: '', from: '16:00', to: '17:30', fromDate: '', confirmation: 'start_only' as 'start_only' | 'full_window' })
   const [feedUrl, setFeedUrl] = useState('')
   const [copied, setCopied] = useState(false)
+  const [justifying, setJustifying] = useState<Booking | null>(null)
+  const [justification, setJustification] = useState('')
 
   const base = `schedule-board/listings/${encodeURIComponent(refId)}`
   const load = useCallback(() => crmFetch(`${base}/booking`)
@@ -86,6 +88,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
 
   const bookingById = useMemo(() => new Map((v?.bookings || []).map(b => [b.id, b])), [v])
   const activeBookings = (v?.bookings || []).filter(b => b.status !== 'cancelled')
+  const declinedBookings = (v?.bookings || []).filter(b => b.ownerSurveyStatus === 'declined')
 
   // A 20-min pick needs the NEXT box in the same window to be free too.
   function canStartAt(slots: Slot[], i: number, d: number) {
@@ -148,6 +151,17 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
       onDone(`Cancelled: ${bookingLine(b)}`)
       await load()
     } catch (e: any) { setErr(e?.data?.error || e?.message || 'Could not cancel.') }
+    finally { setBusy(false) }
+  }
+
+  async function justifyAgain() {
+    if (!justifying || justification.trim().length < 8) return setErr('Add a concrete reason for asking again.')
+    setBusy(true); setErr(null)
+    try {
+      const d = await crmJson(`schedule-board/bookings/${justifying.id}/justify`, 'POST', { reason: justification.trim() })
+      onDone(d.message || 'Justification saved for review.')
+      setJustifying(null); setJustification(''); await load()
+    } catch (e: any) { setErr(e?.data?.error || e?.message || 'Could not save the justification.') }
     finally { setBusy(false) }
   }
 
@@ -445,7 +459,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                     </div>
                     <button className={PRIMARY} disabled={busy || !pick} onClick={book} data-booking-submit>
                       {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      {moving ? 'Move booking' : pickInfo.proposed ? 'Reserve (proposed)' : 'Book slot'}
+                      {moving ? 'Move booking' : 'Send booking request'}
                     </button>
                   </div>
                 </div>
@@ -477,6 +491,27 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                     </div>
                   ))}
                 </div>
+                {!!declinedBookings.length && (
+                  <div className="mt-3 space-y-2" data-declined-bookings>
+                    <div className={SECTION}>Declined requests</div>
+                    {declinedBookings.map(b => (
+                      <div key={b.id} className="rounded-lg border border-rose-100 bg-rose-50/60 px-3 py-2 text-xs">
+                        <div className="font-semibold text-navy">{bookingLine(b)}</div>
+                        {b.ownerDeclineText && <div className="mt-1 text-navy/55">Owner: {b.ownerDeclineText}</div>}
+                        {justifying?.id === b.id ? (
+                          <div className="mt-2 flex gap-2">
+                            <input className={FIELD} value={justification} onChange={e => setJustification(e.target.value)} placeholder="Why this client is worth reconsidering" />
+                            <button className={PRIMARY} disabled={busy || justification.trim().length < 8} onClick={justifyAgain}>Submit</button>
+                          </div>
+                        ) : (
+                          <button className="mt-2 text-[11px] font-semibold text-navy underline" onClick={() => { setJustifying(b); setJustification('') }}>
+                            Justify client and request once more
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

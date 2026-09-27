@@ -26,6 +26,11 @@ export type Booking = {
   party: { label: string | null; ref: string | null; size: number | null }
   notes: string | null; canEdit: boolean
   ownerConfirmed: boolean
+  ownerAskedAt?: string | null
+  ownerSurveyStatus?: string | null
+  ownerDeclineText?: string | null
+  agentJustification?: string | null
+  requestRound?: number
   attention: { reason: string; at: string; seen: boolean } | null
 }
 export type CalendarFeed = {
@@ -79,7 +84,7 @@ export function maltaToIso(date: string, time: string) {
 }
 
 export const STATUS_LABEL: Record<string, string> = {
-  confirmed: 'Confirmed', pending: 'Proposed · pending owner', cancelled: 'Cancelled', done: 'Done', no_show: 'No show',
+  confirmed: 'Confirmed', pending: 'Booking request · pending owner', cancelled: 'Declined / cancelled', done: 'Done', no_show: 'No show',
 }
 
 const hm12 = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
