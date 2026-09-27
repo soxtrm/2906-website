@@ -1,0 +1,1431 @@
+{
+  "note": "Wikipedia excerpts; recurring traditions are not a current event schedule. Venue data comes from the Nexus registry.",
+  "records": [
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.43833333,
+        35.89277778
+      ],
+      "key": "malta:attard",
+      "summary": "Attard (Maltese: Ħ'Attard) is a locality in the Northern Region of Malta. Together with Balzan and Lija, it forms part of the \"Three Villages\" (Maltese: It-Tliet Irħula) and has been inhabited since the Classical Period. It has a population of 12,268 as of 2021. Attard's traditional Latin motto is Florigera rosis halo (\"I perfume the air with my blossoms\") due to its many flower gardens and citrus orchards. Attard is abundant in public gardens. The inhabitants of Attard are known as saraċini. The population of Attard was 12,988 in July 2024. This included 6.626 males and 6,372 females; 11,074 Maltese nationals and 1,924 foreign nationals.",
+      "sourceTitle": "Attard",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Attard",
+      "name": "Attard"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.453725,
+        35.938787
+      ],
+      "key": "malta:bahar-ic-caghaq",
+      "summary": "Baħar iċ-Ċagħaq is an urban village in Malta situated between the limits of Madliena, Magħtab, Għargħur and Pembroke. The area is situated at the mouth of the island's longest valley called 'Wied il-Kbir'. The name Baħar iċ-Ċagħaq in Maltese can be translated to 'sea of pebbles' in English. It has a population of approximately 1,250 people.",
+      "sourceTitle": "Baħar iċ-Ċagħaq",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Ba%C4%A7ar_i%C4%8B-%C4%8Aag%C4%A7aq",
+      "name": "Bahar ic-Caghaq"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.34833333,
+        35.89472222
+      ],
+      "key": "malta:bahrija",
+      "summary": "Baħrija is a village in Rabat, western Malta, with a low population density. The name Baħrija means moth in Maltese. It is also known in English as Baħria, of which the Counts Moscati had owned the fiefdom that was granted by the Grand Master of Malta.",
+      "sourceTitle": "Baħrija",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Ba%C4%A7rija",
+      "name": "Bahrija"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.45333333,
+        35.89805556
+      ],
+      "key": "malta:balzan",
+      "summary": "Balzan (Maltese: Ħal Balzan) is a municipality in the Northern Region of Malta, and together with Attard and Lija, forms part of the \"Three Villages\" (Maltese: It-Tliet Irħula). The village originally consisted of a group of small dwellings and farms but eventually grew, becoming a parish in the 17th century. The population of Balzan was 5,022 in July 2024. This included 2,504 males and 2,518 females; 3,957 Maltese nationals and 1,065 foreign nationals.",
+      "sourceTitle": "Balzan",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Balzan",
+      "name": "Balzan"
+    },
+    {
+      "traditions": [
+        "Bidnija's small church is dedicated to the Holy Family and its feast day is celebrated in July.  "
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.39833333,
+        35.92694444
+      ],
+      "key": "malta:bidnija",
+      "summary": "Bidnija (Maltese: Il-Bidnija) is a rural hamlet between Mosta, St. Paul's Bay and Mġarr. It is located in the northern region of  Malta and is home to roughly 300 people as of 2008. The second least populated habitable zone on the Maltese islands, tt is located between two main valleys (Wied Qannotta and Wied tal-Pwales) then extends into other small valleys surrounding the area. It is largely a rural village surrounded by fields mainly belong to the inhabitants, although over the years other Maltese and foreigners have settled in the area generally for its countryside views.",
+      "sourceTitle": "Bidnija",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Bidnija",
+      "name": "Bidnija"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.5225,
+        35.88805556
+      ],
+      "key": "malta:birgu",
+      "summary": "Birgu (Maltese: Il-Birgu [ɪlˈbɪrɡʊ], Italian: Vittoriosa), also known by its title Città Vittoriosa ('Victorious City'), is an old fortified city on the south side of the Grand Harbour in the Port Region of Malta. The city occupies a promontory of land with Fort Saint Angelo at its head and the city of Cospicua at its base. Birgu is ideally situated for safe anchorage, and has a long history of maritime, mercantile and military activities. Birgu was settled in medieval times.",
+      "sourceTitle": "Birgu",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Birgu",
+      "name": "Birgu (Vittoriosa)"
+    },
+    {
+      "key": "malta:birguma",
+      "status": "UNKNOWN",
+      "name": "Birguma (Naxxar)",
+      "summary": "",
+      "traditions": []
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.4625,
+        35.89666667
+      ],
+      "key": "malta:birkirkara",
+      "summary": "Birkirkara (abbreviated as B'Kara or BKR) is a city in the Eastern Region of Malta. It is the second most populous on the island, with 30,166 inhabitants as of July 2026. The town consists of five autonomous parishes: Saint Helen, Saint Joseph the Worker, Our Lady of Mount Carmel, Saint Mary and San Gorg Preca. The city's motto is In hoc signo vinces, and its coat of arms is a plain red cross, surmounted by a crown. The population of Birkirkara was 30,166 in july 2026. 20,095 Maltese nationals and 10,071 foreign nationals.",
+      "sourceTitle": "Birkirkara",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Birkirkara",
+      "name": "Birkirkara"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.52805556,
+        35.82555556
+      ],
+      "key": "malta:birzebbuga",
+      "summary": "Birżebbuġa (Maltese pronunciation: [biːrzɛˈbːuːd͡ʒɐ]; sometimes shortened to B'Buġa) is a seaside town in the Southern Region of Malta, close to Marsaxlokk. It is approximately 13 kilometres (8 miles) from the capital Valletta. The population of Birżebbuġa was 12,467 in July 2024. This included 7,170 males and 5,297 females; 8,468 Maltese nationals and 3,999 foreign nationals. The town is popular among Maltese holidaymakers, and is known for its sandy beach, Pretty Bay. The town is also notable for its important archaeological sites, especially Għar Dalam, Ta' Kaċċatura and Borġ in-Nadur.",
+      "sourceTitle": "Birżebbuġa",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Bir%C5%BCebbu%C4%A1a",
+      "name": "Birzebbuga"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.52222222,
+        35.88222222
+      ],
+      "key": "malta:bormla",
+      "summary": "Cospicua (Italian) or Bormla (Maltese, [ˈbɔrmlɐ]) is a double-fortified harbour city in the Port Region of Malta. It served as the principal port of Phoenician Malta and, through Greek, Latin, and Arabic, may have given its name to the island and country. Along with Birgu and Senglea, it is one of the Three Cities located within the Grand Harbour to the east of the capital city Valletta. With a population of 5,395 as of March 2014, it is the most dense city of the Three Cities. Locals are known for their Cottonera dialect.",
+      "sourceTitle": "Cospicua",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Cospicua",
+      "name": "Bormla (Cospicua)"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.41166667,
+        35.94916667
+      ],
+      "key": "malta:bugibba",
+      "summary": "Buġibba (English pronunciation: ) is a zone within St. Paul's Bay in the Northern Region, Malta. Situated adjacent to Qawra, it is a popular tourist resort, containing numerous hotels, restaurants, pubs, night clubs, and a casino.",
+      "sourceTitle": "Buġibba",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Bu%C4%A1ibba",
+      "name": "Bugibba"
+    },
+    {
+      "traditions": [
+        "The village feast is celebrated on the last Sunday of June."
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.4143,
+        35.9349
+      ],
+      "key": "malta:burmarrad",
+      "summary": "Burmarrad is a hamlet in St. Paul's Bay, Malta. The main heritage site is the San Pawl Milqi zone, where there is a chapel dedicated to St. Paul, built on the remains of a Roman temple dedicated to Apollo, and  according to tradition the remains of the home of St. Publius. The Parish Church dedicated to the Immaculate Heart Of Mary was built in 1964. The village feast is celebrated on the last Sunday of June. Burmarrad forms part of the Saint Paul's Bay local council",
+      "sourceTitle": "Burmarrad",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Burmarrad",
+      "name": "Burmarrad"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.38138889,
+        35.86027778
+      ],
+      "key": "malta:dingli",
+      "summary": "Dingli (Maltese: Ħad-Dingli) is a village in the Western Region of Malta. It is 13 kilometres (8 miles) from the capital Valletta and two kilometers (1.2 miles) from the nearest town, Rabat. The village lies on a plateau some 230 metres above sea level, near the highest point of Malta. The area provides not only open sea views over the tiny, uninhabited isle of Filfla, but is also a good vantage point over Malta. The cliffs offer views of the nearby Buskett Gardens and Verdala Palace. The population of Dingli was 3,950 in July 2024.",
+      "sourceTitle": "Dingli",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Dingli",
+      "name": "Dingli"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.52111111,
+        35.8725
+      ],
+      "key": "malta:fgura",
+      "summary": "Fgura (Maltese: Il-Fgura, Italian: Figura) is a town in the Port Region of Malta. It has a population of 13,066 as of 2021. Its northern fringes are bordered by the Cottonera Lines of fortifications while it merges with the towns of Żabbar to the east and Paola and Tarxien to the West. A modern settlement, Fgura expanded to the outskirts of the Grand Harbour area and was one of the fastest-growing towns of Malta. Fgura has grown to become one of the foremost commercial areas in the central-southern part of the island. Today, Fgura has one of the highest population densities in the country.",
+      "sourceTitle": "Fgura",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Fgura",
+      "name": "Fgura"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.47194444,
+        35.89138889
+      ],
+      "key": "malta:fleur-de-lys",
+      "summary": "Fleur-de-Lys is a suburb that forms part of Birkirkara, and is also considered a suburb of Santa Venera and Qormi. It lies approximately 5 kilometers from Malta's capital, Valletta. The population of Fleur-de-Lys is about 2,200 people and the area is very small.",
+      "sourceTitle": "Fleur-de-Lys, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Fleur-de-Lys%2C_Malta",
+      "name": "Fleur-de-lys (Birkirkara)"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.50583333,
+        35.89333333
+      ],
+      "key": "malta:floriana",
+      "summary": "Floriana (Maltese: Il-Furjana or Il-Floriana), also known by its title Borgo Vilhena, is a fortified town in the Port Region area of Malta, just outside the capital city Valletta. It has a population of 2,205 as of March 2014. Floriana is the birthplace of many famous Maltese, amongst which the composer of the national anthem, 'L-Innu Malti', Robert Samut; former Bishop of Malta Dun Mauro Caruana, the poets Oliver Friggieri and Maria Grech Ganado, the writer and politician Herbert Ganado and Swedish Idol winner Kevin Borg.",
+      "sourceTitle": "Floriana",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Floriana",
+      "name": "Floriana"
+    },
+    {
+      "key": "malta:ghadira",
+      "status": "SOURCED",
+      "name": "Ghadira",
+      "summary": "Għadira (Maltese: L-Għadira, lit. 'the pond') also known as Għadira Nature Reserve (Maltese: ir-Riserva Naturali tal-Għadira) is a protected area located in the locality of Mellieħa, Malta. It comprises a brackish lake and a salt marsh habitat. Due to Malta's arid climate, permanent inland water areas are rare, making the Għadira wetlands an extremely important habitat for birds and other wildlife. Many of the birds observed here are migratory, stopping to rest before continuing their migration.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "Għadira",
+      "coordinates": null,
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C4%A7adira",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "key": "malta:ghajn-tuffieha",
+      "status": "SOURCED",
+      "name": "Ghajn Tuffieha",
+      "summary": "Għajn Tuffieħa (lit. 'Spring of Apples'), commonly called Riviera and frequently mistranslated as Apple's Eye in English, is a bay and sandy, red beach which is located in Mġarr, Malta. The bay is 345 metres (377 yd) south of Golden Bay. It is less busy than Golden Bay and often visited by Maltese natives as well as tourists. To reach this beach, one needs to descend a hill on a staircase of 200 steps. On top of the cliffs west of Għajn Tuffieħa bay is the Għajn Tuffieħa Tower, one of the seven towers built by Grand Master Giovanni Paolo Lascaris, of the Knights Hospitaller.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "Għajn Tuffieħa",
+      "coordinates": null,
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C4%A7ajn_Tuffie%C4%A7a",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.45337222,
+        35.92406944
+      ],
+      "key": "malta:gharghur",
+      "summary": "Għargħur (Maltese: Ħal Għargħur) is a village in the Eastern Region of Malta. It is situated on a hilltop between two valleys. The population of Għargħur was 4,172 in July 2024. This included 2,125 males and 2,047 females; 3,329 Maltese nationals and 843 foreign nationals.",
+      "sourceTitle": "Għargħur",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C4%A7arg%C4%A7ur",
+      "name": "Gharghur"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.51722222,
+        35.84833333
+      ],
+      "key": "malta:ghaxaq",
+      "summary": "Għaxaq (Maltese: Ħal Għaxaq, pronounced [ħɐl ˈɐˤːʃɐʔ]) is a village in the Southern Region of Malta. The surrounding areas are predominantly used for agriculture. The population of Għaxaq was 5,852 in July 2024. This included 3,047 males and 2,805 females; 5,235 Maltese nationals and 617 foreign nationals. The village's name likely originates from the surname of a local noble family, Axiaq (also spelt Axiak or Asciak), who were feudal landholders in the 14th century.",
+      "sourceTitle": "Għaxaq",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C4%A7axaq",
+      "name": "Ghaxaq"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.24222222,
+        36.03638889
+      ],
+      "key": "gozo:fontana",
+      "summary": "Fontana (Maltese: Il-Fontana), as a local council, is an administrative unit of Malta, on the island of Gozo. The population of Fontana was 1,160 in July 2024. This included 630 males and 530 females; 899 Maltese nationals and 261 foreign nationals.",
+      "sourceTitle": "Fontana, Gozo",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Fontana%2C_Gozo",
+      "name": "Gozo - Fontana"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.29027778,
+        36.02694444
+      ],
+      "key": "gozo:ghajnsielem",
+      "summary": "Għajnsielem (Maltese pronunciation: [ɐˤɪ̯nˈsɪːlɛm]; meaning \"Spring of Peace\") is a village and local council on the south-eastern coast of the island of Gozo in Malta, including the entire island of Comino. The population in July 2024 was 3,733, of which 1,945 were male and 1,788 female, and  2,912 were Maltese and 821 were foreign nationals.",
+      "sourceTitle": "Għajnsielem",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C4%A7ajnsielem",
+      "name": "Gozo - Ghajnsielem"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.20916667,
+        36.06111111
+      ],
+      "key": "gozo:gharb",
+      "summary": "Għarb (Maltese: L-Għarb) is an administrative unit of Malta, located at the westernmost point of the island of Gozo. The population of Għarb was 1,595 in July 2024. This included 796 males and 799 females; 1,228 Maltese nationals and 367 foreign nationals.",
+      "sourceTitle": "Għarb",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C4%A7arb",
+      "name": "Gozo - Gharb"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.22777778,
+        36.05833333
+      ],
+      "key": "gozo:ghasri",
+      "summary": "Għasri (Maltese: L-Għasri) is a village and an administrative unit of Malta, in the western part of the island of Gozo. The population of Għasri was 529 in July 2024. This included 284 males and 245 females; 421 Maltese nationals and 108 foreign nationals. By population, it is the smallest village in Gozo after San Lawrenz, and the third-smallest in the Maltese Islands, after Bidnija and Mdina. Għasri, however, has a relatively large area. The village lies between the hills of Żebbuġ and Għammar. The name has Arabic origins and refers to the period of the day between the afternoon and the evening.",
+      "sourceTitle": "Għasri",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C4%A7asri",
+      "name": "Gozo - Ghasri"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.22972222,
+        36.04055556
+      ],
+      "key": "gozo:kercem",
+      "summary": "Ta' Kerċem is a village in Malta, in the island of Gozo. The population of Kerċem was 1,932 in July 2024. This included 971 males and 961 females; 1,703 Maltese nationals and 229 foreign nationals. Ta' Kerċem evolved into a village community around chapel dedicated to Pope Gregory the Great built around 1581 and replaced in 1851 by a church which was enlarged to its present state between 1906 and 1910. Ta' Kerċem became a distinct parish on 10 March 1885 and since 17 August 1885, the church was additionally co-dedicated to Our Lady of Perpetual Help.",
+      "sourceTitle": "Kerċem",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Ker%C4%8Bem",
+      "name": "Gozo - Kercem"
+    },
+    {
+      "key": "gozo:marsalforn",
+      "status": "SOURCED",
+      "name": "Gozo - Marsalforn",
+      "summary": "Marsalforn (pronounced: Mars al-Forn), also written as M'Forn for shortcut purposes, is a town on the north coast of Gozo, the second largest island of the Maltese archipelago. The town lies between the hilltop towns of Xagħra and Żebbuġ. Associated with this town is the bay of Qbajjar. The town is part of the Żebbuġ local council.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "Marsalforn",
+      "coordinates": null,
+      "sourceUrl": "https://en.wikipedia.org/wiki/Marsalforn",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "traditions": [
+        "The feast officially falls on 10 February which is also a national public holiday; however, the outside festivities are celebrated on the third Sunday of each May."
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.23527778,
+        36.03027778
+      ],
+      "key": "gozo:munxar",
+      "summary": "Munxar (Maltese: Il-Munxar) is an administrative unit of Malta, which lies on the southern side of the island of Gozo. The population of Munxar was 1,872 in July 2024. This included 1,002 males and 870 females; 1,098 Maltese nationals and 774 foreign nationals.",
+      "sourceTitle": "Munxar",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Munxar",
+      "name": "Gozo - Munxar"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.295,
+        36.03805556
+      ],
+      "key": "gozo:nadur",
+      "summary": "Nadur (Maltese: In-Nadur) is an administrative unit of Malta, located in the eastern part of the island of Gozo. Nadur is built on a plateau and is one of the largest localities in Gozo. Known as the 'second city', it spreads along a high ridge to the east of Victoria. The population of Nadur was 4,625 in July 2024. This included 2,396 males and 2,229 females; 3,944 Maltese nationals and 681 foreign nationals. The word is derived from the Arabic word ‘nadara’, which means 'lookout', pretty much having the same meaning as its motto ‘Vigilant’.",
+      "sourceTitle": "Nadur",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Nadur",
+      "name": "Gozo - Nadur"
+    },
+    {
+      "key": "gozo:qala",
+      "status": "SOURCED",
+      "name": "Gozo - Qala",
+      "summary": "Qala (Maltese: Il-Qala) is an administrative unit of Malta, on the island of Gozo, with a population of 2,300 as of November 2021. Nearby is Ħondoq ir-Rummien, a coastline with salt pans and caves.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "Qala, Malta",
+      "coordinates": [
+        14.31027778,
+        36.03527778
+      ],
+      "sourceUrl": "https://en.wikipedia.org/wiki/Qala%2C_Malta",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.24305556,
+        36.04361111
+      ],
+      "key": "gozo:victoria",
+      "summary": "Victoria (Maltese: Il-Belt Victoria, meaning \"the city Victoria\"), also known among the native Maltese as Rabat (which is the name of the old town centre) or by its title Città Victoria, is an administrative unit of Malta, and the main town on Gozo. Victoria is the most populous settlement in Gozo. Its population was 7,491 in July 2024. This included 3,934 males and 3,557 females; 5,801 Maltese nationals and 1,690 foreign nationals. The area around the town, situated on a hill near the centre of the island, has been settled since Neolithic times.",
+      "sourceTitle": "Victoria, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Victoria%2C_Malta",
+      "name": "Gozo - Rabat (Victoria)"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.20416667,
+        36.055
+      ],
+      "key": "gozo:san-lawrenz",
+      "summary": "San Lawrenz is an administrative unit of Malta, on the island of Gozo. Its name is derived from Lawrence of Rome who is the patron saint for the locality. It has a population of 748, as of March 2014. The Dwejra nature reserve is administratively part of the town. Prominent in the reserve is the Fungus Rock, and formerly also the Azure Window landmark before its collapse on March 8, 2017.",
+      "sourceTitle": "San Lawrenz",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/San_Lawrenz",
+      "name": "Gozo - San Lawrenz"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.24583333,
+        36.02444444
+      ],
+      "key": "gozo:sannat",
+      "summary": "Sannat (Maltese: Ta' Sannat) is an administrative unit of Malta, on the island of Gozo, with a population of 2,117 people (March 2014). Ta' Sannat is in the south of Gozo, popular for its very high cliffs, ancient cart ruts, temples and dolmens, and rich fauna and flora. In 1951 The Duchess of Edinburgh (who became Queen Elizabeth II) of the United Kingdom visited a house called \"The Lace house\" located in a small square in Ta' Sannat called \"Pjazza Tax-Xelina\".",
+      "sourceTitle": "Sannat",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Sannat",
+      "name": "Gozo - Sannat"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.2675,
+        36.05027778
+      ],
+      "key": "gozo:xaghra",
+      "summary": "Xagħra (Maltese: Ix-Xagħra) is an administrative unit of Malta on the island of Gozo. It is one of the earliest inhabited parts of Gozo, being home to the Ġgantija megalithic temples, which date back to 3600 BC, and the Xagħra Stone Circle. Natural underground features such as Xerri's Grotto and Ninu's Cave are located in this town, along with Calypso's Cave, which overlooks the red sandy beach of Ramla Bay. It is the second-largest town in Gozo, with a population of 5,161 according to the 2021 census, and it is located northeast of Victoria, the capital of Gozo.",
+      "sourceTitle": "Xagħra",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Xag%C4%A7ra",
+      "name": "Gozo - Xaghra"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.25833333,
+        36.03305556
+      ],
+      "key": "gozo:xewkija",
+      "summary": "Xewkija (Maltese: Ix-Xewkija, Italian: Casal Xeuchia, pronounced and written as Casal Sceuchia)  is an administrative unit and village of Malta, on the island of Gozo. The population of Xewkija is 3,300 as of March 2014.",
+      "sourceTitle": "Xewkija",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Xewkija",
+      "name": "Gozo - Xewkija"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.21888889,
+        36.02972222
+      ],
+      "key": "gozo:xlendi",
+      "summary": "Xlendi is an urban village in the southwest of the island of Gozo, Malta. It is bordered by the villages of Munxar, Fontana, and Kerċem. The village is administered by the Munxar Local Council, but has its own coat of arms and motto. Since March 2010, Xlendi has had a five-member \"mini council\" responsible for managing local activities and affairs.",
+      "sourceTitle": "Xlendi",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Xlendi",
+      "name": "Gozo - Xlendi"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.23694444,
+        36.07083333
+      ],
+      "key": "gozo:zebbug",
+      "summary": "Żebbuġ (Maltese: Iż-Żebbuġ) is a village and an administrative unit of Malta, in the northwest coast of the island of Gozo. It is located close to Għarb and Għasri and is built on two hilltop plateaus, Ta' Abram and Ix-Xagħra taż-Żebbuġ. The fishing port and tourist resort of Marsalforn lies within the Żebbuġ Council. The village has a population of 2,956 (as of March 2014), which makes it the fifth largest in Gozo, after Xewkija. With an area of 7.6 km2, Żebbuġ is the largest local council in Gozo by land area.",
+      "sourceTitle": "Żebbuġ, Gozo",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/%C5%BBebbu%C4%A1%2C_Gozo",
+      "name": "Gozo - Zebbug (Gozo)"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.5025,
+        35.84833333
+      ],
+      "key": "malta:gudja",
+      "summary": "Gudja is a village in the Southern Region of Malta. The village is located on high grounds, south of the capital Valletta. It is administered by the Gudja Local Council. A number of schools, clubs, public gardens and recreation places are found around the village. The population of Gudja was 3,501 in July 2024. This included 1,790 males and 1,711 females; 3,028 Maltese nationals and 473 foreign nationals. The area has been inhabited since prehistoric times, evident from remains still in situ. Scarce Punic remains were found in an area known as Xlejli, within the village.",
+      "sourceTitle": "Gudja",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Gudja",
+      "name": "Gudja"
+    },
+    {
+      "key": "malta:gwardamanga",
+      "status": "SOURCED",
+      "name": "Gwardamanga (Pieta)",
+      "summary": "Gwardamanġa (English: Guardamangia or sometimes incorrectly written as Gwarda Mangia) is a hamlet in Pietà, Malta. Gwardamanġa is the home of St. Luke's Hospital, Malta's former general public hospital, and Villa Guardamangia, the former home of Queen Elizabeth II. It is also the location of the Rediffusion House.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "Gwardamanġa",
+      "coordinates": null,
+      "sourceUrl": "https://en.wikipedia.org/wiki/Gwardaman%C4%A1a",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.49444444,
+        35.905
+      ],
+      "key": "malta:gzira",
+      "summary": "Gżira (Maltese: Il-Gżira) is a town in the Eastern Region of Malta. It is located between Msida and Sliema, also bordering on Ta' Xbiex. It has a population of 12,504 according to NSO 2024 figures. The word Gżira means \"island\" in Maltese, and the town is named after Manoel Island which lies to the east of Gżira, between the Sliema peninsula and Valletta. The seafront of Gżira has views of the walled city of Valletta, which is illuminated at night, forming a backdrop to Manoel Island, the yacht marina and a seafront public garden. The hamlet of Kappara is located close to Gżira.",
+      "sourceTitle": "Gżira",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/G%C5%BCira",
+      "name": "Gzira"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.51,
+        35.815
+      ],
+      "key": "malta:hal-far",
+      "summary": "Ħal Far is the largest industrial estate in Malta. It is at the southern extreme of Malta, between the localities of Birżebbuġa, Safi and Żurrieq.",
+      "sourceTitle": "Ħal Far",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/%C4%A6al_Far",
+      "name": "Hal Far"
+    },
+    {
+      "key": "malta:hal-farrug",
+      "status": "UNKNOWN",
+      "name": "Hal Farrug",
+      "summary": "",
+      "traditions": []
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.48944444,
+        35.88611111
+      ],
+      "key": "malta:hamrun",
+      "summary": "Hamrun (Maltese: Ħamrun [ħɐmˈruːn]) is a town in the Southern Region of Malta, with a population of 10,514 as of November 2021.",
+      "sourceTitle": "Hamrun",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Hamrun",
+      "name": "Hamrun"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.45444444,
+        35.90416667
+      ],
+      "key": "malta:iklin",
+      "summary": "Iklin (Maltese: L-Iklin) is a village in the Eastern Region of Malta. Iklin was established in the mid-20th century; however some archaeological sites and a medieval chapel, named as St. Michael Chapel, are proof to earlier settlements. Until recently, the town was considered to form part of the Three villages of Malta, as part of Lija. With the separation of Iklin from Lija, Iklin is no longer part of the three villages. It is bordered by Għargħur, San Ġwann, Birkirkara, Balzan and Naxxar. The population of Iklin was 3,692 in July 2024.",
+      "sourceTitle": "Iklin",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Iklin",
+      "name": "Iklin"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.51694444,
+        35.88777778
+      ],
+      "key": "malta:isla",
+      "summary": "Senglea (Maltese: L-Isla [ˈlɪslɐ]), also known by its title Città Invicta (or Civitas Invicta), is a fortified city in the Port Region of Malta. It is one of the Three Cities in the Grand Harbour area, the other two being Cospicua and Vittoriosa, and has a population of approximately 2,720 people. The city's title Città Invicta (lit. invincible city) was given because it managed to resist the Ottoman invasion at the Great Siege of Malta in 1565. The name Senglea comes from the Grand Master who built it, Claude de la Sengle, and gave the city a part of his name.",
+      "sourceTitle": "Senglea",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Senglea",
+      "name": "Isla (Senglea)"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.52944444,
+        35.88916667
+      ],
+      "key": "malta:kalkara",
+      "summary": "Kalkara (Maltese: Il-Kalkara) is a village in the Port Region of Malta, with a population of 3,014 as of March 2014. The name is derived from the Latin word for lime (calce), and it is believed that there was a lime kiln present there since Roman times. Kalkara forms part of the inner harbour area and occupies the area around Kalkara Creek. The town has its own local council and is bordered by Birgu, Żabbar, and Xgħajra.",
+      "sourceTitle": "Kalkara",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Kalkara",
+      "name": "Kalkara"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.56666667,
+        35.86666667
+      ],
+      "key": "malta:kappara",
+      "summary": "Kappara, or Il-Kappara, is a hamlet in Malta, situated between the local councils of San Ġwann, St. Julian's and Gżira. Kappara is mainly part of San Ġwann.",
+      "sourceTitle": "Kappara",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Kappara",
+      "name": "Kappara"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.485,
+        35.84194444
+      ],
+      "key": "malta:kirkop",
+      "summary": "Kirkop (Maltese: Ħal Kirkop) is a village in the Southern Region of Malta. Located near the Malta International Airport, it has been inhabited since pre-history. The parish church is dedicated to Saint Leonard. The football team of the village is Kirkop United.",
+      "sourceTitle": "Kirkop",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Kirkop",
+      "name": "Kirkop"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.44722222,
+        35.90138889
+      ],
+      "key": "malta:lija",
+      "summary": "Lija (Maltese: Ħal Lija) is a small village in the Eastern Region of Malta. Together with Attard and Balzan, it forms part of Malta's \"Three Villages\" (Maltese: It-Tliet Irħula). Lija has a baroque parish church and seven other small chapels. The parish church is dedicated to Our Saviour. Lija became a parish in 1594, after the small community detached itself from the neighbouring town, Birkirkara. The population of Lija was 3,785 in July 2024. This included 2,098 males and 1,687 females; 2,901 Maltese nationals and 884 foreign nationals.",
+      "sourceTitle": "Lija",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Lija",
+      "name": "Lija"
+    },
+    {
+      "traditions": [
+        "The patron saint's traditional feast is celebrated on the first Sunday of July, with the liturgical feast being celebrated on 30 November."
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.48916667,
+        35.85972222
+      ],
+      "key": "malta:luqa",
+      "summary": "Luqa (Maltese: Ħal Luqa [ħɐl ˈluːʔɐ], lit. 'poplar') is a town located in the Southern Region of Malta, 4.3 km away from the capital Valletta. With a population of 5,945 as of March 2014, it is a small but densely populated settlement which is typical of Malta's older towns and villages. Luqa is centered around a main square which contains a church dedicated to St. Andrew. The patron saint's traditional feast is celebrated on the first Sunday of July, with the liturgical feast being celebrated on 30 November. The Malta International Airport is located in Luqa.",
+      "sourceTitle": "Luqa",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Luqa",
+      "name": "Luqa"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.48,
+        35.92083333
+      ],
+      "key": "malta:madliena",
+      "summary": "Madliena (Maltese: Il-Madliena), formerly spelt Madalena, is an area in Swieqi, in Northern Region, Malta, formerly part of the adjacent town of Għargħur.",
+      "sourceTitle": "Madliena",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Madliena",
+      "name": "Madliena"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.44,
+        35.945
+      ],
+      "key": "malta:maghtab",
+      "summary": "Magħtab is a Maltese village. It lies in the valley of the same name in the local council of Naxxar. It is the site of the largest landfill in the island, commonly known as 'Mount Magħtab'. The landfill was closed when Malta joined the EU in 2004, but two others were subsequently opened. The Il-Widna acoustic mirror is located 1,410 metres (1,540 yd) away. The hill of Ġebel San Pietru also lies within the confines of Magħtab.",
+      "sourceTitle": "Magħtab",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Mag%C4%A7tab",
+      "name": "Maghtab"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.35358333,
+        35.94063889
+      ],
+      "key": "malta:manikata",
+      "summary": "Manikata is a small settlement in the limits of Mellieħa in the northwestern part of Malta. It oversees the farming areas in the valley between il-Ballut and il-Manikata. The village's population of 539 is spread among 40 families.",
+      "sourceTitle": "Manikata",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Manikata",
+      "name": "Manikata"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.49472222,
+        35.88333333
+      ],
+      "key": "malta:marsa",
+      "summary": "Marsa (Maltese: Il-Marsa) is a town in the Southern Region of Malta, with a population of 4,401 people as of March 2014. The name Marsa means \"the harbour\".",
+      "sourceTitle": "Marsa, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Marsa%2C_Malta",
+      "name": "Marsa"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.5675,
+        35.8625
+      ],
+      "key": "malta:marsaskala",
+      "summary": "Marsaskala, also known as Wied il-Għajn or Marsascala and abbreviated as M'Skala or M'Scala is a seaside town in the Southern Region of Malta. Originally a fishing village, it has grown into a tourist destination and a permanent hometown for an ever-growing population. The parish church, built in 1953, is dedicated to Saint Anne and Marsaskala's feast is celebrated at the end of July.",
+      "sourceTitle": "Marsaskala",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Marsaskala",
+      "name": "Marsaskala"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.54472222,
+        35.84166667
+      ],
+      "key": "malta:marsaxlokk",
+      "summary": "Marsaxlokk (Maltese pronunciation: [mɐrsɐʃˈlɔk]) is a small, traditional fishing village in the Southern Region of Malta. It has a harbour, and is a tourist attraction known for its views, fishing and history. The village is also known for the Marsaxlokk Market, which is mainly a large fish market which takes place along the seafront on Sundays, and a tourist market during all other days of the week. Inhabited and well-known since antiquity, Marsaxlokk was used as a port by Phoenicians, Carthaginians and also has the remains of a Roman-era harbour.",
+      "sourceTitle": "Marsaxlokk",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Marsaxlokk",
+      "name": "Marsaxlokk"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.40305556,
+        35.88583333
+      ],
+      "key": "malta:mdina",
+      "summary": "Mdina (Maltese: L-Imdina [lɪmˈdiːnɐ]), also known by its Italian epithets Città Vecchia (\"Old City\") and Città Notabile (\"Notable City\"), is a fortified city in the Western Region of Malta which was the island's capital from antiquity to the medieval period. The city has not spread beyond its ancient walls, and had a population of 242 as of July 2024. This included 120 males and 122 females; 166 Maltese nationals and 76 foreign nationals. A natural redoubt, the area of the city has been inhabited since prehistory.",
+      "sourceTitle": "Mdina",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Mdina",
+      "name": "Mdina"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.36638889,
+        35.95638889
+      ],
+      "key": "malta:mellieha",
+      "summary": "Mellieħa (Maltese: il-Mellieħa [ɪl mɛˈlːɪːħɐ]) is a large village in the Northern Region of Malta. The population of Mellieħa was 14,232 in July 2024. This included 7,578 males and 6,654 females; 9,312 Maltese nationals and 4,920 foreign nationals. Mellieħa is also a tourist resort, popular for its sandy beaches, natural environment, and Popeye Village nearby.",
+      "sourceTitle": "Mellieħa",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Mellie%C4%A7a",
+      "name": "Mellieha"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.36638889,
+        35.91972222
+      ],
+      "key": "malta:mgarr",
+      "summary": "Mġarr (Maltese: L-Imġarr), formerly known as Mgiarro, is a village in the Northern Region of Malta. Mġarr is a rural village, isolated from nearby towns and cities. Mġarr lies west of Mosta and is surrounded by farmland and vineyards. Many of the Imġarrin are farmers or otherwise engaged in agricultural activity. The population of Mġarr was 5,336 in July 2024. This included 2,798 males and 2,538 females; 4,518 Maltese nationals and 818 foreign nationals.",
+      "sourceTitle": "Mġarr",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/M%C4%A1arr",
+      "name": "Mgarr"
+    },
+    {
+      "traditions": [
+        "The Mosta parish celebrates the feast of the Assumption of Mary every 15 August."
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.42611111,
+        35.90972222
+      ],
+      "key": "malta:mosta",
+      "summary": "Mosta (Maltese: Il-Mosta) is a small but densely populated city in the Northern Region of Malta. The most prominent building in Mosta is the Rotunda, a large basilica built by its parishioners' volunteer labour. It features the world's third largest unsupported dome, and displays a replica of a German bombshell that famously crashed through the dome during World War II but did not detonate upon impact. The Mosta parish celebrates the feast of the Assumption of Mary every 15 August. Mosta's feast day celebration is popular amongst both locals and tourists.",
+      "sourceTitle": "Mosta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Mosta",
+      "name": "Mosta"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.46694444,
+        35.84416667
+      ],
+      "key": "malta:mqabba",
+      "summary": "Mqabba (Maltese: L-Imqabba) is a town in the Western Region of Malta. It has a traditional Maltese village layout. The focal point is the Parish Church of the Assumption, found at the core of the village. It has two band clubs, a number of gardens and a list of national monuments. The motto of the village is 'Non Nisi Per Ardua' which translates into 'Only with Ability'. The population of Mqabba was 3,714 in July 2024. This included 1,922 males and 1,792 females; 3,420 Maltese nationals and 294 foreign nationals.",
+      "sourceTitle": "Mqabba",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Mqabba",
+      "name": "Mqabba"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.4625,
+        35.89666667
+      ],
+      "key": "malta:mriehel",
+      "summary": "Birkirkara (abbreviated as B'Kara or BKR) is a city in the Eastern Region of Malta. It is the second most populous on the island, with 30,166 inhabitants as of July 2026. The town consists of five autonomous parishes: Saint Helen, Saint Joseph the Worker, Our Lady of Mount Carmel, Saint Mary and San Gorg Preca. The city's motto is In hoc signo vinces, and its coat of arms is a plain red cross, surmounted by a crown. The population of Birkirkara was 30,166 in july 2026. 20,095 Maltese nationals and 10,071 foreign nationals.",
+      "sourceTitle": "Birkirkara",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Birkirkara",
+      "name": "Mriehel"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.48944444,
+        35.89777778
+      ],
+      "key": "malta:msida",
+      "summary": "Msida (Maltese: L-Imsida, Italian: Misida) is a harbour and university town in the Eastern Region of Malta. The population of Msida was 16,001 in July 2024. This included 9,008 males and 6,993 females; 6,017 Maltese nationals and 9,984 foreign nationals.",
+      "sourceTitle": "Msida",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Msida",
+      "name": "Msida"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.39694444,
+        35.89083333
+      ],
+      "key": "malta:mtarfa",
+      "summary": "Mtarfa (Maltese: L-Imtarfa) is a small town in the Northern Region of Malta. It was considered to be a suburb of Rabat until 2000, when it became a separate local council. It is twinned with the village of Pumpherston, Scotland. The population of Mtarfa was 2,607 in July 2024. This included 1,286 males and 1,321 females; 2,489 Maltese nationals and 118 foreign nationals.",
+      "sourceTitle": "Mtarfa",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Mtarfa",
+      "name": "Mtarfa"
+    },
+    {
+      "key": "malta:mtarleb",
+      "status": "UNKNOWN",
+      "name": "Mtarleb",
+      "summary": "",
+      "traditions": []
+    },
+    {
+      "traditions": [
+        "The annual village feast is celebrated on 8 September."
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.44472222,
+        35.915
+      ],
+      "key": "malta:naxxar",
+      "summary": "Naxxar (Maltese: In-Naxxar) is a city and local council in the Northern Region of Malta. The population of Naxxar was 18,063 in July 2024. This included 9,115 males and 8,948 females; 14,534 Maltese nationals and 3,529 foreign nationals. The Naxxar Church is dedicated to Our Lady of Victories. The annual village feast is celebrated on 8 September. It formerly hosted the Maltese International Trade Fair at Maltese International Trade Fair Grounds. Naxxar is spread over 11 square kilometres (4 sq mi).",
+      "sourceTitle": "Naxxar",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Naxxar",
+      "name": "Naxxar"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.4914,
+        35.9237
+      ],
+      "key": "malta:paceville",
+      "summary": "Paceville (PAH-chuh-vil sometimes abbreviated PV) is a district in St Julian's which is the main nightlife hub in Malta, being heavily populated with nightclubs, bars, strip clubs, pubs and restaurants. It is hence also known as 'Malta's Sin City'. Paceville is located between Spinola Point and Dragonara Point, delimiting Spinola Bay and St. George's Bay respectively. In 2016, it was estimated that Paceville's population stood around 1,939, of which 1,160 were foreigners.",
+      "sourceTitle": "Paceville",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Paceville",
+      "name": "Paceville"
+    },
+    {
+      "traditions": [
+        "The feast of Christ the King is celebrated on the last Sunday of July and Our Lady of Lourdes is celebrated on the first Sunday after 17 August."
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.5075,
+        35.87277778
+      ],
+      "key": "malta:paola",
+      "summary": "Paola (Maltese: Raħal Ġdid, Italian: Casal Nuovo, both meaning \"New Town\") is a town in the Port Region of Malta, with 8,706 inhabitants as of 2019. The town is a commercial centre in the Southern Harbour area of Malta, about 5 km (3.1 mi) from the capital Valletta, contiguous to Tarxien and Fgura, with which it forms a single urban area. Paola is named after Grand Master Antoine de Paule, who laid the foundation stone in 1626.",
+      "sourceTitle": "Paola, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Paola%2C_Malta",
+      "name": "Paola"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.48083333,
+        35.92638889
+      ],
+      "key": "malta:pembroke",
+      "summary": "Pembroke is a town in the Eastern Region of Malta, and it is considered to be the country's newest locality. To the east is Paceville, the nightlife district of Malta. The coastal town and tourist hub of St. Julian's lies to the southeast, and the residential area of Swieqi lies to the south. The hilltop village of Madliena is to its west, and Baħar iċ-Ċagħaq lies to the northwest. Pembroke covers an area of 2.3 km2 (0.89 sq mi). The area hugs a coastal zone with a rocky beach.",
+      "sourceTitle": "Pembroke, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Pembroke%2C_Malta",
+      "name": "Pembroke"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.49361111,
+        35.89305556
+      ],
+      "key": "malta:pieta",
+      "summary": "Pietà (Maltese: Tal-Pietà) is a small harbour town in the Eastern Region of Malta, located near the outskirts of the capital city Valletta.",
+      "sourceTitle": "Pietà, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Piet%C3%A0%2C_Malta",
+      "name": "Pieta"
+    },
+    {
+      "key": "malta:qajjenza",
+      "status": "UNKNOWN",
+      "name": "Qajjenza",
+      "summary": "",
+      "traditions": []
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.42,
+        35.95416667
+      ],
+      "key": "malta:qawra",
+      "summary": "Qawra (Maltese: Il-Qawra, pronounced [ɪlˈʔɐʊ̯rɐ]) is a zone within St. Paul's Bay in the Northern Region, Malta. Located close to Buġibba and Salina, it is a popular tourist resort, containing many hotels and restaurants. Around 1638, the Order of St. John built Qawra Tower at Qawra Point, as part of a series of fortifications defending Malta's coastline. A battery was built around it in 1715, while an entrenchment wall was added in the 1760s. Today, the tower and battery are a restaurant, and parts of the entrenchment can still be seen.",
+      "sourceTitle": "Qawra",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Qawra",
+      "name": "Qawra"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.47222222,
+        35.87944444
+      ],
+      "key": "malta:qormi",
+      "summary": "Qormi (Maltese: Ħal Qormi, [ħɐl ˈʔɔrmɪ], locally [ħɐl ˈʔʊrmɪ]), also known by its title Città Pinto, is a city in the Southern Region of Malta, southwest of Valletta in the centre of the island. It had a population of 16,324 (as of March 2018), making it Malta's fifth-largest city. The population of Qormi was 19,752 in July 2024. This included 10,664 males and 9,088 females; 15,727 Maltese nationals and 4,025 foreign nationals. Qormi has two parishes, one dedicated to Saint George and one to Saint Sebastian. It contains two valleys: Wied il-Kbir (The Large Valley) and Wied is-Sewda (Black Valley).",
+      "sourceTitle": "Qormi",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Qormi",
+      "name": "Qormi"
+    },
+    {
+      "traditions": [
+        "Two annual feasts are held in Qrendi: the feast of Our Lady of Lourdes is celebrated either on the last Sunday of June or the first Sunday of July, and the Feast of the Ascension of Our Lady on 15 August."
+      ],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.45888889,
+        35.83416667
+      ],
+      "key": "malta:qrendi",
+      "summary": "Qrendi (Maltese: Il-Qrendi) is a village in the Western Region of Malta It is located close to Mqabba, Żurrieq and Siġġiewi. Within its boundaries are the two Neolithic temples of Mnajdra and Ħaġar Qim. The population of Qrendi was 3,324 in July 2024. This included 1,714 males and 1,610 females; 2,985 Maltese nationals and 339 foreign nationals. Two annual feasts are held in Qrendi: the feast of Our Lady of Lourdes is celebrated either on the last Sunday of June or the first Sunday of July, and the Feast of the Ascension of Our Lady on 15 August.",
+      "sourceTitle": "Qrendi",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Qrendi",
+      "name": "Qrendi"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.39888889,
+        35.88166667
+      ],
+      "key": "malta:rabat",
+      "summary": "Rabat (Maltese: Ir-Rabat [ɪˈrːɐbɐt]) is a town in the Western Region of Malta. It adjoins the ancient capital city of Mdina, and a north-western part of Rabat was in the Roman city of Melite until its medieval retrenchment. The population of Rabat was 12,329 in July 2024. This included 6,249 males and 6,080 females; 10,996 Maltese nationals and 1,333 foreign nationals. The Apostolic Nunciature of the Holy See to the Republic of Malta is seated in this village. The Local Council of Rabat is also the administrator of Baħrija. Parts of the films Munich and Black Eagle were shot in Rabat.",
+      "sourceTitle": "Rabat, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Rabat%2C_Malta",
+      "name": "Rabat"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.485,
+        35.83333333
+      ],
+      "key": "malta:safi",
+      "summary": "Safi (Maltese: Ħal Safi) is a village in the Western Region of Malta, bordering Żurrieq and Kirkop. The population of Safi was 3,324 in July 2024. This included 1,714 males and 1,610 females; 2,985 Maltese nationals and 339 foreign nationals. The formation of the village, as known today, goes back to the Punic-Roman period: the Ta' Ġawhar Tower, a round Punic-Roman tower in the village, was probably built at the time of the Punic Wars. The village of Ħal Safi is surrounded by four other major villages. Farmers and peasants used to interact on their way back home from work.",
+      "sourceTitle": "Safi, Malta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Safi%2C_Malta",
+      "name": "Safi"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.42444444,
+        35.94555556
+      ],
+      "key": "malta:salina",
+      "summary": "Salina is a village in Malta. Salina borders the villages of Baħar iċ-Ċagħaq, Magħtab, the small city of Naxxar and St. Paul's Bay. Salina is mostly known for its salt pans and the Salina Catacombs. The word salini means salt pans in Maltese.",
+      "sourceTitle": "Is-Salina",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Is-Salina",
+      "name": "Salina"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.47861111,
+        35.90944444
+      ],
+      "key": "malta:san-gwann",
+      "summary": "San Ġwann (transl. Saint John) is a town in the Northern Region of Malta, with a population of 14,244 as of 2021. Prior to its establishment as a distinct municipality, it was a fragmented community comprising parts of Birkirkara and St. Julian's. San Ġwann emerged as a new parish in 1965 and was officially recognised as a town in 1968. The Local Councils Act of 1993 identified San Ġwann as a separate district with its own statutory local government authority, marking its transition from being part of the neighbouring localities. San Ġwann Council was elected on 16 April 1994.",
+      "sourceTitle": "San Ġwann",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/San_%C4%A0wann",
+      "name": "San Gwann"
+    },
+    {
+      "key": "malta:san-pawl-tat-targa",
+      "status": "UNKNOWN",
+      "name": "San Pawl tat-Targa (Naxxar)",
+      "summary": "",
+      "traditions": []
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.50444444,
+        35.8625
+      ],
+      "key": "malta:santa-lucia",
+      "summary": "Santa Luċija (English: Saint Lucia) is a village in the Southern Region of Malta. It is one of the modern towns developed in Malta during the 20th century. By virtue of an article which appeared in Government Gazette of 7 July 1961, its location is defined as the area between Tal-Barrani (Tarxien By-Pass) and Luqa By-Pass. Santa Luċija was named after a 16th-century chapel located in the vicinity. The Parish Church is dedicated to Pope Pius X. It is home of the Chinese Garden of Serenity (a Chinese-built public garden). Located there is a hypogeum which was discovered in 1973.",
+      "sourceTitle": "Santa Luċija",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Santa_Lu%C4%8Bija",
+      "name": "Santa Lucia"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.47777778,
+        35.88972222
+      ],
+      "key": "malta:santa-venera",
+      "summary": "Santa Venera is a town in the Central Region of Malta. It is located between the towns of Birkirkara and Hamrun, and also borders Qormi and Msida. The population of Santa Venera was 9,762 in July 2024. This included 5,094 males and 4,668 females; 7,088 Maltese nationals and 2,674 foreign nationals.",
+      "sourceTitle": "Santa Venera",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Santa_Venera",
+      "name": "Santa Venera"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.43833333,
+        35.85416667
+      ],
+      "key": "malta:siggiewi",
+      "summary": "Siġġiewi (Maltese: Is-Siġġiewi [ɪsːɪˈd͡ʒːɪːwɪ]), also called by its title Città Ferdinand, is a city and a local council in the Western Region of Malta.The island of Filfla is part of the village. It is the third largest council in Malta by surface area, after Rabat and Mellieħa. Siġġiewi is situated on a plateau approximately 5 kilometers (3 miles) away from Mdina (the ancient capital city of Malta) and 10 kilometres (6 miles) away from Valletta, the contemporary capital. The population of Siġġiewi was 9,697 in July 2024. This included 4,895 males and 4,802 females; 8,947 Maltese nationals and 750 foreign nationals.",
+      "sourceTitle": "Siġġiewi",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Si%C4%A1%C4%A1iewi",
+      "name": "Siggiewi"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.50416667,
+        35.91222222
+      ],
+      "key": "malta:sliema",
+      "summary": "Sliema (Maltese: Tas-Sliema [tɐˈsːlɪːmɐ]) is a town located on the northeast coast of Malta in the Northern Harbour District. It is a major residential and commercial area and a centre for shopping, bars, dining, and café life. It is also the most densely populated town on the island. Lining the coastline is a promenade known as the Sliema Front that has become the popular spot for joggers and walkers as well as a prolific meeting place for locals during the summer season. Sliema is also known for its numerous rocky beaches, water sports and hotels.",
+      "sourceTitle": "Sliema",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Sliema",
+      "name": "Sliema"
+    },
+    {
+      "key": "malta:st-julian-s",
+      "status": "SOURCED",
+      "name": "St Julian's",
+      "summary": "Saint Julian's (Maltese: San Ġiljan) is a town in the Eastern Region of Malta. It is situated along the coast, north of the country's capital, Valletta. It is known for tourism-oriented businesses, such as hotels, restaurants and nightclubs which are centred mainly in an area known as Paceville. The population of St. Julian's was 14,709 in July 2024. This included 8.078 males and 6,631 females; 6,295 Maltese nationals and 8,614 foreign nationals.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "St. Julian's, Malta",
+      "coordinates": [
+        14.49,
+        35.91861111
+      ],
+      "sourceUrl": "https://en.wikipedia.org/wiki/St._Julian%27s%2C_Malta",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "key": "malta:st-paul-s-bay",
+      "status": "SOURCED",
+      "name": "St Paul's Bay",
+      "summary": "Saint Paul's Bay (Maltese: San Pawl il-Baħar) is a town located on the northeast coast of Malta in the Northern Region. It is a major residential and commercial area and a centre for shopping, bars, dining, and café life. According to the 2021 census, St. Paul's Bay is the most populated settlement in the country.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "St. Paul's Bay",
+      "coordinates": [
+        14.40166667,
+        35.94833333
+      ],
+      "sourceUrl": "https://en.wikipedia.org/wiki/St._Paul%27s_Bay",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.47861111,
+        35.89805556
+      ],
+      "key": "malta:swatar",
+      "summary": "Swatar, (Maltese: Tas-Swatar or Is-Swatar), is a hamlet in Malta situated in Birkirkara and in Msida. As of 2015, the population was approximately 5,100 people, with about 1,600 families. Swatar has its own separate parish since 8 November 2006, by an official decree issued by the Bishop of Malta Monsignor Paul Cremona. Swatar is located on a hill. It is in the proximity to Mater Dei Hospital and the University of Malta which are found in an area in Msida known as Tal-Qroqq. Swatar is also found next to Tal-Qattus and Ta' Paris areas in Birkirkara.",
+      "sourceTitle": "Swatar",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Swatar",
+      "name": "Swatar (Birkirkara)"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.48,
+        35.92083333
+      ],
+      "key": "malta:swieqi",
+      "summary": "Swieqi (Maltese: Is-Swieqi) is a town in the Eastern Region of Malta. It is a residential area just 15 minutes by bus from Sliema and within walking distance of Malta's nightlife and entertainment centres, Paceville and St. Julian's. As the town developed, residential estates took over farmland. The town's name means \"water channels\", a reminder of the region's past. The population of Swieqi was 14,979 in July 2024. This included 7,725 males and 7,254 females; 8,286 Maltese nationals and 6,693 foreign nationals.",
+      "sourceTitle": "Swieqi",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Swieqi",
+      "name": "Swieqi"
+    },
+    {
+      "key": "malta:ta-ibragg",
+      "status": "UNKNOWN",
+      "name": "Ta Ibragg (Swieqi)",
+      "summary": "",
+      "traditions": []
+    },
+    {
+      "key": "malta:ta-xbiex",
+      "status": "SOURCED",
+      "name": "Ta Xbiex",
+      "summary": "Ta' Xbiex (Maltese pronunciation: [tɐʒˈbɪːʃ]) is a locality and Local Council in the Eastern Region of Malta. It is part of a small headland within the Marsamxett Harbour, right between the villages of Msida and Gżira.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "Ta' Xbiex",
+      "coordinates": [
+        14.49805556,
+        35.89916667
+      ],
+      "sourceUrl": "https://en.wikipedia.org/wiki/Ta%27_Xbiex",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.51194444,
+        35.86583333
+      ],
+      "key": "malta:tarxien",
+      "summary": "Tarxien (Maltese: Ħal Tarxien [ˈħɐl tɐrˈʃɪːn]) is a town in the Port region of Malta, seat of the Port Regional Council. Its population stood at 8,583 in March 2014. The town is most notable for the Tarxien Temples, a megalithic temple complex which is among the oldest freestanding structures on Earth. It forms part of a UNESCO World Heritage Site.",
+      "sourceTitle": "Tarxien",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Tarxien",
+      "name": "Tarxien"
+    },
+    {
+      "key": "malta:tigne",
+      "status": "SOURCED",
+      "name": "Tigne",
+      "summary": "Tigné (French pronunciation: [tiɲe] ) is a small village, administratively a former commune, in the Maine-et-Loire department in western France. On January 1, 2016 it became a delegated commune within the new commune of Lys-Haut-Layon. Wines produced in the commune carry the protected name Coteaux-du-Layon. As of 2022, the village has 722 inhabitants.",
+      "traditions": [],
+      "license": "CC BY-SA 4.0",
+      "sourceTitle": "Tigné",
+      "coordinates": [
+        -0.4272,
+        47.2014
+      ],
+      "sourceUrl": "https://en.wikipedia.org/wiki/Tign%C3%A9",
+      "retrievedAt": "2026-09-27"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.5125,
+        35.89833333
+      ],
+      "key": "malta:valletta",
+      "summary": "Valletta ( ; Maltese: il-Belt Valletta, lit. 'the city [of] Valletta', pronounced [ɪlˈbɛlt vɐˈlːɛtːɐ]), also known as Città Umilissima (transl. the Humblest City), is the capital city of Malta and one of its 68 council areas. Located between the Grand Harbour to the east and Marsamxett Harbour to the west, its population as of 2021 was 5,157. As Malta's capital city, it is a commercial centre for shopping, bars, dining, and café life. It is also the southernmost capital of Europe, and, at just 0.61 square kilometres (0.24 sq mi), it is the European Union's second-smallest capital city. Valletta's 16th-century buildings were constructed by the Knights Hospitaller.",
+      "sourceTitle": "Valletta",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Valletta",
+      "name": "Valletta"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.39254167,
+        35.93795833
+      ],
+      "key": "malta:wardija",
+      "summary": "Wardija is a hamlet in St. Paul's Bay, Malta, about 363 feet above sea level. Its name is corrupted from the Sicilian or Italian word guardia, meaning 'to watch'). Although the name of the hamlet has Arabic lexicons, it was probably named later when Maltese, then an Arabic dialect, remained a dominant language. The hamlet is bordered by Bidnija, Buġibba, San Martin and Pwales. Several archeological remains found around the vicinity prove that it was inhabited in pre-history and the Roman period, and it has always been mainly a rural village.",
+      "sourceTitle": "Wardija",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Wardija",
+      "name": "Wardija"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.38583333,
+        35.95055556
+      ],
+      "key": "malta:xemxija",
+      "summary": "Xemxija (Maltese: Ix-Xemxija, pronounced shem-shee-ya) is a suburb in the western part of St. Paul's Bay in the Northern Region of Malta. It is surrounded by countryside and contains two bays, the titular Xemxija Bay and Mistra Bay, located just north of the parish church. There are a number of hotels and restaurants in Xemxija.",
+      "sourceTitle": "Xemxija",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Xemxija",
+      "name": "Xemxija"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.54722222,
+        35.88638889
+      ],
+      "key": "malta:xghajra",
+      "summary": "Xgħajra (Maltese: Ix-Xgħajra) is a small village in the Port Region of Malta. It is located on the coast, about halfway between Valletta and Marsaskala. Its local football club is known as the Xgħajra Tornadoes F.C. Contrary to popular belief, it has no relation to the Gozitan village Xagħra. The population of Xgħajra was 2,440 in July 2024. This included 1,351 males and 1,089 females; 1,820 Maltese nationals and 620 foreign nationals.",
+      "sourceTitle": "Xgħajra",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Xg%C4%A7ajra",
+      "name": "Xghajra"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.53805556,
+        35.87722222
+      ],
+      "key": "malta:zabbar",
+      "summary": "Żabbar (Maltese: Ħaż-Żabbar [ħɐzːɐˈbːɐːr]), also known as Città Hompesch, is a city in the Port Region of Malta. It is the seventh largest city in the country, with an estimated population of 15,648 as of January 2021. Originally a part of Żejtun, Żabbar was granted the title of Città Hompesch by the last of the Grand Masters of the Order of St. John to reign in Malta, Ferdinand von Hompesch zu Bolheim.",
+      "sourceTitle": "Żabbar",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/%C5%BBabbar",
+      "name": "Zabbar"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.44194444,
+        35.87305556
+      ],
+      "key": "malta:zebbug",
+      "summary": "Żebbuġ (Maltese: Ħaż-Żebbuġ [ħɐzːɛˈbːuːt͡ʃ]), also known by its title Città Rohan, is a city in the Western Region of Malta. It is one of the oldest towns in the country. The population of Żebbuġ was 14,798 in July 2024, including 7,772 men and 7,026 women (of which 12,708 were Maltese nationals and 2,090 foreign nationals).",
+      "sourceTitle": "Żebbuġ",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/%C5%BBebbu%C4%A1",
+      "name": "Zebbug"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.53333333,
+        35.85555556
+      ],
+      "key": "malta:zejtun",
+      "summary": "Żejtun (Maltese: Iż-Żejtun [ɪzːɛɪ̯ˈtuːn]) is a city in the Southern Region of Malta. Żejtun is traditionally known as Città Beland, a title conferred by the grandmaster of the Order of the Knights of Malta, Ferdinand von Hompesch zu Bolheim in 1797. Before that, the village was known as Casale Santa Caterina, named after its patron saint and parish titular. The population of Żejtun was 12,783 in July 2024. This included 6,541 males and 6,242 females; 11,732 Maltese nationals and 1,051 foreign nationals. The old urban cores, called Bisqallin and Ħal Bisbut, largely retain their narrow medieval streets and ancient boundaries.",
+      "sourceTitle": "Żejtun",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/%C5%BBejtun",
+      "name": "Zejtun"
+    },
+    {
+      "traditions": [],
+      "status": "SOURCED",
+      "license": "CC BY-SA 4.0",
+      "coordinates": [
+        14.47583333,
+        35.82916667
+      ],
+      "key": "malta:zurrieq",
+      "summary": "Żurrieq (Maltese: Iż-Żurrieq [ɪzːʊˈrːɪːʔ]) is a town in the Western Region of Malta. It is one of the oldest towns in the country. Żurrieq is one of the 10 parishes to be documented in 1436 and is dedicated to Saint Catherine. The town stretches from Nigret to Ħal Far. In old times the town had a border with Żejtun. The village of Qrendi used to be part of the parish of Żurrieq until 1618 when it was made into its own parish. The population of Żurrieq was 12,731 in July 2024.",
+      "sourceTitle": "Żurrieq",
+      "retrievedAt": "2026-09-27",
+      "sourceUrl": "https://en.wikipedia.org/wiki/%C5%BBurrieq",
+      "name": "Zurrieq"
+    }
+  ]
+}

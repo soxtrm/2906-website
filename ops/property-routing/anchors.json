@@ -1,0 +1,56 @@
+[
+  {
+    "id": "malta-overview-valletta-gate",
+    "name": "Valletta Gate",
+    "coordinates": [
+      14.5107,
+      35.8968
+    ],
+    "group": "overview"
+  },
+  {
+    "id": "malta-overview-mdina",
+    "name": "Mdina",
+    "coordinates": [
+      14.4033,
+      35.8868
+    ],
+    "group": "overview"
+  },
+  {
+    "id": "malta-overview-portomaso",
+    "name": "Portomaso · St Julian’s",
+    "coordinates": [
+      14.4928,
+      35.9221
+    ],
+    "group": "overview"
+  },
+  {
+    "id": "malta-overview-tigne-point",
+    "name": "Tigné Point · Sliema",
+    "coordinates": [
+      14.5148,
+      35.9074
+    ],
+    "group": "overview"
+  },
+  {
+    "id": "malta-overview-golden-bay",
+    "name": "Golden Bay",
+    "coordinates": [
+      14.3447,
+      35.9344
+    ],
+    "group": "overview"
+  },
+  {
+    "id": "malta-overview-cirkewwa",
+    "name": "Ċirkewwa",
+    "coordinates": [
+      14.329,
+      35.9874
+    ],
+    "group": "overview"
+  }
+]

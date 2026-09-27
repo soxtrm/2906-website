@@ -8,7 +8,7 @@
   <title>Nexus Housing — Malta homes</title>
   <link rel="icon" href="/Link/assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/Link/fonts.css">
-  <link rel="stylesheet" href="/link-marketplace/marketplace.css?v=curated-gallery-2">
+  <link rel="stylesheet" href="/link-marketplace/marketplace.css?v=brochure-collections-3">
 </head>
 <body>
   <a class="skip-link" href="#market-grid">Skip to homes</a>
@@ -19,11 +19,11 @@
   </header>
 
   <main>
-    <section class="matrix-banner" aria-labelledby="matrix-title">
+    <a class="matrix-banner" href="/link-matrix" aria-labelledby="matrix-title">
       <div><span>NEXUS LINK · SMART MATRIX</span><h1 id="matrix-title">Your life, matched to a home.</h1><p>Compare daily routes, real mobility friction and what surrounds every listing.</p></div>
-      <a href="/link-matrix">Open Matrix <b>↗</b></a>
+      <span class="matrix-banner-cta">Explore Matrix ↗</span>
       <div class="matrix-orbit" aria-hidden="true"><i></i><i></i><i></i><span class="nexus-star"></span></div>
-    </section>
+    </a>
 
     <section class="market-shell">
       <aside class="filter-panel" aria-label="Property filters">
@@ -41,7 +41,7 @@
 
       <section class="market-content">
         <div class="results-head"><div><span id="result-kicker">LIVE RENTALS</span><h2 id="result-title">Browse homes.</h2><p id="result-meta" role="status">Connecting the live 2906 inventory…</p></div></div>
-        <div class="active-filters" id="active-filters" aria-label="Applied filters"></div>
+        <div class="collection-tools"><button type="button" data-collection="saved" aria-pressed="false">♡ Favourites</button><button type="button" data-collection="selected" aria-pressed="false">☑ Selected <span data-selection-count>0</span></button><button type="button" data-clear-selection>Clear selection</button></div><div class="active-filters" id="active-filters" aria-label="Applied filters"></div>
         <div class="skeleton-grid" id="skeleton-grid" aria-label="Loading homes"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="listing-rows" id="market-grid"></div>
         <button class="load-more" id="load-more" type="button" hidden>Show more homes <span>↓</span></button>
@@ -50,10 +50,11 @@
   </main>
 
   <dialog class="property-drawer" id="property-drawer" aria-labelledby="drawer-title"><div id="drawer-content"></div></dialog>
+  <dialog id="agency-drawer" aria-labelledby="agency-title"><button data-close class="drawer-close" aria-label="Close">×</button><section class="agency-profile"><span>LISTED BY</span><h2 id="agency-title">2906 Estate</h2><p>Agency listing</p><p>The individual uploader profile and verification records are not connected to this public listing yet.</p><a href="https://www.2906.estate/" target="_blank" rel="noopener">Agency website ↗</a></section></dialog>
   <dialog class="village-drawer" id="village-drawer" aria-labelledby="village-title"><div id="village-content"></div></dialog>
   <dialog class="tunnel-dialog" id="tunnel-dialog" aria-labelledby="tunnel-title"><div id="tunnel-content"></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <footer><span class="nexus-star"></span><p><b>Nexus Housing</b><small>The first layer of Nexus Marketplace.</small></p><a href="/link-matrix">Go deeper with Nexus Link ↗</a></footer>
-  <script type="module" src="/link-marketplace/marketplace.js?v=curated-gallery-2"></script>
+  <script type="module" src="/link-marketplace/marketplace.js?v=brochure-collections-3"></script>
 </body>
 </html>

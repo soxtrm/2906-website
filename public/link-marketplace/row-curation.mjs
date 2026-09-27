@@ -4,7 +4,7 @@ export function diversifyRows(rows, limit=14) {
   const reserved=new Set(recent?.items.slice(0,4).map(p=>p.id)||[]);
   const seen=new Map();
   return rows.map(row=>{
-    const candidates=[...new Map(row.items.map(p=>[p.id,p])).values()];
+    const candidates=[...new Map(row.items.filter(p=>!seen.has(p.id)).map(p=>[p.id,p])).values()];
     const indexed=candidates.map((p,index)=>({p,index}));
     if(row.title!=='Most Recent') indexed.sort((a,b)=>{
       const exposure=p=>(seen.get(p.id)||0)+(row.title==='Nexus Selects'&&reserved.has(p.id)&&!p.crmTop?1:0);

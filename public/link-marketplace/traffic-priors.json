@@ -1,0 +1,9 @@
+{
+  "timezone": "Europe/Malta",
+  "confidence": "LOCAL PRIOR",
+  "source": "Kevin, 2026-09-27",
+  "windows": [
+    {"area":"Malta","weekdays":[1,2,3,4,5],"start":"16:00","end":"18:00","context":"Weekday commuter traffic","measuredMaximum":false},
+    {"area":"Cirkewwa ferry corridor","weekdays":[0],"start":"17:00","end":"20:00","context":"Weekend ferry return traffic","measuredMaximum":false}
+  ]
+}

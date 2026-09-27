@@ -5,6 +5,8 @@ const {execFile}=require('node:child_process');
 const {promisify}=require('node:util');
 const {createHash}=require('node:crypto');
 const run=promisify(execFile);
+const overviewAnchors=require('./anchors.json');
+const {currentTraffic}=require('./google-traffic.cjs');
 const cache=new Map();let snapshot=null,loading=null;
 const valid=c=>Array.isArray(c)&&c.length===2&&c.every(Number.isFinite)&&c[0]>=14.1&&c[0]<=14.7&&c[1]>=35.7&&c[1]<=36.2;
 const distance=(a,b)=>{const r=Math.PI/180;return 6371000*2*Math.asin(Math.min(1,Math.sqrt(Math.sin((b[1]-a[1])*r/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin((b[0]-a[0])*r/2)**2)));};
@@ -45,20 +47,20 @@ async function compute(ref){
  const key=createHash('sha256').update(JSON.stringify([ref,origin,property.updatedAt,data.places.map(p=>[p.id,p.coordinates])])).digest('hex');
  const hit=cache.get(ref);if(hit?.key===key&&Date.now()-hit.at<3600000)return hit.value;
  const nearest=data.places.map(p=>({...p,d:distance(origin,p.coordinates),group:category(p)})).filter(p=>p.group&&p.d<=5000).sort((a,b)=>a.d-b.d);
- const selected=[...new Map(['swimming','daily','social','wellbeing','mobility'].flatMap(group=>nearest.filter(p=>p.group===group).slice(0,18)).map(p=>[p.id,p])).values()];
+ const selected=[...new Map(['swimming','daily','social','wellbeing','mobility'].flatMap(group=>nearest.filter(p=>p.group===group).slice(0,18)).map(p=>[p.id,p])).values(),...(origin[1]<36?overviewAnchors:[])];
  const [walk,drive,pin]=await Promise.all([matrix(origin,selected,5012),matrix(origin,selected,5011),publicPin(origin,ref,Boolean(internal))]);
  const precision=internal&&pin?'APPROXIMATE':'AREA_ONLY',observedAt=new Date().toISOString();
  const values=selected.map((place,i)=>{
   const w=walk?.durations?.[0]?.[i+1],d=drive?.durations?.[0]?.[i+1],walkSnap=walk?.destinations?.[i+1]?.distance,driveSnap=drive?.destinations?.[i+1]?.distance;
   const walkingOk=Number.isFinite(w)&&walkSnap<=200&&(walk?.sources?.[0]?.distance??Infinity)<=200;
   const drivingOk=Number.isFinite(d)&&driveSnap<=300&&(drive?.sources?.[0]?.distance??Infinity)<=300;
-  return {id:place.id,routeVerified:walkingOk||drivingOk,walkingSeconds:walkingOk?w:null,walkingDistanceMetres:walkingOk?walk.distances[0][i+1]:null,drivingSeconds:drivingOk?d:null,drivingDistanceMetres:drivingOk?drive.distances[0][i+1]:null,walkingAccessGapMetres:walkingOk?Math.round(walkSnap):null,drivingAccessGapMetres:drivingOk?Math.round(driveSnap):null,routeSource:'OSRM / OpenStreetMap',routeConfidence:'MODELLED',routeObservedAt:observedAt,originPrecision:precision};
+  return {id:place.id,...(place.group==='overview'?{name:place.name,coordinates:place.coordinates,overview:true}:{}),routeVerified:walkingOk||drivingOk,walkingSeconds:walkingOk?w:null,walkingDistanceMetres:walkingOk?walk.distances[0][i+1]:null,drivingSeconds:drivingOk?d:null,drivingDistanceMetres:drivingOk?drive.distances[0][i+1]:null,walkingAccessGapMetres:walkingOk?Math.round(walkSnap):null,drivingAccessGapMetres:drivingOk?Math.round(driveSnap):null,routeSource:'OSRM / OpenStreetMap',routeConfidence:'MODELLED',routeObservedAt:observedAt,originPrecision:precision};
  });
  const value={status:'CONNECTED',propertyRef:ref,publicCoordinates:pin||property.coordinates,precision,originBasis:internal?'PRIVATE_VERIFIED_LOCATION':'APPROXIMATE_AREA',source:'OpenStreetMap / self-hosted OSRM',confidence:'MODELLED',traffic:'NOT_CONNECTED',observedAt,places:values};
  cache.set(ref,{at:Date.now(),key,value});if(cache.size>1000)cache.delete(cache.keys().next().value);return value;
 }
 async function geometry(value,placeId,mode){
- const data=await sources(),place=data.places.find(p=>p.id===placeId);
+ const data=await sources(),place=[...data.places,...overviewAnchors].find(p=>p.id===placeId);
  if(!place||!value.places.some(p=>p.id===placeId)||!valid(value.publicCoordinates))throw Object.assign(Error('PLACE_NOT_CONNECTED'),{status:404});
  const port=mode==='walk'?5012:5011;
  const result=await json(`http://127.0.0.1:${port}/route/v1/driving/${value.publicCoordinates.join(',')};${place.coordinates.join(',')}?overview=full&geometries=geojson&steps=false`);
@@ -79,6 +81,7 @@ const server=http.createServer(async(req,res)=>{
   const ref=url.searchParams.get('ref');if(!/^[A-Za-z0-9][\w-]{1,79}$/.test(ref||''))throw Object.assign(Error('INVALID_REF'),{status:400});
   if(active>=12)throw Object.assign(Error('BUSY'),{status:429});active++;
   try{
+  if(url.searchParams.get('traffic')==='1'){res.setHeader('Cache-Control','no-store');const data=await sources(),property=data.properties.find(p=>p.id===ref);if(!property||!valid(property.coordinates))throw Object.assign(Error('LOCATION_UNRESOLVED'),{status:404});const exact=data.private.find(p=>p.ref===ref&&p.precision==='exact'&&valid(p.coordinates));res.end(JSON.stringify(await currentTraffic(exact?.coordinates||property.coordinates,overviewAnchors,ref)));return;}
    if(!inflight.has(ref))inflight.set(ref,compute(ref).finally(()=>inflight.delete(ref)));
    const value=await inflight.get(ref),place=url.searchParams.get('place');
    res.end(JSON.stringify(place?await geometry(value,place,url.searchParams.get('mode')==='car'?'car':'walk'):value));

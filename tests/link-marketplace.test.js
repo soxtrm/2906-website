@@ -70,11 +70,11 @@ const makeProperty = (index, market = 'longlets') => ({
     rail.style.scrollBehavior = 'auto'
     rail.scrollLeft = 5
     const pointer=(type,x,pointerType='mouse')=>rail.dispatchEvent(new PointerEvent(type,{clientX:x,clientY:100,pointerType}))
-    const wheel=(deltaX=0)=>{const e=new WheelEvent('wheel',{deltaX,deltaY:180,bubbles:true,cancelable:true});rail.dispatchEvent(e);return e.defaultPrevented}
+    const wheel=(deltaX=0)=>{const e=new WheelEvent('wheel',{deltaX,deltaY:180,bubbles:true,cancelable:true});rail.querySelector('.listing-card').dispatchEvent(e);return e.defaultPrevented}
     pointer('pointerenter',100)
     const defaultPrevented=wheel()
     pointer('pointermove',132)
-    await new Promise(resolve=>setTimeout(resolve,200))
+    await new Promise(resolve=>setTimeout(resolve,550))
     const before=rail.scrollLeft,rightPrevented=wheel(),after=rail.scrollLeft
     pointer('pointermove',110)
     const leftPrevented=wheel()
@@ -98,6 +98,18 @@ const makeProperty = (index, market = 'longlets') => ({
   assert.equal(wheelScroll.horizontalNative,true)
   assert.equal(wheelScroll.touchNative,true)
 
+  await page.click('.card-favourite')
+  assert.equal(await page.$eval('.card-favourite',n=>n.getAttribute('aria-pressed')),'true')
+  await page.click('[data-select-home]')
+  assert.equal(await page.$eval('[data-selection-count]',n=>n.textContent),'1')
+  await page.click('[data-card-photo="1"]')
+  assert.equal(await page.$eval('[data-card-photo="1"]',n=>n.getAttribute('aria-pressed')),'true')
+  await page.click('.card-locality-link')
+  await page.waitForSelector('#village-drawer[open] .brochure-map .leaflet-pane')
+  assert.ok(await page.$('#village-drawer .brochure-stories'))
+  await page.screenshot({path:'brochure-mobile-smoke.png'})
+  await page.click('#village-drawer [data-close]')
+  assert.equal(await page.$eval('.matrix-banner',n=>n.getAttribute('href')),'/link-matrix')
   await page.type('#query', 'no listing can match this')
   assert.equal(await page.$eval('.listing-rail', rail => rail.querySelectorAll('.listing-card').length), 12, 'draft filter applied before Show homes')
   await page.click('#apply-filters')

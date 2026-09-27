@@ -8,11 +8,13 @@ export async function GET(req: NextRequest) {
   }
   const url = new URL('http://178.104.162.193/api/public/property-routing')
   url.searchParams.set('ref', ref)
+  if (req.nextUrl.searchParams.get('traffic') === '1') url.searchParams.set('traffic', '1')
   if (place) url.searchParams.set('place', place)
   url.searchParams.set('mode', req.nextUrl.searchParams.get('mode') === 'car' ? 'car' : 'walk')
+  const traffic = req.nextUrl.searchParams.get('traffic') === '1'
   try {
-    const response = await fetch(url, { next: { revalidate: 60 }, signal: AbortSignal.timeout(25000) })
-    return NextResponse.json(await response.json(), { status: response.status, headers: { 'Cache-Control': 'public, max-age=60' } })
+    const response = await fetch(url, { ...(traffic ? { cache: 'no-store' as const } : { next: { revalidate: 60 } }), signal: AbortSignal.timeout(25000) })
+    return NextResponse.json(await response.json(), { status: response.status, headers: { 'Cache-Control': traffic ? 'no-store' : 'public, max-age=60' } })
   } catch {
     return NextResponse.json({ status: 'UNKNOWN', reason: 'ROUTING_UNAVAILABLE' }, { status: 503 })
   }
