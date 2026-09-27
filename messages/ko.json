@@ -197,5 +197,46 @@
   },
   "referral": {
     "commissionExplanation": "성공적인 추천 1건당 10% 수수료를 받으세요."
+  },
+  "modernHome": {
+    "collectionEyebrow": "A considered collection",
+    "collectionTitle": "Homes with character. Decisions with context.",
+    "collectionIntro": "Explore a quieter, more considered presentation of Malta property, with verified listing facts and a direct path into Nexus Link intelligence.",
+    "collectionTabs": "Property collections",
+    "aestheticTab": "Aesthetic selection",
+    "allTab": "All properties",
+    "viewCollection": "View collection",
+    "viewProperty": "View property",
+    "propertyFacts": "Property facts",
+    "beds": "beds",
+    "baths": "baths",
+    "nexusEyebrow": "Property intelligence",
+    "nexusTitle": "The useful facts, in one view",
+    "poweredBy": "Powered by Nexus Link",
+    "openNexus": "Open smart view",
+    "loading": "Preparing the collection…",
+    "empty": "The next collection is being prepared.",
+    "status": {
+      "available": "Available",
+      "viewings": "Viewing",
+      "rented": "Rented"
+    },
+    "promise": {
+      "eyebrow": "The 2906 approach",
+      "title": "Personal real estate, made more precise.",
+      "text": "A refined property experience led by local judgment, clear information and technology that stays in the background until it is useful.",
+      "localTitle": "Local judgement",
+      "localText": "Malta-specific market knowledge with a human point of view.",
+      "verifiedTitle": "Clear property facts",
+      "verifiedText": "Known details stay distinct from estimates and personal preferences.",
+      "accessTitle": "A wider network",
+      "accessText": "One considered route into homes, agents and owners across Malta."
+    },
+    "nexusInvite": {
+      "eyebrow": "Nexus Link · connected intelligence",
+      "title": "See beyond the listing.",
+      "text": "Open a property with its location context, practical connections and the signals that matter to your daily life.",
+      "cta": "Explore Nexus Link"
+    }
   }
 }
