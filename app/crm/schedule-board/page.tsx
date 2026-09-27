@@ -2409,8 +2409,14 @@ function daysUntilAvailable(iso: string | null | undefined): number | null {
 // already promises and this status check was silently breaking.
 function isFarFuture(r: { availableStatus: string | null; availableDate: string | null }): boolean {
   if (r.availableStatus === 'rented' || r.availableStatus === 'archived') return false
-  const days = daysUntilAvailable(r.availableDate)
-  return days != null && days > 100
+  if (!r.availableDate) return false
+  const target = new Date(r.availableDate)
+  if (!Number.isFinite(target.getTime())) return false
+  const now = new Date()
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  cutoff.setUTCMonth(cutoff.getUTCMonth() + 3)
+  const targetDay = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate())
+  return targetDay > cutoff.getTime()
 }
 
 // The photo-overlay pill (Kev, 2026-08-22): "Uploaded X" until somebody
@@ -2881,6 +2887,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // so these stay a pure visual add-on with zero new props.
   const [rowMsg, setRowMsg] = useState<string | null>(null)
   const flash = (text: string) => { setRowMsg(text); setTimeout(() => setRowMsg(null), 2400) }
+  const futureLocked = isFarFuture(r)
+  const [futureOverride, setFutureOverride] = useState<{ label: string; run: () => void } | null>(null)
+  function guardedFutureAction(label: string, run: () => void) {
+    if (!futureLocked) { run(); return }
+    if (!isAdmin) {
+      flash(`Coming ${fmtDateDots(r.availableDate) || 'later'} · actions open within 3 months`)
+      return
+    }
+    setFutureOverride({ label, run })
+  }
+  const futureActionStyle = futureLocked ? { opacity: 0.48, filter: 'grayscale(.45)' } : {}
   const [duplicateOpen, setDuplicateOpen] = useState(false)
   const [contactBusy, setContactBusy] = useState(false)
 
@@ -2970,7 +2987,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // exclusion (nothing off-market should be offered for forwarding OR for a
   // client swipe deck); missing-anchor only disables the separate @Tag
   // button below, never the pick control itself.
-  const canSelect = !offMarket
+  const canSelect = !offMarket && (!futureLocked || isAdmin)
   const tagWhy    = offMarket
     ? 'Off the market — tagging it would invite somebody to forward it.'
     : noAnchor
@@ -2995,7 +3012,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
     : r.availableStatus === 'pending_check' ? { c: '#C98A1A', t: 'needs a recheck' }
     : r.availableStatus === 'not_available' ? { c: '#B91C1C', t: 'not available' }
     : { c: '#C9C4B8', t: 'unknown' }
-  const isUpcoming = r.availableStatus === 'upcoming'
+  const isUpcoming = r.availableStatus === 'upcoming' || futureLocked
   // Older cached responses predate the contact block; default to "usable" so a
   // stale payload degrades to the previous behaviour instead of a dead card.
   const c = r.contact || {
@@ -3526,13 +3543,24 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             "still available?" is the wrong question to even offer — no button,
             just the fact and when we'll check again. */}
         {isUpcoming ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#7C5CFC' }}>
-              UPCOMING{fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)!.toUpperCase()}` : ''}
+          <div data-future-lock={r.ref} style={{ display: 'grid', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9D8BFF' }}>
+                COMING{fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)!.toUpperCase()}` : ''}
+              </div>
+              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, textAlign: 'right' }}>
+                Owner recheck · every 8 weeks
+              </div>
             </div>
-            <div style={{ fontSize: 9.5, color: DTEXT_FAINT, textAlign: 'right' }}>
-              Next check: near availability date
+            <div style={{ fontSize: 9.5, color: DTEXT_FAINT }}>
+              Last owner update · {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : r.updatedAt ? ago(r.updatedAt) : 'not recorded'}
             </div>
+            {isAdmin && (
+              <button onClick={() => guardedFutureAction('Still available check', () => askStillAvailable(false, false, true))}
+                style={{ ...stillAvailableBtn(dark), ...futureActionStyle, justifyContent: 'center' }}>
+                Review future check
+              </button>
+            )}
           </div>
         ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3563,6 +3591,27 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             </div>
           </div>
         </div>
+        )}
+
+        {futureOverride && (
+          <div data-future-override={r.ref} style={{
+            marginTop: 7, padding: '10px 11px', borderRadius: 10,
+            background: 'rgba(124,92,252,.10)', border: '1px solid rgba(157,139,255,.55)',
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.08em', color: '#B7AAFF' }}>ADMIN OVERRIDE</div>
+            <div style={{ fontSize: 10.5, lineHeight: 1.45, color: dark ? DTEXT_DIM : LTEXT_DIM, marginTop: 4 }}>
+              {futureOverride.label} for #{r.ref}. Expected from {fmtDateDots(r.availableDate) || 'a future date'}.
+              <br />Last owner confirmation: {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'not recorded'}.
+              <br />Last property update: {r.updatedAt ? ago(r.updatedAt) : 'not recorded'}.
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <button onClick={() => { const action = futureOverride.run; setFutureOverride(null); action() }}
+                style={{ ...menuItemBtn(dark), flex: 1, justifyContent: 'center', background: '#7C5CFC', color: '#fff', fontWeight: 700 }}>
+                Continue once
+              </button>
+              <button onClick={() => setFutureOverride(null)} style={menuItemBtn(dark)}>Cancel</button>
+            </div>
+          </div>
         )}
 
         {/* Kev, 2026-09-14 (spec item 2): persists after the 2.4s flash fades —
@@ -3697,23 +3746,26 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             block right before `isUpcoming` above. Facebook stays inside "..."
             exactly where it already is (still under menuSection "Tools"). */}
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={onChat} title="Chat with the owner" style={trayPrimaryBtn(dark)}>
+          <button onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
+            title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}
+            style={{ ...trayPrimaryBtn(dark), ...futureActionStyle }}>
             Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
           </button>
-          <button onClick={onBook} data-book-btn={r.ref}
+          <button onClick={() => guardedFutureAction('Create booking request', onBook)} data-book-btn={r.ref}
+            disabled={futureLocked && !isAdmin}
             title={r.bookingsPossible ? 'Bookings possible — owner-confirmed viewing time' : 'Book a viewing'}
-            style={r.bookingsPossible
+            style={{ ...(r.bookingsPossible
               ? { ...trayPrimaryBtn(dark), background: BOOK_YELLOW, borderColor: BOOK_YELLOW, color: '#151C2C', fontWeight: 700 }
-              : trayPrimaryBtn(dark)}>
+              : trayPrimaryBtn(dark)), ...futureActionStyle }}>
             Book
           </button>
           <button
             data-watag-one={r.ref}
-            onClick={() => canTag && !tagging && onTag()}
-            disabled={!canTag || tagging}
+            onClick={() => canTag && !tagging && guardedFutureAction('Send Property Chat tag', onTag)}
+            disabled={!canTag || tagging || (futureLocked && !isAdmin)}
             title={tagWhy}
             style={{
-              ...trayPrimaryBtn(dark),
+              ...trayPrimaryBtn(dark), ...futureActionStyle,
               color: canTag ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
             }}>
             @Tag
@@ -3744,10 +3796,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             <div style={menuSection(dark)}>Talk to</div>
             <div style={menuGrid}>
               <button
-                onClick={() => { if (c.canQuestion) { onAsk(); setMenuOpen(false) } }}
-                disabled={!c.canQuestion}
+                onClick={() => { if (c.canQuestion) guardedFutureAction(r.isMine ? 'Ask owner' : 'Ask agent', () => { onAsk(); setMenuOpen(false) }) }}
+                disabled={!c.canQuestion || (futureLocked && !isAdmin)}
                 title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
-                style={{ ...menuGridBtn(dark), color: c.canQuestion ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
+                style={{ ...menuGridBtn(dark), ...futureActionStyle, color: c.canQuestion ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
                 {r.isMine ? 'Ask Owner' : 'Ask Agent'}
               </button>
               {(() => {
@@ -3762,10 +3814,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 )
               })()}
               <button
-                onClick={() => { if (!r.isMine) { setInquiryOpen(true); setMenuOpen(false) } }}
-                disabled={r.isMine}
+                onClick={() => { if (!r.isMine) guardedFutureAction('Agent inquiry', () => { setInquiryOpen(true); setMenuOpen(false) }) }}
+                disabled={r.isMine || (futureLocked && !isAdmin)}
                 title={r.isMine ? 'This is your own listing.' : `Send a quick note to ${r.listedBy.displayName || 'the listing agent'}`}
-                style={{ ...menuGridBtn(dark), color: r.isMine ? (dark ? DTEXT_FAINT : LTEXT_FAINT) : (dark ? DTEXT : LTEXT), cursor: r.isMine ? 'not-allowed' : 'pointer' }}>
+                style={{ ...menuGridBtn(dark), ...futureActionStyle, color: r.isMine ? (dark ? DTEXT_FAINT : LTEXT_FAINT) : (dark ? DTEXT : LTEXT), cursor: r.isMine ? 'not-allowed' : 'pointer' }}>
                 Agent Inquiry
               </button>
             </div>
@@ -3775,7 +3827,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 Still Available button above now, same request-availability
                 call for both isMine (owner) and colleague (relay) cases. */}
             <div style={menuGrid}>
-              <button data-match-btn={r.ref} onClick={() => { onMatch(); setMenuOpen(false) }} title="Find active clients this listing fits" style={menuGridBtn(dark)}>
+              <button data-match-btn={r.ref} onClick={() => guardedFutureAction('Run client matching', () => { onMatch(); setMenuOpen(false) })}
+                disabled={futureLocked && !isAdmin} title="Find active clients this listing fits" style={{ ...menuGridBtn(dark), ...futureActionStyle }}>
                 Match
               </button>
               {(() => {
@@ -3790,10 +3843,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                   : 'Needs a confirmed booking first — the owner has to say yes.'
                 return (
                   <button
-                    onClick={() => { if (ready) { onCreateGroup(); setMenuOpen(false) } }}
-                    disabled={!ready || already}
+                    onClick={() => { if (ready) guardedFutureAction('Create viewing group', () => { onCreateGroup(); setMenuOpen(false) }) }}
+                    disabled={!ready || already || (futureLocked && !isAdmin)}
                     title={title}
-                    style={{ ...menuGridBtn(dark), color: ready && !already ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
+                    style={{ ...menuGridBtn(dark), ...futureActionStyle, color: ready && !already ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
                     {already ? 'Grouped ✓' : 'Create Group'}
                   </button>
                 )
