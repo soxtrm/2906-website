@@ -2415,6 +2415,7 @@ function isFarFuture(r: { availableStatus: string | null; availableDate: string 
   const now = new Date()
   const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   cutoff.setUTCMonth(cutoff.getUTCMonth() + 3)
+  cutoff.setUTCDate(cutoff.getUTCDate() + 21)
   const targetDay = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate())
   return targetDay > cutoff.getTime()
 }
