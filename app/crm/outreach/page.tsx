@@ -276,7 +276,7 @@ function ArgusConsole() {
         </section>
 
         {selectedAccount && <div className="outreach-active-console">
-          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Prepare lists and drafts here. The final owner and contact checks still run immediately before send.</small></div>
+          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Drafts prepare automatically 2h before the 24h 15m window. Send remains reviewed and runs the final owner checks.</small></div>
           <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
         </div>
         }
