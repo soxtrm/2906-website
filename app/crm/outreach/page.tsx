@@ -52,6 +52,17 @@ type DueReminder = {
   auto_send_status: string; auto_send_block_reason: string | null
   assigned_session: string | null; auto_send_for: string | null
 }
+type RecheckProperty = { id: number; ref: string; town: string | null; property_type: string | null; bedrooms: number | null; available_status: string | null }
+type OwnerRecheckTask = {
+  id: number; owner_name: string | null; state: 'DECISION_REQUIRED' | 'WAITING_FOR_DATE' | 'AUTO_RESOLVED' | 'AUTOMATION_BLOCKED' | 'APPROVED'
+  decision: string; reason: string; proposed_action: string | null; proposed_message: string | null
+  property_id: number | null; updated_at: string; context_snapshot: {
+    owner?: { name?: string; lastKnownAccountId?: number | null }
+    lastRelevantMessage?: { at?: string; text?: string } | null
+    properties?: RecheckProperty[]
+    reminder?: { id?: number; note?: string; due?: string; timing?: string }
+  }
+}
 
 function useMaltaClock() {
   const [now, setNow] = useState(() => new Date())
@@ -132,6 +143,7 @@ function ArgusConsole() {
   const [duplicates, setDuplicates] = useState<any[] | null>(null)
   const [summary, setSummary] = useState<any>(null)
   const [dueReminders, setDueReminders] = useState<{ rows: DueReminder[]; perAccount: any[] }>({ rows: [], perAccount: [] })
+  const [rechecks, setRechecks] = useState<{ mode: string; tasks: OwnerRecheckTask[] }>({ mode: 'REVIEW_ONLY', tasks: [] })
   // Templates are a global library (spec follow-up: "Saved Drafts" button) —
   // lifted here, not per-console, so saving one in DEFAULT's card makes it
   // immediately available in every other account's card too.
@@ -140,14 +152,16 @@ function ArgusConsole() {
 
   const load = useCallback(async () => {
     try {
-      const [accRes, sumRes, dueRes] = await Promise.all([
+      const [accRes, sumRes, dueRes, recheckRes] = await Promise.all([
         crmGet('outreach/accounts'),
         crmGet('outreach/today-summary').catch(() => null),
         crmGet('outreach/due-reminders').catch(() => ({ rows: [], perAccount: [] })),
+        crmGet('outreach/owner-recheck').catch(() => ({ mode: 'UNKNOWN', tasks: [] })),
       ])
       setAccounts(accRes.accounts)
       setSummary(sumRes)
       setDueReminders(dueRes)
+      setRechecks(recheckRes)
       setError('')
     } catch (e: any) {
       setError(e?.message || 'Failed to load accounts')
@@ -201,6 +215,7 @@ function ArgusConsole() {
       {error && <div style={{ padding: '10px 24px', color: 'var(--crm-danger)', fontSize: 12 }}>{error}</div>}
       {!accounts && !error && <div style={{ padding: 24, color: MUTED, fontSize: 12 }}>Loading…</div>}
 
+      {accounts && <OwnerRecheckLane data={rechecks} onChanged={load} />}
       {accounts && <DueReminderLane data={dueReminders} />}
 
       {/* ── PROFILE CONSOLES — horizontal scroll ──────────────────────── */}
@@ -256,9 +271,9 @@ function DueReminderLane({ data }: { data: { rows: DueReminder[]; perAccount: an
     <section style={{ margin: '18px 24px 2px', border: `1px solid ${HAIRLINE}`, borderRadius: 18, background: PANEL, overflow: 'hidden' }}>
       <div style={{ padding: '16px 18px', display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', flexWrap: 'wrap', borderBottom: `1px solid ${HAIRLINE}` }}>
         <div>
-          <div style={{ fontSize: 10, color: '#35d6c4', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 800 }}>Due Reminder Queue</div>
-          <div style={{ fontSize: 18, fontWeight: 760, marginTop: 3 }}>Tomorrow’s owner follow-ups</div>
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Distributed across Kevin-persona accounts. Argus1 stays bridge-only.</div>
+          <div style={{ fontSize: 10, color: '#35d6c4', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 800 }}>Legacy reminder queue</div>
+          <div style={{ fontSize: 18, fontWeight: 760, marginTop: 3 }}>Held for owner recheck</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>These rows cannot send automatically while REVIEW_ONLY is active.</div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <span style={metricPill('#35d6c4')}>{queued} queued</span>
@@ -291,6 +306,77 @@ function DueReminderLane({ data }: { data: { rows: DueReminder[]; perAccount: an
       </div>
     </section>
   )
+}
+
+const RECHECK_VIEWS = [
+  ['DECISION_REQUIRED', 'Decision needed'],
+  ['WAITING_FOR_DATE', 'Waiting for date'],
+  ['AUTO_RESOLVED', 'Automatically resolved'],
+  ['AUTOMATION_BLOCKED', 'Automation blocked'],
+] as const
+
+function OwnerRecheckLane({ data, onChanged }: { data: { mode: string; tasks: OwnerRecheckTask[] }; onChanged: () => Promise<void> }) {
+  const [view, setView] = useState<OwnerRecheckTask['state']>('DECISION_REQUIRED')
+  const [busy, setBusy] = useState<number | null>(null)
+  const [pauseDates, setPauseDates] = useState<Record<number, string>>({})
+  const visible = data.tasks.filter(task => task.state === view)
+
+  async function act(task: OwnerRecheckTask, action: string, extra: Record<string, unknown> = {}) {
+    setBusy(task.id)
+    try {
+      await crmJson(`outreach/owner-recheck/${task.id}/action`, 'POST', { action, ...extra })
+      await onChanged()
+    } finally { setBusy(null) }
+  }
+
+  return <section style={{ margin: '18px 24px 2px', border: `1px solid ${HAIRLINE}`, borderRadius: 18, background: PANEL, overflow: 'hidden' }}>
+    <div style={{ padding: '16px 18px', display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', flexWrap: 'wrap', borderBottom: `1px solid ${HAIRLINE}` }}>
+      <div>
+        <div style={{ fontSize: 10, color: '#f2a53d', letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 800 }}>Owner Recheck</div>
+        <div style={{ fontSize: 18, fontWeight: 760, marginTop: 3 }}>Context first. Contact only after review.</div>
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>One card per owner and topic. New replies invalidate old approvals.</div>
+      </div>
+      <span style={metricPill(data.mode === 'REVIEW_ONLY' ? '#f2a53d' : '#e26b78')}>{data.mode}</span>
+    </div>
+    <div style={{ padding: '10px 14px', display: 'flex', gap: 7, overflowX: 'auto', borderBottom: `1px solid ${HAIRLINE}` }}>
+      {RECHECK_VIEWS.map(([state, label]) => {
+        const count = data.tasks.filter(task => task.state === state).length
+        const selected = view === state
+        return <button key={state} onClick={() => setView(state)} style={{ ...btnGhost, whiteSpace: 'nowrap', color: selected ? TEXT : MUTED, borderColor: selected ? '#f2a53d88' : HAIRLINE, background: selected ? 'rgba(242,165,61,.08)' : 'transparent' }}>{label} · {count}</button>
+      })}
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,330px),1fr))', gap: 12, padding: 14 }}>
+      {visible.map(task => {
+        const snapshot = task.context_snapshot || {}
+        const properties = snapshot.properties || []
+        const last = snapshot.lastRelevantMessage
+        const due = snapshot.reminder?.due ? String(snapshot.reminder.due).slice(0, 10) : 'unknown'
+        return <article key={task.id} style={{ border: `1px solid ${HAIRLINE}`, borderRadius: 14, padding: 14, background: EDITOR, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+            <div><div style={{ fontSize: 14, fontWeight: 760 }}>{task.owner_name || snapshot.owner?.name || 'Owner'}</div><div style={{ fontSize: 9.5, color: FAINT, marginTop: 2 }}>RECHECK #{task.id} · reminder due {due}</div></div>
+            <span style={{ ...metricPill(task.state === 'AUTOMATION_BLOCKED' ? '#e26b78' : task.state === 'AUTO_RESOLVED' ? '#3ecf8e' : '#f2a53d'), height: 'fit-content' }}>{task.decision.replaceAll('_', ' ')}</span>
+          </div>
+          <div style={{ marginTop: 11, fontSize: 11.5, lineHeight: 1.45, color: MUTED }}>{task.reason}</div>
+          {last?.text && <div style={{ marginTop: 10, borderLeft: '2px solid #f2a53d88', padding: '8px 10px', background: 'rgba(242,165,61,.05)', borderRadius: '0 8px 8px 0' }}><div style={{ fontSize: 9, color: FAINT, textTransform: 'uppercase', letterSpacing: '.08em' }}>Latest relevant owner message · {last.at ? new Date(last.at).toLocaleString('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'time unknown'}</div><div style={{ marginTop: 4, fontSize: 11.5, color: TEXT }}>“{last.text}”</div></div>}
+          {snapshot.reminder?.note && <div style={{ marginTop: 9, fontSize: 10.5, color: FAINT }}><b style={{ color: MUTED }}>Old reminder:</b> {snapshot.reminder.note}</div>}
+          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {properties.map(property => <button key={property.id} disabled={busy === task.id} onClick={() => act(task, 'assign_property', { propertyId: property.id })} style={{ ...btnGhost, padding: '5px 8px', fontSize: 9.5 }}>#{property.ref} · {property.town || 'area unknown'} · {property.available_status || 'status unknown'}</button>)}
+            {!properties.length && <span style={{ fontSize: 10, color: FAINT }}>No verified linked property.</span>}
+          </div>
+          {task.proposed_action && <div style={{ marginTop: 10, fontSize: 10.5, color: '#f2a53d' }}>{task.proposed_action}</div>}
+          {task.proposed_message && <div style={{ marginTop: 9, padding: 9, border: `1px solid ${HAIRLINE}`, borderRadius: 8, fontSize: 11 }}>{task.proposed_message}</div>}
+          {(task.state === 'DECISION_REQUIRED' || task.state === 'WAITING_FOR_DATE') && <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+            <button disabled={busy === task.id} onClick={() => act(task, 'resolve')} style={btnGhost}>Already captured / done</button>
+            <button disabled={busy === task.id} onClick={() => act(task, 'take_over')} style={btnGhost}>Take over personally</button>
+            <button disabled={busy === task.id} onClick={() => act(task, 'block')} style={{ ...btnGhost, color: '#e26b78' }}>Block automation</button>
+            {task.proposed_message && <button disabled={busy === task.id} onClick={() => act(task, 'approve')} style={{ ...btnGhost, color: '#3ecf8e' }}>Approve this proposal</button>}
+          </div>}
+          {(task.state === 'DECISION_REQUIRED' || task.state === 'WAITING_FOR_DATE') && <div style={{ marginTop: 8, display: 'flex', gap: 6 }}><input aria-label={`Pause ${task.owner_name || 'owner'} until`} type="date" value={pauseDates[task.id] || ''} onChange={event => setPauseDates(old => ({ ...old, [task.id]: event.target.value }))} style={{ background: PANEL, border: `1px solid ${HAIRLINE}`, color: TEXT, borderRadius: 8, padding: '6px 8px', fontSize: 10 }} /><button disabled={busy === task.id || !pauseDates[task.id]} onClick={() => act(task, 'pause', { until: pauseDates[task.id] })} style={btnGhost}>Pause until date</button></div>}
+        </article>
+      })}
+      {!visible.length && <div style={{ color: FAINT, fontSize: 12, padding: 6 }}>No owners in this view.</div>}
+    </div>
+  </section>
 }
 
 function metricPill(color: string) {
