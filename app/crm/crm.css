@@ -1,4 +1,6 @@
 .crm-root {
+  --font-bricolage: "Avenir Next", Avenir, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-jetbrains: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --crm-bg: #f7f7f5; --crm-surface: #ffffff; --crm-raised: #f1f2ef;
   --crm-text: #222722; --crm-muted: #5b625c; --crm-faint: #687067;
   --crm-border: #d8dcd5; --crm-accent: #795816; --crm-accent-soft: #f8f0dc;
