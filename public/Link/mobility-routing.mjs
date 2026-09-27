@@ -1,6 +1,7 @@
 export function mergeMappedRoutes(existing=[],payload={}){
  const mapped=(payload.status==='CONNECTED'?payload.places||[]:[]).flatMap(place=>['walk','car'].flatMap(mode=>{
   const seconds=place[mode==='walk'?'walkingSeconds':'drivingSeconds'],metres=place[mode==='walk'?'walkingDistanceMetres':'drivingDistanceMetres'];
+  if(mode==='walk'&&metres>0&&(!(seconds>0)||metres/seconds>2.22))return [];
   if(!Number.isFinite(seconds)||seconds<0||!Number.isFinite(metres)||metres<0)return [];
   return [{mode,anchorPlaceId:place.id,durationMinutes:seconds/60,distanceMetres:metres,confidence:'MODELLED',source:place.routeSource||payload.source,observedAt:place.routeObservedAt||payload.observedAt,originBasis:payload.originBasis}];
  }));

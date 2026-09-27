@@ -54,7 +54,7 @@ async function compute(ref){
  const precision=internal&&pin?'APPROXIMATE':'AREA_ONLY',observedAt=new Date().toISOString();
  const values=selected.map((place,i)=>{
   const w=walk?.durations?.[0]?.[i+1],d=drive?.durations?.[0]?.[i+1],walkSnap=walk?.destinations?.[i+1]?.distance,driveSnap=drive?.destinations?.[i+1]?.distance;
-  const walkingOk=Number.isFinite(w)&&walkSnap<=200&&(walk?.sources?.[0]?.distance??Infinity)<=200;
+  const walkingOk=Number.isFinite(w)&&w>0&&Number.isFinite(walk?.distances?.[0]?.[i+1])&&walk.distances[0][i+1]/w<=2.22&&walkSnap<=200&&(walk?.sources?.[0]?.distance??Infinity)<=200;
   const drivingOk=Number.isFinite(d)&&driveSnap<=300&&(drive?.sources?.[0]?.distance??Infinity)<=300;
   return {id:place.id,...(place.group==='overview'?{name:place.name,coordinates:place.coordinates,overview:true}:{}),routeVerified:walkingOk||drivingOk,walkingSeconds:walkingOk?w:null,walkingDistanceMetres:walkingOk?walk.distances[0][i+1]:null,drivingSeconds:drivingOk?d:null,drivingDistanceMetres:drivingOk?drive.distances[0][i+1]:null,walkingAccessGapMetres:walkingOk?Math.round(walkSnap):null,drivingAccessGapMetres:drivingOk?Math.round(driveSnap):null,routeSource:'OSRM / OpenStreetMap',routeConfidence:'MODELLED',routeObservedAt:observedAt,originPrecision:precision};
  });

@@ -15,7 +15,7 @@ const confidence=value=>MOBILITY_CONFIDENCE.includes(String(value||'').toUpperCa
 const percentile=(values,p=.5)=>{const sorted=values.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);if(!sorted.length)return null;const index=(sorted.length-1)*p,lo=Math.floor(index),hi=Math.ceil(index);return sorted[lo]+(sorted[hi]-sorted[lo])*(index-lo);};
 const minutes=value=>Number.isFinite(value)?`${Math.max(1,Math.round(value))} min`:'UNKNOWN';
 const euros=value=>Number.isFinite(value)?new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',maximumFractionDigits:value<10?1:0}).format(value):'UNKNOWN';
-const range=(low,high,format)=>Number.isFinite(low)&&Number.isFinite(high)?`${format(low)}–${format(high)}`:'UNKNOWN';
+const range=(low,high,format)=>Number.isFinite(low)&&Number.isFinite(high)?(format(low)===format(high)?format(low):`${format(low)}–${format(high)}`):'UNKNOWN';
 
 export const MOBILITY_OBSERVATION_FIELDS=Object.freeze([
  'originArea','destinationArea','direction','weekday','hour','season','distanceMetres','durationMinutes',
