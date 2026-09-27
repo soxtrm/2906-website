@@ -31,4 +31,5 @@ export type Me = {
   role: 'admin' | 'agent' | 'viewer' | 'board'
   daily_reveal_limit: number
   boardOnly?: boolean
+  boardTourCompletedAt?: string | null
 }

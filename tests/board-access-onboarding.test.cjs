@@ -1,0 +1,27 @@
+'use strict'
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const root = path.join(__dirname, '..')
+const read = file => fs.readFileSync(path.join(root, file), 'utf8')
+
+const login = read('app/crm/board-login/page.tsx')
+assert.match(login, /Request access/)
+assert.match(login, /board\/request-access/)
+for (const field of ['name:', 'email:', 'phone:', 'password']) assert.match(login, new RegExp(field))
+assert.match(login, /Access starts only after approval/)
+
+const access = read('app/crm/board-access/page.tsx')
+assert.match(access, /ACCESS REQUESTS/)
+assert.match(access, /phone_owner_count > 1/)
+assert.match(access, /active: \{when\(r\.last_active_at\)\}/)
+assert.match(access, /login: \{when\(r\.last_login_at\)\}/)
+
+const ui = read('lib/crm/ui.tsx')
+assert.match(ui, /FIRST MISSION · AGENT BOARD/)
+assert.match(ui, /schedule-board\/me\/tour-complete/)
+assert.equal((ui.match(/eyebrow: '0\d ·/g) || []).length, 4)
+const crmLogin = read('app/crm/login/page.tsx')
+assert.match(crmLogin, /role === 'board' \? '\/schedule-board'/)
+assert.match(crmLogin, /board-login\?mode=request/)
+console.log('board access onboarding: ok')

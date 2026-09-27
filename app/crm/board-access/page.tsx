@@ -18,9 +18,14 @@ import {
 type Row = {
   id: number; name: string | null; email: string | null; username: string
   role: string; active: boolean; board_access: boolean
-  last_login_at: string | null; created_at: string | null
+  last_login_at: string | null; last_active_at: string | null; created_at: string | null
+  board_tour_completed_at: string | null
   whatsapp_phone: string
+  phone_owner_count: number
+  linked_whatsapp_session: string | null
+  linked_whatsapp_label: string | null
 }
+type AccessRequest = { id: number; name: string; email: string; phone: string; requested_at: string }
 
 function when(v: string | null) {
   if (!v) return 'never'
@@ -34,6 +39,7 @@ function when(v: string | null) {
 function BoardAccess() {
   const isMobile = useIsMobile()
   const [rows, setRows] = useState<Row[]>([])
+  const [requests, setRequests] = useState<AccessRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [email, setEmail] = useState('')
@@ -54,7 +60,7 @@ function BoardAccess() {
   const load = useCallback(async () => {
     try {
       const d = await crmFetch('board-access')
-      setRows(d.agents || []); setErr(null)
+      setRows(d.agents || []); setRequests(d.requests || []); setErr(null)
     } catch (e: any) { setErr(e?.message || 'Could not load the list') }
     finally { setLoading(false) }
   }, [])
@@ -88,6 +94,15 @@ function BoardAccess() {
     setNote(null)
     try { await crmJson(`board-access/${r.id}`, 'PATCH', { active: !r.active }); await load() }
     catch (e: any) { setNote(e?.message || 'Could not update') }
+  }
+
+  async function reviewRequest(r: AccessRequest, action: 'approve' | 'reject') {
+    setNote(null)
+    try {
+      await crmJson(`board-access/requests/${r.id}/${action}`, 'POST', {})
+      setNote(action === 'approve' ? `${r.name} can now sign in normally.` : `${r.name}'s request was declined.`)
+      await load()
+    } catch (e: any) { setNote(e?.data?.error || e?.message || `Could not ${action} request`) }
   }
 
   async function savePhone(r: Row, value: string) {
@@ -192,6 +207,22 @@ function BoardAccess() {
           {note && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--crm-accent)', fontWeight: 600 }}>{note}</div>}
         </div>
 
+        {requests.length > 0 && (
+          <div style={{ background: 'linear-gradient(135deg,#111B2B,#0B1320)', border: `1px solid rgba(184,149,63,.48)`, borderRadius: 12, padding: 18, marginTop: 16 }}>
+            <div style={{ color: A, fontSize: 10, fontWeight: 800, letterSpacing: '.16em' }}>ACCESS REQUESTS · {requests.length}</div>
+            <div style={{ color: DTEXT_DIM, fontSize: 12, marginTop: 5 }}>A request never activates itself. Approve it here after checking the identity.</div>
+            {requests.map(r => <div key={r.id} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', paddingTop: 13, marginTop: 13, borderTop: `1px solid ${DBORDER}` }}>
+              <div style={{ flex: 1, minWidth: 210 }}>
+                <div style={{ color: DTEXT, fontSize: 13, fontWeight: 700 }}>{r.name}</div>
+                <div style={{ color: DTEXT_DIM, fontSize: 11.5, marginTop: 2 }}>{r.email} · +{r.phone}</div>
+                <div style={{ color: DTEXT_FAINT, fontSize: 10.5, marginTop: 3 }}>requested {when(r.requested_at)}</div>
+              </div>
+              <button style={ghost} onClick={() => reviewRequest(r, 'reject')}>Decline</button>
+              <button style={btn} onClick={() => reviewRequest(r, 'approve')}>Approve account</button>
+            </div>)}
+          </div>
+        )}
+
         {/* Facebook cookie uploader — replaces pasting a cookie export into
             WhatsApp for someone to scp onto the VPS by hand. */}
         <div style={{ background: DCARD, border: `1px solid ${DCARD_BORDER}`, borderRadius: 12, padding: 18, marginTop: 16 }}>
@@ -274,9 +305,13 @@ function PhoneCell({ r, onSave }: { r: Row; onSave: (r: Row, value: string) => v
     )
   }
   return (
-    <div onClick={() => setEditing(true)} title="Click to edit"
-      style={{ fontSize: 11.5, color: r.whatsapp_phone ? DTEXT : DTEXT_FAINT, cursor: 'pointer', minWidth: 110 }}>
-      {r.whatsapp_phone ? `+${r.whatsapp_phone}` : 'no phone — click to add'}
+    <div onClick={() => setEditing(true)} title="Click to edit" style={{ cursor: 'pointer', minWidth: 135 }}>
+      <div style={{ fontSize: 11.5, color: r.whatsapp_phone ? DTEXT : DTEXT_FAINT }}>
+        {r.whatsapp_phone ? `+${r.whatsapp_phone}` : 'no phone — click to add'}
+      </div>
+      {r.whatsapp_phone && <div style={{ fontSize: 9.5, marginTop: 3, fontWeight: 800, letterSpacing: '.08em', color: r.phone_owner_count > 1 ? '#F87171' : A }}>
+        {r.phone_owner_count > 1 ? 'DUPLICATE BINDING' : r.linked_whatsapp_session ? `SESSION · ${r.linked_whatsapp_label || r.linked_whatsapp_session}` : 'IDENTITY LINKED'}
+      </div>}
     </div>
   )
 }
@@ -305,7 +340,10 @@ function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, on
               <div style={{ fontSize: 11.5, color: DTEXT_DIM, marginTop: 2 }}>{r.email || 'no address — cannot sign in'}</div>
             </div>
             <PhoneCell r={r} onSave={onSavePhone} />
-            <div style={{ fontSize: 11.5, color: DTEXT_FAINT, minWidth: 110 }}>last in: {when(r.last_login_at)}</div>
+            <div style={{ minWidth: 116 }}>
+              <div style={{ fontSize: 11.5, color: r.last_active_at ? A : DTEXT_FAINT }}>active: {when(r.last_active_at)}</div>
+              <div style={{ fontSize: 10.5, color: DTEXT_FAINT, marginTop: 2 }}>login: {when(r.last_login_at)}</div>
+            </div>
             {/* Kev, 2026-09-16: most useful for someone who has never logged
                 in ("last in: never") — but left available any time, since a
                 link never used within 30 minutes just expires quietly. */}

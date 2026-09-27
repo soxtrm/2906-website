@@ -276,7 +276,51 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       </div>
     )
   }
-  return <Ctx.Provider value={{ me, reveals, nav, doReveal, logout, theme, toggleTheme }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ me, reveals, nav, doReveal, logout, theme, toggleTheme }}>
+    {children}
+    {me?.boardOnly && !me.boardTourCompletedAt && (
+      <BoardFirstRunTour onDone={() => setMe(current => current ? { ...current, boardTourCompletedAt: new Date().toISOString() } : current)} />
+    )}
+  </Ctx.Provider>
+}
+
+const TOUR_STEPS = [
+  { icon: '⌂', eyebrow: '01 · HOME BASE', title: 'Read the board at a glance', text: 'Properties, availability and the next action live together. Open a card when you need the full context.' },
+  { icon: '◈', eyebrow: '02 · PROPERTY CARD', title: 'Act from the property', text: 'Chat, Book and status controls stay attached to the correct property, so a decision never loses its reference.' },
+  { icon: '◷', eyebrow: '03 · VIEWING FLOW', title: 'Turn interest into a slot', text: 'A booking request asks the owner first. Confirmed availability becomes a clear slot for the team.' },
+  { icon: '✦', eyebrow: '04 · NEXUS LINK', title: 'One identity across the board', text: 'Your phone, email and actions belong to your own account. Notes and updates keep the team in sync.' },
+]
+
+function BoardFirstRunTour({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const current = TOUR_STEPS[step]
+  async function finish() {
+    if (saving) return
+    setSaving(true)
+    try { await crmJson('schedule-board/me/tour-complete', 'POST', {}); onDone() }
+    catch { setSaving(false) }
+  }
+  return <div role="dialog" aria-modal="true" aria-label="Agent Board introduction" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(4,10,18,.82)', backdropFilter: 'blur(9px)', display: 'grid', placeItems: 'center', padding: 18 }}>
+    <div style={{ width: 'min(470px,100%)', border: '1px solid rgba(197,166,90,.42)', borderRadius: 22, background: 'radial-gradient(circle at 50% 0,rgba(197,166,90,.11),transparent 34%),#0D1726', boxShadow: '0 30px 100px rgba(0,0,0,.58)', color: '#F8F5EC', padding: 24, position: 'relative', overflow: 'hidden' }}>
+      <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 2, background: 'linear-gradient(90deg,transparent,#C5A65A,transparent)' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 9.5, letterSpacing: '.18em', color: '#C5A65A', fontWeight: 800 }}>FIRST MISSION · AGENT BOARD</div>
+        <button onClick={finish} disabled={saving} style={{ border: 0, background: 'transparent', color: '#8D98A8', fontFamily: F, fontSize: 11, cursor: 'pointer' }}>Skip tour</button>
+      </div>
+      <div style={{ display: 'grid', placeItems: 'center', margin: '26px 0 19px' }}>
+        <div style={{ width: 76, height: 76, borderRadius: 23, display: 'grid', placeItems: 'center', fontSize: 34, color: '#E5C771', border: '1px solid rgba(229,199,113,.52)', background: 'rgba(229,199,113,.07)', boxShadow: '0 0 42px rgba(229,199,113,.17)' }}>{current.icon}</div>
+      </div>
+      <div style={{ color: '#C5A65A', fontSize: 9.5, letterSpacing: '.16em', fontWeight: 800 }}>{current.eyebrow}</div>
+      <h2 style={{ fontSize: 25, lineHeight: 1.12, letterSpacing: '-.035em', margin: '8px 0 10px', color: '#FFF', fontFamily: F }}>{current.title}</h2>
+      <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0, color: '#AEB8C6' }}>{current.text}</p>
+      <div style={{ display: 'flex', gap: 6, marginTop: 23 }}>{TOUR_STEPS.map((_, i) => <span key={i} style={{ height: 3, flex: 1, borderRadius: 4, background: i <= step ? '#C5A65A' : '#273447', transition: 'background .2s' }} />)}</div>
+      <div style={{ display: 'flex', gap: 9, marginTop: 20 }}>
+        {step > 0 && <button onClick={() => setStep(step - 1)} style={{ flex: 1, border: '1px solid #314056', background: 'transparent', borderRadius: 10, padding: 11, color: '#C1C8D3', fontFamily: F, fontWeight: 700, cursor: 'pointer' }}>Back</button>}
+        <button onClick={() => step === TOUR_STEPS.length - 1 ? finish() : setStep(step + 1)} disabled={saving} style={{ flex: 2, border: 0, background: '#C5A65A', borderRadius: 10, padding: 11, color: '#101A2B', fontFamily: F, fontWeight: 850, cursor: 'pointer' }}>{step === TOUR_STEPS.length - 1 ? (saving ? 'Saving…' : 'Enter the board') : 'Continue'}</button>
+      </div>
+    </div>
+  </div>
 }
 
 // ── responsive hook ──────────────────────────────────────────────────────────

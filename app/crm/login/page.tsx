@@ -16,8 +16,8 @@ export default function CrmLogin() {
   async function submit() {
     setErr(''); setLoading(true)
     try {
-      await crmJson('login', 'POST', { emailOrUsername: id.trim(), password: pw })
-      router.replace('/')
+      const d = await crmJson('login', 'POST', { emailOrUsername: id.trim(), password: pw })
+      router.replace(d?.agent?.role === 'board' ? '/schedule-board' : '/')
     } catch (e: any) {
       setErr(e?.message || 'Login failed'); setLoading(false)
     }
@@ -41,6 +41,11 @@ export default function CrmLogin() {
             style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 10, padding: '13px', fontSize: 13, fontWeight: 700, fontFamily: F, cursor: loading ? 'wait' : 'pointer', letterSpacing: '0.03em', opacity: (!id || !pw) ? 0.5 : 1, marginTop: 4 }}>
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
+        </div>
+        <div style={{ marginTop: 17, display: 'flex', justifyContent: 'center', gap: 8, fontSize: 11 }}>
+          <a href="/board-login" style={{ color: '#667085', textDecoration: 'none' }}>Board sign-in</a>
+          <span style={{ color: '#D2CEC5' }}>·</span>
+          <a href="/board-login?mode=request" style={{ color: A, textDecoration: 'none', fontWeight: 700 }}>Request access</a>
         </div>
         <div style={{ marginTop: 20, fontSize: 10, color: '#CCC', textAlign: 'center' }}>2906 Estate · Malta</div>
       </div>
