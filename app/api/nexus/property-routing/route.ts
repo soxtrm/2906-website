@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(req: NextRequest) {
   const ref = req.nextUrl.searchParams.get('ref') || ''
   const place = req.nextUrl.searchParams.get('place')
-  if (!/^2906-[\w-]{1,60}$/.test(ref) || (place && !/^nexus-place:\d+$/.test(place))) {
+  if (!/^[A-Za-z0-9][\w-]{1,79}$/.test(ref) || (place && !/^nexus-place:\d+$/.test(place))) {
     return NextResponse.json({ status: 'UNKNOWN', reason: 'INVALID_REFERENCE' }, { status: 400 })
   }
   const url = new URL('http://178.104.162.193/api/public/property-routing')

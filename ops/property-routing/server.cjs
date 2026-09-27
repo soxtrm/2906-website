@@ -70,7 +70,7 @@ const server=http.createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,'http://localhost');if(req.method!=='GET')throw Object.assign(Error('METHOD_NOT_ALLOWED'),{status:405});
   if(url.pathname==='/health'){res.end(JSON.stringify({ok:true,engine:'OSRM',traffic:false}));return;}
-  const ref=url.searchParams.get('ref');if(!/^2906-[\w-]{1,60}$/.test(ref||''))throw Object.assign(Error('INVALID_REF'),{status:400});
+  const ref=url.searchParams.get('ref');if(!/^[A-Za-z0-9][\w-]{1,79}$/.test(ref||''))throw Object.assign(Error('INVALID_REF'),{status:400});
   if(active>=12)throw Object.assign(Error('BUSY'),{status:429});active++;
   try{
    if(!inflight.has(ref))inflight.set(ref,compute(ref).finally(()=>inflight.delete(ref)));
