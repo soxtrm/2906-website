@@ -589,15 +589,7 @@
       "retrievedAt": "2026-09-27",
       "sourceUrl": "https://en.wikipedia.org/wiki/G%C5%BCira",
       "name": "Gzira",
-      "photo": {
-        "source": "Wikimedia Commons",
-        "license": "CC BY-SA 3.0",
-        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hafenpromenade_Sliema.jpg",
-        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Hafenpromenade_Sliema.jpg/1280px-Hafenpromenade_Sliema.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
-        "author": "FrankBothe",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "caption": "Gzira"
-      }
+      "photo": null
     },
     {
       "traditions": [],
