@@ -43,6 +43,8 @@ const MALTA_TZ = 'Europe/Malta'
 const MAX_RETRY_ATTEMPTS = 20
 const RETRY_DELAY_MS = 3 * 60_000
 const OUTREACH_ACCOUNT_INTERVAL_MS = (24 * 60 + 15) * 60_000
+const AUTO_PREP_LEAD_MS = 2 * 60 * 60_000
+const AUTO_PREP_GRACE_MS = 15 * 60_000
 
 function isSystemManagerSession(sessionName, label = '') {
   return /argus\s*1|argus[_-]?1/i.test(`${sessionName || ''} ${label || ''}`)
@@ -56,6 +58,18 @@ async function accountCooldown(sessionName, at = new Date()) {
   const lastSentAt = result.rows[0]?.last_sent_at ? new Date(result.rows[0].last_sent_at) : null
   const nextEligibleAt = lastSentAt ? new Date(lastSentAt.getTime() + OUTREACH_ACCOUNT_INTERVAL_MS) : null
   return { lastSentAt, nextEligibleAt, allowed: !nextEligibleAt || nextEligibleAt <= at }
+}
+
+function autoPreparationWindow(lastSentAt, now = new Date()) {
+  if (!lastSentAt) return { due: false, reason: 'no_previous_outreach' }
+  const readyAt = new Date(new Date(lastSentAt).getTime() + OUTREACH_ACCOUNT_INTERVAL_MS)
+  const remainingMs = readyAt.getTime() - now.getTime()
+  return {
+    due: remainingMs <= AUTO_PREP_LEAD_MS && remainingMs >= -AUTO_PREP_GRACE_MS,
+    readyAt,
+    remainingMs,
+    reason: remainingMs > AUTO_PREP_LEAD_MS ? 'too_early' : remainingMs < -AUTO_PREP_GRACE_MS ? 'window_passed' : 'due',
+  }
 }
 
 // ── Explicit state-transition log (spec: every ARMED exit needs a reason,
@@ -269,6 +283,78 @@ async function saveMessageTemplate(label, text, createdBy) {
 }
 async function deleteMessageTemplate(templateId) {
   await db.query(`DELETE FROM outreach_message_templates WHERE id = $1`, [templateId])
+}
+
+// Draft preparation only. It never arms or sends a plan. Two hours before an
+// account becomes eligible again, reuse the newest identity-compatible text
+// and its previous list size. This gives Kevin a prepared morning queue while
+// preserving REVIEW_ONLY and the normal final contact checks.
+async function prepareDueAccountPlans(now = new Date()) {
+  const rows = await db.query(
+    `SELECT a.id, a.session_name, a.label, a.account_persona,
+            MAX(l.sent_at) AS last_sent_at
+       FROM whatsapp_accounts a
+       JOIN outreach_log l ON l.account_used = a.session_name AND l.sent_at IS NOT NULL
+      WHERE a.is_active = TRUE AND a.outreach_enabled = TRUE
+      GROUP BY a.id, a.session_name, a.label, a.account_persona
+      ORDER BY a.priority, a.id`)
+  const identityRules = require('./outreachIdentity')
+  const prepared = []
+  const skipped = []
+
+  for (const account of rows.rows) {
+    if (isSystemManagerSession(account.session_name, account.label)) {
+      skipped.push({ session: account.session_name, reason: 'system_manager' })
+      continue
+    }
+    const window = autoPreparationWindow(account.last_sent_at, now)
+    if (!window.due) continue
+    const date = maltaTodayStr(window.readyAt)
+    const plan = await ensurePlan(account.id, date, 'auto-prep-2h')
+    const stats = await computeStats(plan.id)
+    if (plan.armed || ['ready', 'running', 'completed', 'cancelled'].includes(plan.status)
+      || stats.total > 0 || String(plan.message_template || '').trim()) {
+      skipped.push({ session: account.session_name, planId: plan.id, reason: 'already_prepared' })
+      continue
+    }
+
+    const previous = await db.query(
+      `SELECT message_template, target_count
+         FROM outreach_plans
+        WHERE account_id = $1 AND id <> $2
+          AND NULLIF(BTRIM(message_template), '') IS NOT NULL
+          AND COALESCE(target_count, 0) > 0
+        ORDER BY scheduled_date DESC, updated_at DESC
+        LIMIT 12`,
+      [account.id, plan.id])
+    const compatible = previous.rows.find(row =>
+      identityRules.findForeignSignatures(row.message_template, String(account.account_persona || '').toLowerCase()).length === 0)
+    if (!compatible) {
+      skipped.push({ session: account.session_name, planId: plan.id, reason: 'no_identity_safe_previous_draft' })
+      continue
+    }
+
+    const count = Math.max(5, Math.min(80, Number(compatible.target_count) || 30))
+    try {
+      const generated = await generateList(plan.id, count)
+      if (!generated.added) {
+        skipped.push({ session: account.session_name, planId: plan.id, reason: 'no_eligible_contacts' })
+        continue
+      }
+      await setMessageTemplate(plan.id, compatible.message_template)
+      await db.query(
+        `UPDATE outreach_plans
+            SET scheduled_at = $2, source = 'auto_prepared_2h', status = 'saved', armed = FALSE, updated_at = NOW()
+          WHERE id = $1`,
+        [plan.id, window.readyAt])
+      prepared.push({ session: account.session_name, planId: plan.id, scheduledAt: window.readyAt, count: generated.added })
+    } catch (err) {
+      await clearEntries(plan.id).catch(() => {})
+      log.warn('outreachPlanner: two-hour draft preparation failed', { session: account.session_name, planId: plan.id, err: err.message })
+      skipped.push({ session: account.session_name, planId: plan.id, reason: err.code || err.message })
+    }
+  }
+  return { prepared, skipped }
 }
 
 // ── Reservation (spec point 14/35) ──────────────────────────────────────────
@@ -887,6 +973,7 @@ async function todayContactedSummary() {
 
 module.exports = {
   maltaTodayStr, addDaysStr, maltaLocalToUTC, maltaTimeLabel, dayLabelFor,
+  autoPreparationWindow, prepareDueAccountPlans,
   listAccounts, setAccountVolume, ensurePlan, getPlanWithEntries, listRollingPlans, computeStats,
   setMessageTemplate, addEntriesFromPaste, generateList, removeEntry, clearEntries, regenerate,
   saveDraft, armPlan, pausePlan, cancelPlan, runScheduledPlan,
