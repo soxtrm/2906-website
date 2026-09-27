@@ -39,8 +39,7 @@ export function normalizeMobilityObservation(value){
 function sameCorridor(observation,origin,destination){return clean(observation.originArea)===clean(origin)&&clean(observation.destinationArea)===clean(destination);}
 function routeFor(property,anchor,mode){
  const routes=Array.isArray(property.mobilityRoutes)?property.mobilityRoutes:[];
- if(anchor.overview)return routes.find(route=>route&&route.mode===mode&&route.anchorPlaceId===anchor.placeId)||null;
- return routes.find(route=>route&&route.mode===mode&&(!route.anchorPlaceId||route.anchorPlaceId===anchor.placeId))||null;
+ return routes.find(route=>route&&route.mode===mode&&anchor.placeId&&route.anchorPlaceId===anchor.placeId)||null;
 }
 function observationSummary(records,origin,destination,direction='outbound'){
  const matching=(Array.isArray(records)?records:[]).map(normalizeMobilityObservation).filter(Boolean).filter(item=>sameCorridor(item,origin,destination)&&item.direction===direction);
@@ -74,7 +73,7 @@ function buildMode(mode,{property,anchor,origin,destination,observations}){
  if(route){
   const low=finite(route.durationLowMinutes??route.durationMinutes),high=finite(route.durationHighMinutes??route.durationMinutes);
   result.time=range(low,high,minutes);result.minutes=Number.isFinite(low)&&Number.isFinite(high)?(low+high)/2:null;
-  result.confidence=confidence(route.confidence);
+  result.confidence=confidence(route.confidence);result.distanceMetres=finite(route.distanceMetres);result.source=route.source||null;result.observedAt=route.observedAt||route.requestedAt||null;
   if(mode==='walk')result.comfort=route.friction||'Weather, night, urgency and luggage can change the practical fit.';
   if(mode==='bus'){
    const transfers=finite(route.transfers),walking=finite(route.walkingMinutes),frequency=finite(route.frequencyMinutes);

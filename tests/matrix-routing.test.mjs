@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {mergeMappedRoutes} from '../public/Link/mobility-routing.mjs';
+import {buildMobilityReality} from '../public/Link/mobility-reality.mjs';
+const id='malta-overview-valletta-gate';
+const routes=mergeMappedRoutes([{mode:'bus',anchorPlaceId:id,durationMinutes:26,confidence:'MODELLED'}],{status:'CONNECTED',places:[{id,walkingSeconds:1800,walkingDistanceMetres:2000,drivingSeconds:600,drivingDistanceMetres:6000},{id:'unrouted',walkingSeconds:null,drivingSeconds:null}]});
+assert.equal(routes.length,3);assert.equal(routes.find(r=>r.mode==='walk').durationMinutes,30);assert.equal(routes.find(r=>r.mode==='car').distanceMetres,6000);
+assert.equal(mergeMappedRoutes(routes,{status:'CONNECTED',places:[{id,walkingSeconds:1200,walkingDistanceMetres:1500}]}).length,3);
+const overview=buildMobilityReality({area:'Sliema',mobilityRoutes:routes},{anchors:[],transport:'bus'});
+assert.equal(overview[0].modes[0].mode,'bus');assert.equal(overview[0].modes.find(m=>m.mode==='car').distanceMetres,6000);assert.equal(overview[1].modes.find(m=>m.mode==='car').time,'UNKNOWN');
+const personal=buildMobilityReality({area:'Sliema',mobilityRoutes:[{mode:'car',durationMinutes:5,confidence:'MODELLED'}]},{transport:'car',anchors:[{location:'Work',placeId:'work'},{location:'Gym',placeId:'gym'}]});
+assert.ok(personal.every(j=>j.modes[0].time==='UNKNOWN'));
+console.log('Matrix route mapping, destination isolation and missing evidence passed');
