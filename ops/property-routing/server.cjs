@@ -70,6 +70,12 @@ const server=http.createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,'http://localhost');if(req.method!=='GET')throw Object.assign(Error('METHOD_NOT_ALLOWED'),{status:405});
   if(url.pathname==='/health'){res.end(JSON.stringify({ok:true,engine:'OSRM',traffic:false}));return;}
+  if(url.searchParams.get('view')==='curation'){
+   const data=await sources();
+   const result=await run('docker',['exec','2906_postgres','psql','-U','2906user','-d','2906db','-Atc',"SELECT coalesce(json_agg(json_build_object('id',ref,'crmTop',is_hot_property,'createdAt',created_at)),'[]') FROM properties WHERE ref IS NOT NULL"],{timeout:10000,maxBuffer:1024*1024});
+   const publicIds=new Set(data.properties.map(p=>p.id));
+   res.end(JSON.stringify({properties:JSON.parse(result.stdout).filter(p=>publicIds.has(p.id))}));return;
+  }
   const ref=url.searchParams.get('ref');if(!/^[A-Za-z0-9][\w-]{1,79}$/.test(ref||''))throw Object.assign(Error('INVALID_REF'),{status:400});
   if(active>=12)throw Object.assign(Error('BUSY'),{status:429});active++;
   try{

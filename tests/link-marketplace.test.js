@@ -19,7 +19,7 @@ const makeProperty = (index, market = 'longlets') => ({
   availableFrom: '2026-10-01',
   rentalModes: market === 'stays' ? ['SHORT_LET'] : ['LONG_LET'],
   propertyType: 'apartment',
-  images: [`https://images.test/${market}-${index}.jpg`],
+  images: [`https://images.test/${market}-${index}.jpg`, `https://images.test/${market}-${index}-2.jpg`],
   featureFacts: { balcony: { status: 'KNOWN', value: true } },
   description: `Bright ${market} apartment number ${index} with a balcony.`,
   updatedAt: '2026-09-26T10:00:00Z'
@@ -69,13 +69,34 @@ const makeProperty = (index, market = 'longlets') => ({
   const wheelScroll = await page.$eval('.listing-rail', async rail => {
     rail.style.scrollBehavior = 'auto'
     rail.scrollLeft = 5
-    const before = rail.scrollLeft
-    const event = new WheelEvent('wheel', { deltaY: 180, bubbles: true, cancelable: true })
-    rail.dispatchEvent(event)
-    await new Promise(resolve => setTimeout(resolve, 350))
-    return { before, after: rail.scrollLeft, width: rail.clientWidth, scrollWidth: rail.scrollWidth, prevented: event.defaultPrevented }
+    const pointer=(type,x,pointerType='mouse')=>rail.dispatchEvent(new PointerEvent(type,{clientX:x,clientY:100,pointerType}))
+    const wheel=(deltaX=0)=>{const e=new WheelEvent('wheel',{deltaX,deltaY:180,bubbles:true,cancelable:true});rail.dispatchEvent(e);return e.defaultPrevented}
+    pointer('pointerenter',100)
+    const defaultPrevented=wheel()
+    pointer('pointermove',132)
+    await new Promise(resolve=>setTimeout(resolve,200))
+    const before=rail.scrollLeft,rightPrevented=wheel(),after=rail.scrollLeft
+    pointer('pointermove',110)
+    const leftPrevented=wheel()
+    await new Promise(resolve=>setTimeout(resolve,950))
+    const leftStillReleased=!wheel()
+    pointer('pointerleave',110)
+    pointer('pointerenter',100)
+    await new Promise(resolve=>setTimeout(resolve,950))
+    const dwellPrevented=wheel(),horizontalNative=!wheel(250)
+    pointer('pointerleave',100)
+    pointer('pointerenter',100,'touch')
+    const touchNative=!wheel()
+    return {before,after,defaultPrevented,rightPrevented,leftPrevented,leftStillReleased,dwellPrevented,horizontalNative,touchNative}
   })
   assert.ok(wheelScroll.after > wheelScroll.before, `mouse wheel did not move the hovered property rail horizontally: ${JSON.stringify(wheelScroll)}`)
+  assert.equal(wheelScroll.defaultPrevented,false,'ordinary page scrolling must not be captured')
+  assert.equal(wheelScroll.rightPrevented,true)
+  assert.equal(wheelScroll.leftPrevented,false)
+  assert.equal(wheelScroll.leftStillReleased,true,'leftward escape must persist while hovering')
+  assert.equal(wheelScroll.dwellPrevented,true)
+  assert.equal(wheelScroll.horizontalNative,true)
+  assert.equal(wheelScroll.touchNative,true)
 
   await page.type('#query', 'no listing can match this')
   assert.equal(await page.$eval('.listing-rail', rail => rail.querySelectorAll('.listing-card').length), 12, 'draft filter applied before Show homes')
@@ -95,6 +116,11 @@ const makeProperty = (index, market = 'longlets') => ({
   await page.click('[data-market="longlets"]')
   await page.click('.listing-card')
   await page.waitForSelector('#property-drawer[open]')
+  await page.click('[data-gallery-index="1"]')
+  await page.waitForFunction(()=>document.querySelector('[data-gallery-index="1"]')?.getAttribute('aria-pressed')==='true')
+  assert.equal(await page.$eval('.world-photo-count',n=>n.textContent), '2 / 2')
+  assert.equal(await page.$eval('.world-hero',n=>getComputedStyle(n).backgroundColor),'rgba(0, 0, 0, 0)')
+  assert.equal(await page.$eval('.source-pill',n=>n.textContent),'AGENCY')
   const intelligence = await page.evaluate(() => ({
     world: Boolean(document.querySelector('.property-world')),
     connectors: document.querySelectorAll('[data-connector]').length,
