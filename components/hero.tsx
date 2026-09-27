@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 export function Hero() {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const visibleRef = useRef(true)
   const [videoReady, setVideoReady] = useState(false)
   const [videoError, setVideoError] = useState(false)
   const t = useTranslations()
@@ -24,10 +25,14 @@ export function Hero() {
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
+    const playWhenReady = () => {
+      if (visibleRef.current && document.visibilityState === 'visible') video.play().catch(() => {})
+    }
     const observer = new IntersectionObserver(
       ([entry]) => {
+        visibleRef.current = entry.isIntersecting
         if (entry.isIntersecting) {
-          video.play().catch(() => {})
+          playWhenReady()
         } else {
           video.pause()
         }
@@ -35,7 +40,13 @@ export function Hero() {
       { threshold: 0 }
     )
     observer.observe(video)
-    return () => observer.disconnect()
+    document.addEventListener('visibilitychange', playWhenReady)
+    window.addEventListener('pageshow', playWhenReady)
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', playWhenReady)
+      window.removeEventListener('pageshow', playWhenReady)
+    }
   }, [])
 
   return (
@@ -49,8 +60,11 @@ export function Hero() {
           loop
           playsInline
           preload="auto"
+          poster="/hero-loading.png"
           className="absolute inset-0 w-full h-full object-cover"
-          onCanPlayThrough={() => setVideoReady(true)}
+          onLoadedData={event => { setVideoReady(true); event.currentTarget.play().catch(() => {}) }}
+          onCanPlay={event => { setVideoReady(true); event.currentTarget.play().catch(() => {}) }}
+          onPlaying={() => setVideoReady(true)}
           onError={() => setVideoError(true)}
         >
           <source src="/videos/hero.mp4" type="video/mp4" />

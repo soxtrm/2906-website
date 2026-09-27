@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, X, ChevronDown, Home, Bed, Bath } from 'lucide-react'
+import { MapPin, X, ChevronDown, Home, Bed, Bath, SlidersHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { maltaLocations, propertyTypes, bedroomOptions, bathroomOptions } from '@/lib/data'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,7 @@ export function PropertySearch() {
     budget: '',
   })
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [locationSearch, setLocationSearch] = useState('')
   const searchRef = useRef<HTMLDivElement>(null)
 
@@ -146,6 +147,18 @@ export function PropertySearch() {
               )}
             </AnimatePresence>
           </div>
+
+          <button
+            type="button"
+            aria-expanded={mobileFiltersOpen}
+            onClick={() => setMobileFiltersOpen(value => !value)}
+            className="lg:hidden flex items-center justify-between gap-3 px-3 py-2.5 border-y border-white/15 text-sm text-white/75"
+          >
+            <span className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-gold" /> More filters</span>
+            <ChevronDown className={cn('w-4 h-4 transition-transform', mobileFiltersOpen && 'rotate-180')} />
+          </button>
+
+          <div className={cn('contents', !mobileFiltersOpen && 'max-lg:hidden')}>
 
           {/* Divider */}
           <div className="hidden lg:block w-px bg-white/20" />
@@ -320,6 +333,7 @@ export function PropertySearch() {
               onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value.replace(/\D/g, '') }))}
               className="w-24 px-2 py-2 bg-transparent text-white text-sm placeholder:text-white/50 focus:outline-none"
             />
+          </div>
           </div>
 
           {/* Search Button */}

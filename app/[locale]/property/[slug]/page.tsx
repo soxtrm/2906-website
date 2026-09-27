@@ -5,9 +5,20 @@ import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { cn } from '@/lib/utils'
 import { PropertyGallery } from './gallery'
+import { PropertyLifeOverview } from '@/components/property-life-overview'
+import { getPropertyLifeOverview } from '@/lib/nexus-property-context'
 
 const VPS = 'http://178.104.162.193:3001'
 const COMMERCIAL_TYPES = ['Office', 'Retail', 'Warehouse']
+
+function cleanPropertyTitle(property: Property) {
+  const location = String(property.location || '').trim().toLowerCase()
+  const useful = String(property.title || '').split('|').map(part => part.trim()).filter(part => {
+    const normalized = part.toLowerCase()
+    return normalized && normalized !== location && !/€|\bbed(room)?s?\b|\bbath(room)?s?\b|^\d[\d,.]*$/.test(normalized)
+  })
+  return useful.join(' · ') || property.propertyType || 'Residence'
+}
 
 interface Property {
   id: string
@@ -56,6 +67,8 @@ export default async function PropertyPage({
 
   if (!property) notFound()
 
+  const lifeOverview = await getPropertyLifeOverview(property.propertyReference)
+
   const isCommercial =
     property.category === 'commercial' ||
     COMMERCIAL_TYPES.includes(property.propertyType)
@@ -76,6 +89,7 @@ export default async function PropertyPage({
   }
 
   const description = property.fullDescription || property.description || ''
+  const displayTitle = cleanPropertyTitle(property)
 
   const hasPool   = property.features?.some(f => /pool|piscin/i.test(f))
   const hasGarage = property.features?.some(f => /garage|parking/i.test(f))
@@ -123,7 +137,7 @@ export default async function PropertyPage({
                 {/* Title block — stacks on mobile */}
                 <div className="mb-5">
                   <h1 className="font-serif text-xl md:text-3xl text-navy mb-2 leading-snug break-words">
-                    {property.title}
+                    {displayTitle}
                   </h1>
                   <div className="flex items-center gap-1.5 text-navy/60 mb-3">
                     <MapPin className="w-4 h-4 shrink-0" />
@@ -223,6 +237,8 @@ export default async function PropertyPage({
                     </div>
                   </div>
                 )}
+
+                {lifeOverview && <PropertyLifeOverview overview={lifeOverview} />}
               </div>
             </div>
 
@@ -241,7 +257,7 @@ export default async function PropertyPage({
                 </div>
                 <div className="space-y-3">
                   <a
-                    href={`https://wa.me/35679010070?text=Hi, I'm interested in ${property.title}`}
+                    href={`https://wa.me/35679010070?text=Hi, I'm interested in ${displayTitle}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded bg-[#25D366] text-white font-medium hover:bg-[#20BD5A] transition-colors text-sm"
@@ -250,7 +266,7 @@ export default async function PropertyPage({
                     WhatsApp
                   </a>
                   <a
-                    href={`mailto:contact@2906.estate?subject=Inquiry about ${property.title}`}
+                    href={`mailto:contact@2906.estate?subject=Inquiry about ${displayTitle}`}
                     className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded bg-navy text-white font-medium hover:opacity-90 transition-opacity text-sm"
                   >
                     <Mail className="w-4 h-4" />

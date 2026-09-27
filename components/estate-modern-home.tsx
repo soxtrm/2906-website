@@ -8,12 +8,16 @@ import {
   Bath,
   BedDouble,
   Building2,
-  Check,
   Compass,
+  Dumbbell,
+  HeartPulse,
   MapPin,
   Ruler,
   ShieldCheck,
+  ShoppingBasket,
+  SlidersHorizontal,
   Sparkles,
+  Waves,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Header } from '@/components/header'
@@ -27,6 +31,8 @@ import type { Property } from '@/lib/types'
 import styles from './estate-modern-home.module.css'
 
 type Collection = 'aesthetic' | 'all'
+type SmartPriority = 'weekly-shop' | 'swimming' | 'health' | 'gym'
+type SmartContext = { name: string; distanceKm: number; label: string }
 
 const FALLBACK_FEATURES = ['Property facts', 'Local context', 'Human guidance']
 
@@ -64,12 +70,11 @@ function propertySignals(property: Property) {
   return Array.from(new Set(raw.map(humanize))).slice(0, 4)
 }
 
-function ModernPropertyCard({ property, index }: { property: Property; index: number }) {
+function ModernPropertyCard({ property, index, smartContext }: { property: Property; index: number; smartContext?: SmartContext }) {
   const t = useTranslations('modernHome')
   const reduceMotion = useReducedMotion()
   const signals = propertySignals(property)
   const photo = property.images?.[0] || '/placeholder.jpg'
-  const nexusHref = `/Link#/property/${encodeURIComponent(property.id)}`
   const title = displayTitle(property)
 
   return (
@@ -100,25 +105,15 @@ function ModernPropertyCard({ property, index }: { property: Property; index: nu
         <span><Ruler aria-hidden="true" /> <b>{property.area || '–'}</b> m²</span>
       </div>
 
-      <div className={styles.nexusPanel}>
-        <div className={styles.nexusHeading}>
-          <div>
-            <span className={styles.nexusEyebrow}>{t('nexusEyebrow')}</span>
-            <strong>{t('nexusTitle')}</strong>
-          </div>
-          <Sparkles aria-hidden="true" />
-        </div>
-        <div className={styles.signalTags}>
-          {(signals.length ? signals : FALLBACK_FEATURES).map(signal => (
-            <span key={signal}><Check aria-hidden="true" />{signal}</span>
-          ))}
-        </div>
-        <div className={styles.nexusFooter}>
-          <span>{t('poweredBy')}</span>
-          <Link href={nexusHref} aria-label={`${t('openNexus')} ${title}`}>
-            {t('openNexus')} <ArrowUpRight aria-hidden="true" />
-          </Link>
-        </div>
+      {smartContext && <div className={styles.smartContext}>
+        <span>SMART FILTER</span>
+        <strong>{smartContext.name}</strong>
+        <p><b>{smartContext.distanceKm < 1 ? `${Math.max(50, Math.round(smartContext.distanceKm * 1000 / 50) * 50)} m` : `${smartContext.distanceKm.toFixed(1)} km`}</b> approx. from the area pin</p>
+        <small>Powered by Nexus Link</small>
+      </div>}
+      <div className={styles.cardFooter}>
+        <span>{signals.slice(0, 2).join(' · ') || FALLBACK_FEATURES[0]}</span>
+        <Link href={`/property/${property.slug}`}>{t('viewProperty')} <ArrowUpRight aria-hidden="true" /></Link>
       </div>
     </motion.article>
   )
@@ -130,6 +125,9 @@ function PropertyCollection() {
   const [featured, setFeatured] = useState<Property[]>([])
   const [all, setAll] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
+  const [smartOpen, setSmartOpen] = useState(false)
+  const [smartPriority, setSmartPriority] = useState<SmartPriority | null>(null)
+  const [smartContexts, setSmartContexts] = useState<Record<string, SmartContext>>({})
 
   useEffect(() => {
     let active = true
@@ -161,6 +159,17 @@ function PropertyCollection() {
 
   const visible = (collection === 'aesthetic' ? aesthetic : all).slice(0, 6)
 
+  useEffect(() => {
+    const refs = visible.map(property => property.propertyReference).filter(Boolean) as string[]
+    if (!smartPriority || !refs.length) { setSmartContexts({}); return }
+    let active = true
+    fetch(`/api/property-context?priority=${smartPriority}&refs=${encodeURIComponent(refs.join(','))}`)
+      .then(response => response.ok ? response.json() : { contexts: {} })
+      .then(data => { if (active) setSmartContexts(data.contexts || {}) })
+      .catch(() => { if (active) setSmartContexts({}) })
+    return () => { active = false }
+  }, [smartPriority, collection, all, featured])
+
   return (
     <section className={styles.collection} id="collection">
       <div className={styles.shell}>
@@ -186,13 +195,26 @@ function PropertyCollection() {
           </Link>
         </div>
 
+        <div className={styles.smartFilter} data-open={smartOpen || undefined}>
+          <button type="button" className={styles.smartFilterToggle} aria-expanded={smartOpen} onClick={() => setSmartOpen(value => !value)}>
+            <SlidersHorizontal aria-hidden="true" /><span><b>Smart intelligence</b><small>Add one life priority to the property cards</small></span><i>{smartOpen ? '−' : '+'}</i>
+          </button>
+          {smartOpen && <div className={styles.smartChoices} aria-label="Smart property priorities">
+            <button type="button" aria-pressed={smartPriority === 'weekly-shop'} onClick={() => setSmartPriority(value => value === 'weekly-shop' ? null : 'weekly-shop')}><ShoppingBasket />Weekly shop</button>
+            <button type="button" aria-pressed={smartPriority === 'swimming'} onClick={() => setSmartPriority(value => value === 'swimming' ? null : 'swimming')}><Waves />Coast</button>
+            <button type="button" aria-pressed={smartPriority === 'health'} onClick={() => setSmartPriority(value => value === 'health' ? null : 'health')}><HeartPulse />Health</button>
+            <button type="button" aria-pressed={smartPriority === 'gym'} onClick={() => setSmartPriority(value => value === 'gym' ? null : 'gym')}><Dumbbell />Gym & movement</button>
+            <Link href="/link-matrix">Custom routine <ArrowUpRight /></Link>
+          </div>}
+        </div>
+
         {loading ? (
           <div className={styles.loadingGrid} aria-live="polite">
             <span>{t('loading')}</span>
           </div>
         ) : visible.length ? (
           <div className={styles.propertyGrid}>
-            {visible.map((property, index) => <ModernPropertyCard key={property.id} property={property} index={index} />)}
+            {visible.map((property, index) => <ModernPropertyCard key={property.id} property={property} index={index} smartContext={property.propertyReference ? smartContexts[property.propertyReference] : undefined} />)}
           </div>
         ) : (
           <p className={styles.empty}>{t('empty')}</p>
