@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Presentation } from 'lucide-react'
 import { crmFetch } from '@/lib/crm/api'
 import {
   CrmProvider, CrmShell, A, AD, AB, F, FM, fmtDate, useCrm,
@@ -62,6 +63,19 @@ function Dashboard() {
             Kev, 2026-09-11: "outreach kann auch ins crm tab, halt nur für
             mich". The dashboard tile it used to live in here is gone rather
             than duplicated. */}
+
+        {me?.role === 'admin' && (
+          <div onClick={() => router.push('/pitch')} style={{ marginTop: 18, background: 'linear-gradient(135deg,rgba(184,149,63,.12),rgba(53,214,196,.06),var(--crm-surface))', borderRadius: 18, padding: '18px 20px', border: `1px solid ${AB}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ display: 'grid', placeItems: 'center', width: 42, height: 42, borderRadius: 13, background: AD, color: A }}><Presentation size={20} /></span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 750, color: DTEXT }}>Argus System · Ben Estates presentation</div>
+                <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 3 }}>Live product story: agent workflow, distribution, outreach, assistants and Nexus Link.</div>
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: A, whiteSpace: 'nowrap' }}>Present →</span>
+          </div>
+        )}
 
         {me?.role === 'admin' && (
           <div onClick={() => router.push('/crm/admin/ml-learning')} style={{ marginTop: 18, background: DCARD, borderRadius: 14, padding: '14px 20px', border: `1px solid ${DCARD_BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
