@@ -34,6 +34,11 @@ export default function proxy(req: NextRequest) {
   }
   if (pathname === '/link' || pathname.startsWith('/link/') || pathname === '/link-matrix' || pathname.startsWith('/link-matrix/') || pathname.startsWith('/link-marketplace/') || pathname.startsWith('/Link/')) return NextResponse.next()
 
+  // Tokenised owner tools are deliberately unlocalised capability links.
+  // Running them through next-intl rewrites the token route to /[locale] and
+  // turns otherwise valid owner links into a 404 on the public domains.
+  if (pathname.startsWith('/owner-schedule/') || pathname.startsWith('/owner-upload/')) return NextResponse.next()
+
   if (host.startsWith('crm.')) {
     if (pathname.startsWith('/crm')) return NextResponse.next()
     const url = req.nextUrl.clone()
