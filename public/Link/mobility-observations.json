@@ -1,8 +1,84 @@
 {
-  "version": 1,
+  "version": 2,
   "capacity": 10000,
   "privacy": "Locality-level observations only. Driver names and street addresses are not retained.",
   "observations": [
+    {
+      "id": "bolt-user-reference-008km",
+      "sourceType": "USER_SUPPLIED_EVIDENCE",
+      "sourceReference": "user-table-2026-09-27",
+      "originArea": "Swieqi",
+      "destinationArea": "Swieqi",
+      "direction": "outbound",
+      "weekday": null,
+      "hour": null,
+      "season": "",
+      "distanceMetres": 800,
+      "durationMinutes": 5,
+      "quotedPrice": null,
+      "actualPrice": 6.99,
+      "pickupMinutes": null,
+      "outcome": "accepted",
+      "observedAt": "",
+      "serviceCategory": ""
+    },
+    {
+      "id": "bolt-user-reference-034km",
+      "sourceType": "USER_SUPPLIED_EVIDENCE",
+      "sourceReference": "user-table-2026-09-27",
+      "originArea": "Swieqi",
+      "destinationArea": "San Gwann",
+      "direction": "outbound",
+      "weekday": null,
+      "hour": null,
+      "season": "",
+      "distanceMetres": 3400,
+      "durationMinutes": 7,
+      "quotedPrice": null,
+      "actualPrice": 7.99,
+      "pickupMinutes": null,
+      "outcome": "accepted",
+      "observedAt": "",
+      "serviceCategory": ""
+    },
+    {
+      "id": "bolt-user-reference-049km",
+      "sourceType": "USER_SUPPLIED_EVIDENCE",
+      "sourceReference": "user-table-2026-09-27",
+      "originArea": "Swieqi",
+      "destinationArea": "Gzira",
+      "direction": "outbound",
+      "weekday": null,
+      "hour": null,
+      "season": "",
+      "distanceMetres": 4900,
+      "durationMinutes": 11,
+      "quotedPrice": null,
+      "actualPrice": 14.5,
+      "pickupMinutes": null,
+      "outcome": "accepted",
+      "observedAt": "",
+      "serviceCategory": ""
+    },
+    {
+      "id": "bolt-user-reference-083km",
+      "sourceType": "USER_REPORTED",
+      "sourceReference": "user-description-2026-09-27",
+      "originArea": "",
+      "destinationArea": "",
+      "direction": "outbound",
+      "weekday": null,
+      "hour": null,
+      "season": "",
+      "distanceMetres": 8300,
+      "durationMinutes": 18,
+      "quotedPrice": null,
+      "actualPrice": 16,
+      "pickupMinutes": null,
+      "outcome": "accepted",
+      "observedAt": "",
+      "serviceCategory": ""
+    },
     {
       "id": "bolt-user-evidence-001",
       "sourceType": "USER_SCREENSHOT",
@@ -54,6 +130,7 @@
       "quotedPrice": null,
       "actualPrice": 33.88,
       "additionalCharges": 0.62,
+      "waitingFee": 0.62,
       "totalPaid": 34.5,
       "pickupMinutes": null,
       "outcome": "accepted",
@@ -98,11 +175,37 @@
   ],
   "fields": [
     "originArea", "destinationArea", "direction", "weekday", "hour", "season",
-    "distanceMetres", "durationMinutes", "quotedPrice", "actualPrice", "additionalCharges",
-    "totalPaid", "pickupMinutes", "outcome", "observedAt", "sourceType", "sourceReference"
+    "distanceMetres", "durationMinutes", "quotedPrice", "actualPrice", "additionalCharges", "waitingFee",
+    "totalPaid", "pickupMinutes", "outcome", "observedAt", "sourceType", "sourceReference", "serviceCategory"
   ],
   "outcomes": ["accepted", "cancelled", "failed", "unknown"],
   "confidence": ["LIVE", "OBSERVED", "HISTORICAL", "MODELLED", "LOCAL PRIOR", "UNKNOWN"],
+  "models": [
+    {
+      "id": "bolt-reference-neighbours-v1",
+      "type": "PROVISIONAL_MODEL",
+      "officialTariff": false,
+      "pricesStraightLineDistance": false,
+      "notes": "Sparse comparable-observation reference. Waiting fees, credits, cancelled trips and unknown surge indicators stay separate.",
+      "unresolved": ["official base component", "official kilometre rate", "official minute rate", "service-category coefficients", "time and season calibration"]
+    }
+  ],
+  "driverAppSignals": [
+    {
+      "value": 1.4,
+      "sourceType": "DRIVER_APP_OBSERVED",
+      "location": "",
+      "observedAt": "",
+      "interpretation": "UNKNOWN"
+    },
+    {
+      "value": 1.9,
+      "sourceType": "DRIVER_APP_OBSERVED",
+      "location": "",
+      "observedAt": "",
+      "interpretation": "UNKNOWN"
+    }
+  ],
   "localPriors": [
     {
       "id": "north-ferry-central-evening-crowding",

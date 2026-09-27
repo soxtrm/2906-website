@@ -1,0 +1,58 @@
+import {categoryForPoi,distanceMetres,validCoordinates} from '../Link/activity-intelligence.mjs';
+
+export const CONNECTORS=[
+  {key:'swimming',label:'Swimming',icon:'≈',radius:5000,categories:['swimming','promenades']},
+  {key:'daily',label:'Daily life',icon:'▢',radius:2000,categories:['shopping','transport'],kinds:['grocery','supermarket','convenience','pharmacy','atm','medical','healthcare']},
+  {key:'social',label:'Food / social',icon:'◇',radius:2000,categories:['restaurants','nightlife']},
+  {key:'wellbeing',label:'Wellbeing',icon:'◌',radius:5000,categories:['gyms','sports','parks','wellness','family']},
+  {key:'mobility',label:'Mobility',icon:'↗',radius:2000,categories:['transport']}
+];
+export const SEARCH_RADII=Object.freeze([250,500,1000,2000,5000]);
+
+const precisionValue=value=>{
+  const normalized=String(value||'').trim().toLowerCase();
+  if(['exact','precise','verified_exact'].includes(normalized))return 'EXACT';
+  if(['approximate','approx','nearby','blurred'].includes(normalized))return 'APPROXIMATE';
+  return 'AREA_ONLY';
+};
+
+const KIND_CATEGORY={beach:'swimming',swimming:'swimming',promenade:'promenades',gym:'gyms',outdoor_gym:'gyms',sport:'sports',restaurant:'restaurants',cafe:'restaurants',bar:'nightlife',nightclub:'nightlife',grocery:'shopping',supermarket:'shopping',convenience:'shopping',pharmacy:'shopping',medical:'shopping',healthcare:'shopping',atm:'shopping',shopping:'shopping',bus_stop:'transport',ferry:'transport',park:'parks',wellness:'wellness'};
+
+const connectorFor=place=>CONNECTORS.find(connector=>connector.categories.includes(place.category)||connector.kinds?.includes(place.kind))?.key||null;
+
+export function propertyLocationPrecision(property){
+  if(!validCoordinates(property?.coordinates))return 'AREA_ONLY';
+  return precisionValue(property.locationDisclosure||property.locationPrecision||property.coordinatePrecision||'approximate');
+}
+
+export function buildLocationIntelligence(property,records,{radius=5000}={}){
+  const precision=propertyLocationPrecision(property),origin=validCoordinates(property?.coordinates)?property.coordinates:null;
+  if(!origin)return {origin:null,precision,radius,tiers:Object.fromEntries(SEARCH_RADII.map(value=>[value,0])),places:[],connectors:CONNECTORS.map(connector=>({...connector,places:[]})),routeEvidence:0};
+  const places=(records||[]).flatMap((record,index)=>{
+    if(!validCoordinates(record.coordinates)||!record.name)return [];
+    const distance=distanceMetres(origin,record.coordinates),category=record.category||KIND_CATEGORY[record.kind]||categoryForPoi(record);
+    if(distance===null||distance>radius||!category)return [];
+    const id=String(record.id||`${record.kind||category}-${index}`),routeMode=record.routeMode||(Number.isFinite(record.walkingSeconds)?'walk':Number.isFinite(record.drivingSeconds)?'car':null),travelSeconds=routeMode==='walk'?record.walkingSeconds:record.drivingSeconds,place={...record,id,category,distance,connector:null,connection:{origin_id:String(property.id||''),destination_id:id,coordinate_precision:precision,entrance_access_point:record.entranceAccessPoint||null,straight_line_m:Math.round(distance),walking_m:record.routeVerified&&Number.isFinite(record.walkingDistanceMetres)?record.walkingDistanceMetres:null,driving_km:record.routeVerified&&Number.isFinite(record.drivingDistanceMetres)?record.drivingDistanceMetres/1000:null,travel_minutes:record.routeVerified&&Number.isFinite(travelSeconds)?travelSeconds/60:null,transport_mode:record.routeVerified?routeMode:null,source:record.routeVerified?record.routeSource||'ROUTE_DATA':'GEOMETRIC',observed_at:record.routeObservedAt||'',confidence:record.routeVerified?record.routeConfidence||'LIVE':'MODELLED'}};
+    place.connector=connectorFor(place);
+    return place.connector?[place]:[];
+  }).sort((a,b)=>a.distance-b.distance||String(a.name).localeCompare(String(b.name)));
+  const seen=new Set(),deduped=places.filter(place=>{
+    const key=`${place.connector}:${String(place.name).trim().toLowerCase()}`;
+    if(seen.has(key))return false;seen.add(key);return true;
+  });
+  const connectors=CONNECTORS.map(connector=>{let selected=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const aTime=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bTime=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return aTime-bTime||a.distance-b.distance;});if(connector.key==='swimming'){const beach=selected.find(place=>place.kind==='beach'||place.publicBeach===true),swim=selected.filter(place=>place!==beach).slice(0,2);selected=[...swim,...(beach?[beach]:[])];}return {...connector,places:selected.slice(0,18)};});
+  const tiers=Object.fromEntries(SEARCH_RADII.map(value=>[value,deduped.filter(place=>place.distance<=value).length]));
+  return {origin,precision,radius,tiers,places:deduped.slice(0,80),connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
+}
+
+export function placeTravelEvidence(place){
+  if(!place?.routeVerified){if(place?.walkableRoute===true&&Number.isFinite(place.walkingDistanceMetres)&&place.walkingDistanceMetres>=0)return {walk:`${Math.max(1,Math.round(place.walkingDistanceMetres/75))} min`,drive:'UNKNOWN',confidence:'MODELLED · 4.5 KM/H'};return {walk:'UNKNOWN',drive:'UNKNOWN',confidence:'UNKNOWN'};}
+  const minutes=seconds=>Number.isFinite(seconds)?`${Math.max(1,Math.round(seconds/60))} min`:'UNKNOWN';
+  return {walk:minutes(place.walkingSeconds),drive:minutes(place.drivingSeconds),confidence:'LIVE / ROUTED'};
+}
+
+export function mapPosition(origin,coordinates,radius=2500){
+  if(!validCoordinates(origin)||!validCoordinates(coordinates))return {x:50,y:50};
+  const latitude=origin[1]*Math.PI/180,dx=(coordinates[0]-origin[0])*111320*Math.cos(latitude),dy=(coordinates[1]-origin[1])*110540;
+  return {x:Math.max(7,Math.min(93,50+dx/radius*43)),y:Math.max(7,Math.min(93,50-dy/radius*43))};
+}

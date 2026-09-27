@@ -19,7 +19,7 @@ const range=(low,high,format)=>Number.isFinite(low)&&Number.isFinite(high)?`${fo
 
 export const MOBILITY_OBSERVATION_FIELDS=Object.freeze([
  'originArea','destinationArea','direction','weekday','hour','season','distanceMetres','durationMinutes',
- 'quotedPrice','actualPrice','additionalCharges','totalPaid','pickupMinutes','outcome','observedAt','sourceType','sourceReference'
+ 'quotedPrice','actualPrice','additionalCharges','waitingFee','totalPaid','pickupMinutes','outcome','observedAt','sourceType','sourceReference','serviceCategory'
 ]);
 
 export function normalizeMobilityObservation(value){
@@ -31,8 +31,8 @@ export function normalizeMobilityObservation(value){
   weekday:Number.isInteger(value.weekday)&&value.weekday>=0&&value.weekday<=6?value.weekday:null,
   hour:Number.isInteger(value.hour)&&value.hour>=0&&value.hour<=23?value.hour:null,season:String(value.season||'').slice(0,40),
   distanceMetres:finite(value.distanceMetres),durationMinutes:finite(value.durationMinutes),quotedPrice:finite(value.quotedPrice),
-  actualPrice:finite(value.actualPrice),additionalCharges:finite(value.additionalCharges),totalPaid:finite(value.totalPaid),pickupMinutes:finite(value.pickupMinutes),outcome,observedAt:String(value.observedAt||''),
-  sourceType:String(value.sourceType||'').slice(0,40),sourceReference:String(value.sourceReference||'').slice(0,120)
+  actualPrice:finite(value.actualPrice),additionalCharges:finite(value.additionalCharges),waitingFee:finite(value.waitingFee),totalPaid:finite(value.totalPaid),pickupMinutes:finite(value.pickupMinutes),outcome,observedAt:String(value.observedAt||''),
+  sourceType:String(value.sourceType||'').slice(0,40),sourceReference:String(value.sourceReference||'').slice(0,120),serviceCategory:String(value.serviceCategory||'').slice(0,40)
  };
 }
 
@@ -45,9 +45,22 @@ function routeFor(property,anchor,mode){
 function observationSummary(records,origin,destination,direction='outbound'){
  const matching=(Array.isArray(records)?records:[]).map(normalizeMobilityObservation).filter(Boolean).filter(item=>sameCorridor(item,origin,destination)&&item.direction===direction);
  if(!matching.length)return null;
- const prices=matching.map(item=>item.totalPaid??item.actualPrice??item.quotedPrice).filter(Number.isFinite),durations=matching.map(item=>item.durationMinutes).filter(Number.isFinite),pickups=matching.map(item=>item.pickupMinutes).filter(Number.isFinite);
+ const prices=matching.flatMap(item=>item.outcome==='accepted'&&Number.isFinite(item.actualPrice)?[item.actualPrice]:Number.isFinite(item.quotedPrice)?[item.quotedPrice]:[]),durations=matching.filter(item=>item.outcome==='accepted').map(item=>item.durationMinutes).filter(Number.isFinite),pickups=matching.map(item=>item.pickupMinutes).filter(Number.isFinite);
  const outcomes=matching.filter(item=>item.outcome!=='unknown'),accepted=outcomes.filter(item=>item.outcome==='accepted').length;
  return {count:matching.length,priceLow:prices.length>=2?percentile(prices,.2):null,priceExpected:percentile(prices,.5),priceHigh:prices.length>=2?percentile(prices,.8):null,durationLow:percentile(durations,.2),durationHigh:percentile(durations,.8),pickup:percentile(pickups,.5),acceptance:outcomes.length?accepted/outcomes.length:null};
+}
+
+export const BOLT_REFERENCE_MODEL=Object.freeze({id:'bolt-reference-neighbours-v1',version:1,type:'PROVISIONAL_MODEL',officialTariff:false,uses:['completed observed base fares','road kilometres','in-vehicle minutes'],excludes:['straight-line distance','waiting fees','wallet credits','cancelled €0 trips','unknown surge multipliers'],unresolved:['official base component','official kilometre rate','official minute rate','service-category coefficients','time and season calibration']});
+
+export function estimateBoltReference({roadKm,journeyMinutes,origin='',destination='',direction='outbound',observations=[]}={}){
+ const km=finite(roadKm),duration=finite(journeyMinutes);if(!Number.isFinite(km)||km<=0)return {expected:null,low:null,high:null,confidence:'UNKNOWN',count:0,model:BOLT_REFERENCE_MODEL.id,reason:'ROAD_DISTANCE_REQUIRED'};
+ const normalized=(Array.isArray(observations)?observations:[]).map(normalizeMobilityObservation).filter(Boolean).filter(item=>item.outcome==='accepted'&&Number.isFinite(item.distanceMetres)&&Number.isFinite(item.actualPrice)&&item.actualPrice>0);
+ const corridor=String(origin).trim()&&String(destination).trim()?normalized.filter(item=>sameCorridor(item,origin,destination)&&item.direction===direction):[];
+ const pool=(corridor.length?corridor:normalized).map(item=>({...item,roadKm:item.distanceMetres/1000})).filter(item=>Math.abs(item.roadKm-km)<=Math.max(2.5,km*.45));
+ if(!pool.length)return {expected:null,low:null,high:null,confidence:'UNKNOWN',count:0,model:BOLT_REFERENCE_MODEL.id,reason:'NO_COMPARABLE_OBSERVATIONS'};
+ const ranked=pool.map(item=>{const distanceGap=Math.abs(item.roadKm-km)/Math.max(km,1),timeGap=Number.isFinite(duration)&&Number.isFinite(item.durationMinutes)?Math.abs(item.durationMinutes-duration)/Math.max(duration,1):.35;return {...item,weight:1/(.2+distanceGap+timeGap)};}).sort((a,b)=>b.weight-a.weight).slice(0,4);
+ const weight=ranked.reduce((sum,item)=>sum+item.weight,0),expected=ranked.reduce((sum,item)=>sum+item.actualPrice*item.weight,0)/weight,prices=ranked.map(item=>item.actualPrice);
+ return {expected,low:prices.length>=2?Math.min(...prices):null,high:prices.length>=2?Math.max(...prices):null,confidence:'MODELLED',count:ranked.length,model:BOLT_REFERENCE_MODEL.id,reason:ranked.length<3?'LIMITED_COMPARABLE_OBSERVATIONS':'COMPARABLE_OBSERVATIONS'};
 }
 function busPrior(origin,destination,time){
  const north=/mellieha|cirkewwa|marfa|ferry|armier|mgarr/.test(clean(origin));

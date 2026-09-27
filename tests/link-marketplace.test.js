@@ -94,6 +94,29 @@ const makeProperty = (index, market = 'longlets') => ({
   await page.click('[data-market="longlets"]')
   await page.click('.listing-card')
   await page.waitForSelector('#property-drawer[open]')
+  const intelligence = await page.evaluate(() => ({
+    world: Boolean(document.querySelector('.property-world')),
+    connectors: document.querySelectorAll('[data-connector]').length,
+    precision: document.querySelector('.property-anchor span')?.textContent,
+    matrixHref: document.querySelector('.world-bridges a')?.getAttribute('href'),
+    fit: document.querySelector('.fit-section')?.textContent
+  }))
+  assert.equal(intelligence.world, true)
+  assert.equal(intelligence.connectors, 5)
+  assert.match(intelligence.precision, /APPROXIMATE/)
+  assert.match(intelligence.matrixHref, /\/link-matrix#\/property\/2906-longlets-/)
+  assert.match(intelligence.fit, /CONNECTIVITYUNKNOWN/, 'missing route evidence was presented as known')
+  await page.click('[data-connector="daily"]')
+  await new Promise(resolve => setTimeout(resolve, 750))
+  assert.equal(await page.$eval('.intelligence-map', map => map.dataset.activeConnector), 'daily')
+  assert.match(await page.$eval('[data-connector-results]', node => node.textContent), /Daily Market/)
+  const dailyPins = await page.$$eval('.intel-pin[data-pin-connector="daily"]', pins => pins.map(pin => ({ opacity: getComputedStyle(pin).opacity, x: pin.style.getPropertyValue('--pin-x'), y: pin.style.getPropertyValue('--pin-y') })))
+  assert.equal(dailyPins.length, 2)
+  assert.ok(dailyPins.every(pin => Number(pin.opacity) > .9), JSON.stringify(dailyPins))
+  await page.screenshot({ path: 'marketplace-property-mobile-smoke.png', fullPage: false })
+  await page.click('[data-connector="mobility"]')
+  assert.match(await page.$eval('[data-connector-results]', node => node.textContent), /9 individual observations/)
+  assert.match(await page.$eval('[data-connector-results]', node => node.textContent), /Road kilometres required/)
   await page.click('#property-drawer [data-open-tunnel]')
   await page.waitForSelector('#tunnel-dialog[open]')
   await page.click('[data-role="agent"]')

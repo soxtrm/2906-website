@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildMobilityReality,MALTA_OVERVIEW_ANCHORS,modeOrder,normalizeMobilityObservation} from '../public/Link/mobility-reality.mjs';
+import {buildMobilityReality,estimateBoltReference,MALTA_OVERVIEW_ANCHORS,modeOrder,normalizeMobilityObservation} from '../public/Link/mobility-reality.mjs';
 
 assert.deepEqual(modeOrder('bus'),['bus','bolt','walk','car']);
 assert.deepEqual(modeOrder('car'),['car','bolt','bus','walk']);
@@ -36,10 +36,17 @@ assert.equal(unknown.monthly.money.length,0);
 
 assert.equal(normalizeMobilityObservation({originArea:'A',destinationArea:'B',outcome:'rejected'}).outcome,'unknown');
 const paid=buildMobilityReality({area:'Swieqi',mobilityObservations:[{originArea:'Swieqi',destinationArea:'Kalkara',direction:'outbound',durationMinutes:25,actualPrice:33.88,additionalCharges:.62,totalPaid:34.5,outcome:'accepted'}]},{transport:'bolt',anchors:[{type:'work',person:'You',location:'Kalkara',days:1,time:'11:00'}]})[0];
-assert.equal(paid.modes[0].costExpected,34.5);
+assert.equal(paid.modes[0].costExpected,33.88);
 assert.equal(paid.modes[0].costDetail.low,null);
 const registry=JSON.parse(readFileSync(new URL('../public/Link/mobility-observations.json',import.meta.url),'utf8'));
-assert.equal(registry.observations.length,5);
+assert.equal(registry.observations.length,9);
 assert.ok(registry.observations.every(item=>!('address' in item)&&!('driverName' in item)));
-assert.equal(registry.observations[0].actualPrice,null);
+assert.equal(registry.models[0].officialTariff,false);
+assert.equal(estimateBoltReference({observations:registry.observations}).reason,'ROAD_DISTANCE_REQUIRED');
+const estimate=estimateBoltReference({roadKm:13.4,journeyMinutes:23,observations:[...registry.observations,{originArea:'A',destinationArea:'B',distanceMetres:13400,durationMinutes:20,actualPrice:0,totalPaid:0,outcome:'cancelled'}]});
+assert.equal(estimate.confidence,'MODELLED');
+assert.ok(estimate.expected>20&&estimate.expected<35);
+assert.ok(estimate.count>=2);
+const directional=estimateBoltReference({roadKm:3.4,journeyMinutes:7,origin:'Swieqi',destination:'San Gwann',direction:'outbound',observations:[...registry.observations,{originArea:'Swieqi',destinationArea:'San Gwann',direction:'return',distanceMetres:3400,durationMinutes:7,actualPrice:99,outcome:'accepted'}]});
+assert.equal(directional.expected,7.99);
 console.log('mobility reality tests passed');
