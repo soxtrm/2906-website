@@ -2997,7 +2997,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // the same timestamp, so the colour and the fact can never disagree.
   const fresh = freshness(r.lastConfirmedAvailableAt)
   const avail = availChip(r.availability)
-  const status = confirmed ? { c: GREEN, t: 'confirmed available' }
+  const status = isFarFuture(r) ? { c: '#5C6478', t: `🕓 future${fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)}` : ''}${daysUntilAvailable(r.availableDate) != null ? ` · ${daysUntilAvailable(r.availableDate)}d away` : ''}` }
+    : confirmed ? { c: GREEN, t: 'confirmed available' }
     : r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
     : r.availableStatus === 'rented' ? { c: '#B91C1C', t: 'rented' }
     // Kev, 2026-09-14 (spec item 1): occupied until a known future date —
@@ -3007,12 +3008,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
     // its own "🕓 FUTURE" reading — same days-away fact the +3 MONTHS tab and
     // guardrail dialog already use — so a card never has to be opened to
     // tell "available next month" apart from "available in 6 months".
-    : isFarFuture(r) ? { c: '#5C6478', t: `🕓 future${fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)}` : ''}${daysUntilAvailable(r.availableDate) != null ? ` · ${daysUntilAvailable(r.availableDate)}d away` : ''}` }
     : r.availableStatus === 'upcoming' ? { c: '#7C5CFC', t: `upcoming${fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)}` : ''}` }
     : r.availableStatus === 'pending_check' ? { c: '#C98A1A', t: 'needs a recheck' }
     : r.availableStatus === 'not_available' ? { c: '#B91C1C', t: 'not available' }
     : { c: '#C9C4B8', t: 'unknown' }
-  const isUpcoming = r.availableStatus === 'upcoming' || futureLocked
+  // The lock follows the date, not the stored label. Once the property enters
+  // the next-three-month window its actions reopen automatically, even before
+  // a later owner confirmation changes `upcoming` back to `available`.
+  const isUpcoming = futureLocked
   // Older cached responses predate the contact block; default to "usable" so a
   // stale payload degrades to the previous behaviour instead of a dead card.
   const c = r.contact || {
