@@ -319,6 +319,7 @@ function OwnerRecheckLane({ data, onChanged }: { data: { mode: string; tasks: Ow
   const [view, setView] = useState<OwnerRecheckTask['state']>('DECISION_REQUIRED')
   const [busy, setBusy] = useState<number | null>(null)
   const [pauseDates, setPauseDates] = useState<Record<number, string>>({})
+  const [drafts, setDrafts] = useState<Record<number, string>>({})
   const visible = data.tasks.filter(task => task.state === view)
 
   async function act(task: OwnerRecheckTask, action: string, extra: Record<string, unknown> = {}) {
@@ -364,7 +365,8 @@ function OwnerRecheckLane({ data, onChanged }: { data: { mode: string; tasks: Ow
             {!properties.length && <span style={{ fontSize: 10, color: FAINT }}>No verified linked property.</span>}
           </div>
           {task.proposed_action && <div style={{ marginTop: 10, fontSize: 10.5, color: '#f2a53d' }}>{task.proposed_action}</div>}
-          {task.proposed_message && <div style={{ marginTop: 9, padding: 9, border: `1px solid ${HAIRLINE}`, borderRadius: 8, fontSize: 11 }}>{task.proposed_message}</div>}
+          {task.state === 'DECISION_REQUIRED' && <div style={{ marginTop: 9 }}><textarea aria-label={`Message proposal for ${task.owner_name || 'owner'}`} value={drafts[task.id] ?? task.proposed_message ?? ''} onChange={event => setDrafts(old => ({ ...old, [task.id]: event.target.value }))} placeholder="Only write a proposal when one concrete question is still open." rows={3} style={{ width: '100%', resize: 'vertical', boxSizing: 'border-box', background: PANEL, border: `1px solid ${HAIRLINE}`, color: TEXT, borderRadius: 8, padding: 9, font: `11px/1.45 ${F}` }} /><button disabled={busy === task.id || !(drafts[task.id] ?? task.proposed_message ?? '').trim()} onClick={() => act(task, 'save_proposal', { message: drafts[task.id] ?? task.proposed_message })} style={{ ...btnGhost, marginTop: 6 }}>Save proposal</button></div>}
+          {task.proposed_message && task.state !== 'DECISION_REQUIRED' && <div style={{ marginTop: 9, padding: 9, border: `1px solid ${HAIRLINE}`, borderRadius: 8, fontSize: 11 }}>{task.proposed_message}</div>}
           {(task.state === 'DECISION_REQUIRED' || task.state === 'WAITING_FOR_DATE') && <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 7 }}>
             <button disabled={busy === task.id} onClick={() => act(task, 'resolve')} style={btnGhost}>Already captured / done</button>
             <button disabled={busy === task.id} onClick={() => act(task, 'take_over')} style={btnGhost}>Take over personally</button>
