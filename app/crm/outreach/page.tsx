@@ -99,7 +99,8 @@ function cooldownState(account: Account) {
   if (!account.lastOutreachAt) return { ready: true, label: 'Ready · no previous outreach' }
   const readyAt = new Date(new Date(account.lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS)
   const ready = readyAt.getTime() <= Date.now()
-  return { ready, label: ready ? 'Ready after 24h 15m check' : `Protected until ${maltaHM(readyAt)}` }
+  const moment = `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(readyAt)} · ${maltaHM(readyAt)}`
+  return { ready, label: ready ? 'Ready after 24h 15m check' : `Protected until ${moment}` }
 }
 
 // Kev, 2026-09-11: "checkt wann der letzte !outreach gemacht wurde und
