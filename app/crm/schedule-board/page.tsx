@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -78,6 +78,7 @@ type Listing = {
   // Rental modes (2026-09-21): LONG / WINTER / SHORT let, several at once. Effective
   // modes from the backend — already derived for listings nobody classified yet.
   rentalModes?: string[] | null
+  units?: { groupRootId: number | null; total: number; available: number }
   // Canonical locality from the backend resolver (2026-09-22) — what the board pins and filters on
   localityKey?: string | null; localityLabel?: string | null; localityLat?: number | null; localityLng?: number | null
   // Kev, 2026-08-31 (AV-date-confirm button) — "from when can this be
@@ -183,6 +184,13 @@ type Listing = {
     reachesName: string | null
     canAsk: boolean
     reason: string | null
+    blockCode?: string | null
+    ownerBlocked?: boolean
+    ownerPauseUntil?: string | null
+    propertyPauseUntil?: string | null
+    lastContactAt?: string | null
+    lastContactKind?: string | null
+    lastContactStatus?: string | null
     questionsUsed: number
     questionsPerDay: number
     canQuestion: boolean
@@ -1668,6 +1676,7 @@ function Board() {
               onAddPhotos={(files) => addPhotos(r, files)}
               photoUploadBusy={photoBusyRef === r.ref}
               onDelete={() => deleteOneListing(r)}
+              onChanged={reload}
             />
           ))}
         </div>
@@ -2759,7 +2768,7 @@ function ReachoutSwitch() {
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
-                onAddPhotos, photoUploadBusy, onDelete }: {
+                onAddPhotos, photoUploadBusy, onDelete, onChanged }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -2811,6 +2820,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // Kev, 2026-09-04: bad/empty listings need a direct delete from the board.
   // Admin-only — the card hides the control for everyone else.
   onDelete: () => void
+  onChanged: () => void
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
@@ -2871,6 +2881,26 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // so these stay a pure visual add-on with zero new props.
   const [rowMsg, setRowMsg] = useState<string | null>(null)
   const flash = (text: string) => { setRowMsg(text); setTimeout(() => setRowMsg(null), 2400) }
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
+  const [contactBusy, setContactBusy] = useState(false)
+
+  async function ownerContactAction(action: 'block' | 'unblock' | 'pause' | 'clear_pause') {
+    if (contactBusy) return
+    setContactBusy(true)
+    try {
+      const tomorrow = new Date(Date.now() + 24 * 3600_000).toISOString().slice(0, 10)
+      await crmJson(`schedule-board/listings/${encodeURIComponent(r.ref)}/owner-contact`, 'PATCH', {
+        action,
+        until: action === 'pause' ? tomorrow : undefined,
+        reason: action === 'block' ? 'Blocked manually in Agency Board' : action === 'pause' ? 'Paused for 24 hours in Agency Board' : undefined,
+      })
+      flash(action === 'block' ? 'Owner automation blocked' : action === 'unblock' ? 'Owner automation unblocked' : action === 'pause' ? 'Owner paused for 24h' : 'Owner pause cleared')
+      setMenuOpen(false)
+      onChanged()
+    } catch (e: any) {
+      flash(e?.data?.error || e?.message || 'Owner control failed')
+    } finally { setContactBusy(false) }
+  }
 
   // Copy — the ONE persistent link for this property (services/shareLinks.js,
   // Kev's Prompt A). Get-or-create: same link every time, nothing new spun up
@@ -3381,6 +3411,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         </div>
 
+        {!!r.units && r.units.total > 1 && (
+          <div data-unit-stock={r.ref} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+            marginTop: 6, padding: '4px 7px', borderRadius: 7,
+            color: r.units.available > 0 ? '#8FE0B8' : '#E29B9B',
+            background: r.units.available > 0 ? 'rgba(47,111,87,.14)' : 'rgba(185,28,28,.12)',
+            fontSize: 9.5, fontWeight: 700, letterSpacing: '.035em',
+          }}>
+            <span aria-hidden>▦</span>{r.units.available} of {r.units.total} units available
+          </div>
+        )}
+
         {/* The street, where we have one. Number never shown, and only on your
             own listing — see streetWithoutNumber() on the server. */}
         {r.streetName && <div style={{ fontSize: 11, color: 'var(--crm-accent)', opacity: 0.85, marginTop: 3 }}>{r.streetName}</div>}
@@ -3530,6 +3572,25 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         {!isUpcoming && avOutcome && (
           <div style={{ fontSize: 10, marginTop: 5, color: avOutcome.tone === 'ok' ? 'rgb(47,111,87)' : '#B91C1C' }}>
             {avOutcome.tone === 'ok' ? '✓ ' : '⚠ '}{avOutcome.text}
+          </div>
+        )}
+
+        {isAdmin && !isUpcoming && !c.canAsk && (
+          <div data-contact-block-reason={r.ref} style={{
+            marginTop: 7, padding: '8px 9px', borderRadius: 9,
+            border: '1px solid rgba(226,155,155,.24)', background: 'rgba(185,28,28,.07)',
+            display: 'grid', gridTemplateColumns: '15px 1fr', columnGap: 7, rowGap: 2,
+          }}>
+            <ShieldAlert size={13} style={{ color: '#E29B9B', marginTop: 1 }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ color: '#F0C1C1', fontSize: 10.5, fontWeight: 700 }}>Why this action is locked</div>
+              <div style={{ color: DTEXT_DIM, fontSize: 9.8, lineHeight: 1.4, marginTop: 2 }}>{c.reason}</div>
+              {c.lastContactAt && (
+                <div style={{ color: DTEXT_FAINT, fontSize: 9.2, marginTop: 3 }}>
+                  Last contact {ago(c.lastContactAt)}{c.lastContactKind ? ` · ${c.lastContactKind.replaceAll('_', ' ')}` : ''}{c.lastContactStatus ? ` · ${c.lastContactStatus}` : ''}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -3774,6 +3835,18 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 exactly where it's always been. */}
             {isAdmin && (
               <>
+                <div style={menuSection(dark)}>Admin</div>
+                <div style={menuGrid}>
+                  <button onClick={() => { setDuplicateOpen(true); setMenuOpen(false) }} style={menuGridBtn(dark)} title="Copy this listing into a separately tracked unit">
+                    <CopyPlus size={13} /> Copy unit
+                  </button>
+                  <button onClick={() => ownerContactAction(c.ownerBlocked ? 'unblock' : 'block')} disabled={contactBusy} style={{ ...menuGridBtn(dark), color: c.ownerBlocked ? '#8FE0B8' : '#E29B9B' }}>
+                    <ShieldAlert size={13} /> {c.ownerBlocked ? 'Unblock owner' : 'Block owner'}
+                  </button>
+                  <button onClick={() => ownerContactAction(c.ownerPauseUntil ? 'clear_pause' : 'pause')} disabled={contactBusy || !!c.ownerBlocked} style={menuGridBtn(dark)}>
+                    <Clock3 size={13} /> {c.ownerPauseUntil ? 'Clear pause' : 'Pause 24h'}
+                  </button>
+                </div>
                 <div style={menuSection(dark)}>Tools</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 9px' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -3809,6 +3882,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           propertyRef={r.ref}
           agentName={r.listedBy.displayName}
           onClose={(sent) => { setInquiryOpen(false); if (sent) flash('Sent to ' + (r.listedBy.displayName || 'the agent')) }}
+        />
+      )}
+      {duplicateOpen && (
+        <DuplicateUnitDialog
+          sourceRef={r.ref}
+          onClose={() => setDuplicateOpen(false)}
+          onCreated={(message) => { setDuplicateOpen(false); flash(message); onChanged() }}
         />
       )}
 
@@ -3854,6 +3934,57 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         <span>
           {[r.beds != null ? `${r.beds}B` : '', r.baths != null ? `${r.baths}B` : ''].join('')} {townLabel(r.town)?.toUpperCase()}
         </span>
+      </div>
+    </div>
+  )
+}
+
+function DuplicateUnitDialog({ sourceRef, onClose, onCreated }: {
+  sourceRef: string
+  onClose: () => void
+  onCreated: (message: string) => void
+}) {
+  const [unit, setUnit] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  async function create() {
+    if (!unit.trim() || busy) return
+    setBusy(true); setErr(null)
+    try {
+      const d = await crmJson(`schedule-board/listings/${encodeURIComponent(sourceRef)}/duplicate`, 'POST', { unit: unit.trim() })
+      onCreated(d.message || `Created #${d.ref}`)
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not copy this unit.')
+      setBusy(false)
+    }
+  }
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="duplicate-unit-title" style={{
+      position: 'fixed', inset: 0, zIndex: 330, padding: 16,
+      display: 'grid', placeItems: 'center', background: 'rgba(4,9,14,.78)',
+    }} onClick={onClose}>
+      <div style={{ width: 'min(420px,100%)', borderRadius: 18, padding: 20, color: '#F7F4EC',
+        background: 'linear-gradient(145deg,#111A20,#17272B)', border: '1px solid rgba(205,170,92,.28)',
+        boxShadow: '0 28px 80px rgba(0,0,0,.46)', fontFamily: F }} onClick={e => e.stopPropagation()}>
+        <div style={{ color: A, fontSize: 9.5, letterSpacing: '.18em', fontWeight: 800 }}>MULTI-UNIT INVENTORY</div>
+        <h3 id="duplicate-unit-title" style={{ margin: '7px 0 6px', fontSize: 21, letterSpacing: '-.03em' }}>Copy #{sourceRef}</h3>
+        <p style={{ margin: '0 0 15px', color: '#AEBBB8', fontSize: 12, lineHeight: 1.5 }}>
+          Photos, owner, property facts and website state are copied. The new flat receives its own short REF and availability history.
+        </p>
+        <label style={{ display: 'grid', gap: 6, color: '#D6DDD9', fontSize: 11.5, fontWeight: 700 }}>
+          New flat / unit
+          <input autoFocus value={unit} onChange={e => setUnit(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') create() }} placeholder="e.g. Flat 5"
+            style={{ width: '100%', boxSizing: 'border-box', borderRadius: 10, padding: '11px 12px', color: '#F7F4EC',
+              background: 'rgba(255,255,255,.055)', border: '1px solid rgba(255,255,255,.14)', outline: 'none', fontFamily: F }} />
+        </label>
+        {err && <div style={{ marginTop: 8, color: '#F0A4A4', fontSize: 11 }}>{err}</div>}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 17 }}>
+          <button onClick={onClose} style={{ ...secondaryBtn, flex: '0 0 auto', color: '#D6DDD9', background: 'transparent', borderColor: 'rgba(255,255,255,.16)' }}>Cancel</button>
+          <button onClick={create} disabled={!unit.trim() || busy} style={{ ...secondaryBtn, flex: '0 0 auto', border: 0,
+            background: A, color: '#151C2C', fontWeight: 800, opacity: !unit.trim() || busy ? .45 : 1 }}>
+            {busy ? 'Creating…' : 'Create separate unit'}
+          </button>
+        </div>
       </div>
     </div>
   )
