@@ -78,6 +78,7 @@ function maltaHM(d: Date) {
 }
 
 const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
+const OUTREACH_STARTER_BATCH_MAX = 10
 function isArgusManager(account: Account) {
   return /argus\s*1|argus[_-]?1/i.test(`${account.label} ${account.sessionName}`)
 }
@@ -465,7 +466,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [queueText, setQueueText] = useState('')
   const [msgOpen, setMsgOpen] = useState(false)
   const [msgDraft, setMsgDraft] = useState('')
-  const [count, setCount] = useState(40)
+  const [count, setCount] = useState(OUTREACH_STARTER_BATCH_MAX)
   const [armTime, setArmTime] = useState('14:15')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
@@ -550,7 +551,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // `count` total, never duplicating what's already there.
   async function generate(topUp = false, overrideCount?: number) {
     if (!activePlan) return
-    const n = overrideCount ?? count
+    const n = Math.min(OUTREACH_STARTER_BATCH_MAX, overrideCount ?? count)
     setBusy(true); setNote('')
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: n, topUp })
@@ -584,7 +585,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function autoRun() {
     if (!activePlan) return
     const last = loadLastUsed(account.id)
-    const seedCount = last?.count ?? defaultSeedCount(account)
+    const seedCount = Math.min(OUTREACH_STARTER_BATCH_MAX, last?.count ?? defaultSeedCount(account))
     const seedText = last?.text ?? msgDraft
 
     setCount(seedCount)
@@ -641,7 +642,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/arm`, 'POST', { time: armTime })
       if (r.ok === false) {
-        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.' }
+        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', starter_batch_limit: `Starter mode allows up to ${OUTREACH_STARTER_BATCH_MAX} contacts per run.` }
         setNote(reasons[r.reason] || r.reason)
       } else { setNote(`Armed for ${armTime}.`) }
       await refresh()
@@ -771,7 +772,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             ⚡ AUTO
           </button>
           <button disabled={busy} onClick={() => generate(false)} title="Generates a fresh list of eligible owners — the exact same engine as the real !createlist WhatsApp command." style={{ ...btnGhost, flex: '1 1 auto' }}>+ Create List</button>
-          <input type="number" value={count} onChange={e => setCount(Math.max(1, Math.min(200, parseInt(e.target.value) || 40)))} style={inputSmall} />
+          <input aria-label="Contacts per starter batch" type="number" min={1} max={OUTREACH_STARTER_BATCH_MAX} value={count} onChange={e => setCount(Math.max(1, Math.min(OUTREACH_STARTER_BATCH_MAX, parseInt(e.target.value) || OUTREACH_STARTER_BATCH_MAX)))} style={inputSmall} />
+          <span style={{ fontSize: 9, color: FAINT }}>Starter max {OUTREACH_STARTER_BATCH_MAX}</span>
           <button disabled={busy} onClick={() => generate(true)} title="Keeps everyone already in the queue and only adds as many NEW eligible owners as needed to reach the count above." style={btnGhost}>Top Up</button>
           <button disabled={busy} onClick={clearList} title="Removes everyone from this queue and releases their reservation." style={btnGhost}>Clear</button>
         </div>
