@@ -16,10 +16,10 @@ export function createMapInstruments(root,{id,map=false,getFilters,onFilters,get
  panel.querySelector('[data-nearby-towns]').onchange=e=>onFilters({...getFilters(),nearbyTowns:e.target.checked});
  panel.querySelector('[data-instrument-page="filters"] .instrument-title').insertAdjacentHTML('afterend','<div class="budget-sculpture" aria-hidden="true"><div class="sculpture-ground"></div><div class="sculpture-building"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="sculpture-wing"><i></i><i></i></div><div class="sculpture-pool"></div><span>SPACE, IN MOTION</span></div>');
  const places=createPlacesSelector(panel.querySelector('.instrument-places'),{getLabels:getLocations,onChange:onLocations,getZones:()=>getFilters().drawnAreas||[],onZones:zones=>onFilters({...getFilters(),drawnAreas:zones}),getHomes,getFavorites,getSuperFavorites,onOpenProperty:close,onShowMap:scope=>{close();onShowZoneMap(scope);},onMap:()=>{close();onMap(true);}});
- function open(tab='filters'){current=tab;panel.classList.toggle('is-place-selection',tab==='places');panel.hidden=false;root.classList.add('instrument-open');if(!map)document.body.classList.add('site-filter-open');panel.querySelectorAll('[data-instrument-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.instrumentTab===tab)));panel.querySelectorAll('[data-instrument-page]').forEach(p=>p.hidden=p.dataset.instrumentPage!==tab);render();}
+ function open(tab='filters'){if(tab!=='view')releaseStick();current=tab;panel.classList.toggle('is-place-selection',tab==='places');panel.hidden=false;root.classList.add('instrument-open');if(!map)document.body.classList.add('site-filter-open');panel.querySelectorAll('[data-instrument-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.instrumentTab===tab)));panel.querySelectorAll('[data-instrument-page]').forEach(p=>p.hidden=p.dataset.instrumentPage!==tab);render();}
  panel.querySelector('[data-instrument-page="places"]').insertAdjacentHTML('beforeend','<button type="button" class="instrument-apply apply-places">Use these places ✓</button>');
  panel.querySelector('.apply-places').onclick=()=>close();
- function close(){panel.hidden=true;root.classList.remove('instrument-open');if(!map)document.body.classList.remove('site-filter-open');clearInterval(holdTimer);onMove?.({x:0,y:0});}
+ function close(){panel.hidden=true;root.classList.remove('instrument-open');if(!map)document.body.classList.remove('site-filter-open');releaseStick();}
  function toggle(tab='filters'){!panel.hidden&&current===tab?close():open(tab);}
  function render(){
   const filters=getFilters(),sale=filters.market==='sales',max=sale?1500000:10000;
@@ -45,10 +45,22 @@ export function createMapInstruments(root,{id,map=false,getFilters,onFilters,get
  panel.querySelector('.instrument-apply').onclick=()=>{close();onMap();};
  panel.querySelector('.price-layer-toggle')?.addEventListener('click',event=>{const button=event.currentTarget,on=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(on));onLayer(on);});
  panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}});
- const stick=panel.querySelector('.map-joystick');let pointer=null,holdTimer,held={x:0,y:0};
- function move(x,y){const length=Math.hypot(x,y),factor=length>1?1/length:1;x*=factor;y*=factor;held={x,y};stick.style.setProperty('--stick-x',`${x*27}px`);stick.style.setProperty('--stick-y',`${y*27}px`);onMove(held);clearInterval(holdTimer);if(x||y)holdTimer=setInterval(()=>onMove(held),100);}
- if(stick){stick.onpointerdown=event=>{if(event.button!==0)return;pointer=event.pointerId;stick.setPointerCapture(pointer);stick.classList.add('is-held');updateStick(event);};const updateStick=event=>{if(pointer!==event.pointerId)return;const r=stick.getBoundingClientRect();move((event.clientX-r.left-r.width/2)/40,(event.clientY-r.top-r.height/2)/40);};stick.onpointermove=updateStick;const release=()=>{pointer=null;stick.classList.remove('is-held');move(0,0);};stick.onpointerup=release;stick.onpointercancel=release;stick.onlostpointercapture=release;stick.onblur=release;stick.onkeydown=event=>{const axes={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};if(axes[event.key]){event.preventDefault();move(...axes[event.key]);}};stick.onkeyup=event=>{if(event.key.startsWith('Arrow'))release();};document.addEventListener('visibilitychange',()=>{if(document.hidden)release();});}
- panel.querySelector('.joystick-return')?.addEventListener('click',()=>onReturn?.());
+ const stick=panel.querySelector('.map-joystick');let pointer=null,holdTimer,held={x:0,y:0};const pressed=new Set();
+ function move(x,y){const length=Math.hypot(x,y),factor=length>1?1/length:1;x*=factor;y*=factor;held={x,y};stick?.style.setProperty('--stick-x',`${x*27}px`);stick?.style.setProperty('--stick-y',`${y*27}px`);onMove?.(held);clearInterval(holdTimer);if(x||y)holdTimer=setInterval(()=>onMove?.(held),100);}
+ function releaseStick(){const captured=pointer;pointer=null;pressed.clear();stick?.classList.remove('is-held');move(0,0);if(captured!==null&&stick?.hasPointerCapture(captured))stick.releasePointerCapture(captured);}
+ if(stick){
+  const updateStick=event=>{if(pointer!==event.pointerId)return;const r=stick.getBoundingClientRect(),x=(event.clientX-r.left-r.width/2)/40,y=(event.clientY-r.top-r.height/2)/40;move(...(Math.hypot(x,y)<.12?[0,0]:[x,y]));};
+  stick.onpointerdown=event=>{if(event.button!==0||pointer!==null)return;pointer=event.pointerId;stick.setPointerCapture(pointer);stick.classList.add('is-held');updateStick(event);};
+  stick.onpointermove=updateStick;
+  stick.onpointerup=stick.onpointercancel=event=>{if(event.pointerId===pointer)releaseStick();};
+  stick.onlostpointercapture=stick.onblur=releaseStick;
+  const keyboardMove=()=>move(Number(pressed.has('ArrowRight'))-Number(pressed.has('ArrowLeft')),Number(pressed.has('ArrowDown'))-Number(pressed.has('ArrowUp')));
+  stick.onkeydown=event=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pressed.add(event.key);keyboardMove();}};
+  stick.onkeyup=event=>{if(pressed.delete(event.key)){event.preventDefault();keyboardMove();}};
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseStick();});
+  window.addEventListener('blur',releaseStick);
+ }
+ panel.querySelector('.joystick-return')?.addEventListener('click',()=>{releaseStick();onReturn?.();});
  panel.querySelectorAll('[data-map-view]').forEach(input=>input.oninput=()=>{const key=input.dataset.mapView,value=Number(input.value);panel.querySelector(`[data-view-output="${key}"]`).textContent=key==='pitch'?`${value}°`:value.toFixed(1);onView({[key]:value});});
  return {open,close,toggle,render,inspect,setView(value){for(const key of ['zoom','pitch']){const input=panel.querySelector(`[data-map-view="${key}"]`);if(!input||document.activeElement===input)continue;input.value=value[key];panel.querySelector(`[data-view-output="${key}"]`).textContent=key==='pitch'?`${Math.round(value[key])}°`:value[key].toFixed(1);}},get visible(){return !panel.hidden;}};
 }
