@@ -91,7 +91,16 @@
       "sourceTitle": "Birgu",
       "retrievedAt": "2026-09-27",
       "sourceUrl": "https://en.wikipedia.org/wiki/Birgu",
-      "name": "Birgu (Vittoriosa)"
+      "name": "Birgu (Vittoriosa)",
+      "photo": {
+        "source": "Wikimedia Commons",
+        "license": "CC BY-SA 3.0",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Birgu-Vittoriosa_-_Malta.jpg",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7d/Birgu-Vittoriosa_-_Malta.jpg/1280px-Birgu-Vittoriosa_-_Malta.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "author": "MrPanyGoff",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "caption": "Birgu (Vittoriosa)"
+      }
     },
     {
       "key": "malta:birguma",
@@ -438,7 +447,16 @@
       "sourceTitle": "Victoria, Malta",
       "retrievedAt": "2026-09-27",
       "sourceUrl": "https://en.wikipedia.org/wiki/Victoria%2C_Malta",
-      "name": "Gozo - Rabat (Victoria)"
+      "name": "Gozo - Rabat (Victoria)",
+      "photo": {
+        "source": "Wikimedia Commons",
+        "license": "CC BY-SA 3.0",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Malta_Gozo_Victoria_BW_2011-10-08_15-32-18.jpg",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Malta_Gozo_Victoria_BW_2011-10-08_15-32-18.jpg/1280px-Malta_Gozo_Victoria_BW_2011-10-08_15-32-18.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "author": "Berthold Werner",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "caption": "Gozo - Rabat (Victoria)"
+      }
     },
     {
       "traditions": [],
@@ -570,7 +588,16 @@
       "sourceTitle": "Gżira",
       "retrievedAt": "2026-09-27",
       "sourceUrl": "https://en.wikipedia.org/wiki/G%C5%BCira",
-      "name": "Gzira"
+      "name": "Gzira",
+      "photo": {
+        "source": "Wikimedia Commons",
+        "license": "CC BY-SA 3.0",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hafenpromenade_Sliema.jpg",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Hafenpromenade_Sliema.jpg/1280px-Hafenpromenade_Sliema.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "author": "FrankBothe",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "caption": "Gzira"
+      }
     },
     {
       "traditions": [],
@@ -789,7 +816,16 @@
       "sourceTitle": "Marsaskala",
       "retrievedAt": "2026-09-27",
       "sourceUrl": "https://en.wikipedia.org/wiki/Marsaskala",
-      "name": "Marsaskala"
+      "name": "Marsaskala",
+      "photo": {
+        "source": "Wikimedia Commons",
+        "license": "CC BY-SA 3.0",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Malta_-_Marsaskala_-_Triq_is-Salini%2BMarsaskala_Bay%2BTriq_Zonqor_02_ies.jpg",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/Malta_-_Marsaskala_-_Triq_is-Salini%2BMarsaskala_Bay%2BTriq_Zonqor_02_ies.jpg/1280px-Malta_-_Marsaskala_-_Triq_is-Salini%2BMarsaskala_Bay%2BTriq_Zonqor_02_ies.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "author": "Frank Vincentz",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "caption": "Marsaskala"
+      }
     },
     {
       "traditions": [],
@@ -1208,7 +1244,16 @@
         35.91861111
       ],
       "sourceUrl": "https://en.wikipedia.org/wiki/St._Julian%27s%2C_Malta",
-      "retrievedAt": "2026-09-27"
+      "retrievedAt": "2026-09-27",
+      "photo": {
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Malta-stjulians-hotels-207.jpg",
+        "licenseUrl": null,
+        "source": "Wikimedia Commons",
+        "author": "Thyes",
+        "license": "Public domain",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Malta-stjulians-hotels-207.jpg/1280px-Malta-stjulians-hotels-207.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "caption": "St Julian's"
+      }
     },
     {
       "key": "malta:st-paul-s-bay",
@@ -1223,7 +1268,16 @@
         35.94833333
       ],
       "sourceUrl": "https://en.wikipedia.org/wiki/St._Paul%27s_Bay",
-      "retrievedAt": "2026-09-27"
+      "retrievedAt": "2026-09-27",
+      "photo": {
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:St._Paul%27s_Bay_montage.jpg",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "source": "Wikimedia Commons",
+        "author": "Xwejnusgozo (montage)Ies (original photos)",
+        "license": "CC BY-SA 3.0",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/St._Paul%27s_Bay_montage.jpg/1280px-St._Paul%27s_Bay_montage.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "caption": "St Paul's Bay"
+      }
     },
     {
       "traditions": [],
@@ -1253,7 +1307,16 @@
       "sourceTitle": "Swieqi",
       "retrievedAt": "2026-09-27",
       "sourceUrl": "https://en.wikipedia.org/wiki/Swieqi",
-      "name": "Swieqi"
+      "name": "Swieqi",
+      "photo": {
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Malta_-_Swieqi_-_Triq_il-Madliena%2BTriq_il-Fortizza_01_ies.jpg",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "source": "Wikimedia Commons",
+        "author": "Frank Vincentz",
+        "license": "CC BY-SA 3.0",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Malta_-_Swieqi_-_Triq_il-Madliena%2BTriq_il-Fortizza_01_ies.jpg/1280px-Malta_-_Swieqi_-_Triq_il-Madliena%2BTriq_il-Fortizza_01_ies.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "caption": "Swieqi"
+      }
     },
     {
       "key": "malta:ta-ibragg",
@@ -1320,7 +1383,16 @@
       "sourceTitle": "Valletta",
       "retrievedAt": "2026-09-27",
       "sourceUrl": "https://en.wikipedia.org/wiki/Valletta",
-      "name": "Valletta"
+      "name": "Valletta",
+      "photo": {
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:St_Sebastian_Curtain_(cropped).jpg",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "source": "Wikimedia Commons",
+        "author": "Mandyy88",
+        "license": "CC BY-SA 4.0",
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/St_Sebastian_Curtain_%28cropped%29.jpg/1280px-St_Sebastian_Curtain_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+        "caption": "Valletta"
+      }
     },
     {
       "traditions": [],
