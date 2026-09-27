@@ -67,7 +67,7 @@ export default async function PropertyPage({
 
   if (!property) notFound()
 
-  const lifeOverview = await getPropertyLifeOverview(property.propertyReference)
+  const lifeOverview = await getPropertyLifeOverview(property.propertyReference, property.location)
 
   const isCommercial =
     property.category === 'commercial' ||
@@ -212,6 +212,8 @@ export default async function PropertyPage({
                   </div>
                 )}
 
+                {lifeOverview && <PropertyLifeOverview overview={lifeOverview} />}
+
                 {description && (
                   <div className="py-5">
                     <h2 className="font-serif text-lg md:text-xl text-navy mb-4">About This Property</h2>
@@ -238,7 +240,6 @@ export default async function PropertyPage({
                   </div>
                 )}
 
-                {lifeOverview && <PropertyLifeOverview overview={lifeOverview} />}
               </div>
             </div>
 

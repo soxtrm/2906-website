@@ -24,12 +24,17 @@ export type PlaceDistance = {
   kind: string
   distanceKm: number
   role: 'weekly-shop' | 'top-up' | 'swimming' | 'health' | 'gym' | 'mobility'
+  rating?: number | null
+  reviews?: number | null
 }
 
 export type PropertyLifeOverview = {
   reference: string
+  requestedReference: string
   area: string
   precision: string
+  sourceBasis: 'property' | 'locality'
+  mappedCount: number
   advantages: string[]
   considerations: string[]
   categories: Array<{
@@ -77,14 +82,24 @@ function nearestPlaces(origin: [number, number], places: NexusPlace[]) {
     if (!role) return []
     const distance = distanceKm(origin, place.coordinates)
     if (!Number.isFinite(distance) || distance > 12) return []
-    return [{ id: place.id, name: place.name, kind: place.kind, distanceKm: distance, role } satisfies PlaceDistance]
+    const rating = Number(place.quality?.rating)
+    const reviews = Number(place.quality?.userRatingCount)
+    return [{
+      id: place.id,
+      name: place.name,
+      kind: place.kind,
+      distanceKm: distance,
+      role,
+      rating: Number.isFinite(rating) ? rating : null,
+      reviews: Number.isFinite(reviews) ? reviews : null,
+    } satisfies PlaceDistance]
   }).sort((a, b) => a.distanceKm - b.distanceKm || a.name.localeCompare(b.name))
 }
 
 const first = (places: PlaceDistance[], role: PlaceDistance['role'], limit: number, maxKm = 12) =>
   places.filter(place => place.role === role && place.distanceKm <= maxKm).slice(0, limit)
 
-export function buildLifeOverview(property: NexusInventoryProperty, places: NexusPlace[]): PropertyLifeOverview {
+export function buildLifeOverview(property: NexusInventoryProperty, places: NexusPlace[], options?: { requestedReference?: string; sourceBasis?: 'property' | 'locality' }): PropertyLifeOverview {
   const nearby = nearestPlaces(property.coordinates, places)
   const weekly = first(nearby, 'weekly-shop', 2, 8)
   const topUp = first(nearby, 'top-up', 1, 2.5)
@@ -111,8 +126,11 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
 
   return {
     reference: property.id,
+    requestedReference: options?.requestedReference || property.id,
     area: property.areaLabel || 'Malta',
     precision: property.locationDisclosure || 'area',
+    sourceBasis: options?.sourceBasis || 'property',
+    mappedCount: nearby.filter(place => place.distanceKm <= 3).length,
     advantages: advantages.slice(0, 3),
     considerations: considerations.slice(0, 3),
     categories: [
@@ -144,12 +162,27 @@ export async function fetchNexusContext() {
   return pendingContext
 }
 
-export async function getPropertyLifeOverview(reference?: string | null) {
+const normaliseArea = (value?: string | null) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[’']/g, '')
+  .replace(/\bst\.?\s+/g, 'saint ')
+  .replace(/[^a-z0-9]+/gi, ' ')
+  .trim()
+  .toLowerCase()
+
+export async function getPropertyLifeOverview(reference?: string | null, area?: string | null) {
   if (!reference) return null
   try {
     const data = await fetchNexusContext()
-    const property = data.properties.find(item => item.id === reference.replace(/^#/, ''))
-    return property ? buildLifeOverview(property, data.places) : null
+    const requestedReference = reference.replace(/^#/, '')
+    const exact = data.properties.find(item => item.id === requestedReference)
+    if (exact) return buildLifeOverview(exact, data.places, { requestedReference, sourceBasis: 'property' })
+
+    const areaKey = normaliseArea(area)
+    if (!areaKey) return null
+    const locality = data.properties.find(item => normaliseArea(item.areaLabel) === areaKey)
+    return locality ? buildLifeOverview(locality, data.places, { requestedReference, sourceBasis: 'locality' }) : null
   } catch {
     return null
   }

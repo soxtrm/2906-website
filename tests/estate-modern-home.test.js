@@ -61,13 +61,15 @@ async function run() {
   await page.goto(`${BASE}${propertyHref}`, { waitUntil: 'networkidle2', timeout: 45000 })
   await page.waitForSelector('h1')
   const detail = await page.evaluate(() => ({
-    hasOverview: document.body.innerText.includes('The practical picture, before a viewing.'),
-    hasPros: document.body.innerText.includes('WHAT WORKS HERE'),
-    hasTradeoffs: document.body.innerText.includes('WORTH CHECKING'),
+    hasOverview: document.body.innerText.includes('See how this home fits real life.'),
+    hasPros: document.body.innerText.includes('AT A GLANCE · ADVANTAGES'),
+    hasTradeoffs: document.body.innerText.includes('CHECK BEFORE YOU DECIDE'),
     hasWeeklyShop: document.body.innerText.includes('Weekly shopping'),
+    hasSmartStats: document.body.innerText.toLowerCase().includes('area signals') && document.body.innerText.toLowerCase().includes('weekly shop'),
+    hasNexusLink: Boolean(document.querySelector('a[href*="link-matrix"]')),
     hasOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   }))
-  if (!detail.hasOverview || !detail.hasPros || !detail.hasTradeoffs || !detail.hasWeeklyShop) failures.push('property detail: decision overview incomplete')
+  if (!detail.hasOverview || !detail.hasPros || !detail.hasTradeoffs || !detail.hasWeeklyShop || !detail.hasSmartStats || !detail.hasNexusLink) failures.push(`property detail: decision overview incomplete ${JSON.stringify(detail)}`)
   if (detail.hasOverflow) failures.push('property detail: horizontal overflow')
   await page.screenshot({ path: 'tests/screenshots/property-life-overview-mobile.png', fullPage: true })
 
