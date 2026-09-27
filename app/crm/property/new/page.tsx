@@ -74,7 +74,9 @@ function NewProperty() {
         is_exclusive: excl.on, exclusive_weeks: excl.on ? excl.weeks : null,
       }
       const r = await crmJson('properties', 'POST', body)
-      router.replace(`/property/${r.id}`)
+      // Stay inside the operational board after the canonical upload so the
+      // agent can immediately review channel state and complete distribution.
+      router.replace(`/crm/property/${r.id}`)
     } catch (e: any) { setErr(e?.message || 'Submit failed'); setSubmitting(false) }
   }
 
@@ -224,6 +226,13 @@ function NewProperty() {
             <Review label="Images" value={`${images.length} uploaded`} />
             <Review label="Exclusive" value={excl.on ? `Yes · until ${exclDate()}` : 'No'} />
             <Review label="Listed by" value={(() => { const ag = agents.find(x => String(x.id) === listedBy); return ag ? (ag.name || ag.username) : 'You' })()} />
+            <div style={{ marginTop: 14, border: '1px solid #E8E4DA', borderRadius: 10, padding: '12px 14px', background: '#FAF9F6' }}>
+              <div style={{ ...lbl, marginBottom: 8 }}>Upload distribution</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {['CRM record', 'Agent Board', 'Website status', 'Facebook status', 'Owner groups', 'Client matching'].map((target, index) => <span key={target} style={{ padding: '5px 8px', borderRadius: 7, background: index < 2 ? '#ECFDF3' : '#FFFBEB', color: index < 2 ? '#15803D' : '#A16207', fontSize: 9.5, fontWeight: 750 }}>{index < 2 ? '●' : '○'} {target}</span>)}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 9.5, lineHeight: 1.5, color: '#9A978F' }}>Creation writes one canonical property. Every external destination reports its own status on the next screen; matching and external sends still require their configured checks.</div>
+            </div>
             <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
               <button onClick={() => setStep(4)} style={ghost}>← Back</button>
               <button onClick={submit} disabled={submitting} style={{ ...primary, flex: 1 }}>{submitting ? 'Creating…' : 'Create property'}</button>
