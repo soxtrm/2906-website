@@ -48,6 +48,17 @@ require('./scripts/waha_session_watcher')
 require('./scripts/planned_message_flush_cron')
 
 function startCrons() {
+  // Day-11 market review: creates one internal review card per qualifying
+  // newly listed property. No owner message is generated or sent here.
+  cron.schedule('15 7 * * *', async () => {
+    try {
+      const result = await require('./services/marketFollowupReview').ensureMarketFollowupTasks()
+      if (result.created) log.info('Cron: day-11 market reviews prepared', result)
+    } catch (err) {
+      log.error('Cron day-11 market review error', err)
+    }
+  })
+
   // Prepare the next account queue two hours before its 24h15 eligibility
   // boundary. This creates an editable saved draft only; it never arms or
   // sends and therefore remains safe while owner automation is REVIEW_ONLY.

@@ -285,6 +285,32 @@ function Detail({ id }: { id: number }) {
                 <Bar pct={p.completeness} />
               </div>
 
+              {/* One canonical upload, with every destination visible. The
+                  backend derives these states from the property record and
+                  property_publishing_status instead of presenting demo ticks. */}
+              <div style={card} data-testid="property-distribution">
+                <div style={head}>Upload distribution</div>
+                <div style={{ display: 'grid', gap: 7 }}>
+                  {(d.distribution?.channels || [
+                    { key: 'crm', label: 'CRM', status: 'connected', detail: 'Canonical property record' },
+                    { key: 'agent_board', label: 'Agent Board', status: 'connected', detail: 'Visible in operational inventory' },
+                    { key: 'website', label: '2906 Website', status: p.published ? 'live' : 'off', detail: p.published ? 'Public listing enabled' : 'Not published' },
+                  ]).map((channel: any) => {
+                    const live = ['connected', 'live', 'posted'].includes(channel.status)
+                    const waiting = ['scheduled', 'syncing', 'ready', 'manual'].includes(channel.status)
+                    const attention = channel.status === 'attention'
+                    const color = live ? '#15803D' : attention ? '#B42318' : waiting ? '#A16207' : '#9CA3AF'
+                    const bg = live ? '#ECFDF3' : attention ? '#FEF3F2' : waiting ? '#FFFBEB' : '#F5F5F4'
+                    return <div key={channel.key} style={{ display: 'grid', gridTemplateColumns: '9px minmax(0,1fr) auto', gap: 9, alignItems: 'center', padding: '9px 10px', borderRadius: 9, border: '1px solid #EEEAE1', background: '#FCFBF8' }}>
+                      <i style={{ width: 7, height: 7, borderRadius: '50%', background: color, boxShadow: live ? `0 0 8px ${color}66` : 'none' }} />
+                      <span style={{ minWidth: 0 }}><b style={{ display: 'block', fontSize: 11.5, color: '#242424' }}>{channel.label}</b><small style={{ display: 'block', overflow: 'hidden', color: '#A3A3A3', fontSize: 9, textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{channel.detail}</small></span>
+                      <span style={{ padding: '3px 6px', borderRadius: 5, background: bg, color, fontSize: 8, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase' }}>{channel.count ? `${channel.count} · ` : ''}{channel.status}</span>
+                    </div>
+                  })}
+                </div>
+                <div style={{ marginTop: 10, color: '#B1ADA5', fontSize: 9, lineHeight: 1.5 }}>Updates stay attached to this property. A channel can wait, fail or be paused without changing the canonical CRM facts.</div>
+              </div>
+
               {/* owner */}
               <div style={card}>
                 <div style={head}>Owner</div>
