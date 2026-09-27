@@ -11,7 +11,6 @@ export async function createPropertyMap(element,intelligence,{onSelect}={}){
  element.classList.add('nexus-dark-map');
  const map=L.map(element,{scrollWheelZoom:false,zoomControl:false,attributionControl:true,preferCanvas:false}).setView(latlng(intelligence.origin),15);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
- L.control.zoom({position:'topright'}).addTo(map);
  const anchor=L.circleMarker(latlng(intelligence.origin),{radius:10,color:'#397d91',weight:2,fillColor:'#7aa5b0',fillOpacity:.48}).addTo(map);
  anchor.bindTooltip(intelligence.precision==='AREA_ONLY'?'Approximate area':'Approximate home location');
  L.circle(latlng(intelligence.origin),{radius:intelligence.precision==='AREA_ONLY'?200:65,color:'#65969e',weight:1,dashArray:'3 7',fillOpacity:.055,interactive:false}).addTo(map);
@@ -20,10 +19,11 @@ export async function createPropertyMap(element,intelligence,{onSelect}={}){
  let route=null;const bounds=points=>L.latLngBounds([latlng(intelligence.origin),...points.map(p=>latlng(p.coordinates))]);
  const observer=new ResizeObserver(()=>map.invalidateSize({pan:false}));observer.observe(element);
  return {
-  select(key,places){for(const {marker,place}of markers.values())marker.setStyle({fillOpacity:place.connector===key?1:0,opacity:place.connector===key?1:0,radius:place.connector===key?6:0});if(places.length)map.fitBounds(bounds(places.slice(0,6)),{padding:[38,38],maxZoom:16,animate:!matchMedia('(prefers-reduced-motion:reduce)').matches,duration:.6});},
+  select(key,places){for(const {marker,place}of markers.values()){const active=place.connector===key;marker.setStyle({fillOpacity:active?1:.13,opacity:active?1:.2,radius:active?6:3,weight:active?1.5:.6});marker.options.interactive=active;}if(places.length)map.fitBounds(bounds(places.slice(0,6)),{padding:[38,38],maxZoom:16,animate:!matchMedia('(prefers-reduced-motion:reduce)').matches,duration:.6});},
   focus(id){const hit=markers.get(id);if(hit){hit.marker.openTooltip();map.fitBounds(bounds([hit.place]),{padding:[50,50],maxZoom:17});}},
-  route(geometry){if(route)map.removeLayer(route);route=null;if(geometry){route=L.featureGroup([L.geoJSON(geometry,{style:{color:'#0ae1ff',weight:12,opacity:.17,lineCap:'round'}}),L.geoJSON(geometry,{style:{color:'#071d2a',weight:7,opacity:1,lineCap:'round'}}),L.geoJSON(geometry,{style:{color:'#62edff',weight:4,opacity:1,lineCap:'round'}})]).addTo(map);map.fitBounds(route.getBounds(),{padding:[35,35],maxZoom:17});}},
+  route(geometry,mode='walk'){if(route)map.removeLayer(route);route=null;if(geometry){const colour=mode==='car'?'#f3c66f':'#67ecff';route=L.featureGroup([L.geoJSON(geometry,{style:{className:'nexus-route-halo',color:colour,weight:14,opacity:.14,lineCap:'round'}}),L.geoJSON(geometry,{style:{color:'#071d2a',weight:7,opacity:.96,lineCap:'round'}}),L.geoJSON(geometry,{style:{className:'nexus-route-flow',color:colour,weight:3.5,opacity:1,lineCap:'round',dashArray:'2 11'}})]).addTo(map);map.fitBounds(route.getBounds(),{padding:[35,35],maxZoom:17});}},
   recenter(){map.setView(latlng(intelligence.origin),15,{animate:true});},
+  zoom(direction){if(direction>0)map.zoomIn(1);else map.zoomOut(1);},
   destroy(){observer.disconnect();map.remove();}
  };
 }

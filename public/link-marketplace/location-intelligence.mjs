@@ -1,7 +1,7 @@
 import {categoryForPoi,distanceMetres,validCoordinates} from '../Link/activity-intelligence.mjs';
 
 export const CONNECTORS=[
- {key:'swimming',label:'Swimming',icon:'≈',radius:5000,categories:['swimming','promenades'],limit:3},
+ {key:'swimming',label:'Swimming',icon:'≈',radius:12000,categories:['swimming','promenades'],limit:5},
  {key:'daily',label:'Mini-markets',icon:'▢',radius:2000,categories:[],kinds:['grocery','supermarket','convenience','shopping'],limit:2},
  {key:'health',label:'Health',icon:'✚',radius:3000,categories:[],kinds:['pharmacy','medical','healthcare','hospital','doctor'],limit:2},
  {key:'atm',label:'ATM',icon:'€',radius:2000,categories:[],kinds:['atm'],limit:2},
@@ -45,7 +45,7 @@ export function buildLocationIntelligence(property,records,{radius=5000}={}){
     const key=`${place.connector}:${String(place.name).trim().toLowerCase()}`;
     if(seen.has(key))return false;seen.add(key);return true;
   });
-  const connectors=CONNECTORS.map(connector=>{let selected=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const aTime=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bTime=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return aTime-bTime||a.distance-b.distance;});if(connector.key==='swimming'){const beach=selected.find(place=>place.kind==='beach'||place.publicBeach===true),swim=selected.filter(place=>place!==beach).slice(0,2);selected=[...swim,...(beach?[beach]:[])];}return {...connector,places:selected.slice(0,connector.limit||3)};});
+  const connectors=CONNECTORS.map(connector=>{let selected=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const aTime=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bTime=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return aTime-bTime||a.distance-b.distance;});if(connector.key==='swimming'){const bathing=selected.filter(place=>place.kind==='beach'||place.kind==='swimming'||place.publicBeach===true),promenades=selected.filter(place=>!bathing.includes(place));selected=[...bathing.slice(0,4),...promenades.slice(0,1)];}return {...connector,places:selected.slice(0,connector.limit||3)};});
   const tiers=Object.fromEntries(SEARCH_RADII.map(value=>[value,deduped.filter(place=>place.distance<=value).length]));
   return {origin,precision,radius,tiers,places:connectors.flatMap(connector=>connector.places),connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
 }
