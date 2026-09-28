@@ -1,3 +1,4 @@
+import anchors from '../ops/property-routing/anchors.json'
 export type SmartPriority = 'weekly-shop' | 'swimming' | 'health' | 'gym'
 
 export type NexusPlace = {
@@ -20,16 +21,18 @@ export type NexusInventoryProperty = {
 
 export type PlaceDistance = {
   id: string
+  coordinates: [number, number]
   name: string
   kind: string
   distanceKm: number
-  role: 'weekly-shop' | 'top-up' | 'swimming' | 'health' | 'gym' | 'mobility'
+  role: 'weekly-shop' | 'top-up' | 'swimming' | 'health' | 'gym' | 'mobility' | 'school' | 'commute'
   rating?: number | null
   reviews?: number | null
 }
 
 export type PropertyLifeOverview = {
   reference: string
+  origin: [number, number]
   requestedReference: string
   area: string
   precision: string
@@ -38,7 +41,7 @@ export type PropertyLifeOverview = {
   advantages: string[]
   considerations: string[]
   categories: Array<{
-    key: 'groceries' | 'coast' | 'health' | 'movement'
+    key: 'groceries' | 'coast' | 'health' | 'movement' | 'school' | 'commute'
     label: string
     summary: string
     places: PlaceDistance[]
@@ -60,6 +63,7 @@ const placeRole = (place: NexusPlace): PlaceDistance['role'] | null => {
   if (['grocery', 'convenience', 'shopping'].includes(kind)) return 'top-up'
   if (['beach', 'swimming', 'swimming_spot', 'promenade'].includes(kind)) return 'swimming'
   if (['pharmacy', 'medical', 'healthcare', 'hospital', 'doctor'].includes(kind)) return 'health'
+  if (['education', 'school', 'kindergarten'].includes(kind)) return 'school'
   if (['gym', 'outdoor_gym', 'sport', 'park'].includes(kind)) return 'gym'
   if (['bus_stop', 'ferry', 'transit'].includes(kind)) return 'mobility'
   return null
@@ -86,6 +90,7 @@ function nearestPlaces(origin: [number, number], places: NexusPlace[]) {
     const reviews = Number(place.quality?.userRatingCount)
     return [{
       id: place.id,
+      coordinates: place.coordinates,
       name: place.name,
       kind: place.kind,
       distanceKm: distance,
@@ -126,6 +131,7 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
 
   return {
     reference: property.id,
+    origin: property.coordinates,
     requestedReference: options?.requestedReference || property.id,
     area: property.areaLabel || 'Malta',
     precision: property.locationDisclosure || 'area',
@@ -134,6 +140,8 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
     advantages: advantages.slice(0, 3),
     considerations: considerations.slice(0, 3),
     categories: [
+      { key: 'commute', label: 'Regular destinations', summary: 'Compare a regular journey. These are area landmarks, not your exact workplace.', places: anchors.map(a => ({id:a.id,name:a.name,coordinates:a.coordinates as [number,number],kind:'destination',role:'commute' as const,distanceKm:distanceKm(property.coordinates,a.coordinates as [number,number])})) },
+      { key: 'school', label: 'Schools', summary: 'Mapped education locations; check age range, admission and the exact entrance.', places: first(nearby, 'school', 3, 5) },
       { key: 'groceries', label: 'Weekly shopping', summary: weekly.length ? `${weekly.length} full-size options mapped` : 'Large store coverage incomplete', places: [...weekly, ...topUp] },
       { key: 'coast', label: 'Coast & swimming', summary: coast.length ? `${coast.length} coastal options mapped` : 'No connected coastal option yet', places: coast },
       { key: 'health', label: 'Health', summary: health.length ? `${health.length} nearby options mapped` : 'Health coverage incomplete', places: health },

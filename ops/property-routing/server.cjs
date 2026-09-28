@@ -21,7 +21,7 @@ async function sources(){
   snapshot={at:Date.now(),properties:inventory.properties.filter(p=>p.listable===true),places:places.records.filter(p=>valid(p.coordinates)),private:JSON.parse(privateResult.stdout)};return snapshot;
  })().finally(()=>loading=null);return loading;
 }
-const category=p=>({beach:'swimming',swimming_spot:'swimming',gym:'wellbeing',outdoor_gym:'wellbeing',sport:'wellbeing',park:'wellbeing',medical:'daily',pharmacy:'daily',healthcare:'daily',grocery:'daily',shopping:'daily',atm:'daily',transit:'mobility',restaurant:'social',cafe:'social',nightlife:'social',education:'wellbeing'})[p.kind]||null;
+const category=p=>({beach:'swimming',swimming_spot:'swimming',gym:'wellbeing',outdoor_gym:'wellbeing',sport:'wellbeing',park:'wellbeing',medical:'daily',pharmacy:'daily',healthcare:'daily',supermarket:'daily',convenience:'daily',hospital:'daily',doctor:'daily',swimming:'swimming',promenade:'swimming',bus_stop:'mobility',ferry:'mobility',school:'wellbeing',kindergarten:'wellbeing',grocery:'daily',shopping:'daily',atm:'daily',transit:'mobility',restaurant:'social',cafe:'social',nightlife:'social',education:'wellbeing'})[p.kind]||null;
 async function publicPin(origin,ref,precise){
  if(!precise)return origin;
  const hash=[...ref].reduce((n,c)=>(Math.imul(n,31)+c.charCodeAt(0))>>>0,7),angle=hash%360*Math.PI/180;
@@ -48,8 +48,8 @@ async function compute(ref){
  if(!valid(origin))return {status:'UNKNOWN',reason:'LOCATION_UNRESOLVED',places:[]};
  const key=createHash('sha256').update(JSON.stringify([ref,origin,property.updatedAt,data.places.map(p=>[p.id,p.coordinates])])).digest('hex');
  const hit=cache.get(ref);if(hit?.key===key&&Date.now()-hit.at<3600000)return hit.value;
- const nearest=data.places.map(p=>({...p,d:distance(origin,p.coordinates),group:category(p)})).filter(p=>p.group&&p.d<=5000).sort((a,b)=>a.d-b.d);
- const selected=[...new Map(['swimming','daily','social','wellbeing','mobility'].flatMap(group=>nearest.filter(p=>p.group===group).slice(0,18)).map(p=>[p.id,p])).values(),...(origin[1]<36?overviewAnchors:[])];
+ const nearest=data.places.map(p=>({...p,d:distance(origin,p.coordinates),group:category(p)})).filter(p=>p.group&&p.d<=8000).sort((a,b)=>a.d-b.d);
+ const selected=[...new Map(['swimming','daily','social','wellbeing','mobility'].flatMap(group=>nearest.filter(p=>p.group===group).slice(0,18)).concat(['supermarket','grocery','shopping','pharmacy','medical','healthcare','hospital','education','school','kindergarten'].flatMap(kind=>nearest.filter(p=>p.kind===kind).slice(0,3))).map(p=>[p.id,p])).values(),...(origin[1]<36?overviewAnchors:[])];
  const [walk,drive,pin]=await Promise.all([matrix(origin,selected,5012),matrix(origin,selected,5011),publicPin(origin,ref,Boolean(internal))]);
  const precision=internal&&pin?'APPROXIMATE':'AREA_ONLY',observedAt=new Date().toISOString();
  const values=selected.map((place,i)=>{
