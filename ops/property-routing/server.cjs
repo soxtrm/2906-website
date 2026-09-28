@@ -47,7 +47,7 @@ async function compute(ref){
  const origin=internal?.coordinates||property.coordinates;
  if(!valid(origin))return {status:'UNKNOWN',reason:'LOCATION_UNRESOLVED',places:[]};
  const key=createHash('sha256').update(JSON.stringify([ref,origin,property.updatedAt,data.places.map(p=>[p.id,p.coordinates])])).digest('hex');
- const hit=cache.get(ref);if(hit?.key===key&&Date.now()-hit.at<3600000)return hit.value;
+ const hit=cache.get(ref);if(hit?.key===key&&Date.now()-hit.at<900000)return hit.value;
  const nearest=data.places.map(p=>({...p,d:distance(origin,p.coordinates),group:category(p)})).filter(p=>p.group&&p.d<=8000).sort((a,b)=>a.d-b.d);
  const selected=[...new Map(['swimming','daily','social','wellbeing','mobility'].flatMap(group=>nearest.filter(p=>p.group===group).slice(0,18)).concat(['supermarket','grocery','shopping','pharmacy','medical','healthcare','hospital','education','school','kindergarten'].flatMap(kind=>nearest.filter(p=>p.kind===kind).slice(0,3))).map(p=>[p.id,p])).values(),...(origin[1]<36?overviewAnchors:[])];
  const [walk,drive,pin]=await Promise.all([matrix(origin,selected,5012),matrix(origin,selected,5011),publicPin(origin,ref,Boolean(internal))]);

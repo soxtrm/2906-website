@@ -1,8 +1,8 @@
 [Unit]
-Description=Refresh current Nexus routes every 30 minutes
+Description=Refresh current Nexus routes every 15 minutes
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=30min
+OnUnitActiveSec=15min
 Unit=nexus-routing-warm.service
 [Install]
 WantedBy=timers.target
