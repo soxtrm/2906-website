@@ -5,6 +5,8 @@ export const MALTA_OVERVIEW_ANCHORS=Object.freeze([
  {type:'everyday',person:'Malta overview',label:'Landmark',location:'Mdina',placeId:'malta-overview-mdina',coordinates:[14.4033,35.8868],overview:true},
  {type:'everyday',person:'Malta overview',label:'Landmark',location:'Portomaso · St Julian’s',placeId:'malta-overview-portomaso',coordinates:[14.4928,35.9221],overview:true},
  {type:'everyday',person:'Malta overview',label:'Landmark',location:'Tigné Point · Sliema',placeId:'malta-overview-tigne-point',coordinates:[14.5148,35.9074],overview:true},
+ {type:'everyday',person:'Malta overview',label:'Mapped site · entrance unverified',location:'Malta International Airport',placeId:'malta-overview-airport',coordinates:[14.4863361,35.8517424],overview:true},
+ {type:'everyday',person:'Malta overview',label:'Park pin · entrance unverified',location:'Ta’ Qali National Park',placeId:'malta-overview-ta-qali',coordinates:[14.4206599,35.8924089],overview:true},
  {type:'everyday',person:'Malta overview',label:'Landmark',location:'Golden Bay',placeId:'malta-overview-golden-bay',coordinates:[14.3447,35.9344],overview:true},
  {type:'everyday',person:'Malta overview',label:'Landmark',location:'Ċirkewwa',placeId:'malta-overview-cirkewwa',coordinates:[14.3290,35.9874],overview:true}
 ]);

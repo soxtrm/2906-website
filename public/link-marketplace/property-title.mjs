@@ -1,4 +1,5 @@
 export function withoutLocality(title,area){
+ title=String(title).replace(/^\d+[- ]bed(?:room)?s?\s+/i,'');
  if(!area)return title;
  const escaped=String(area).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  // Remove standalone location labels, not embedded development names.

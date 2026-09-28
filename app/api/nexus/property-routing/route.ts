@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(req: NextRequest) {
   const ref = req.nextUrl.searchParams.get('ref') || ''
   const place = req.nextUrl.searchParams.get('place')
-  if (!/^[A-Za-z0-9][\w-]{1,79}$/.test(ref) || (place && !/^(?:nexus-place:\d+|malta-overview-(?:valletta-gate|mdina|portomaso|tigne-point|golden-bay|cirkewwa))$/.test(place))) {
+  if (!/^[A-Za-z0-9][\w-]{1,79}$/.test(ref) || (place && !/^(?:nexus-place:\d+|malta-overview-(?:valletta-gate|mdina|portomaso|tigne-point|golden-bay|cirkewwa|airport|ta-qali))$/.test(place))) {
     return NextResponse.json({ status: 'UNKNOWN', reason: 'INVALID_REFERENCE' }, { status: 400 })
   }
   const url = new URL('http://178.104.162.193/api/public/property-routing')

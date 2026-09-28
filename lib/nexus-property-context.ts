@@ -25,7 +25,7 @@ export type PlaceDistance = {
   name: string
   kind: string
   distanceKm: number
-  role: 'weekly-shop' | 'top-up' | 'swimming' | 'health' | 'gym' | 'mobility' | 'school' | 'commute'
+  role: 'weekly-shop' | 'top-up' | 'swimming' | 'health' | 'gym' | 'mobility' | 'school' | 'commute' | 'restaurant' | 'cafe'
   rating?: number | null
   reviews?: number | null
 }
@@ -41,7 +41,7 @@ export type PropertyLifeOverview = {
   advantages: string[]
   considerations: string[]
   categories: Array<{
-    key: 'groceries' | 'coast' | 'health' | 'movement' | 'school' | 'commute'
+    key: 'groceries' | 'coast' | 'health' | 'movement' | 'school' | 'commute' | 'restaurant' | 'cafe'
     label: string
     summary: string
     places: PlaceDistance[]
@@ -63,6 +63,8 @@ const placeRole = (place: NexusPlace): PlaceDistance['role'] | null => {
   if (['grocery', 'convenience', 'shopping'].includes(kind)) return 'top-up'
   if (['beach', 'swimming', 'swimming_spot', 'promenade'].includes(kind)) return 'swimming'
   if (['pharmacy', 'medical', 'healthcare', 'hospital', 'doctor'].includes(kind)) return 'health'
+  if (kind==='restaurant') return 'restaurant'
+  if (kind==='cafe') return 'cafe'
   if (['education', 'school', 'kindergarten'].includes(kind)) return 'school'
   if (['gym', 'outdoor_gym', 'sport', 'park'].includes(kind)) return 'gym'
   if (['bus_stop', 'ferry', 'transit'].includes(kind)) return 'mobility'
@@ -106,7 +108,7 @@ const first = (places: PlaceDistance[], role: PlaceDistance['role'], limit: numb
 
 export function buildLifeOverview(property: NexusInventoryProperty, places: NexusPlace[], options?: { requestedReference?: string; sourceBasis?: 'property' | 'locality' }): PropertyLifeOverview {
   const nearby = nearestPlaces(property.coordinates, places)
-  const weekly = first(nearby, 'weekly-shop', 2, 8)
+  const weekly = first(nearby, 'weekly-shop', 4, 8)
   const topUp = first(nearby, 'top-up', 1, 2.5)
   const coast = first(nearby, 'swimming', 3, 8)
   const health = first(nearby, 'health', 3, 5)
@@ -140,6 +142,8 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
     advantages: advantages.slice(0, 3),
     considerations: considerations.slice(0, 3),
     categories: [
+      {key:'restaurant',label:'Restaurants',summary:'Mapped dining choices; cuisine appears only where supported.',places:first(nearby,'restaurant',24,3)},
+      {key:'cafe',label:'Cafés',summary:'Coffee and social stops around the area.',places:first(nearby,'cafe',24,3)},
       { key: 'commute', label: 'The Standards', summary: 'Compare a regular journey. These are area landmarks, not your exact workplace.', places: anchors.map(a => ({id:a.id,name:a.name,coordinates:a.coordinates as [number,number],kind:'destination',role:'commute' as const,distanceKm:distanceKm(property.coordinates,a.coordinates as [number,number])})) },
       { key: 'school', label: 'Schools', summary: 'Mapped education locations; check age range, admission and the exact entrance.', places: first(nearby, 'school', 3, 5) },
       { key: 'groceries', label: 'Weekly shopping', summary: weekly.length ? `${weekly.length} full-size options mapped` : 'Large store coverage incomplete', places: [...weekly, ...topUp] },

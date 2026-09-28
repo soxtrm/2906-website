@@ -142,11 +142,11 @@ const makeProperty = (index, market = 'longlets') => ({
     fit: document.querySelector('.fit-section')?.textContent
   }))
   assert.equal(intelligence.world, true)
-  assert.equal(intelligence.connectors, 11)
+  assert.equal(intelligence.connectors, 14)
   assert.match(intelligence.precision, /APPROXIMATE/)
   assert.match(intelligence.matrixHref, /\/link-matrix#\/property\/2906-longlets-/)
   assert.match(intelligence.fit, /Powered by Nexus Link/)
-  await page.click('[data-connector="daily"]')
+  await page.click('[data-life-group="amenities"]');await page.click('[data-connector="daily"]')
   await new Promise(resolve => setTimeout(resolve, 750))
   assert.equal(await page.$eval('.intelligence-map', map => map.dataset.activeConnector), 'daily')
   assert.match(await page.$eval('[data-connector-results]', node => node.textContent), /Daily Market/)

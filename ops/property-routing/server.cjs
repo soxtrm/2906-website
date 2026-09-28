@@ -61,12 +61,14 @@ async function compute(ref){
  const value={status:'CONNECTED',propertyRef:ref,publicCoordinates:pin||property.coordinates,precision,originBasis:internal?'PRIVATE_VERIFIED_LOCATION':'APPROXIMATE_AREA',source:'OpenStreetMap / self-hosted OSRM',confidence:'MODELLED',traffic:'NOT_CONNECTED',observedAt,places:values};
  cache.set(ref,{at:Date.now(),key,value});if(cache.size>1000)cache.delete(cache.keys().next().value);return value;
 }
+function connected(value,place){return place&&valid(place.coordinates)&&valid(value.publicCoordinates)&&(value.places.some(p=>p.id===place.id)||(category(place)&&distance(value.publicCoordinates,place.coordinates)<=8000));}
 async function geometry(value,placeId,mode){
  const data=await sources(),place=[...data.places,...overviewAnchors].find(p=>p.id===placeId);
- if(!place||!value.places.some(p=>p.id===placeId)||!valid(value.publicCoordinates))throw Object.assign(Error('PLACE_NOT_CONNECTED'),{status:404});
+ if(!connected(value,place))throw Object.assign(Error('PLACE_NOT_CONNECTED'),{status:404});
  const port=mode==='walk'?5012:5011;
  const result=await json(`http://127.0.0.1:${port}/route/v1/driving/${value.publicCoordinates.join(',')};${place.coordinates.join(',')}?overview=full&geometries=geojson&steps=false`);
- return {status:result.code==='Ok'?'CONNECTED':'UNKNOWN',geometry:result.routes?.[0]?.geometry||null,source:'OpenStreetMap / OSRM',confidence:'MODELLED',originBasis:'PUBLIC_APPROXIMATE_PIN',mode};
+ const route=result.routes?.[0],limit=mode==='walk'?200:300,verified=result.code==='Ok'&&Number.isFinite(route?.duration)&&route.duration>0&&Number.isFinite(route?.distance)&&(mode!=='walk'||route.distance/route.duration<=2.22)&&(result.waypoints||[]).length===2&&result.waypoints.every(p=>p.distance<=limit);
+ return {status:verified?'CONNECTED':'UNKNOWN',durationSeconds:verified?route.duration:null,distanceMetres:verified?route.distance:null,geometry:verified?route.geometry:null,source:'OpenStreetMap / OSRM',confidence:'MODELLED',originBasis:'PUBLIC_APPROXIMATE_PIN',mode};
 }
 let active=0;const inflight=new Map();
 const server=http.createServer(async(req,res)=>{
@@ -89,7 +91,7 @@ const server=http.createServer(async(req,res)=>{
    if(place&&url.searchParams.get('mode')==='bus'){
     res.setHeader('Cache-Control','no-store');
     const data=await sources(),destination=[...data.places,...overviewAnchors].find(p=>p.id===place);
-    if(!destination||!value.places.some(p=>p.id===place)||!valid(value.publicCoordinates))throw Object.assign(Error('PLACE_NOT_CONNECTED'),{status:404});
+    if(!connected(value,destination))throw Object.assign(Error('PLACE_NOT_CONNECTED'),{status:404});
     let key;try{key=fs.readFileSync('/opt/nexus-routing/google-routes.key','utf8').trim();}catch{}
     const requestKey='bus:'+ref+':'+place;
     if(!inflight.has(requestKey))inflight.set(requestKey,transitRoute(value.publicCoordinates,destination.coordinates,{key}).finally(()=>inflight.delete(requestKey)));

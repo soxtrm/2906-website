@@ -52,5 +52,27 @@
       35.9874
     ],
     "group": "overview"
+  },
+  {
+    "id": "malta-overview-airport",
+    "name": "Malta International Airport · mapped site",
+    "coordinates": [
+      14.4863361,
+      35.8517424
+    ],
+    "group": "overview",
+    "canonicalPlaceId": "nexus-place:3498",
+    "endpointNote": "Existing airport site pin; terminal entrance not verified"
+  },
+  {
+    "id": "malta-overview-ta-qali",
+    "name": "Ta’ Qali National Park",
+    "coordinates": [
+      14.4206599,
+      35.8924089
+    ],
+    "group": "overview",
+    "canonicalPlaceId": "nexus-place:502",
+    "endpointNote": "Existing park pin; entrance not verified"
   }
 ]

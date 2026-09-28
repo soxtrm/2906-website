@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { ArrowUpRight, BusFront, CarFront, Check, CircleAlert, Footprints, HeartPulse, MapPinned, Route, ShoppingBasket, Sparkles, Star, Waves, CarTaxiFront, GraduationCap, BriefcaseBusiness } from 'lucide-react'
+import { ArrowUpRight, BusFront, CarFront, Check, CircleAlert, Footprints, HeartPulse, MapPinned, Route, ShoppingBasket, Sparkles, Star, Waves, CarTaxiFront, GraduationCap, BriefcaseBusiness, Utensils, Coffee } from 'lucide-react'
 import type { PropertyLifeOverview as Overview } from '@/lib/nexus-property-context'
 import styles from './property-life-overview.module.css'
 
-const icons = { groceries: ShoppingBasket, coast: Waves, health: HeartPulse, movement: BusFront, school: GraduationCap, commute: BriefcaseBusiness }
+const icons = { groceries: ShoppingBasket, coast: Waves, health: HeartPulse, movement: BusFront, school: GraduationCap, commute: BriefcaseBusiness, restaurant: Utensils, cafe: Coffee }
 type RouteEvidence = { id: string; routeVerified?: boolean; walkingSeconds?: number | null; drivingSeconds?: number | null; walkingDistanceMetres?: number | null; drivingDistanceMetres?: number | null }
 const distance = (value: number) => value < 1 ? `${Math.max(50, Math.round(value * 1000 / 50) * 50)} m` : `${value.toFixed(1)} km`
 const minutes = (value?: number | null) => Number.isFinite(value) ? `${Math.max(1, Math.round(Number(value) / 60))} min` : null
@@ -16,6 +16,8 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
   const category = overview.categories.find(item => item.key === active) || overview.categories[0]
   const Icon = icons[category.key]
   const [mode, setMode] = useState<'walk' | 'bus' | 'taxi' | 'car'>('walk')
+  const [expanded, setExpanded] = useState(false)
+  useEffect(() => setExpanded(false), [active])
   const [chosen, setChosen] = useState('')
   const selected = category.places.find(place => place.id === chosen) || category.places[0]
   const [geometry, setGeometry] = useState<unknown>(null)
@@ -127,15 +129,15 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
       <div className={styles.modeBar} role="group" aria-label="Travel mode">{modes.map(m => <button type="button" key={m.key} aria-pressed={mode === m.key} onClick={() => setMode(m.key)}><m.Icon aria-hidden="true" />{m.label}{m.key === 'taxi' && <small>Uber / Bolt</small>}</button>)}</div>
       <iframe ref={frame} className={styles.areaMap} src="/link-marketplace/estate-area-map.html" title="Map of useful places near this property" loading="lazy" onLoad={() => setMapReady(n => n + 1)} />
       <p className={styles.evidence}>Approximate {overview.sourceBasis === 'locality' ? 'locality' : 'property area'} origin · select a pin or a place below. Route lines use the public area pin; front-door distances can differ.</p>
-      {selected && <div key={`${mode}:${selected.id}`} className={styles.journey} aria-live="polite"><div><small>YOUR JOURNEY TO</small><h4>{selected.name}</h4><strong>{journeyLoading ? 'Checking journey…' : minutes(selectedSeconds) || 'Time unavailable'}</strong><span>{mode === 'bus' ? 'scheduled journey' : mode === 'walk' ? 'on foot' : 'driving time'} · one way</span></div><div>
-        {mode === 'bus' ? <p>{bus?.status === 'CONNECTED' ? `${Math.round(bus.walkingMinutes || 0)} min walking included · ${bus.transfers ?? 'Unknown'} transfers · ${bus.services?.map((s: any) => s.line).filter(Boolean).join(', ') || 'Line not provided'}` : 'Select a place to check its scheduled bus connection. No car-time approximation.'}</p> : <p>{selectedSeconds != null ? 'MODELLED · OpenStreetMap / OSRM · no live traffic.' : 'No verified travel time for this journey.'} {mode === 'taxi' && 'Uber / Bolt fare and pickup wait require a live quote; they are not included.'}</p>}
+      {selected && <div key={`${mode}:${selected.id}`} className={styles.journey} aria-live="polite"><div><small>YOUR JOURNEY TO</small><h4>{selected.name}</h4><strong>{journeyLoading ? 'Checking journey…' : minutes(selectedSeconds) || 'Time unavailable'}</strong><span>{mode === 'bus' ? 'scheduled journey' : mode === 'walk' ? 'on foot' : mode === 'taxi' ? 'drive leg · pickup unknown' : 'driving time'} · one way</span></div><div>
+        {mode === 'bus' ? <p>{bus?.status === 'CONNECTED' ? `${Number.isFinite(bus.accessWalkMinutes)?Math.round(bus.accessWalkMinutes)+' min to stop':'Walk to stop unknown'} · ${Number.isFinite(bus.scheduledWaitMinutes)?Math.round(bus.scheduledWaitMinutes)+' min scheduled wait':'Wait unknown'} · ${Number.isFinite(bus.rideMinutes)?Math.round(bus.rideMinutes)+' min ride':'Ride unknown'} · ${Number.isFinite(bus.egressWalkMinutes)?Math.round(bus.egressWalkMinutes)+' min final walk':'Final walk unknown'} · ${bus.transfers ?? 'Unknown'} transfers · ${bus.services?.map((s: any) => s.line).filter(Boolean).join(', ') || 'Line not provided'}` : 'Select a place to check its scheduled bus connection. No car-time approximation.'}</p> : <p>{selectedSeconds != null ? 'MODELLED · OpenStreetMap / OSRM · no live traffic.' : 'No verified travel time for this journey.'} {mode === 'taxi' && 'Uber / Bolt fare and pickup wait require a live quote; they are not included.'}</p>}
         {mode === 'bus' && bus?.requestedAt && <small>Google Maps · {new Date(bus.requestedAt).toLocaleString()} · schedule estimate, not live reliability</small>}
         {(mode === 'car' || mode === 'taxi') && selected.id.startsWith('malta-overview-') && <div><button type="button" className={styles.trafficCheck} disabled={trafficLoading} onClick={checkTraffic}>{trafficLoading ? 'Checking traffic…' : 'Check current traffic'}</button>{trafficRoute ? <p>Google Maps · {minutes(trafficRoute.trafficSeconds) || 'ETA unavailable'} now · {minutes(trafficRoute.noTrafficSeconds) || 'Baseline unavailable'} without traffic · {trafficRoute.distanceMetres != null ? distance(trafficRoute.distanceMetres / 1000) : ''}<br />Updated {new Date(trafficRoute.observedAt).toLocaleString()} · predicted driving time, not a completed journey.</p> : traffic?.status === 'UNKNOWN' ? <p>Traffic is unavailable. The modelled route above is unchanged.</p> : null}</div>}
         <label>My one-way time budget <select value={budget} onChange={e => setBudget(Number(e.target.value))}>{[10,15,20,30,45,60].map(n => <option key={n} value={n}>{n} min</option>)}</select></label>
         <label>Round trips per week <select value={days} onChange={e => setDays(Number(e.target.value))}>{[1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
         <p>{selectedSeconds != null ? `${selectedSeconds / 60 <= budget ? 'Within' : 'Over'} your time budget · about ${Math.round(selectedSeconds / 60 * 2 * days)} min travelling per week. Return assumed equal; waiting and stops may add time.` : 'Weekly travel time appears when a route is available.'}</p>
       </div></div>}
-      {category.places.length ? <div className={styles.placeGrid}>{category.places.map((place, index) => {
+      {category.places.length ? <div className={styles.placeGrid}>{category.places.slice(0, expanded ? 24 : 6).map((place, index) => {
         const route = routes[place.id]
         const ModeIcon = modes.find(m => m.key === mode)!.Icon
         const modeSeconds = duration(place.id)
@@ -144,10 +146,11 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
           <button type="button" className={styles.placeSelect} aria-pressed={selected?.id === place.id} onClick={() => setChosen(place.id)}>{place.name}<ArrowUpRight aria-hidden="true" /></button>
           {place.rating ? <span className={styles.rating}><Star aria-hidden="true" /> {place.rating.toFixed(1)}{place.reviews ? ` · ${place.reviews.toLocaleString()} reviews` : ''}</span> : null}
           <button type="button" className={styles.modeJourney} onClick={() => setChosen(place.id)} aria-label={`Show ${mode} journey to ${place.name}`}><ModeIcon aria-hidden="true" /><span><small>{mode === 'taxi' ? 'Taxi · Uber / Bolt' : mode}</small><b>{minutes(modeSeconds) || (mode === 'bus' ? 'Check bus journey' : 'Time unavailable')}</b><small>{mode === 'bus' ? (place.id === selected?.id && bus?.distanceMetres ? distance(bus.distanceMetres / 1000) : 'Select to load the timetable') : (mode === 'walk' ? route?.walkingDistanceMetres : route?.drivingDistanceMetres) != null ? distance(Number(mode === 'walk' ? route?.walkingDistanceMetres : route?.drivingDistanceMetres) / 1000) + ' routed' : distance(place.distanceKm) + ' straight-line'}</small></span><ArrowUpRight aria-hidden="true" /></button>
-          {mode === 'taxi' && <small className={styles.evidence}>Fare and pickup wait require an Uber / Bolt quote.</small>}
+          {mode === 'taxi' && <small className={styles.evidence}>Drive leg only · pickup and total time unknown. Fare requires a quote.</small>}
           <small className={styles.evidence}>{mode === 'bus' ? 'GOOGLE MAPS · scheduled journey when available' : route?.routeVerified ? 'MODELLED ROUTE · no live traffic' : 'STRAIGHT-LINE · privacy-safe area pin'}</small>
         </article>
       })}</div> : <p className={styles.empty}>This category is not sufficiently mapped yet. It stays unknown instead of becoming a made-up score.</p>}
+      {category.places.length>6 && <button className={styles.trafficCheck} type="button" onClick={()=>setExpanded(!expanded)}>{expanded?'Show fewer':`Show all ${category.places.length} mapped options`}</button>}
     </div>
 
     <footer className={styles.footer}>

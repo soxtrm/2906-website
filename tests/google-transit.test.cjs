@@ -6,3 +6,5 @@ assert.equal(normalizeTransit({}).reason,'NO_TRANSIT_ROUTE');
 assert.equal(normalizeTransit({routes:[{legs:[{steps:[{travelMode:'WALK'}]}]}]}).reason,'NO_TRANSIT_LEG');
 assert.equal(normalizeTransit({routes:[{legs:[{steps:[{travelMode:'TRANSIT'},{travelMode:'WALK'}]}]}]}).walkingMinutes,null);
 (async()=>{let body;await transitRoute([14.5,35.9],[14.51,35.89],{key:'fixture-only',fetcher:async(url,options)=>{body=JSON.parse(options.body);return{ok:true,json:async()=>({})}}});assert.equal(body.travelMode,'TRANSIT');assert.deepEqual(body.transitPreferences.allowedTravelModes,['BUS']);assert.equal(body.routingPreference,undefined);console.log('Transit normalization and request fixtures passed');})().catch(e=>{console.error(e);process.exitCode=1});
+
+const parts=normalizeTransit({routes:[{duration:'1800s',legs:[{steps:[{travelMode:'WALK',staticDuration:'300s'},{travelMode:'TRANSIT',staticDuration:'900s'},{travelMode:'WALK',staticDuration:'120s'}]}]}]});assert.equal(parts.accessWalkMinutes,5);assert.equal(parts.egressWalkMinutes,2);assert.equal(parts.rideMinutes,15);assert.equal(parts.scheduledWaitMinutes,8);assert.equal(result.scheduledWaitMinutes,null);

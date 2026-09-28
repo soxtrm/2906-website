@@ -37,3 +37,5 @@ assert.equal(services.connectors.find(c=>c.key==='daily').places.length,0);
 assert.equal(services.connectors.find(c=>c.key==='gym').places[0].id,'gym2');
 assert.equal(services.connectors.find(c=>c.key==='sport').places[0].id,'sport2');
 assert.equal(services.places.filter(p=>p.kind==='atm').length,2);
+
+const choices=buildLocationIntelligence(property,[...Array.from({length:8},(_,i)=>({id:'r'+i,name:'Restaurant '+i,kind:'restaurant',coordinates:[14.5001+i*.0001,35.91]})),{id:'s',name:'Supermarket',kind:'supermarket',coordinates:[14.501,35.91]},{id:'p',name:'Promenade',kind:'promenade',coordinates:[14.501,35.91]}]);assert.equal(choices.connectors.find(c=>c.key==='social').total,8);assert.equal(choices.connectors.find(c=>c.key==='social').places.length,6);assert.equal(choices.connectors.find(c=>c.key==='social').mapPlaces.length,8);assert.equal(choices.connectors.find(c=>c.key==='supermarkets').places.length,1);assert.equal(choices.connectors.find(c=>c.key==='swimming').places.length,0);

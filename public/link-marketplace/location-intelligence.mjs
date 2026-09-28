@@ -1,11 +1,14 @@
 import {categoryForPoi,distanceMetres,validCoordinates} from '../Link/activity-intelligence.mjs';
 
 export const CONNECTORS=[
- {key:'swimming',label:'Swimming',icon:'≈',radius:12000,categories:['swimming','promenades'],limit:5},
- {key:'daily',label:'Mini-markets',icon:'▢',radius:2000,categories:[],kinds:['grocery','supermarket','convenience','shopping'],limit:2},
+ {key:'swimming',label:'Swimming',icon:'≈',radius:12000,categories:['swimming'],limit:3,section:'activities'},
+ {key:'supermarkets',label:'Supermarkets',icon:'▣',radius:8000,categories:[],kinds:['supermarket'],limit:3,section:'amenities'},
+ {key:'promenade',label:'Promenades',icon:'↟',radius:5000,categories:['promenades'],limit:3,section:'activities'},
+ {key:'cafes',label:'Cafés',icon:'☕',radius:2000,categories:[],kinds:['cafe'],limit:4,section:'social'},
+ {key:'daily',label:'Mini-markets',icon:'▢',radius:2000,categories:[],kinds:['grocery','convenience','shopping'],limit:2},
  {key:'health',label:'Health',icon:'✚',radius:3000,categories:[],kinds:['pharmacy','medical','healthcare','hospital','doctor'],limit:2},
  {key:'atm',label:'ATM',icon:'€',radius:2000,categories:[],kinds:['atm'],limit:2},
- {key:'social',label:'Food & cafés',icon:'◇',radius:2000,categories:['restaurants'],limit:6},
+ {key:'social',label:'Restaurants',icon:'◇',radius:2000,categories:['restaurants'],limit:6},
  {key:'nightlife',label:'Bars',icon:'✧',radius:2000,categories:['nightlife'],limit:4},
  {key:'gym',label:'Gyms',icon:'◉',radius:5000,categories:['gyms'],limit:3},
  {key:'sport',label:'Sport',icon:'◎',radius:5000,categories:['sports'],limit:3},
@@ -21,16 +24,16 @@ const precisionValue=value=>{
   return 'AREA_ONLY';
 };
 
-const KIND_CATEGORY={beach:'swimming',swimming:'swimming',promenade:'promenades',gym:'gyms',outdoor_gym:'gyms',sport:'sports',restaurant:'restaurants',cafe:'restaurants',bar:'nightlife',nightclub:'nightlife',grocery:'shopping',supermarket:'shopping',convenience:'shopping',pharmacy:'shopping',medical:'shopping',healthcare:'shopping',atm:'shopping',shopping:'shopping',bus_stop:'transport',ferry:'transport',park:'parks',wellness:'wellness'};
+const KIND_CATEGORY={beach:'swimming',swimming:'swimming',swimming_spot:'swimming',promenade:'promenades',gym:'gyms',outdoor_gym:'gyms',sport:'sports',restaurant:'restaurants',cafe:'restaurants',bar:'nightlife',nightclub:'nightlife',grocery:'shopping',supermarket:'shopping',convenience:'shopping',pharmacy:'shopping',medical:'shopping',healthcare:'shopping',atm:'shopping',shopping:'shopping',bus_stop:'transport',ferry:'transport',park:'parks',wellness:'wellness'};
 
-const connectorFor=place=>CONNECTORS.find(c=>c.kinds?.includes(place.kind))?.key||CONNECTORS.find(c=>c.categories.includes(place.category))?.key||null;
+const connectorFor=place=>String(place.quality?.primaryType||'')==='supermarket'?'supermarkets':CONNECTORS.find(c=>c.kinds?.includes(place.kind))?.key||CONNECTORS.find(c=>c.categories.includes(place.category))?.key||null;
 
 export function propertyLocationPrecision(property){
   if(!validCoordinates(property?.coordinates))return 'AREA_ONLY';
   return precisionValue(property.locationDisclosure||property.locationPrecision||property.coordinatePrecision||'approximate');
 }
 
-export function buildLocationIntelligence(property,records,{radius=5000}={}){
+export function buildLocationIntelligence(property,records,{radius=8000}={}){
   const precision=propertyLocationPrecision(property),origin=validCoordinates(property?.coordinates)?property.coordinates:null;
   if(!origin)return {origin:null,precision,radius,tiers:Object.fromEntries(SEARCH_RADII.map(value=>[value,0])),places:[],connectors:CONNECTORS.map(connector=>({...connector,places:[]})),routeEvidence:0};
   const places=(records||[]).flatMap((record,index)=>{
@@ -41,13 +44,20 @@ export function buildLocationIntelligence(property,records,{radius=5000}={}){
     place.connector=connectorFor(place);
     return place.connector?[place]:[];
   }).sort((a,b)=>a.distance-b.distance||String(a.name).localeCompare(String(b.name)));
-  const seen=new Set(),deduped=places.filter(place=>{
-    const key=`${place.connector}:${String(place.name).trim().toLowerCase()}`;
-    if(seen.has(key))return false;seen.add(key);return true;
+  const seen=new Map(),deduped=places.filter(place=>{
+    const key=`${place.connector}:${String(place.name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/gi,'').toLowerCase()}`;
+    const locations=seen.get(key)||[];
+    if(locations.some(c=>distanceMetres(c,place.coordinates)<=75))return false;
+    locations.push(place.coordinates);seen.set(key,locations);return true;
   });
-  const connectors=CONNECTORS.map(connector=>{let selected=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const aTime=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bTime=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return aTime-bTime||a.distance-b.distance;});if(connector.key==='swimming'){const bathing=selected.filter(place=>place.kind==='beach'||place.kind==='swimming'||place.publicBeach===true),promenades=selected.filter(place=>!bathing.includes(place));selected=[...bathing.slice(0,4),...promenades.slice(0,1)];}return {...connector,places:selected.slice(0,connector.limit||3)};});
+  const connectors=CONNECTORS.map(connector=>{
+    const all=deduped.filter(place=>place.connector===connector.key&&place.distance<=connector.radius).sort((a,b)=>{const at=a.routeVerified&&Number.isFinite(a.walkingSeconds)?a.walkingSeconds:Infinity,bt=b.routeVerified&&Number.isFinite(b.walkingSeconds)?b.walkingSeconds:Infinity;return at-bt||a.distance-b.distance;});
+    let selected=all.slice(0,connector.limit||3);
+    if(connector.key==='swimming'){const spots=all.filter(p=>p.kind==='swimming'||p.kind==='swimming_spot'),beaches=all.filter(p=>p.kind==='beach'||p.publicBeach===true);selected=[...spots.slice(0,2),...beaches.slice(0,1)];}
+    return {...connector,section:connector.section||(['daily','health','atm','mobility'].includes(connector.key)?'amenities':connector.key==='social'||connector.key==='nightlife'?'social':'activities'),places:selected,total:all.length,mapPlaces:all.slice(0,connector.key==='atm'?2:24)};
+  });
   const tiers=Object.fromEntries(SEARCH_RADII.map(value=>[value,deduped.filter(place=>place.distance<=value).length]));
-  return {origin,precision,radius,tiers,places:connectors.flatMap(connector=>connector.places),connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
+  return {origin,precision,radius,tiers,places:connectors.flatMap(connector=>connector.mapPlaces),connectors,routeEvidence:deduped.filter(place=>place.routeVerified&&(Number.isFinite(place.walkingSeconds)||Number.isFinite(place.drivingSeconds))).length};
 }
 
 export function placeTravelEvidence(place){
