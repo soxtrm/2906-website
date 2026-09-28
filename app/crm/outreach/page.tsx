@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { Zap, Users, MessageSquare, Clock3, ShieldCheck, Radio, Layers } from 'lucide-react'
+import './outreach-console.css'
 import { crmGet, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 
@@ -86,7 +88,8 @@ function accountDisplayName(account: Account) {
   return /^(default|primary)$/i.test(account.sessionName) || /primary/i.test(account.label) ? 'Kev Default' : account.label
 }
 function accountPriority(account: Account) {
-  if (isArgusManager(account)) return -20
+  const argus = `${account.sessionName}`.match(/^argus[ _-]?([1-4])$/i)
+  if (argus) return -30 + Number(argus[1])
   const session = account.sessionName.toLowerCase()
   if (session === 'default') return -15
   if (session === 'kevsecond') return -14
@@ -168,6 +171,9 @@ function ArgusConsole() {
   const clock = useMaltaClock()
   const [accounts, setAccounts] = useState<Account[] | null>(null)
   const [error, setError] = useState('')
+  const [adding,setAdding]=useState(false)
+  const [newAccount,setNewAccount]=useState({label:'',sessionName:'',phone:''})
+  const [registering,setRegistering]=useState(false)
   const [duplicates, setDuplicates] = useState<any[] | null>(null)
   const [summary, setSummary] = useState<any>(null)
   const [dueReminders, setDueReminders] = useState<{ rows: DueReminder[]; perAccount: any[] }>({ rows: [], perAccount: [] })
@@ -210,35 +216,35 @@ function ArgusConsole() {
     } catch (e: any) { setError(e.message || 'Duplicate check failed'); setDuplicates(null) }
   }
 
-  const connectedCount = accounts?.filter(a => a.connected).length ?? 0
-  const orderedAccounts = useMemo(() => [...(accounts || [])].sort((a, b) => accountPriority(a) - accountPriority(b) || a.id - b.id), [accounts])
+  const connectedCount = accounts?.filter(a => a.connected && !/^(jasmine|olga)$/i.test(a.sessionName)).length ?? 0
+  const orderedAccounts = useMemo(() => [...(accounts || [])].filter(a => !/^(jasmine|olga)$/i.test(a.sessionName.trim())).sort((a, b) => accountPriority(a) - accountPriority(b) || a.id - b.id), [accounts])
   const outreachAccounts = useMemo(() => orderedAccounts.filter(account => account.outreachEligible !== false && !isArgusManager(account)), [orderedAccounts])
-  const selectedAccount = outreachAccounts.find(account => account.id === selectedAccountId) || outreachAccounts[0] || null
+  const selectedAccount = outreachAccounts.find(account => account.id === selectedAccountId) || outreachAccounts.find(account => account.sessionName.toLowerCase() === 'default') || outreachAccounts[0] || null
 
   useEffect(() => {
-    if (outreachAccounts.length && !outreachAccounts.some(account => account.id === selectedAccountId)) setSelectedAccountId(outreachAccounts[0].id)
+    if (outreachAccounts.length && !outreachAccounts.some(account => account.id === selectedAccountId)) setSelectedAccountId((outreachAccounts.find(account => account.sessionName.toLowerCase() === 'default') || outreachAccounts[0]).id)
   }, [outreachAccounts, selectedAccountId])
 
   if (me && me.role !== 'admin') {
     return (
-      <div style={{ minHeight: '100vh', background: BG, color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F }}>
+      <div className="argus-workspace" style={{ minHeight: '100vh', background: BG, color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F }}>
         Admins only.
       </div>
     )
   }
 
   return (
-    <CrmShell title="Outreach Planner" subtitle="Your accounts, queues and schedules." dark><div style={{ minHeight: '100vh', background: `radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(224,56,159,0.06), transparent), radial-gradient(ellipse 1000px 500px at 90% 0%, rgba(79,123,242,0.06), transparent), ${BG}`, color: TEXT, fontFamily: F, paddingBottom: 60 }}>
+    <CrmShell title="Outreach Planner" subtitle="Your accounts, queues and schedules." dark><div className="argus-workspace" style={{ minHeight: '100vh', background: `radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(224,56,159,0.06), transparent), radial-gradient(ellipse 1000px 500px at 90% 0%, rgba(79,123,242,0.06), transparent), ${BG}`, color: TEXT, fontFamily: F, paddingBottom: 60 }}>
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ padding: '22px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, borderBottom: `1px solid ${HAIRLINE}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: '8px 14px' }}>
             <div style={{ fontSize: 9, color: FAINT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Connected Accounts</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-              {(accounts || []).map((a, i) => (
+              {orderedAccounts.map((a, i) => (
                 <span key={a.id} title={a.sessionName} style={{ width: 8, height: 8, borderRadius: '50%', background: a.connected ? accentFor(i).a : 'transparent', border: `1px solid ${a.connected ? accentFor(i).a : FAINT}`, boxShadow: a.connected ? `0 0 6px ${accentFor(i).glow}` : 'none' }} />
               ))}
-              <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 6 }}>{connectedCount} / {accounts?.length ?? 0} connected</span>
+              <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 6 }}>{connectedCount} / {orderedAccounts.length} connected</span>
             </div>
           </div>
           <div style={{ background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: '8px 14px', textAlign: 'right' }}>
@@ -263,17 +269,25 @@ function ArgusConsole() {
 
       {accounts && activeTab === 'tools' && <>
         <section className="outreach-account-overview">
-          <header><div><span>ACCOUNT CONTROL</span><h2>Every line, one clean view.</h2></div><p>Argus 1 keeps the system running. Outreach identities stay separate and use the real last-send timestamp.</p></header>
-          <div className="outreach-account-grid">
+          <header><div><span>ACCOUNT CONTROL</span><h2>Your outreach network.</h2></div><p>Argus 1 keeps the system running. Outreach identities stay separate and use the real last-send timestamp.</p></header>
+          <div className="outreach-account-grid"><div className="account-row-label">SYSTEM & OUTREACH / ARGUS</div>
             {orderedAccounts.map((account, index) => {
               const manager = isArgusManager(account), rotating = account.outreachEligible !== false && !manager, selected = selectedAccount?.id === account.id, cooldown = cooldownState(account)
-              return <button key={account.id} type="button" disabled={!rotating} aria-pressed={selected} onClick={() => setSelectedAccountId(account.id)} className={`outreach-account-tile${manager ? ' is-manager' : ''}${!rotating ? ' is-support' : ''}${selected ? ' is-selected' : ''}`} style={{ '--account-accent': accentFor(index).a } as React.CSSProperties}>
+              return <div key={account.id} className={/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? 'account-slot argus-slot' : 'account-slot'}>{index > 0 && /^argus[ _-]?[1-4]$/i.test(orderedAccounts[index-1].sessionName) && !/^argus[ _-]?[1-4]$/i.test(account.sessionName) && <span className="account-team-label">YOUR TEAM</span>}<button key={account.id} type="button" disabled={!rotating} aria-pressed={selected} onClick={() => setSelectedAccountId(account.id)} className={`outreach-account-tile${/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? ' is-argus' : ''}${manager ? ' is-manager' : ''}${!rotating ? ' is-support' : ''}${selected ? ' is-selected' : ''}`} style={{ '--account-accent': accentFor(index).a } as React.CSSProperties}>
                 <i aria-hidden>{manager ? '⌘' : rotating ? '↗' : '◇'}</i><span><b>{accountDisplayName(account)}</b><small>{manager ? 'SYSTEM MANAGER · NOT IN ROTATION' : rotating ? `${account.pool === 'bottom' ? 'Z→A' : 'A→Z'} OUTREACH` : 'SUPPORT · NOT IN ROTATION'}</small></span>
                 <em className={account.connected ? 'is-online' : ''}>{account.connected ? 'ONLINE' : 'OFFLINE'}</em>
                 <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{rotating && <strong className={cooldown.ready ? 'is-ready' : ''}>{cooldown.label}</strong>}</footer>
-              </button>
+              </button></div>
             })}
+            <button className="account-add" onClick={()=>setAdding(true)}><b>+</b><span>Add account<small>Expand your network</small></span></button>
           </div>
+          {adding && <form className="account-register" onSubmit={async event=>{event.preventDefault();setRegistering(true);setError('');try{await crmJson('outreach/accounts','POST',newAccount);setAdding(false);setNewAccount({label:'',sessionName:'',phone:''});await load()}catch(e:any){setError(e.message||'Registration failed')}finally{setRegistering(false)}}}>
+            <h3>Connect another outreach account</h3><p>Register the identity here, then connect its WhatsApp session. An offline account cannot send.</p>
+            <label>Display name<input required value={newAccount.label} onChange={e=>setNewAccount({...newAccount,label:e.target.value})} placeholder="Argus 5" /></label>
+            <label>Session name<input required pattern="[A-Za-z0-9_-]{2,40}" value={newAccount.sessionName} onChange={e=>setNewAccount({...newAccount,sessionName:e.target.value})} placeholder="Argus5" /></label>
+            <label>Phone number<input required type="tel" value={newAccount.phone} onChange={e=>setNewAccount({...newAccount,phone:e.target.value})} placeholder="+356 …" /></label>
+            <button disabled={registering} type="submit">{registering?'Registering…':'Register account'}</button><button type="button" onClick={()=>setAdding(false)}>Cancel</button>
+          </form>}
         </section>
 
         {selectedAccount && <div className="outreach-active-console">
@@ -464,7 +478,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // tomorrow by default).
   const [activeLabel, setActiveLabel] = useState<'TODAY' | 'TOMORROW' | 'IN_2_DAYS'>('TODAY')
   const [queueText, setQueueText] = useState('')
-  const [msgOpen, setMsgOpen] = useState(false)
+  const [msgOpen, setMsgOpen] = useState(true)
   const [msgDraft, setMsgDraft] = useState('')
   const [count, setCount] = useState(OUTREACH_STARTER_BATCH_MAX)
   const [armTime, setArmTime] = useState('14:15')
@@ -583,10 +597,10 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // zum vortag automatisch"). Everything it touches stays a normal editable
   // field afterward (message box left open) — AUTO never arms anything.
   async function autoRun() {
-    if (!activePlan) return
+    if (!activePlan || busy || activePlan.armed || ['running', 'completed'].includes(activePlan.status)) return
     const last = loadLastUsed(account.id)
     const seedCount = Math.min(OUTREACH_STARTER_BATCH_MAX, last?.count ?? defaultSeedCount(account))
-    const seedText = last?.text ?? msgDraft
+    const seedText = msgDraft.trim() || activePlan.message_template || last?.text || ''
 
     setCount(seedCount)
     if (seedText) setMsgDraft(seedText)
@@ -601,8 +615,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
     setBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: seedCount, topUp: false })
+      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: seedCount, topUp: true })
       if (seedText) await crmJson(`outreach/plans/${activePlan.id}/message`, 'POST', { text: seedText })
+      await crmJson(`outreach/plans/${activePlan.id}/save`, 'POST', {})
       await refresh(activePlan.id)
       saveLastUsed(account.id, { text: seedText, count: seedCount })
       setNote(`Auto: ${r.added} added${seedText ? ' · message set' : ' · no message yet — write one below'}.`)
@@ -667,13 +682,23 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const initials = displayName.slice(0, 1).toUpperCase()
 
   return (
-    <div style={{
+    <div className="queue-console" style={{
       flex: '0 0 min(92vw, 380px)', scrollSnapAlign: 'start',
       background: `linear-gradient(165deg, ${accent.soft}, ${PANEL} 40%)`,
       border: `1px solid ${accent.glow}`, borderRadius: 22, padding: 18,
       boxShadow: `0 0 0 1px rgba(255,255,255,0.02), 0 20px 60px -20px ${accent.glow}`,
       display: 'flex', flexDirection: 'column', gap: 14,
     }}>
+      <div className="queue-mission">
+        <span className="queue-eyebrow"><Radio size={13} /> OUTREACH / WORKSPACE</span>
+        <h2>Prepare. Review. Connect.</h2>
+        <p>One account. One queue. Every step in view.</p>
+        <button className="queue-autosetup" disabled={busy || !activePlan || activePlan.armed || ['running','completed'].includes(activePlan.status)} onClick={autoRun}><Zap size={17} />{busy ? 'Preparing…' : 'Auto-setup queue'}<span>Draft only</span></button>
+      </div>
+      <div className="queue-progress" aria-label="Queue preparation progress">
+        {[{icon: Users, label: 'Contacts', value: `${s?.eligible || 0} eligible`, done: Boolean(s?.eligible)}, {icon: MessageSquare, label: 'Message', value: activePlan?.message_template ? 'Saved' : 'Needs text', done: Boolean(activePlan?.message_template)}, {icon: Clock3, label: 'Window', value: armTime + ' · Malta', done: Boolean(activePlan?.scheduled_at)}, {icon: ShieldCheck, label: 'Release', value: activePlan?.armed ? 'Armed' : 'Review first', done: Boolean(activePlan?.armed)}].map((step, i) => <div key={step.label} className={step.done ? 'is-done' : ''}><step.icon size={17} /><span><small>0{i + 1} / {step.label}</small><b>{step.value}</b></span></div>)}
+      </div>
+      <div className="queue-identity">
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 42, height: 42, borderRadius: '50%', background: `linear-gradient(135deg, ${accent.a}, ${accent.b})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, flexShrink: 0 }}>{initials}</div>
@@ -711,6 +736,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         {account.outreachVolumeUntil && <div style={{ fontSize: 9.5, color: FAINT }}>Temporary pace until {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(account.outreachVolumeUntil))}</div>}
       </div>
 
+      </div>
+      <div className="queue-day-tabs">
       {/* day tabs */}
       <div style={{ display: 'flex', gap: 6 }}>
         {(['TODAY', 'TOMORROW', 'IN_2_DAYS'] as const).map(label => {
@@ -730,6 +757,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         })}
       </div>
 
+      </div>
+      <section className="queue-contacts"><h3><Users size={17} /> Contact queue <span>01</span></h3>
       {/* editable queue */}
       {isCompleted ? (
         <div style={{ background: EDITOR, borderRadius: 12, padding: 16, opacity: 0.75 }}>
@@ -741,7 +770,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <textarea
           value={queueText}
           onChange={e => setQueueText(e.target.value)}
-          onBlur={savePastedList}
+          aria-label="Contact queue"
           disabled={activePlan?.status === 'running'}
           placeholder={'Paste numbers, one per line:\n+35679932938 Mark\n+35679409341 Sarah'}
           spellCheck={false}
@@ -766,11 +795,12 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
-            disabled={busy} onClick={autoRun}
-            title="One click for a non-custom day: reuses this account's last text + count, regenerates the list, saves the message, and nudges the arm time — everything stays editable after."
+            disabled={busy || !activePlan || activePlan.armed || activePlan.status === 'running'} onClick={autoRun}
+            title="Prepare up to ten eligible contacts, preserve the existing queue and save this account’s message as a draft. Does not arm or send."
             style={{ ...btnPrimary(accent), flex: '0 0 auto', paddingLeft: 16, paddingRight: 16 }}>
-            ⚡ AUTO
+            Auto-setup
           </button>
+          <button disabled={busy} onClick={savePastedList} style={btnGhost}>Save edits</button>
           <button disabled={busy} onClick={() => generate(false)} title="Generates a fresh list of eligible owners — the exact same engine as the real !createlist WhatsApp command." style={{ ...btnGhost, flex: '1 1 auto' }}>+ Create List</button>
           <input aria-label="Contacts per starter batch" type="number" min={1} max={OUTREACH_STARTER_BATCH_MAX} value={count} onChange={e => setCount(Math.max(1, Math.min(OUTREACH_STARTER_BATCH_MAX, parseInt(e.target.value) || OUTREACH_STARTER_BATCH_MAX)))} style={inputSmall} />
           <span style={{ fontSize: 9, color: FAINT }}>Starter max {OUTREACH_STARTER_BATCH_MAX}</span>
@@ -779,6 +809,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         </div>
       )}
 
+      </section>
+      <section className="queue-message"><h3><MessageSquare size={17} /> Your message <span>02</span></h3>
+      <p className="queue-help">Review the account identity and wording before scheduling.</p>
       {/* message + save */}
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6 }}>
@@ -816,6 +849,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         </div>
       )}
 
+      </section>
+      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 15m account cooldown. Owner checks run again before sending.</p>
       {/* schedule / arm */}
       {!isCompleted && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -836,6 +871,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           )}
         </div>
       )}
+      </section>
     </div>
   )
 }
