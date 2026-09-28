@@ -35,6 +35,7 @@ type Account = {
   id: number; sessionName: string; phone: string; label: string; connected: boolean; lastOutreachAt: string | null
   pool: 'top' | 'bottom'; outreachVolumePercent: number; outreachVolumeUntil: string | null
   active?: boolean; outreachEnabled?: boolean; outreachEligible?: boolean
+  planningDays?: {day: string; label: string; status: string; armed: boolean; scheduledAt: string | null; count: number}[]
 }
 type Template = { id: number; label: string; text: string; created_at: string }
 type Entry = {
@@ -280,6 +281,7 @@ function ArgusConsole() {
                 <i aria-hidden>{manager ? '⌘' : rotating ? '↗' : '◇'}</i><span><b>{accountDisplayName(account)}</b><small>{manager ? 'SYSTEM MANAGER · NOT IN ROTATION' : rotating ? `${account.pool === 'bottom' ? 'Z→A' : 'A→Z'} OUTREACH` : 'SUPPORT · NOT IN ROTATION'}</small></span>
                 <em className={account.connected ? 'is-online' : ''}>{account.connected ? 'ONLINE' : 'OFFLINE'}</em>
                 <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{rotating && <strong className={cooldown.ready ? 'is-ready' : ''}>{cooldown.label}</strong>}</footer>
+                {rotating && <span style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:4,width:'100%',gridColumn:'1 / -1'}}>{account.planningDays?.map((day,index)=><span key={day.day} title={`${day.day}: ${day.status}${day.scheduledAt ? ' · '+maltaHM(new Date(day.scheduledAt)) : ''} · ${day.count} contacts`} style={{textAlign:'center',padding:'6px 2px',borderRadius:6,background:day.armed?'rgba(62,207,142,.14)':'rgba(255,255,255,.04)',fontSize:9,color:day.status==='failed'||day.status==='blocked_session'?'#f2597a':day.armed||day.status==='completed'?'#3ecf8e':MUTED}}><span style={{display:'block'}}>{index===0?'Today':index===1?'Tomorrow':`Day ${index+1}`}</span><b>{day.status==='completed'?'✓ Done':day.status==='running'?'▶ Run':day.status==='blocked_session'?'! Held':day.armed?'✓ Armed':day.status==='failed'?'! Failed':day.status==='empty'?'—':'Draft'}</b></span>)}</span>}
               </button></div>
             })}
             <button className="account-add" onClick={()=>setAdding(true)}><b>+</b><span>Add account<small>Expand your network</small></span></button>
