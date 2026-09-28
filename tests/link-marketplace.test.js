@@ -142,7 +142,7 @@ const makeProperty = (index, market = 'longlets') => ({
     fit: document.querySelector('.fit-section')?.textContent
   }))
   assert.equal(intelligence.world, true)
-  assert.equal(intelligence.connectors, 10)
+  assert.equal(intelligence.connectors, 11)
   assert.match(intelligence.precision, /APPROXIMATE/)
   assert.match(intelligence.matrixHref, /\/link-matrix#\/property\/2906-longlets-/)
   assert.match(intelligence.fit, /Powered by Nexus Link/)

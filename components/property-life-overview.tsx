@@ -11,7 +11,7 @@ const distance = (value: number) => value < 1 ? `${Math.max(50, Math.round(value
 const minutes = (value?: number | null) => Number.isFinite(value) ? `${Math.max(1, Math.round(Number(value) / 60))} min` : null
 
 export function PropertyLifeOverview({ overview }: { overview: Overview }) {
-  const [active, setActive] = useState<Overview['categories'][number]['key']>('groceries')
+  const [active, setActive] = useState<Overview['categories'][number]['key']>('commute')
   const [routes, setRoutes] = useState<Record<string, RouteEvidence>>({})
   const category = overview.categories.find(item => item.key === active) || overview.categories[0]
   const Icon = icons[category.key]

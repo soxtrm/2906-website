@@ -140,7 +140,7 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
     advantages: advantages.slice(0, 3),
     considerations: considerations.slice(0, 3),
     categories: [
-      { key: 'commute', label: 'Regular destinations', summary: 'Compare a regular journey. These are area landmarks, not your exact workplace.', places: anchors.map(a => ({id:a.id,name:a.name,coordinates:a.coordinates as [number,number],kind:'destination',role:'commute' as const,distanceKm:distanceKm(property.coordinates,a.coordinates as [number,number])})) },
+      { key: 'commute', label: 'The Standards', summary: 'Compare a regular journey. These are area landmarks, not your exact workplace.', places: anchors.map(a => ({id:a.id,name:a.name,coordinates:a.coordinates as [number,number],kind:'destination',role:'commute' as const,distanceKm:distanceKm(property.coordinates,a.coordinates as [number,number])})) },
       { key: 'school', label: 'Schools', summary: 'Mapped education locations; check age range, admission and the exact entrance.', places: first(nearby, 'school', 3, 5) },
       { key: 'groceries', label: 'Weekly shopping', summary: weekly.length ? `${weekly.length} full-size options mapped` : 'Large store coverage incomplete', places: [...weekly, ...topUp] },
       { key: 'coast', label: 'Coast & swimming', summary: coast.length ? `${coast.length} coastal options mapped` : 'No connected coastal option yet', places: coast },

@@ -9,7 +9,7 @@ const latlng=coordinates=>[coordinates[1],coordinates[0]];
 export async function createPropertyMap(element,intelligence,{onSelect}={}){
  const L=await leaflet();if(!element.isConnected||!intelligence.origin)return null;
  element.classList.add('nexus-dark-map');
- const map=L.map(element,{scrollWheelZoom:false,zoomControl:false,attributionControl:true,preferCanvas:false}).setView(latlng(intelligence.origin),15);
+ const map=L.map(element,{scrollWheelZoom:false,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false,zoomControl:false,attributionControl:true,preferCanvas:false}).setView(latlng(intelligence.origin),15);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
  const anchor=L.circleMarker(latlng(intelligence.origin),{radius:10,color:'#397d91',weight:2,fillColor:'#7aa5b0',fillOpacity:.48}).addTo(map);
  anchor.bindTooltip(intelligence.precision==='AREA_ONLY'?'Approximate area':'Approximate home location');
@@ -24,7 +24,7 @@ export async function createPropertyMap(element,intelligence,{onSelect}={}){
   route(geometry,mode='walk'){if(route)map.removeLayer(route);route=null;if(geometry){const colour=mode==='car'?'#f3c66f':'#67ecff';route=L.featureGroup([L.geoJSON(geometry,{style:{className:'nexus-route-halo',color:colour,weight:14,opacity:.14,lineCap:'round'}}),L.geoJSON(geometry,{style:{color:'#071d2a',weight:7,opacity:.96,lineCap:'round'}}),L.geoJSON(geometry,{style:{className:'nexus-route-flow',color:colour,weight:3.5,opacity:1,lineCap:'round',dashArray:'2 11'}})]).addTo(map);map.fitBounds(route.getBounds(),{padding:[35,35],maxZoom:17});}},
   recenter(){map.setView(latlng(intelligence.origin),15,{animate:true});},
   zoom(direction){if(direction>0)map.zoomIn(1);else map.zoomOut(1);},
-  destroy(){observer.disconnect();map.remove();}
+  destroy(){observer.disconnect();map.stop();map.remove();}
  };
 }
 
