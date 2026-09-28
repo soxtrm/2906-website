@@ -21,7 +21,7 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
   const [query, setQuery] = useState('')
   const [observations,setObservations] = useState<any[]>([])
   useEffect(()=>{fetch('/Link/mobility-observations.json').then(r=>r.json()).then(d=>setObservations(d.observations||[])).catch(()=>{})},[])
-  const taxiFare = (id:string,name:string) => {const r=routes[id]; const fare=estimateBoltReference({roadKm:Number(r?.drivingDistanceMetres)/1000,journeyMinutes:Number(r?.drivingSeconds)/60,origin:overview.area,destination:name,observations:observations as never[]});return Number.isFinite(fare.expected)?`≈ €${Number(fare.expected).toFixed(1)}`:'€ —'}
+  const taxiFare = (id:string,name:string) => {const r=routes[id]; const fare=estimateBoltReference({roadKm:Number(r?.drivingDistanceMetres)/1000,journeyMinutes:Number(r?.drivingSeconds)/60,origin:overview.area,destination:name,observations});return Number.isFinite(fare.expected)?`≈ €${Number(fare.expected).toFixed(1)}`:'€ —'}
   useEffect(() => setExpanded(false), [active])
   const [chosen, setChosen] = useState('')
   const selected = category.places.find(place => place.id === chosen) || category.places[0]

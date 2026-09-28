@@ -53,6 +53,7 @@ function observationSummary(records,origin,destination,direction='outbound'){
 
 export const BOLT_REFERENCE_MODEL=Object.freeze({id:'bolt-reference-neighbours-v1',version:1,type:'PROVISIONAL_MODEL',officialTariff:false,uses:['completed observed base fares','road kilometres','in-vehicle minutes'],excludes:['straight-line distance','waiting fees','wallet credits','cancelled €0 trips','unknown surge multipliers'],unresolved:['official base component','official kilometre rate','official minute rate','service-category coefficients','time and season calibration']});
 
+/** @param {{roadKm?: number, journeyMinutes?: number, origin?: string, destination?: string, direction?: string, observations?: any[]}} [input] */
 export function estimateBoltReference({roadKm,journeyMinutes,origin='',destination='',direction='outbound',observations=[]}={}){
  const km=finite(roadKm),duration=finite(journeyMinutes);if(!Number.isFinite(km)||km<=0)return {expected:null,low:null,high:null,confidence:'UNKNOWN',count:0,model:BOLT_REFERENCE_MODEL.id,reason:'ROAD_DISTANCE_REQUIRED'};
  const normalized=(Array.isArray(observations)?observations:[]).map(normalizeMobilityObservation).filter(Boolean).filter(item=>item.outcome==='accepted'&&Number.isFinite(item.distanceMetres)&&Number.isFinite(item.actualPrice)&&item.actualPrice>0);
