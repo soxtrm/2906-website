@@ -81,6 +81,7 @@ function maltaHM(d: Date) {
 
 const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
 const OUTREACH_STARTER_BATCH_MAX = 10
+const OUTREACH_LIST_MAX = 50
 function isArgusManager(account: Account) {
   return /argus\s*1|argus[_-]?1/i.test(`${account.label} ${account.sessionName}`)
 }
@@ -565,7 +566,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // `count` total, never duplicating what's already there.
   async function generate(topUp = false, overrideCount?: number) {
     if (!activePlan) return
-    const n = Math.min(OUTREACH_STARTER_BATCH_MAX, overrideCount ?? count)
+    const n = Math.min(OUTREACH_LIST_MAX, overrideCount ?? count)
     setBusy(true); setNote('')
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: n, topUp })
@@ -802,8 +803,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           </button>
           <button disabled={busy} onClick={savePastedList} style={btnGhost}>Save edits</button>
           <button disabled={busy} onClick={() => generate(false)} title="Generates a fresh list of eligible owners — the exact same engine as the real !createlist WhatsApp command." style={{ ...btnGhost, flex: '1 1 auto' }}>+ Create List</button>
-          <input aria-label="Contacts per starter batch" type="number" min={1} max={OUTREACH_STARTER_BATCH_MAX} value={count} onChange={e => setCount(Math.max(1, Math.min(OUTREACH_STARTER_BATCH_MAX, parseInt(e.target.value) || OUTREACH_STARTER_BATCH_MAX)))} style={inputSmall} />
-          <span style={{ fontSize: 9, color: FAINT }}>Starter max {OUTREACH_STARTER_BATCH_MAX}</span>
+          <input aria-label="Contacts per list" type="number" min={1} max={OUTREACH_LIST_MAX} value={count} onChange={e => setCount(Math.max(1, Math.min(OUTREACH_LIST_MAX, parseInt(e.target.value) || OUTREACH_STARTER_BATCH_MAX)))} style={inputSmall} />
+          <span style={{ fontSize: 9, color: FAINT }}>List max {OUTREACH_LIST_MAX}</span>
           <button disabled={busy} onClick={() => generate(true)} title="Keeps everyone already in the queue and only adds as many NEW eligible owners as needed to reach the count above." style={btnGhost}>Top Up</button>
           <button disabled={busy} onClick={clearList} title="Removes everyone from this queue and releases their reservation." style={btnGhost}>Clear</button>
         </div>
