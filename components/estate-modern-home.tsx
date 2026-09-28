@@ -204,7 +204,7 @@ function PropertyCollection() {
             <button type="button" aria-pressed={smartPriority === 'swimming'} onClick={() => setSmartPriority(value => value === 'swimming' ? null : 'swimming')}><Waves />Coast</button>
             <button type="button" aria-pressed={smartPriority === 'health'} onClick={() => setSmartPriority(value => value === 'health' ? null : 'health')}><HeartPulse />Health</button>
             <button type="button" aria-pressed={smartPriority === 'gym'} onClick={() => setSmartPriority(value => value === 'gym' ? null : 'gym')}><Dumbbell />Gym & movement</button>
-            <Link href="/link-matrix">Custom routine <ArrowUpRight /></Link>
+            <a href="/link-matrix">Custom routine <ArrowUpRight /></a>
           </div>}
         </div>
 
@@ -283,9 +283,9 @@ function NexusInvitation() {
           <h2>{t('nexusInvite.title')}</h2>
           <p>{t('nexusInvite.text')}</p>
         </div>
-        <Link href="/Link" className={styles.nexusButton}>
+        <a href="/Link" className={styles.nexusButton}>
           {t('nexusInvite.cta')} <ArrowUpRight aria-hidden="true" />
-        </Link>
+        </a>
       </motion.div>
     </section>
   )
