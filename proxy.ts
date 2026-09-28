@@ -27,7 +27,7 @@ export default function proxy(req: NextRequest) {
   // The legacy scorecard still lives in public/Link for /link-matrix. Its
   // physical directory wins over a normal rewrite on case-sensitive hosts,
   // so force the exact historical /Link entry URL to the marketplace here.
-  if (pathname === '/Link' || pathname === '/Link/') {
+  if (/^\/(?:en\/|de\/|fr\/|it\/|es\/)?link\/?$/i.test(pathname)) {
     const url = req.nextUrl.clone()
     url.pathname = '/link-marketplace/index.html'
     return NextResponse.rewrite(url)

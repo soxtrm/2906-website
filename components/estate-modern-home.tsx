@@ -283,7 +283,7 @@ function NexusInvitation() {
           <h2>{t('nexusInvite.title')}</h2>
           <p>{t('nexusInvite.text')}</p>
         </div>
-        <a href="/Link" className={styles.nexusButton}>
+        <a href="/link" className={styles.nexusButton}>
           {t('nexusInvite.cta')} <ArrowUpRight aria-hidden="true" />
         </a>
       </motion.div>
