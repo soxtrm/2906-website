@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { crmJson } from '@/lib/crm/api'
 
@@ -10,6 +11,7 @@ export default function CrmLogin() {
   const router = useRouter()
   const [id, setId] = useState('')
   const [pw, setPw] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -33,9 +35,12 @@ export default function CrmLogin() {
           <input value={id} onChange={e => setId(e.target.value)} placeholder="Email or username"
             onKeyDown={e => e.key === 'Enter' && submit()}
             style={inp} autoFocus />
-          <input value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" type="password"
+          <div style={{ position: 'relative' }}>
+          <input value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" aria-label="Password"
             onKeyDown={e => e.key === 'Enter' && submit()}
-            style={inp} />
+            style={{ ...inp, width: '100%', boxSizing: 'border-box', paddingRight: 48 }} />
+          <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} style={{ position: 'absolute', right: 2, top: 0, bottom: 0, width: 44, display: 'grid', placeItems: 'center', border: 0, borderRadius: 8, background: 'transparent', color: '#59616A', cursor: 'pointer' }}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button>
+          </div>
           {err && <div style={{ color: '#B91C1C', fontSize: 12, fontWeight: 600 }}>{err}</div>}
           <button onClick={submit} disabled={loading || !id || !pw}
             style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 10, padding: '13px', fontSize: 13, fontWeight: 700, fontFamily: F, cursor: loading ? 'wait' : 'pointer', letterSpacing: '0.03em', opacity: (!id || !pw) ? 0.5 : 1, marginTop: 4 }}>
