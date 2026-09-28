@@ -45,7 +45,7 @@ type Entry = {
 type Plan = {
   id: number; account_id: number; session_name: string; scheduled_date: string
   scheduled_at: string | null; status: string; armed: boolean; message_template: string | null
-  label: 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | string
+  label: 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS' | string
   stats: { total: number; eligible: number; hot: number; cold: number; skip: number; sent: number }
   entries?: Entry[]
 }
@@ -118,7 +118,7 @@ function suggestTime(plans: Plan[] | null, label: string, lastOutreachAt: string
   if (lastOutreachAt) {
     return maltaHM(new Date(new Date(lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS))
   }
-  const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS']
+  const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS']
   const idx = order.indexOf(label)
   if (idx > 0 && plans) {
     const prev = plans.find(p => p.label === order[idx - 1])
@@ -159,7 +159,9 @@ function defaultSeedCount(account: Account) {
 function dayLabelText(l: string) {
   if (l === 'TODAY') return 'TODAY'
   if (l === 'TOMORROW') return 'TOMORROW'
-  if (l === 'IN_2_DAYS') return 'IN 2 DAYS'
+  if (l === 'IN_2_DAYS') return 'THIRD DAY'
+  if (l === 'IN_3_DAYS') return 'FOURTH DAY'
+  if (l === 'IN_4_DAYS') return 'FIFTH DAY'
   return l
 }
 
@@ -477,7 +479,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // morgen alles auszufüllen und dann zu merken dass es für den falschen
   // tag ist" (filling in the wrong day by accident because it opened on
   // tomorrow by default).
-  const [activeLabel, setActiveLabel] = useState<'TODAY' | 'TOMORROW' | 'IN_2_DAYS'>('TODAY')
+  const [activeLabel, setActiveLabel] = useState<'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS'>('TODAY')
   const [queueText, setQueueText] = useState('')
   const [msgOpen, setMsgOpen] = useState(true)
   const [msgDraft, setMsgDraft] = useState('')
@@ -508,8 +510,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     if (current && (current.armed || current.stats.total > 0 || current.message_template)) return
     const prepared = plans.find(p => p.armed || p.status === 'ready')
       || plans.find(p => p.stats.total > 0 || Boolean(p.message_template))
-    if (prepared && ['TODAY', 'TOMORROW', 'IN_2_DAYS'].includes(prepared.label)) {
-      setActiveLabel(prepared.label as 'TODAY' | 'TOMORROW' | 'IN_2_DAYS')
+    if (prepared && ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'].includes(prepared.label)) {
+      setActiveLabel(prepared.label as 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS')
     }
   }, [plans, activeLabel])
 
@@ -607,7 +609,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     if (seedText) setMsgDraft(seedText)
     setMsgOpen(true)
 
-    const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS'] as const
+    const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'] as const
     const idx = order.indexOf(activeLabel)
     if (idx > 0 && plans) {
       const prev = plans.find(p => p.label === order[idx - 1])
@@ -741,7 +743,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       <div className="queue-day-tabs">
       {/* day tabs */}
       <div style={{ display: 'flex', gap: 6 }}>
-        {(['TODAY', 'TOMORROW', 'IN_2_DAYS'] as const).map(label => {
+        {(['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'] as const).map(label => {
           const p = plans?.find(pl => pl.label === label)
           const on = activeLabel === label
           return (
@@ -752,7 +754,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             }}>
               <span>{dayLabelText(label)}</span>
-              <span style={{ fontSize: 8, opacity: 0.8 }}>{p?.status === 'completed' ? '✓ DONE' : p?.status === 'ready' ? '● READY' : p?.status === 'running' ? '▶ RUNNING' : '○ DRAFT'}</span>
+              <span style={{ fontSize: 8, opacity: 0.8 }}>{p?.status === 'completed' ? '✓ DONE' : p?.armed ? '✓ ARMED' : p?.status === 'ready' ? '● READY' : p?.status === 'running' ? '▶ RUNNING' : '○ DRAFT'}</span>
             </button>
           )
         })}
