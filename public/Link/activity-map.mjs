@@ -18,8 +18,9 @@ export function createActivityMap(map,{send,reduced}){
  function paint(){
   if(!map.getSource('nexus-activities'))return;
   map.getSource('nexus-activities').setData(active?{type:'FeatureCollection',features:[feature(origin,{id:'origin',origin:true,selected:false,name:'Your place',category:'family'}),...pois.map(p=>feature(p.coordinates,{id:p.id,name:p.name,origin:false,selected:p.id===selected,category:p.category||'events'}))]}:empty());
-  const poi=pois.find(p=>p.id===selected);
-  map.getSource('nexus-activity-link').setData(active&&poi?{type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'LineString',coordinates:[origin,poi.coordinates]},properties:{}}]}:empty());
+  // This layer has place coordinates, not a routed path. A connecting line can
+  // cross water or buildings and must not look like a navigable route.
+  map.getSource('nexus-activity-link').setData(empty());
  }
  function scan(){
   if(!active||performance.now()-lastScan<1200||!map.getSource('composite')||!map.isSourceLoaded('composite'))return;lastScan=performance.now();
