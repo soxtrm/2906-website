@@ -658,7 +658,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/arm`, 'POST', { time: armTime })
       if (r.ok === false) {
-        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', starter_batch_limit: `Starter mode allows up to ${OUTREACH_STARTER_BATCH_MAX} contacts per run.` }
+        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
         setNote(reasons[r.reason] || r.reason)
       } else { setNote(`Armed for ${armTime}.`) }
       await refresh()
