@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence, useInView } from 'framer-motion'
+import { motion, AnimatePresence, useInView, useReducedMotion } from 'framer-motion'
 import { Bed, Bath, Square, MapPin } from 'lucide-react'
 import type { Property } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ interface PropertyCardProps {
 const COMMERCIAL_TYPES = ['Office', 'Retail', 'Warehouse']
 
 export function PropertyCard({ property, index = 0, compact = false }: PropertyCardProps) {
+  const reducedMotion = useReducedMotion()
   const [imageError, setImageError] = useState(false)
   const [photoIndex, setPhotoIndex] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
@@ -34,7 +35,7 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
   const photosCount = photos.length
 
   useEffect(() => {
-    if (photosCount <= 1) return
+    if (photosCount <= 1 || reducedMotion) return
     const shouldAnimate = isMobile ? isInView : isHovered
     if (!shouldAnimate) {
       setPhotoIndex(0)
@@ -44,7 +45,7 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
       setPhotoIndex(prev => (prev + 1) % photosCount)
     }, 4000)
     return () => clearInterval(interval)
-  }, [isHovered, isInView, isMobile, photosCount])
+  }, [isHovered, isInView, isMobile, photosCount, reducedMotion])
 
   const statusConfig = {
     available: { dot: 'bg-status-available', label: 'Available', text: 'text-status-available' },
@@ -65,10 +66,11 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
   const currentPhoto = (idx: number) => imageError ? placeholderImage : (photos[idx] || photos[0] || placeholderImage)
 
   useEffect(() => {
-    if (photosCount <= 1) return
+    if (photosCount <= 1 || reducedMotion) return
     const preload = (idx: number) => { const img = new window.Image(); img.src = currentPhoto(idx) }
+    if (!isInView) return
     preload((photoIndex + 1) % photosCount)
-  }, [photoIndex, photosCount])
+  }, [photoIndex, photosCount, isInView, reducedMotion])
 
   const slideVariants = {
     enter: { x: '100%' },
@@ -79,10 +81,10 @@ export function PropertyCard({ property, index = 0, compact = false }: PropertyC
   return (
     <motion.div
       ref={cardRef}
-      initial={{ opacity: 0, y: 15 }}
+      initial={reducedMotion ? false : { opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ delay: index * 0.05, duration: 0.4 }}
+      transition={{ delay: Math.min(index, 5) * 0.04, duration: 0.4 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

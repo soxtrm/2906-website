@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { Header } from './header'
 import { Footer } from './footer'
 import { PropertyFilters } from './property-filters'
+import { ListingMap } from './listing-map'
 import { PropertyCard } from './property-card'
 import { fetchProperties } from '@/lib/api'
 import type { Property, PropertyCategory } from '@/lib/types'
@@ -30,6 +31,7 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let alive = true
     setLoading(true)
 
     const urlMinPrice = searchParams.get('minPrice')
@@ -60,10 +62,11 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
         if (category === 'letting') {
           result = data.filter((p: Property) => p.category === 'letting' || p.category === 'aesthetics')
         }
-        setAllProperties(result)
+        if (alive) setAllProperties(result)
       })
-      .catch(() => setAllProperties([]))
-      .finally(() => setLoading(false))
+      .catch(() => {if(alive)setAllProperties([])})
+      .finally(() => {if(alive)setLoading(false)})
+    return () => {alive=false}
   }, [category, minPrice, searchParams])
 
   return (
@@ -71,7 +74,7 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
       <Header />
 
       {/* Page Header */}
-      <section className="pt-28 pb-10 bg-navy">
+      <section className="pt-24 pb-6 bg-navy">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -128,8 +131,9 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
       <PropertyFilters accentColor={accentColor} category={category} />
 
       {/* Property Grid */}
-      <section className="py-10 md:py-12">
+      <section className="py-5 md:py-8">
         <div className="container mx-auto px-4 lg:px-8">
+          <ListingMap properties={allProperties} />
           {loading ? (
             <div className="flex items-center justify-center py-24 gap-3 text-navy/50">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -137,10 +141,10 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
             </div>
           ) : allProperties.length > 0 ? (
             <>
-              <p className="text-navy/60 text-sm mb-6">
+              <p className="text-navy/60 text-sm mb-4">
                 {allProperties.length} {allProperties.length === 1 ? 'property' : 'properties'}
               </p>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-8">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {allProperties.map((property, index) => (
                   <PropertyCard key={property.id} property={property} index={index} />
                 ))}
