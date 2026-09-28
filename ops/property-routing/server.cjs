@@ -8,6 +8,7 @@ const run=promisify(execFile);
 const overviewAnchors=require('./anchors.json');
 const {currentTraffic}=require('./google-traffic.cjs');
 const {transitRoute}=require('./google-transit.cjs');
+const {routeSegments}=require('./route-segments.cjs');
 const fs=require('node:fs');
 const cache=new Map();let snapshot=null,loading=null;
 const valid=c=>Array.isArray(c)&&c.length===2&&c.every(Number.isFinite)&&c[0]>=14.1&&c[0]<=14.7&&c[1]>=35.7&&c[1]<=36.2;
@@ -66,9 +67,9 @@ async function geometry(value,placeId,mode){
  const data=await sources(),place=[...data.places,...overviewAnchors].find(p=>p.id===placeId);
  if(!connected(value,place))throw Object.assign(Error('PLACE_NOT_CONNECTED'),{status:404});
  const port=mode==='walk'?5012:5011;
- const result=await json(`http://127.0.0.1:${port}/route/v1/driving/${value.publicCoordinates.join(',')};${place.coordinates.join(',')}?overview=full&geometries=geojson&steps=false`);
+ const result=await json(`http://127.0.0.1:${port}/route/v1/driving/${value.publicCoordinates.join(',')};${place.coordinates.join(',')}?overview=full&geometries=geojson&steps=true`);
  const route=result.routes?.[0],limit=mode==='walk'?200:300,verified=result.code==='Ok'&&Number.isFinite(route?.duration)&&route.duration>0&&Number.isFinite(route?.distance)&&(mode!=='walk'||route.distance/route.duration<=2.22)&&(result.waypoints||[]).length===2&&result.waypoints.every(p=>p.distance<=limit);
- return {status:verified?'CONNECTED':'UNKNOWN',durationSeconds:verified?route.duration:null,distanceMetres:verified?route.distance:null,geometry:verified?route.geometry:null,source:'OpenStreetMap / OSRM',confidence:'MODELLED',originBasis:'PUBLIC_APPROXIMATE_PIN',mode};
+ return {status:verified?'CONNECTED':'UNKNOWN',durationSeconds:verified?route.duration:null,distanceMetres:verified?route.distance:null,geometry:verified?route.geometry:null,...(verified?routeSegments(route):{}),source:'OpenStreetMap / OSRM',confidence:'MODELLED',originBasis:'PUBLIC_APPROXIMATE_PIN',mode};
 }
 let active=0;const inflight=new Map();
 const server=http.createServer(async(req,res)=>{

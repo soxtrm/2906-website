@@ -1,0 +1,10 @@
+const assert = require('node:assert/strict');
+const { routeSegments } = require('../ops/property-routing/route-segments.cjs');
+const mixed = routeSegments({legs:[{steps:[{mode:'walking',duration:100},{mode:'ferry',name:'Tas-Sliema - Marsamxett',duration:900.8,distance:1200}]}]});
+assert.equal(mixed.includesFerry,true);
+assert.equal(mixed.ferries[0].name,'Tas-Sliema - Marsamxett');
+assert.equal(mixed.ferryWaitSeconds,null);
+assert.equal(mixed.ferrySchedule,'UNKNOWN');
+assert.equal(routeSegments({legs:[{steps:[{mode:'walking'}]}]}).includesFerry,false);
+assert.deepEqual(routeSegments(null).ferries,[]);
+console.log('route segment tests passed');
