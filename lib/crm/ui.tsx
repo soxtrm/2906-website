@@ -24,7 +24,7 @@ export function canCreateGroup(me: Me | null | undefined) {
   return me?.role === 'admin' || TRUSTED_CREATE_GROUP.has((me?.username || '').toLowerCase())
 }
 
-export const A = 'rgba(184,149,63,1)', AD = 'rgba(184,149,63,0.10)', AB = 'rgba(184,149,63,0.28)'
+export const A = 'rgba(64,86,232,1)', AD = 'rgba(64,86,232,0.10)', AB = 'rgba(64,86,232,0.28)'
 export const NAVY = '#1B2A4A', NAVY_LIGHT = '#2a3d66'
 export const F = "var(--font-bricolage), 'Bricolage Grotesque', Arial, sans-serif"
 export const FM = "var(--font-jetbrains), 'JetBrains Mono', 'Courier New', monospace"
