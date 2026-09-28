@@ -22,6 +22,8 @@ import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
 import dynamic from 'next/dynamic'
+const BoardIntelligenceMap = dynamic(() => import('@/components/crm/nexus-place-editor').then(m => m.NexusPlaceEditor), { ssr: false })
+
 const NexusCheckWorkbench = dynamic(() => import('@/components/crm/nexus-check-workbench').then(m => m.NexusCheckWorkbench), { ssr: false })
 import { type Booking, bookingLine } from '@/lib/crm/booking'
 import { SwipeLinkCreatedModal, SwipeModeChoiceModal, SwipeMultiLinksModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
@@ -443,6 +445,7 @@ function Board() {
   // gestureHandling below). Open by default so existing behaviour is
   // unsurprising; agents who only use the town chips can now hide it.
   const [mapOpen, setMapOpen] = useState(true)
+  const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
 
   const showToast = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
@@ -1692,6 +1695,10 @@ function Board() {
         )}
       </div>
 
+      <details style={{ margin: '12px 24px 30px', border: '1px solid #314452', borderRadius: 16, background: '#101a25', color: '#e8f4f4', overflow: 'hidden' }} onToggle={event=>setIntelligenceOpen(event.currentTarget.open)}>
+        <summary style={{ padding: '20px 24px', cursor: 'pointer', fontSize: 17, fontWeight: 750 }}>Smart Map · Locations &amp; Traffic <span style={{fontSize:11,color:'#92b3bf',marginLeft:12}}>Open map workspace</span></summary>
+        {intelligenceOpen && <BoardIntelligenceMap />}
+      </details>
       {detail && (
         <DetailModal
           refId={detail}
