@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   }
   const url = new URL('http://178.104.162.193/api/public/property-routing')
   url.searchParams.set('ref', ref)
+  url.searchParams.set('schema', 'standards-8-v1')
   if (req.nextUrl.searchParams.get('traffic') === '1') url.searchParams.set('traffic', '1')
   if (place) url.searchParams.set('place', place)
   url.searchParams.set('mode', ['car', 'bus'].includes(req.nextUrl.searchParams.get('mode') || '') ? req.nextUrl.searchParams.get('mode')! : 'walk')
