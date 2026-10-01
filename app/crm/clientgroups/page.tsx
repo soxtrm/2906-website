@@ -64,6 +64,7 @@ type Clientgroup = {
   search: {
     budgetMin: number | null; budgetMax: number | null; bedroomsWanted: number[] | null
     locations: string[] | null; moveInDate: string | null; pets: string | null; subletting: string | null
+    leaseTypeWanted: 'long_let' | 'winter_let' | 'short_let' | 'flexible' | null
     nationalities: string[] | null; groupSize: number | null; notes: string | null
   }
   matches: { total: number; unsent: number; sent: number; liked: number; rejected: number }
@@ -97,6 +98,19 @@ function fmtTimeAgo(iso: string | null) {
   return `${Math.floor(hr / 24)}d ago`
 }
 function fmtMoney(n: number | null) { return n == null ? null : `€${Number(n).toLocaleString()}` }
+
+type ClientLeaseFilter = 'all' | 'long_let' | 'winter_let'
+function clientLeaseKind(value: Clientgroup['search']['leaseTypeWanted']): Exclude<ClientLeaseFilter, 'all'> {
+  return value === 'winter_let' || value === 'short_let' || value === 'flexible' ? 'winter_let' : 'long_let'
+}
+function ClientLeaseBadge({ value }: { value: Clientgroup['search']['leaseTypeWanted'] }) {
+  const winter = clientLeaseKind(value) === 'winter_let'
+  return <span className={winter
+    ? 'rounded-md bg-[#2E6FA8] px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white'
+    : 'rounded-md bg-white/10 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white/70'}>
+    {winter ? '❄️ WINTER' : 'LONG LET'}
+  </span>
+}
 
 // "Next evaluation: tomorrow 11:40-14:10" -- a WINDOW, never a promised exact
 // time (the assistant may still decide WAIT when that check actually fires).
@@ -178,6 +192,7 @@ function ClientgroupCard({ cg, onOpen }: { cg: Clientgroup; onOpen: () => void }
             {cg.label}
           </div>
           <div className="text-[10px] text-white/40 font-mono mt-0.5">{cg.shortCode} · {cg.session}</div>
+          <div className="mt-1.5"><ClientLeaseBadge value={cg.search.leaseTypeWanted} /></div>
         </div>
         {statusPill(cg.status)}
       </div>
@@ -861,6 +876,7 @@ function ClientgroupsInner() {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const [agent, setAgent] = useState('all')
+  const [lease, setLease] = useState<ClientLeaseFilter>('all')
   const [sort, setSort] = useState('activity')
   const [openId, setOpenId] = useState<number | null>(null)
   const load = useCallback(() => {
@@ -870,8 +886,11 @@ function ClientgroupsInner() {
   useEffect(() => { load() }, [load])
   const filtered = useMemo(() => rows.filter(r => {
     const haystack = [r.label, r.agent, r.shortCode, r.session, ...(r.search.locations || [])].join(' ').toLocaleLowerCase()
-    return (!q.trim() || haystack.includes(q.trim().toLocaleLowerCase())) && (agent === 'all' || (r.agent || 'Unassigned') === agent) && (status === 'all' || (status === 'new-matches' ? r.matches.unsent > 0 : status === 'auto' ? r.enabled && r.autoMode : r.status === status))
-  }).sort((a,b) => sort === 'name' ? a.label.localeCompare(b.label) : sort === 'matches' ? b.matches.unsent-a.matches.unsent : Date.parse(b.updatedAt)-Date.parse(a.updatedAt)), [rows,q,status,agent,sort])
+    return (!q.trim() || haystack.includes(q.trim().toLocaleLowerCase())) &&
+      (agent === 'all' || (r.agent || 'Unassigned') === agent) &&
+      (lease === 'all' || clientLeaseKind(r.search.leaseTypeWanted) === lease) &&
+      (status === 'all' || (status === 'new-matches' ? r.matches.unsent > 0 : status === 'auto' ? r.enabled && r.autoMode : r.status === status))
+  }).sort((a,b) => sort === 'name' ? a.label.localeCompare(b.label) : sort === 'matches' ? b.matches.unsent-a.matches.unsent : Date.parse(b.updatedAt)-Date.parse(a.updatedAt)), [rows,q,status,agent,lease,sort])
   return <CrmShell title="Clientgroups" subtitle="Keep each search, conversation and next step in view." dark>
     <div className="crm-group-workspace"><DashboardTabs />
       <GroupStats items={[{label:'Client conversations',value:rows.length},{label:'Auto mode active',value:rows.filter(r=>r.enabled && r.autoMode).length},{label:'New matches',value:rows.reduce((n,r)=>n+r.matches.unsent,0)}]} />
@@ -879,9 +898,10 @@ function ClientgroupsInner() {
         <label className="crm-search">Find a conversation<input type="search" placeholder="Name, agent, location or group code" value={q} onChange={e=>setQ(e.target.value)} /></label>
         <label>Status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All statuses</option><option value="new-matches">With new matches</option><option value="auto">Auto mode active</option>{Array.from(new Set(rows.map(r=>r.status))).sort().map(v=><option key={v} value={v}>{v.replaceAll('_',' ')}</option>)}</select></label>
         <label>Agent<select value={agent} onChange={e=>setAgent(e.target.value)}><option value="all">All agents</option>{Array.from(new Set(rows.map(r=>r.agent || 'Unassigned'))).sort().map(v=><option key={v}>{v}</option>)}</select></label>
+        <label>Rental type<select value={lease} onChange={e=>setLease(e.target.value as ClientLeaseFilter)}><option value="all">All rental types</option><option value="long_let">Long let</option><option value="winter_let">❄️ WINTER</option></select></label>
         <label>Sort by<select value={sort} onChange={e=>setSort(e.target.value)}><option value="activity">Recently updated</option><option value="name">Client name</option><option value="matches">Most new matches</option></select></label>
         <button className="crm-button" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>
-        {(q || status !== 'all' || agent !== 'all') && <button className="crm-button" onClick={()=>{setQ('');setStatus('all');setAgent('all')}}>Clear filters</button>}
+        {(q || status !== 'all' || agent !== 'all' || lease !== 'all') && <button className="crm-button" onClick={()=>{setQ('');setStatus('all');setAgent('all');setLease('all')}}>Clear filters</button>}
       </div>
       {err && <div role="alert" className="crm-error">{err} <button className="crm-button" onClick={load}>Try again</button></div>}
       <p style={{color:'var(--crm-muted)',fontSize:12,marginBottom:14}} role="status">{loading ? 'Loading conversations…' : `${filtered.length} of ${rows.length} conversations`}</p>
