@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bed, Bath, Ruler, MapPin, Check, MessageCircle, Mail, Waves, Car, DoorOpen } from 'lucide-react'
+import { ArrowLeft, Bed, Bath, Ruler, MapPin, Check, MessageCircle, Mail, Waves, Car, DoorOpen, Download } from 'lucide-react'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { cn } from '@/lib/utils'
@@ -45,6 +45,7 @@ interface Property {
   availableFrom: string
   propertyReference: string
   featured: boolean
+  documents?: Array<{ filename: string; url: string }>
 }
 
 async function getProperty(slug: string): Promise<Property | null> {
@@ -239,6 +240,27 @@ export default async function PropertyPage({
                     </div>
                   </div>
                 )}
+
+                {(property.category === 'sales' || isCommercial) && property.documents?.length ? (
+                  <div className="py-5 border-t border-navy/10">
+                    <h2 className="font-serif text-lg md:text-xl text-navy mb-3">Plans &amp; Documents</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {property.documents.map((document, index) => (
+                        <a
+                          key={`${document.url}-${index}`}
+                          href={document.url}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded border border-navy/15 px-3 py-2 text-sm text-navy hover:border-gold hover:text-gold transition-colors"
+                        >
+                          <Download className="h-4 w-4" />
+                          {document.filename || `Property plan ${index + 1}`}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
               </div>
             </div>
