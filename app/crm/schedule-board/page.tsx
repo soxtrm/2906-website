@@ -2869,11 +2869,11 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
       maxHeight: mobile ? 'none' : '100vh', overflow: 'hidden',
       borderRight: mobile ? 'none' : `1px solid ${DBORDER}`,
       borderBottom: mobile ? `1px solid ${DBORDER}` : 'none',
-      background: '#0D1721', color: DTEXT, zIndex: 5,
+      background: '#0D1721', color: '#EDF5F5', zIndex: 5,
     }} aria-label="Agent property feed">
       <button type="button" onClick={() => setOpen(v => !v)} style={{
         width: '100%', border: 0, borderBottom: open ? `1px solid ${DBORDER}` : 0,
-        background: 'transparent', color: DTEXT, padding: mobile ? '12px 14px' : '18px 16px 14px',
+        background: 'transparent', color: '#EDF5F5', padding: mobile ? '12px 14px' : '18px 16px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left',
       }}>
         <span>
@@ -2890,7 +2890,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
           {([['all', 'Live'], ['action', 'Action'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setFilter(value)} style={{
               border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
-              background: filter === value ? AD : 'transparent', color: filter === value ? A : DTEXT_DIM,
+              background: filter === value ? AD : 'transparent', color: filter === value ? A : '#A9BBC4',
               padding: '6px 9px', fontSize: 10, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
             }}>{label}</button>
           ))}
