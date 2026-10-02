@@ -193,3 +193,13 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
 .crm-root button:hover:not(:disabled){box-shadow:0 3px 12px #10234a0b}
 .crm-root input,.crm-root select,.crm-root textarea{accent-color:var(--crm-accent)}
 @media(prefers-reduced-motion:no-preference){.crm-header{animation:argus-arrive .28s ease-out}@keyframes argus-arrive{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}}
+
+.crm-booking-day-focus{border:1px solid rgba(202,145,20,.45);background:linear-gradient(125deg,rgba(255,244,194,.95),rgba(255,255,255,.92));box-shadow:0 0 22px rgba(232,185,49,.16)}
+.crm-booking-gold-live{border:1px solid rgba(232,185,49,.62);box-shadow:0 22px 65px rgba(22,29,44,.28),0 0 0 1px rgba(232,185,49,.18),0 0 34px rgba(232,185,49,.18)}
+.crm-book-button-live{position:relative;isolation:isolate;box-shadow:0 0 0 1px rgba(255,229,111,.4),0 0 15px rgba(232,185,49,.38)!important}
+@media(prefers-reduced-motion:no-preference){
+  .crm-book-button-live{animation:booking-gold-pulse 1.8s ease-in-out infinite}
+  .crm-booking-gold-live{animation:booking-flare 2.8s ease-in-out infinite}
+  @keyframes booking-gold-pulse{0%,100%{filter:brightness(1);box-shadow:0 0 0 1px rgba(255,229,111,.35),0 0 11px rgba(232,185,49,.30)}50%{filter:brightness(1.08);box-shadow:0 0 0 2px rgba(255,229,111,.48),0 0 21px rgba(232,185,49,.52)}}
+  @keyframes booking-flare{0%,100%{box-shadow:0 22px 65px rgba(22,29,44,.28),0 0 0 1px rgba(232,185,49,.18),-5px 0 27px rgba(255,142,24,.08)}50%{box-shadow:0 22px 65px rgba(22,29,44,.28),0 0 0 2px rgba(232,185,49,.27),6px -2px 35px rgba(255,142,24,.18)}}
+}

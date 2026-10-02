@@ -26,7 +26,7 @@ import { AlertTriangle, CalendarDays, Copy, Link2, Loader2, RefreshCw, Trash2, X
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
 import {
-  type Booking, type BookingView, type Slot, bookingLine, dayLabel, maltaToIso, time12, timeLabel,
+  type Booking, type BookingView, type Slot, bookingLine, dayLabel, maltaDayKey, maltaToIso, time12, timeLabel,
 } from '@/lib/crm/booking'
 
 const FIELD =
@@ -89,6 +89,15 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
   const bookingById = useMemo(() => new Map((v?.bookings || []).map(b => [b.id, b])), [v])
   const activeBookings = (v?.bookings || []).filter(b => b.status !== 'cancelled')
   const declinedBookings = (v?.bookings || []).filter(b => b.ownerSurveyStatus === 'declined')
+  const ownerConfirmedDay = useMemo(() => {
+    const accepted = (v?.bookings || []).find(b => b.status === 'confirmed' && b.ownerConfirmed && b.startsAt)
+    if (accepted?.startsAt) return maltaDayKey(accepted.startsAt)
+    const confirmedWindow = v?.windows.find(w => w.slots.some(s => s.confirmed))
+    return confirmedWindow ? maltaDayKey(confirmedWindow.start) : null
+  }, [v])
+  const visibleWindows = useMemo(() => ownerConfirmedDay
+    ? (v?.windows || []).filter(w => maltaDayKey(w.start) === ownerConfirmedDay)
+    : (v?.windows || []), [v, ownerConfirmedDay])
 
   // A 20-min pick needs the NEXT box in the same window to be free too.
   function canStartAt(slots: Slot[], i: number, d: number) {
@@ -240,9 +249,11 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
         initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
         transition={{ duration: 0.16, ease: 'easeOut' }}
         data-booking-dialog={refId}
-        className="fixed z-[200] bg-white shadow-2xl flex flex-col inset-x-0 bottom-0 rounded-t-2xl max-h-[92vh]
-                   sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
-                   sm:w-[640px] sm:rounded-xl sm:max-h-[90vh]">
+        className={cn(
+          'fixed z-[200] bg-white shadow-2xl flex flex-col inset-x-0 bottom-0 rounded-t-2xl max-h-[92vh]',
+          'sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[640px] sm:rounded-xl sm:max-h-[90vh]',
+          v?.bookingsPossible && 'crm-booking-gold-live',
+        )}>
         {header}
         {(v?.canManageCalendars || v?.dualUse) && (
           <div className="flex gap-1 px-5 sm:px-6 pt-3 shrink-0">
@@ -267,6 +278,13 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
 
           {v && tab === 'book' && (
             <div className="space-y-5">
+              {ownerConfirmedDay && visibleWindows[0] && (
+                <div className="crm-booking-day-focus rounded-lg px-4 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-800">Booking sequence activated</div>
+                  <div className="mt-1 text-base font-bold text-navy">Focused on {dayLabel(visibleWindows[0].start)}</div>
+                  <div className="mt-0.5 text-xs text-navy/55">The owner accepted. The calendar now shows this viewing day.</div>
+                </div>
+              )}
               {/* ── owner-confirmed availability ─────────────────────────── */}
               {!v.canBookSlots && (
                 <div className="rounded-lg border border-dashed border-navy/15 p-4">
@@ -289,7 +307,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                 </div>
               )}
 
-              {v.windows.map(w => (
+              {visibleWindows.map(w => (
                 <div key={w.id} data-booking-window={w.id}>
                   <div className="flex items-baseline justify-between gap-2 mb-2">
                     <div>

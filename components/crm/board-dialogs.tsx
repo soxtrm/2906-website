@@ -446,18 +446,19 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
 //   • 50h auto-archive is server-side (bookRelay.js closeIfExpired) — this
 //     component just reflects `status: 'closed'` when it gets it back.
 // ════════════════════════════════════════════════════════════════════════════
-type ChatMessage = { id: number; direction: 'agent_to_owner' | 'owner_to_agent'; text: string; at: string }
+type ChatMessage = { id: number; direction: 'agent_to_owner' | 'owner_to_agent'; text: string; at: string; redacted?: boolean }
 type ChatEvent = { kind: 'av' | 'ask' | 'book'; at: string }
 type ChatState = {
   open: boolean; status?: string; ownerLabel?: string; persona?: string
   messages: ChatMessage[]; events: ChatEvent[]; otherActivity: ChatEvent[]
+  privateDeviceChat?: boolean; preferenceRules?: string[]
   expiresHours?: number
 }
 type TimelineItem =
   | { kind: 'message'; at: string; sortKey: number; message: ChatMessage }
   | { kind: 'event'; at: string; sortKey: number; event: ChatEvent }
 
-const POLL_MS = 4000
+const POLL_MS = 2000
 
 const EVENT_COPY: Record<ChatEvent['kind'], { icon: typeof Home; label: string }> = {
   av:   { icon: Home,       label: 'Availability check sent' },
@@ -678,6 +679,20 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
           </div>
         )}
 
+        {state?.privateDeviceChat && (
+          <div className="mx-4 sm:mx-5 mt-3 rounded-xl border border-white/10 bg-white/[0.045] px-3.5 py-3 text-white/55 shrink-0">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
+              <EyeOff className="h-3.5 w-3.5" /> Private device chat · live activity
+            </div>
+            {!!state.preferenceRules?.length && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {state.preferenceRules.map(rule => <span key={rule} className="rounded-full border border-gold/20 bg-gold/10 px-2 py-1 text-[10.5px] text-gold-light">{rule}</span>)}
+              </div>
+            )}
+            <p className="mt-2 text-[10.5px] leading-relaxed text-white/35">Message content stays private. Direction and timestamps remain visible and refresh live.</p>
+          </div>
+        )}
+
         {/* ── timeline: messages + this agent's own av/ask/book events ─────────── */}
         <div
           ref={scrollRef}
@@ -728,7 +743,12 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
                     ? 'bg-gradient-to-br from-gold/25 to-gold/10 border border-gold/25 text-white rounded-br-sm'
                     : 'bg-white/[0.06] border border-white/[0.08] text-white/90 rounded-bl-sm',
                 )}>
-                  {m.text}
+                  {m.redacted ? (
+                    <div className="min-w-[112px] py-0.5" aria-label="Private message content hidden">
+                      <div className="h-2 w-[88%] rounded-full bg-current opacity-25 blur-[2.5px]" />
+                      <div className="mt-1.5 h-2 w-[62%] rounded-full bg-current opacity-20 blur-[2.5px]" />
+                    </div>
+                  ) : m.text}
                   <div className={cn('text-[9px] mt-1 text-right', mine ? 'text-gold-light/50' : 'text-white/25')}>
                     {timeOnly(m.at)}
                   </div>

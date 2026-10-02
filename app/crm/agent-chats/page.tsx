@@ -32,13 +32,14 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { crmFetch } from '@/lib/crm/api'
 
-type ChatMessage = { direction: 'agent_to_owner' | 'owner_to_agent'; text: string; at: string }
+type ChatMessage = { direction: 'agent_to_owner' | 'owner_to_agent'; text: string; at: string; redacted?: boolean }
 type AgentChat = {
   threadId: number; ref: string; status: string
   agentId: number | null; agentName: string
   ownerLabel: string
   town: string | null; beds: number | null; price: number | null; image: string | null
   createdAt: string; updatedAt: string
+  privateDeviceChat?: boolean
   messages: ChatMessage[]
 }
 
@@ -97,7 +98,7 @@ function ChatCard({ c, open, onToggle }: { c: AgentChat; open: boolean; onToggle
           {last && (
             <div className="text-[11px] text-white/50 mt-2 truncate">
               <span className="text-white/30">{last.direction === 'owner_to_agent' ? 'Owner: ' : `${c.agentName}: `}</span>
-              {last.text}
+              {last.redacted ? <span className="inline-block h-2 w-24 rounded-full bg-white/25 blur-[2.5px]" aria-label="Private message hidden" /> : last.text}
             </div>
           )}
           <div className="text-[10px] text-white/25 mt-1">{fmtTimeAgo(c.updatedAt)} · {c.messages.length} message{c.messages.length === 1 ? '' : 's'}</div>
@@ -114,7 +115,12 @@ function ChatCard({ c, open, onToggle }: { c: AgentChat; open: boolean; onToggle
               <div className={`text-[12px] leading-snug rounded-lg px-3 py-1.5 inline-block max-w-full ${
                 m.direction === 'owner_to_agent' ? 'bg-white/10 text-white/85' : 'bg-gold/15 text-white'
               }`}>
-                {m.text}
+                {m.redacted ? (
+                  <span className="block min-w-[118px] py-1" aria-label="Private message content hidden">
+                    <span className="block h-2 w-28 rounded-full bg-current opacity-25 blur-[2.5px]" />
+                    <span className="mt-1.5 block h-2 w-20 rounded-full bg-current opacity-20 blur-[2.5px]" />
+                  </span>
+                ) : m.text}
               </div>
             </div>
           ))}
@@ -132,11 +138,16 @@ function AgentChatsInner() {
   const [openId, setOpenId] = useState<number | null>(null)
   const [agentFilter, setAgentFilter] = useState<string>('all')
 
-  const load = useCallback(() => {
-    setLoading(true); setErr(null)
+  const load = useCallback((showLoader = true) => {
+    if (showLoader) setLoading(true)
+    setErr(null)
     crmFetch('admin/agent-chats').then(d => setChats(d.chats || [])).catch(e => setErr(e?.data?.error || e?.message || 'Failed to load')).finally(() => setLoading(false))
   }, [])
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    const timer = setInterval(() => load(false), 2000)
+    return () => clearInterval(timer)
+  }, [load])
 
   const agentNames = useMemo(() => {
     const names = new Set(chats.map(c => c.agentName))

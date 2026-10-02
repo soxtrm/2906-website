@@ -3763,6 +3763,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
           </button>
           <button onClick={() => guardedFutureAction('Create booking request', onBook)} data-book-btn={r.ref}
+            className={r.bookingsPossible ? 'crm-book-button-live' : undefined}
             disabled={futureLocked && !isAdmin}
             title={r.bookingsPossible ? 'Bookings possible — owner-confirmed viewing time' : 'Book a viewing'}
             style={{ ...(r.bookingsPossible
