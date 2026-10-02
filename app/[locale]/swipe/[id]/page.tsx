@@ -20,10 +20,49 @@ interface SwipeProperty {
   forSale: boolean
   price: number | null
   shortlet: boolean
+  leaseType: 'long_let' | 'winter_let' | 'short_let' | 'flexible' | null
+  rentalModes: string[]
+  availableUntil: string | null
   availableNow: boolean
   images: string[]
   description: string
   fullDescription: string
+}
+
+function monthLabel(iso: string | null) {
+  if (!iso) return null
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) return null
+  return date.toLocaleDateString('en-GB', { month: 'long' })
+}
+
+function offerLabels(p: SwipeProperty) {
+  const modes = new Set(p.rentalModes || [])
+  if (!modes.size && p.leaseType) modes.add(p.leaseType)
+  if (!modes.size && p.shortlet) modes.add('short_let')
+  const labels: string[] = []
+  if (p.forSale) labels.push('SALE')
+  if (modes.has('winter_let') || p.availableUntil) labels.push('WINTER')
+  if (modes.has('long_let')) labels.push('LONG LET')
+  if (modes.has('short_let')) labels.push('SHORT LET')
+  return [...new Set(labels)]
+}
+
+function OfferIdentity({ p, compact = false }: { p: SwipeProperty; compact?: boolean }) {
+  const labels = offerLabels(p)
+  const until = monthLabel(p.availableUntil)
+  if (!labels.length && !until) return null
+  return (
+    <div className={`flex flex-wrap items-center ${compact ? 'gap-1 mt-1' : 'gap-1.5 mt-2'}`}>
+      {labels.map(label => (
+        <span key={label} className="rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-[0.12em]"
+          style={{ color: label === 'WINTER' ? '#326277' : GOLD, borderColor: label === 'WINTER' ? '#9CC7D5' : '#D9CBA7', background: label === 'WINTER' ? '#EEF7F9' : '#FBF7EC' }}>
+          {label === 'WINTER' ? '❄ WINTER' : label}
+        </span>
+      ))}
+      {until && <span className="text-[10px]" style={{ color: MUTED }}>until {until}</span>}
+    </div>
+  )
 }
 
 function visitorKey(id: string) { return `swipe_visitor_${id}` }
@@ -238,7 +277,7 @@ function Lightbox({ photos, index, onClose, onIndexChange }: {
 // not a slideshow.
 const AUTOPLAY_MS = 3000
 
-function SinglePropertyPage({ p }: { p: SwipeProperty }) {
+function SinglePropertyPage({ p, title }: { p: SwipeProperty; title?: string | null }) {
   const [index, setIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [descOpen, setDescOpen] = useState(false)
@@ -329,9 +368,12 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
           watermark sitting on the photo) instead of overlaying the image,
           so the whole photo is free of any text. */}
       <div className="flex items-center gap-4 pl-3 pr-3 sm:pl-14 sm:pr-5 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
-        <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
-          {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
-        </span>
+        <div className="flex-shrink-0">
+          <span className="block text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
+            {title || eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
+          </span>
+          <OfferIdentity p={p} compact />
+        </div>
         <div className="flex-1 h-px" style={{ background: HAIRLINE }} />
         <span
           className="sm:hidden flex-shrink-0 text-[12px]"
@@ -409,6 +451,7 @@ function SinglePropertyPage({ p }: { p: SwipeProperty }) {
             <h1 className="min-w-0" style={{ color: INK, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
             <span className="flex-shrink-0" style={{ color: INK, fontSize: 22, fontWeight: 700 }}>{fmtSinglePrice(p)}</span>
           </div>
+          <OfferIdentity p={p} />
           {desc && (
             <button
               type="button"
@@ -497,6 +540,7 @@ function PropertiesList({
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] font-medium truncate" style={{ color: INK }}>{loc}</div>
               <div className="text-[12px]" style={{ color: MUTED }}>{fmtSinglePrice(p)}</div>
+              <OfferIdentity p={p} compact />
             </div>
             <button
               type="button"
@@ -522,7 +566,7 @@ function PropertiesList({
 // list on desktop, touchpoint dots on mobile), not a linear swipe deck, so
 // there is no forced "end of deck" screen — a pick is just a heart toggle
 // that persists across however the visitor gets to that property. ─────────
-function MultiPropertyPage({ properties, id }: { properties: SwipeProperty[]; id: string }) {
+function MultiPropertyPage({ properties, id, title }: { properties: SwipeProperty[]; id: string; title?: string | null }) {
   const [index, setIndex] = useState(0)
   const [photoIndex, setPhotoIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -620,9 +664,12 @@ function MultiPropertyPage({ properties, id }: { properties: SwipeProperty[]; id
         {/* header — hairline shortens to make room for one touchpoint dot
             per property once there's more than one to browse. */}
         <div className="flex items-center gap-3 pl-3 pr-3 sm:pl-14 sm:pr-5 pt-6 pb-4 mobile-landscape:pt-3 mobile-landscape:pb-2 flex-shrink-0">
-          <span className="flex-shrink-0 text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
-            {eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
-          </span>
+          <div className="flex-shrink-0">
+            <span className="block text-[11px] uppercase" style={{ color: MUTED, fontWeight: 400, letterSpacing: '0.16em' }}>
+              {title || eyebrow || 'Property'}{p.ref ? ` · #${p.ref}` : ''}
+            </span>
+            <OfferIdentity p={p} compact />
+          </div>
           <div className="h-px" style={{ background: HAIRLINE, flex: showDots ? '0 1 28px' : '1 1 auto' }} />
           {showDots && (
             <div className="flex items-center gap-[5px] flex-shrink-0 flex-1 justify-end">
@@ -712,6 +759,7 @@ function MultiPropertyPage({ properties, id }: { properties: SwipeProperty[]; id
               <h1 className="min-w-0" style={{ color: INK, fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>{location}</h1>
               <span className="flex-shrink-0" style={{ color: INK, fontSize: 22, fontWeight: 700 }}>{fmtSinglePrice(p)}</span>
             </div>
+            <OfferIdentity p={p} />
             {desc && (
               <button
                 type="button"
@@ -767,6 +815,7 @@ export default function SwipePage() {
   const [notFound, setNotFound] = useState(false)
   const [expiredMessage, setExpiredMessage] = useState<string | null>(null)
   const [linkKind, setLinkKind] = useState<'property' | 'client' | null>(null)
+  const [title, setTitle] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -778,6 +827,7 @@ export default function SwipePage() {
         // from a paused/nonexistent link (non-200, notFound below) — the
         // record persists server-side, only public access ends.
         setLinkKind(d.kind === 'property' ? 'property' : 'client')
+        setTitle(typeof d.title === 'string' ? d.title : null)
         if (d.expired) { setExpiredMessage(d.message || 'This link has expired.'); return }
         setProperties(Array.isArray(d.properties) ? d.properties : [])
       })
@@ -822,10 +872,10 @@ export default function SwipePage() {
   }
 
   if (linkKind === 'property') {
-    return properties[0] ? <SinglePropertyPage p={properties[0]} /> : <SinglePropertyMessage text="This listing is no longer available." />
+    return properties[0] ? <SinglePropertyPage p={properties[0]} title={title} /> : <SinglePropertyMessage text="This listing is no longer available." />
   }
 
   return properties.length
-    ? <MultiPropertyPage properties={properties} id={id} />
+    ? <MultiPropertyPage properties={properties} id={id} title={title} />
     : <SinglePropertyMessage text="This selection is empty." />
 }

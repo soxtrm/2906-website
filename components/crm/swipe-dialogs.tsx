@@ -182,13 +182,26 @@ export function SwipeMultiLinksModal({ links, onClose }: { links: { ref: string;
 }
 
 // ── results: every link + who liked/favourited what ───────────────────────
-type LinkRow = { id: string; title: string | null; created_at: string; active: boolean; property_count: number; like_count: number; favourite_count: number; visitor_count: number }
+type LinkRow = { id: string; title: string | null; display_title?: string | null; created_at: string; active: boolean; property_count: number; like_count: number; favourite_count: number; visitor_count: number; has_winter?: boolean; has_sale?: boolean; has_longlet?: boolean; winter_until?: string | null }
 type LinkDetail = {
   id: string; title: string | null; url: string
   properties: { id: number; ref: string; town: string | null; bedrooms: number | null }[]
   // kind: 'favourite' (star) ranks above 'like' (heart) — the backend already
   // sorts favourites first; this panel just renders that order.
   likes: { property_id: number; visitor_id: string; liked_at: string; kind: 'like' | 'favourite'; contact_name: string | null; contact_phone: string | null }[]
+}
+
+function swipeMonth(iso?: string | null) {
+  if (!iso) return null
+  const d = new Date(iso)
+  return Number.isFinite(d.getTime()) ? d.toLocaleDateString('en-GB', { month: 'long' }) : null
+}
+
+function swipeLinkTitle(link: LinkRow) {
+  if (link.title) return link.title
+  const kinds = [link.has_winter && 'Winter', link.has_sale && 'Sale', link.has_longlet && 'Long let'].filter(Boolean)
+  const kind = kinds.length ? kinds.join(' + ') : 'Property'
+  return `${kind} selection · ${link.property_count} listing${link.property_count === 1 ? '' : 's'}`
 }
 
 export function SwipeLinksPanel({
@@ -248,12 +261,20 @@ export function SwipeLinksPanel({
             }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#1A1A1A' }}>
-                  {l.title || `${l.property_count} listing${l.property_count === 1 ? '' : 's'}`}
+                  {l.display_title || swipeLinkTitle(l)}
                   {!l.active && <span style={{ marginLeft: 8, fontSize: 10, color: '#B91C1C', fontWeight: 700 }}>PAUSED</span>}
                 </div>
                 <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
                   {new Date(l.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })} · {l.property_count} listings
                 </div>
+                {(l.has_winter || l.has_sale || l.has_longlet) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', marginTop: 6 }}>
+                    {l.has_winter && <span style={{ border: '1px solid #9CC7D5', background: '#EEF7F9', color: '#326277', borderRadius: 999, padding: '2px 7px', fontSize: 9, fontWeight: 800, letterSpacing: '.08em' }}>❄ WINTER</span>}
+                    {l.has_sale && <span style={{ border: `1px solid ${GOLD}`, background: '#FBF7EC', color: '#876C28', borderRadius: 999, padding: '2px 7px', fontSize: 9, fontWeight: 800, letterSpacing: '.08em' }}>SALE</span>}
+                    {l.has_longlet && <span style={{ border: '1px solid #D8D5CC', color: '#706D65', borderRadius: 999, padding: '2px 7px', fontSize: 9, fontWeight: 800, letterSpacing: '.08em' }}>LONG LET</span>}
+                    {l.has_winter && swipeMonth(l.winter_until) && <span style={{ color: '#777', fontSize: 10.5 }}>until {swipeMonth(l.winter_until)}</span>}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: l.favourite_count ? GOLD : '#CCC' }}>
