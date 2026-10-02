@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { ArrowUpRight, BusFront, CarFront, Check, CircleAlert, Footprints, HeartPulse, MapPinned, Route, ShoppingBasket, Sparkles, Star, Waves, CarTaxiFront, GraduationCap, BriefcaseBusiness, Utensils, Coffee, Ship, Ruler, Radio } from 'lucide-react'
 import type { PropertyLifeOverview as Overview } from '@/lib/nexus-property-context'
 import { estimateBoltReference } from '@/public/Link/mobility-reality.mjs'
+import { motion } from 'framer-motion'
 import styles from './property-life-overview.module.css'
 
 const icons = { groceries: ShoppingBasket, coast: Waves, health: HeartPulse, movement: BusFront, school: GraduationCap, commute: BriefcaseBusiness, restaurant: Utensils, cafe: Coffee }
@@ -140,7 +141,7 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
       </div>
       <a className={styles.profileLink} href={`/link-matrix#/property/${encodeURIComponent(overview.reference)}`}>Add your profile &amp; get LINKED <ArrowUpRight size={16} /></a>
       <div className={styles.searchBox}><label htmlFor={`place-search-${overview.reference}`}>Find your everyday places</label><input id={`place-search-${overview.reference}`} type="search" placeholder="Search supermarket, beach, destination…" value={query} onChange={e=>setQuery(e.target.value)} />{query.trim() && <div className={styles.searchResults}>{allPlaces.filter(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0,8).map(p=><button key={`${p.connector}:${p.id}`} type="button" onClick={()=>{setActive(p.connector);setChosen(p.id);setQuery('')}}>{p.name}<ArrowUpRight size={14}/></button>)}{!allPlaces.some(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())) && <p>No mapped match. Try another place name.</p>}</div>}</div>
-      <div className={styles.modeBar} role="group" aria-label="Travel mode">{modes.map(m => <button type="button" key={m.key} aria-pressed={mode === m.key} onClick={() => setMode(m.key)}><m.Icon aria-hidden="true" />{m.label}{m.key === 'taxi' && <small>Uber / Bolt</small>}</button>)}</div>
+      <div className={styles.modeBar} role="group" aria-label="Travel mode">{modes.map(m => <motion.button type="button" key={m.key} aria-pressed={mode === m.key} onClick={() => setMode(m.key)} whileTap={{scale:.94}} transition={{type:'spring',stiffness:520,damping:30}}>{mode === m.key && <motion.i className={styles.modeGlider} layoutId="travel-mode-glider" transition={{type:'spring',stiffness:430,damping:34,mass:.7}} />}<m.Icon aria-hidden="true" /><span>{m.label}</span>{m.key === 'taxi' && <small>Uber / Bolt</small>}</motion.button>)}</div>
       <iframe ref={frame} className={styles.areaMap} src="/link-marketplace/estate-area-map.html" title="Map of useful places near this property" loading="lazy" onLoad={() => setMapReady(n => n + 1)} />
 
       {selected && <div key={`${mode}:${selected.id}`} className={styles.journey} aria-live="polite"><div><small>YOUR JOURNEY TO</small><h4>{selected.name}</h4><strong>{journeyLoading ? 'Checking journey…' : (mode === 'taxi' ? taxiFare(selected.id,selected.name) : minutes(selectedSeconds)) || 'Time unavailable'}</strong><div className={styles.journeySignals} aria-label="Journey overview">
@@ -170,11 +171,13 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
                 : choice.key === 'car' ? minutes(route?.drivingSeconds)
                   : choice.key === 'taxi' ? taxiFare(place.id, place.name)
                     : place.id === selected?.id && bus?.status === 'CONNECTED' ? minutes(bus.durationMinutes * 60) : null
-              return <button key={choice.key} type="button" aria-pressed={activeChoice}
+              return <motion.button key={choice.key} type="button" aria-pressed={activeChoice}
                 onClick={() => { setMode(choice.key); setChosen(place.id) }}
+                whileTap={{scale:.91}} transition={{type:'spring',stiffness:560,damping:29}}
                 aria-label={`${choice.label} journey to ${place.name}${value ? `, ${value}` : ''}`}>
+                {activeChoice && <motion.i className={styles.choiceGlider} layoutId="journey-choice-glider" transition={{type:'spring',stiffness:480,damping:36,mass:.65}} />}
                 <ChoiceIcon aria-hidden="true" /><small>{choice.label}</small><b>{value || (choice.key === 'bus' ? 'CHECK' : '—')}</b>
-              </button>
+              </motion.button>
             })}
           </div>
           {mode === 'taxi' && <small className={styles.evidence}>Modelled Bolt reference · not a live Uber/Bolt quote. Pickup unknown.</small>}
