@@ -447,6 +447,11 @@ function Board() {
   const [mapOpen, setMapOpen] = useState(true)
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
+  // The agent feed is deliberately fetched without the board's current
+  // filters. It stays useful while an agent is looking at one town, a price
+  // range or Favourites: recent team activity must not disappear just because
+  // the grid underneath has been narrowed.
+  const [feedRows, setFeedRows] = useState<Listing[]>([])
 
   const showToast = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
     setToast({ kind, text })
@@ -488,6 +493,19 @@ function Board() {
   const dismissAvNotification = useCallback((id: number) => {
     setAvNotifications(prev => prev.filter(n => n.id !== id))
     crmJson(`schedule-board/notifications/${id}/seen`, 'POST', {}).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    async function pollFeed() {
+      try {
+        const d = await crmFetch('schedule-board/listings?sort=confirmed')
+        if (alive && Array.isArray(d?.listings)) setFeedRows(d.listings)
+      } catch { /* keep the last useful feed during a brief reconnect */ }
+    }
+    pollFeed()
+    const t = window.setInterval(pollFeed, 20_000)
+    return () => { alive = false; window.clearInterval(t) }
   }, [])
 
   // ── pending classification changes (Kev, 2026-09-17) ─────────────────────
@@ -837,9 +855,12 @@ function Board() {
     if (busyRef) return
     setBusyRef(r.ref)
     const optimistic = new Date().toISOString()
-    setRows(rs => rs.map(x => x.ref === r.ref
-      ? { ...x, availableStatus: 'available_confirmed', lastConfirmedAvailableAt: optimistic, statusChangeReason: null }
-      : x))
+    const optimisticPatch = (x: Listing): Listing => x.ref === r.ref
+      ? { ...x, availableStatus: 'available_confirmed', lastConfirmedAvailableAt: optimistic,
+          updatedAt: optimistic, statusChangeReason: null }
+      : x
+    setRows(rs => rs.map(optimisticPatch))
+    setFeedRows(rs => rs.map(optimisticPatch))
     try {
       const d = await crmJson(
         `schedule-board/listings/${encodeURIComponent(r.ref)}/check-in`, 'POST', {})
@@ -848,16 +869,24 @@ function Board() {
       // fresh timestamp. Take the server's timestamp over ours: the card
       // should show what is in the database, not what this browser guessed a
       // moment ago.
-      setRows(rs => rs.map(x => x.ref === r.ref
+      const confirmedAt = d.lastConfirmedAvailableAt || optimistic
+      const confirmedPatch = (x: Listing): Listing => x.ref === r.ref
         ? { ...x, availableStatus: d.availableStatus || 'available_confirmed',
-                  lastConfirmedAvailableAt: d.lastConfirmedAvailableAt || optimistic }
-        : x))
+            lastConfirmedAvailableAt: confirmedAt, updatedAt: d.updatedAt || confirmedAt,
+            statusChangeReason: null }
+        : x
+      setRows(rs => rs.map(confirmedPatch))
+      setFeedRows(rs => rs.map(confirmedPatch))
       showToast('ok', d.message || `#${r.ref} confirmed available.`)
     } catch (e: any) {
       // Put the card back the way it was. A refusal here is almost always the
       // rented/archived guard, and the reason matters more than the failure.
       setRows(rs => rs.map(x => x.ref === r.ref
         ? { ...x, availableStatus: r.availableStatus, lastConfirmedAvailableAt: r.lastConfirmedAvailableAt }
+        : x))
+      setFeedRows(rs => rs.map(x => x.ref === r.ref
+        ? { ...x, availableStatus: r.availableStatus, lastConfirmedAvailableAt: r.lastConfirmedAvailableAt,
+            updatedAt: r.updatedAt }
         : x))
       const d = e?.data || {}
       showToast('err', d.error || d.message || e?.message || 'Could not confirm this listing.')
@@ -1365,6 +1394,17 @@ function Board() {
       filterBar={filterBar}
       dark
     >
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'flex-start', minWidth: 0 }}>
+        <AgentFeed
+          rows={feedRows}
+          mobile={isMobile}
+          onOpen={r => setDetail(r.ref)}
+          onChat={r => setChatting(r)}
+          onBook={r => setBooking(r)}
+          onConfirm={checkIn}
+          busyRef={busyRef}
+        />
+        <main style={{ minWidth: 0, flex: 1 }}>
       <div style={{ padding: isMobile ? 14 : 22 }}>
         {err && <Notice text={err} />}
 
@@ -1699,6 +1739,8 @@ function Board() {
         <summary style={{ padding: '20px 24px', cursor: 'pointer', fontSize: 17, fontWeight: 750 }}>Smart Map · Locations &amp; Traffic <span style={{fontSize:11,color:'#92b3bf',marginLeft:12}}>Open map workspace</span></summary>
         {intelligenceOpen && <BoardIntelligenceMap />}
       </details>
+        </main>
+      </div>
       {detail && (
         <DetailModal
           refId={detail}
@@ -2430,9 +2472,20 @@ function isFarFuture(r: { availableStatus: string | null; availableDate: string 
 // The photo-overlay pill (Kev, 2026-08-22): "Uploaded X" until somebody
 // confirms it, then "Updated X" — whichever of the two actually happened
 // most recently is the one fact worth stating there.
-function freshBadgeLabel(r: { createdAt: string | null; lastConfirmedAvailableAt: string | null }): string {
-  if (r.lastConfirmedAvailableAt) return `Updated ${ago(r.lastConfirmedAvailableAt)}`
-  return r.createdAt ? `Uploaded ${ago(r.createdAt)}` : 'Uploaded —'
+function listingTouch(r: Pick<Listing, 'createdAt' | 'updatedAt' | 'lastConfirmedAvailableAt'>) {
+  const events = [
+    { kind: 'Confirmed' as const, at: r.lastConfirmedAvailableAt },
+    { kind: 'Updated' as const, at: r.updatedAt },
+    { kind: 'Uploaded' as const, at: r.createdAt },
+  ].filter((event): event is { kind: 'Confirmed' | 'Updated' | 'Uploaded'; at: string } =>
+    !!event.at && Number.isFinite(Date.parse(event.at)))
+  events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+  return events[0] || null
+}
+
+function freshBadgeLabel(r: Pick<Listing, 'createdAt' | 'updatedAt' | 'lastConfirmedAvailableAt'>): string {
+  const latest = listingTouch(r)
+  return latest ? `${latest.kind} ${ago(latest.at)}` : 'Uploaded —'
 }
 
 // Same fact, upper-case and bare, for the small metadata row under the price.
@@ -2780,6 +2833,138 @@ function ReachoutSwitch() {
   )
 }
 
+function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }: {
+  rows: Listing[]
+  mobile: boolean
+  onOpen: (r: Listing) => void
+  onChat: (r: Listing) => void
+  onBook: (r: Listing) => void
+  onConfirm: (r: Listing) => void
+  busyRef: string | null
+}) {
+  const [filter, setFilter] = useState<'all' | 'action' | 'confirmed' | 'new'>('all')
+  const [open, setOpen] = useState(!mobile)
+  const feed = useMemo(() => {
+    const unique = new Map<string, Listing>()
+    for (const row of rows) if (!unique.has(row.ref)) unique.set(row.ref, row)
+    return [...unique.values()]
+      .filter(r => filter === 'all'
+        || (filter === 'action' && (r.availableStatus === 'pending_check' || r.bookingsPossible))
+        || (filter === 'confirmed' && !!r.lastConfirmedAvailableAt)
+        || (filter === 'new' && !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86400_000))
+      .sort((a, b) => {
+        const aAction = Number(a.bookingsPossible || a.availableStatus === 'pending_check')
+        const bAction = Number(b.bookingsPossible || b.availableStatus === 'pending_check')
+        if (filter === 'all' && aAction !== bAction) return bAction - aAction
+        return Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01')
+      })
+      .slice(0, 36)
+  }, [rows, filter])
+
+  const actionCount = rows.filter(r => r.bookingsPossible || r.availableStatus === 'pending_check').length
+  return (
+    <aside style={{
+      width: mobile ? '100%' : 286, flex: '0 0 auto',
+      position: mobile ? 'relative' : 'sticky', top: mobile ? undefined : 0,
+      maxHeight: mobile ? 'none' : '100vh', overflow: 'hidden',
+      borderRight: mobile ? 'none' : `1px solid ${DBORDER}`,
+      borderBottom: mobile ? `1px solid ${DBORDER}` : 'none',
+      background: '#0D1721', color: DTEXT, zIndex: 5,
+    }} aria-label="Agent property feed">
+      <button type="button" onClick={() => setOpen(v => !v)} style={{
+        width: '100%', border: 0, borderBottom: open ? `1px solid ${DBORDER}` : 0,
+        background: 'transparent', color: DTEXT, padding: mobile ? '12px 14px' : '18px 16px 14px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left',
+      }}>
+        <span>
+          <span style={{ display: 'block', fontSize: 10, letterSpacing: '0.15em', color: A, fontWeight: 800 }}>LIVE WORKSPACE</span>
+          <strong style={{ display: 'block', marginTop: 4, fontSize: 17 }}>Agent Feed</strong>
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {actionCount > 0 && <b style={{ minWidth: 22, height: 22, padding: '0 6px', borderRadius: 999, background: BOOK_YELLOW, color: '#111827', display: 'grid', placeItems: 'center', fontSize: 10 }}>{actionCount}</b>}
+          <ChevronDown size={17} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease' }} />
+        </span>
+      </button>
+      {open && <>
+        <div style={{ display: 'flex', gap: 5, padding: '10px 10px 8px', overflowX: 'auto' }}>
+          {([['all', 'Live'], ['action', 'Action'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setFilter(value)} style={{
+              border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
+              background: filter === value ? AD : 'transparent', color: filter === value ? A : DTEXT_DIM,
+              padding: '6px 9px', fontSize: 10, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>{label}</button>
+          ))}
+        </div>
+        <div style={{
+          display: mobile ? 'flex' : 'block', gap: 8, padding: '2px 10px 12px',
+          overflowX: mobile ? 'auto' : 'hidden', overflowY: mobile ? 'hidden' : 'auto',
+          maxHeight: mobile ? 206 : 'calc(100vh - 118px)', scrollbarWidth: 'thin',
+        }}>
+          {feed.map(r => {
+            const touch = listingTouch(r)
+            const needsAction = r.availableStatus === 'pending_check'
+            const bookable = !!r.bookingsPossible
+            return <article key={r.ref} style={{
+              minWidth: mobile ? 258 : undefined, marginBottom: mobile ? 0 : 8,
+              border: `1px solid ${bookable ? 'rgba(232,185,49,.7)' : needsAction ? 'rgba(199,57,26,.65)' : DBORDER}`,
+              borderRadius: 12, overflow: 'hidden', background: DCARD,
+              boxShadow: bookable ? '0 0 16px rgba(232,185,49,.10)' : 'none',
+            }}>
+              <button type="button" onClick={() => onOpen(r)} style={{
+                width: '100%', border: 0, background: 'transparent', color: DTEXT,
+                padding: 10, display: 'grid', gridTemplateColumns: '52px 1fr', gap: 10,
+                textAlign: 'left', cursor: 'pointer',
+              }}>
+                <div style={{ width: 52, height: 52, borderRadius: 9, overflow: 'hidden', background: DTRAY }}>
+                  {r.images?.[0]
+                    ? <img src={r.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ height: '100%', display: 'grid', placeItems: 'center', color: DTEXT_FAINT }}>⌂</span>}
+                </div>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <b style={{ fontFamily: FM, fontSize: 11 }}>#{r.ref}</b>
+                    <small style={{ color: touch?.kind === 'Confirmed' ? '#65C69A' : DTEXT_FAINT, fontSize: 9, whiteSpace: 'nowrap' }}>
+                      {touch ? `${touch.kind} ${ago(touch.at)}` : 'No activity'}
+                    </small>
+                  </span>
+                  <strong style={{ display: 'block', marginTop: 5, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {r.town || 'Malta'} · {r.type || 'Property'}
+                  </strong>
+                  <span style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+                    {bookable && <em style={feedPill('#E8B931', '#18202D')}>BOOK</em>}
+                    {needsAction && <em style={feedPill('#C7391A', '#FFF')}>RECHECK</em>}
+                    {r.lastConfirmedAvailableAt && <em style={feedPill('rgba(52,168,116,.18)', '#65C69A')}>AVAILABLE</em>}
+                    {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let')) && <em style={feedPill('rgba(126,200,227,.15)', '#7EC8E3')}>WINTER</em>}
+                  </span>
+                </span>
+              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: needsAction ? 'repeat(4,1fr)' : 'repeat(3,1fr)', borderTop: `1px solid ${DBORDER}` }}>
+                <FeedAction label="Open" onClick={() => onOpen(r)} />
+                <FeedAction label="Chat" onClick={() => onChat(r)} />
+                <FeedAction label="Book" accent={bookable} onClick={() => onBook(r)} />
+                {needsAction && <FeedAction label={busyRef === r.ref ? '…' : 'Confirm'} disabled={!!busyRef} onClick={() => onConfirm(r)} />}
+              </div>
+            </article>
+          })}
+          {!feed.length && <p style={{ color: DTEXT_FAINT, fontSize: 11, padding: 12 }}>Nothing in this feed yet.</p>}
+        </div>
+      </>}
+    </aside>
+  )
+}
+
+function feedPill(background: string, color: string) {
+  return { background, color, borderRadius: 999, padding: '2px 6px', fontSize: 8, fontStyle: 'normal', fontWeight: 800, letterSpacing: '0.06em' }
+}
+
+function FeedAction({ label, onClick, accent = false, disabled = false }: { label: string; onClick: () => void; accent?: boolean; disabled?: boolean }) {
+  return <button type="button" onClick={onClick} disabled={disabled} style={{
+    border: 0, borderRight: `1px solid ${DBORDER}`, background: accent ? 'rgba(232,185,49,.16)' : DTRAY,
+    color: accent ? BOOK_YELLOW : DTEXT_DIM, padding: '8px 4px', fontSize: 9, fontWeight: 750,
+    cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? .55 : 1,
+  }}>{label}</button>
+}
+
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
                 onAddPhotos, photoUploadBusy, onDelete, onChanged }: {
@@ -3110,7 +3295,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // /properties/:id on every edit) already used to nudge these listings
   // higher in the default 'newest' sort; this is the visual half, in the
   // exact top-right spot the "Uploaded/Updated X ago" pill already lives.
-  const isFreshlyUpdated = !!r.updatedAt && (Date.now() - Date.parse(r.updatedAt) < 48 * 3600_000)
+  const latestTouch = listingTouch(r)
+  const isFreshlyUpdated = !!latestTouch && (Date.now() - Date.parse(latestTouch.at) < 48 * 3600_000)
 
   // Kev, 2026-09-17: "wenn man mit der maus über ein listing hoverd, dass
   // die blätter im 2 sekunden switchen, nur über dem bild selber" — cycle
