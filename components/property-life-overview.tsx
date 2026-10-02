@@ -73,7 +73,12 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
     return () => controller.abort()
   }, [overview.reference, selected?.id, mode])
   const duration = (id: string) => mode === 'bus' ? (id === selected?.id && bus?.status === 'CONNECTED' ? bus.durationMinutes * 60 : null) : mode === 'walk' ? routes[id]?.walkingSeconds : routes[id]?.drivingSeconds
-  const modes = [{key:'walk',label:'Walk',Icon:Footprints},{key:'bus',label:'Bus',Icon:BusFront},{key:'taxi',label:'Taxi',Icon:CarTaxiFront},{key:'car',label:'Car',Icon:CarFront}] as const
+  const modes = [
+    {key:'walk',label:'Walk',hint:'Footpaths',Icon:Footprints},
+    {key:'bus',label:'Bus',hint:'Timetable',Icon:BusFront},
+    {key:'taxi',label:'Taxi',hint:'Fare estimate',Icon:CarTaxiFront},
+    {key:'car',label:'Car',hint:'Road route',Icon:CarFront},
+  ] as const
   const selectedSeconds = selected ? duration(selected.id) : null
   const SelectedModeIcon = modes.find(item => item.key === mode)!.Icon
   const selectedDistanceMetres = selected
@@ -141,7 +146,7 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
       </div>
       <a className={styles.profileLink} href={`/link-matrix#/property/${encodeURIComponent(overview.reference)}`}>Add your profile &amp; get LINKED <ArrowUpRight size={16} /></a>
       <div className={styles.searchBox}><label htmlFor={`place-search-${overview.reference}`}>Find your everyday places</label><input id={`place-search-${overview.reference}`} type="search" placeholder="Search supermarket, beach, destination…" value={query} onChange={e=>setQuery(e.target.value)} />{query.trim() && <div className={styles.searchResults}>{allPlaces.filter(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0,8).map(p=><button key={`${p.connector}:${p.id}`} type="button" onClick={()=>{setActive(p.connector);setChosen(p.id);setQuery('')}}>{p.name}<ArrowUpRight size={14}/></button>)}{!allPlaces.some(p=>p.name.toLowerCase().includes(query.trim().toLowerCase())) && <p>No mapped match. Try another place name.</p>}</div>}</div>
-      <div className={styles.modeBar} role="group" aria-label="Travel mode">{modes.map(m => <motion.button type="button" key={m.key} aria-pressed={mode === m.key} onClick={() => setMode(m.key)} whileTap={{scale:.94}} transition={{type:'spring',stiffness:520,damping:30}}>{mode === m.key && <motion.i className={styles.modeGlider} layoutId="travel-mode-glider" transition={{type:'spring',stiffness:430,damping:34,mass:.7}} />}<m.Icon aria-hidden="true" /><span>{m.label}</span>{m.key === 'taxi' && <small>Uber / Bolt</small>}</motion.button>)}</div>
+      <div className={styles.modeBar} role="group" aria-label="Travel mode">{modes.map(m => <motion.button type="button" key={m.key} aria-pressed={mode === m.key} onClick={() => setMode(m.key)} whileHover={{y:-1}} whileTap={{scale:.94,y:1}} transition={{type:'spring',stiffness:520,damping:30}}>{mode === m.key && <motion.i className={styles.modeGlider} layoutId="travel-mode-glider" transition={{type:'spring',stiffness:430,damping:34,mass:.7}} />}<m.Icon aria-hidden="true" /><span><b>{m.label}</b><small>{m.hint}</small></span></motion.button>)}</div>
       <iframe ref={frame} className={styles.areaMap} src="/link-marketplace/estate-area-map.html" title="Map of useful places near this property" loading="lazy" onLoad={() => setMapReady(n => n + 1)} />
 
       {selected && <div key={`${mode}:${selected.id}`} className={styles.journey} aria-live="polite"><div><small>YOUR JOURNEY TO</small><h4>{selected.name}</h4><strong>{journeyLoading ? 'Checking journey…' : (mode === 'taxi' ? taxiFare(selected.id,selected.name) : minutes(selectedSeconds)) || 'Time unavailable'}</strong><div className={styles.journeySignals} aria-label="Journey overview">
@@ -171,12 +176,13 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
                 : choice.key === 'car' ? minutes(route?.drivingSeconds)
                   : choice.key === 'taxi' ? taxiFare(place.id, place.name)
                     : place.id === selected?.id && bus?.status === 'CONNECTED' ? minutes(bus.durationMinutes * 60) : null
-              return <motion.button key={choice.key} type="button" aria-pressed={activeChoice}
+              const loadingChoice = activeChoice && journeyLoading
+              return <motion.button key={choice.key} type="button" aria-pressed={activeChoice} data-loading={loadingChoice || undefined}
                 onClick={() => { setMode(choice.key); setChosen(place.id) }}
                 whileTap={{scale:.91}} transition={{type:'spring',stiffness:560,damping:29}}
                 aria-label={`${choice.label} journey to ${place.name}${value ? `, ${value}` : ''}`}>
                 {activeChoice && <motion.i className={styles.choiceGlider} layoutId="journey-choice-glider" transition={{type:'spring',stiffness:480,damping:36,mass:.65}} />}
-                <ChoiceIcon aria-hidden="true" /><small>{choice.label}</small><b>{value || (choice.key === 'bus' ? 'CHECK' : '—')}</b>
+                <ChoiceIcon aria-hidden="true" /><small>{choice.label}</small><b>{loadingChoice ? '•••' : value || (choice.key === 'bus' ? 'CHECK' : '—')}</b>
               </motion.button>
             })}
           </div>
