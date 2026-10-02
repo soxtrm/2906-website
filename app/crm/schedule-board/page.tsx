@@ -447,6 +447,7 @@ function Board() {
   const [mapOpen, setMapOpen] = useState(true)
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
+  const [updatesMode, setUpdatesMode] = useState(false)
   // The agent feed is deliberately fetched without the board's current
   // filters. It stays useful while an agent is looking at one town, a price
   // range or Favourites: recent team activity must not disappear just because
@@ -1394,17 +1395,6 @@ function Board() {
       filterBar={filterBar}
       dark
     >
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'flex-start', minWidth: 0 }}>
-        <AgentFeed
-          rows={feedRows}
-          mobile={isMobile}
-          onOpen={r => setDetail(r.ref)}
-          onChat={r => setChatting(r)}
-          onBook={r => setBooking(r)}
-          onConfirm={checkIn}
-          busyRef={busyRef}
-        />
-        <main style={{ minWidth: 0, flex: 1 }}>
       <div style={{ padding: isMobile ? 14 : 22 }}>
         {err && <Notice text={err} />}
 
@@ -1413,11 +1403,12 @@ function Board() {
         <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
           {([['board', 'Active board'], ['rented', 'Rented'],
              ['favourites', 'Favourites']] as const).map(([v, label]) => {
-            const on = view === v
+            const on = !updatesMode && view === v
             const badge = v === 'rented' ? rentedCount : v === 'favourites' ? favCount : 0
             return (
               <button key={v} data-tab={v} onClick={() => {
                 setView(v)
+                setUpdatesMode(false)
                 // Drop the selection when the grid underneath it changes. A ref
                 // picked on the active board that is not in Favourites would
                 // still be sent — an invisible selection is the kind of thing
@@ -1446,6 +1437,17 @@ function Board() {
               </button>
             )
           })}
+          <button data-tab="updates" onClick={() => setUpdatesMode(true)} style={{
+            ...chip, borderRadius: 8,
+            background: updatesMode ? A : DCARD,
+            borderColor: updatesMode ? A : DBORDER,
+            color: updatesMode ? '#151C2C' : DTEXT_DIM,
+            fontWeight: updatesMode ? 800 : 600,
+            boxShadow: updatesMode ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
+          }}>
+            Updates
+            <span style={{ marginLeft: 6, fontFamily: FM, fontSize: 10, opacity: .72 }}>{feedRows.length}</span>
+          </button>
           {/* The owner-reachout switch. Sits here rather than in a settings page
               because this is where you notice the robot's work, and it is where
               Kev asked for it (2026-08-16). Admin only, and read-only for
@@ -1455,6 +1457,20 @@ function Board() {
           <a href="/nexus-map" style={{ ...chip, borderRadius: 8, borderColor: '#64B9D7', color: '#BDEBFA', background: '#183044', fontWeight: 700, textDecoration: 'none' }}><Link2 size={13} style={{ display: 'inline', marginRight: 6 }} />NEXUS MAP</a>
           <ReachoutSwitch />
         </div>
+
+        {updatesMode && (
+          <AgentFeed
+            rows={feedRows}
+            mobile={isMobile}
+            onOpen={r => setDetail(r.ref)}
+            onChat={r => setChatting(r)}
+            onBook={r => setBooking(r)}
+            onConfirm={checkIn}
+            busyRef={busyRef}
+          />
+        )}
+
+        {!updatesMode && <>
 
         {/* Kev, 2026-09-15 (future inventory board, spec items 11-12): a
             second, narrower pill row rather than a peer of Active/Rented/
@@ -1733,14 +1749,13 @@ function Board() {
               : 'Nothing matches this search.'}
           </div>
         )}
+        </>}
       </div>
 
-      <details style={{ margin: '12px 24px 30px', border: '1px solid #314452', borderRadius: 16, background: '#101a25', color: '#e8f4f4', overflow: 'hidden' }} onToggle={event=>setIntelligenceOpen(event.currentTarget.open)}>
+      {!updatesMode && <details style={{ margin: '12px 24px 30px', border: '1px solid #314452', borderRadius: 16, background: '#101a25', color: '#e8f4f4', overflow: 'hidden' }} onToggle={event=>setIntelligenceOpen(event.currentTarget.open)}>
         <summary style={{ padding: '20px 24px', cursor: 'pointer', fontSize: 17, fontWeight: 750 }}>Smart Map · Locations &amp; Traffic <span style={{fontSize:11,color:'#92b3bf',marginLeft:12}}>Open map workspace</span></summary>
         {intelligenceOpen && <BoardIntelligenceMap />}
-      </details>
-        </main>
-      </div>
+      </details>}
       {detail && (
         <DetailModal
           refId={detail}
@@ -2843,7 +2858,6 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
   busyRef: string | null
 }) {
   const [filter, setFilter] = useState<'all' | 'action' | 'confirmed' | 'new'>('all')
-  const [open, setOpen] = useState(!mobile)
   const feed = useMemo(() => {
     const unique = new Map<string, Listing>()
     for (const row of rows) if (!unique.has(row.ref)) unique.set(row.ref, row)
@@ -2852,107 +2866,77 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
         || (filter === 'action' && (r.availableStatus === 'pending_check' || r.bookingsPossible))
         || (filter === 'confirmed' && !!r.lastConfirmedAvailableAt)
         || (filter === 'new' && !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86400_000))
-      .sort((a, b) => {
-        const aAction = Number(a.bookingsPossible || a.availableStatus === 'pending_check')
-        const bAction = Number(b.bookingsPossible || b.availableStatus === 'pending_check')
-        if (filter === 'all' && aAction !== bAction) return bAction - aAction
-        return Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01')
-      })
-      .slice(0, 36)
+      .sort((a, b) => Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01'))
+      .slice(0, 80)
   }, [rows, filter])
 
-  const actionCount = rows.filter(r => r.bookingsPossible || r.availableStatus === 'pending_check').length
+  let previousDay = ''
   return (
-    <aside style={{
-      width: mobile ? '100%' : 286, flex: '0 0 auto',
-      position: mobile ? 'relative' : 'sticky', top: mobile ? undefined : 0,
-      maxHeight: mobile ? 'none' : '100vh', overflow: 'hidden',
-      borderRight: mobile ? 'none' : `1px solid ${DBORDER}`,
-      borderBottom: mobile ? `1px solid ${DBORDER}` : 'none',
-      background: '#0D1721', color: '#EDF5F5', zIndex: 5,
-    }} aria-label="Agent property feed">
-      <button type="button" onClick={() => setOpen(v => !v)} style={{
-        width: '100%', border: 0, borderBottom: open ? `1px solid ${DBORDER}` : 0,
-        background: 'transparent', color: '#EDF5F5', padding: mobile ? '12px 14px' : '18px 16px 14px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left',
-      }}>
-        <span>
-          <span style={{ display: 'block', fontSize: 10, letterSpacing: '0.15em', color: A, fontWeight: 800 }}>LIVE WORKSPACE</span>
-          <strong style={{ display: 'block', marginTop: 4, fontSize: 17 }}>Agent Feed</strong>
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {actionCount > 0 && <b style={{ minWidth: 22, height: 22, padding: '0 6px', borderRadius: 999, background: BOOK_YELLOW, color: '#111827', display: 'grid', placeItems: 'center', fontSize: 10 }}>{actionCount}</b>}
-          <ChevronDown size={17} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease' }} />
-        </span>
-      </button>
-      {open && <>
-        <div style={{ display: 'flex', gap: 5, padding: '10px 10px 8px', overflowX: 'auto' }}>
-          {([['all', 'Live'], ['action', 'Action'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
-            <button key={value} type="button" onClick={() => setFilter(value)} style={{
-              border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
-              background: filter === value ? AD : 'transparent', color: filter === value ? A : '#A9BBC4',
-              padding: '6px 9px', fontSize: 10, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
-            }}>{label}</button>
-          ))}
-        </div>
-        <div style={{
-          display: mobile ? 'flex' : 'block', gap: 8, padding: '2px 10px 12px',
-          overflowX: mobile ? 'auto' : 'hidden', overflowY: mobile ? 'hidden' : 'auto',
-          maxHeight: mobile ? 206 : 'calc(100vh - 118px)', scrollbarWidth: 'thin',
-        }}>
-          {feed.map(r => {
-            const touch = listingTouch(r)
-            const needsAction = r.availableStatus === 'pending_check'
-            const bookable = !!r.bookingsPossible
-            return <article key={r.ref} style={{
-              minWidth: mobile ? 258 : undefined, marginBottom: mobile ? 0 : 8,
-              border: `1px solid ${bookable ? 'rgba(232,185,49,.7)' : needsAction ? 'rgba(199,57,26,.65)' : DBORDER}`,
-              borderRadius: 12, overflow: 'hidden', background: DCARD,
-              boxShadow: bookable ? '0 0 16px rgba(232,185,49,.10)' : 'none',
+    <section aria-label="Property updates" style={{ maxWidth: 1040, margin: '0 auto 32px' }}>
+      <header style={{ padding: mobile ? '8px 2px 14px' : '12px 4px 18px' }}>
+        <span style={{ color: A, fontSize: 10, letterSpacing: '.16em', fontWeight: 850 }}>DAILY PROPERTY INBOX</span>
+        <h2 style={{ color: DTEXT, fontSize: mobile ? 22 : 28, margin: '5px 0 4px' }}>What changed today</h2>
+        <p style={{ color: DTEXT_DIM, fontSize: 12, margin: 0 }}>New listings, owner confirmations and items needing action — newest first.</p>
+      </header>
+      <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
+        {([['all', 'All updates'], ['action', 'Needs action'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
+          <button key={value} type="button" onClick={() => setFilter(value)} style={{
+            border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
+            background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
+            padding: '8px 13px', fontSize: 11, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}>{label}</button>
+        ))}
+      </nav>
+      <div style={{ border: `1px solid ${DBORDER}`, borderRadius: 15, overflow: 'hidden', background: DCARD }}>
+        {feed.map(r => {
+          const touch = listingTouch(r)
+          const day = touch ? new Date(touch.at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Older updates'
+          const showDay = day !== previousDay
+          previousDay = day
+          const needsAction = r.availableStatus === 'pending_check'
+          const bookable = !!r.bookingsPossible
+          const eventLabel = needsAction || bookable ? 'ACTION' : touch?.kind === 'Uploaded' ? 'NEW' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
+          const eventColor = eventLabel === 'ACTION' ? HOT : eventLabel === 'NEW' ? '#4D7CE0' : eventLabel === 'CONFIRMED' ? '#2F8E68' : '#96772C'
+          const market = !['rented', 'archived', 'not_available'].includes(r.availableStatus || '')
+          const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE NOW'
+            : r.availability?.kind === 'date' ? `FREE ${r.availability.label}` : 'DATE UNCLEAR'
+          return <div key={r.ref}>
+            {showDay && <div style={{ padding: '9px 14px', background: DTRAY, borderBottom: `1px solid ${DBORDER}`, color: DTEXT_FAINT, fontSize: 10, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}>{day}</div>}
+            <article style={{
+              display: 'grid', gridTemplateColumns: mobile ? '54px minmax(0,1fr)' : '64px minmax(0,1fr) auto',
+              gap: mobile ? 10 : 14, alignItems: 'center', padding: mobile ? 10 : '12px 14px',
+              borderBottom: `1px solid ${DBORDER}`, background: needsAction ? 'rgba(199,57,26,.045)' : bookable ? 'rgba(232,185,49,.045)' : 'transparent',
             }}>
-              <button type="button" onClick={() => onOpen(r)} style={{
-                width: '100%', border: 0, background: 'transparent', color: DTEXT,
-                padding: 10, display: 'grid', gridTemplateColumns: '52px 1fr', gap: 10,
-                textAlign: 'left', cursor: 'pointer',
-              }}>
-                <div style={{ width: 52, height: 52, borderRadius: 9, overflow: 'hidden', background: DTRAY }}>
-                  {r.images?.[0]
-                    ? <img src={r.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ height: '100%', display: 'grid', placeItems: 'center', color: DTEXT_FAINT }}>⌂</span>}
-                </div>
-                <span style={{ minWidth: 0 }}>
-                  <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                    <b style={{ fontFamily: FM, fontSize: 11 }}>#{r.ref}</b>
-                    <small style={{ color: touch?.kind === 'Confirmed' ? '#65C69A' : DTEXT_FAINT, fontSize: 9, whiteSpace: 'nowrap' }}>
-                      {touch ? `${touch.kind} ${ago(touch.at)}` : 'No activity'}
-                    </small>
-                  </span>
-                  <strong style={{ display: 'block', marginTop: 5, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {r.town || 'Malta'} · {r.type || 'Property'}
-                  </strong>
-                  <span style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
-                    {bookable && <em style={feedPill('#E8B931', '#18202D')}>BOOK</em>}
-                    {needsAction && <em style={feedPill('#C7391A', '#FFF')}>RECHECK</em>}
-                    {r.lastConfirmedAvailableAt && <em style={feedPill('rgba(52,168,116,.18)', '#65C69A')}>AVAILABLE</em>}
-                    {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let')) && <em style={feedPill('rgba(126,200,227,.15)', '#7EC8E3')}>WINTER</em>}
-                  </span>
+              <button type="button" onClick={() => onOpen(r)} style={{ width: mobile ? 54 : 64, height: mobile ? 54 : 64, padding: 0, border: 0, borderRadius: 10, overflow: 'hidden', background: DTRAY, cursor: 'pointer' }}>
+                {r.images?.[0] ? <img src={r.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: DTEXT_FAINT }}>⌂</span>}
+              </button>
+              <button type="button" onClick={() => onOpen(r)} style={{ minWidth: 0, padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: DTEXT }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                  <b style={{ fontSize: 10, padding: '3px 7px', borderRadius: 999, color: '#FFF', background: eventColor }}>{eventLabel}</b>
+                  <strong style={{ fontFamily: FM, fontSize: 12 }}>#{r.ref}</strong>
+                  <small style={{ color: DTEXT_FAINT, marginLeft: 'auto' }}>{touch ? ago(touch.at) : '—'}</small>
+                </span>
+                <strong style={{ display: 'block', marginTop: 6, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.town || 'Malta'} · {r.type || 'Property'}{r.price ? ` · €${r.price.toLocaleString('en-GB')}` : ''}</strong>
+                <span style={{ display: 'flex', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
+                  <em style={feedPill(market ? 'rgba(77,124,224,.14)' : 'rgba(120,125,135,.16)', market ? '#78A0F1' : DTEXT_FAINT)}>{market ? 'ON MARKET' : 'OFF MARKET'}</em>
+                  <em style={feedPill(r.availability?.kind === 'now' ? 'rgba(47,142,104,.17)' : 'rgba(150,119,44,.15)', r.availability?.kind === 'now' ? '#58B88F' : '#C2A75E')}>{availabilityText}</em>
+                  {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let')) && <em style={feedPill('rgba(126,200,227,.15)', '#7EC8E3')}>WINTER</em>}
                 </span>
               </button>
-              <div style={{ display: 'grid', gridTemplateColumns: needsAction ? 'repeat(4,1fr)' : 'repeat(3,1fr)', borderTop: `1px solid ${DBORDER}` }}>
+              <div style={{ gridColumn: mobile ? '1 / -1' : undefined, display: 'flex', gap: 6, justifyContent: mobile ? 'stretch' : 'flex-end' }}>
                 <FeedAction label="Open" onClick={() => onOpen(r)} />
                 <FeedAction label="Chat" onClick={() => onChat(r)} />
                 <FeedAction label="Book" accent={bookable} onClick={() => onBook(r)} />
                 {needsAction && <FeedAction label={busyRef === r.ref ? '…' : 'Confirm'} disabled={!!busyRef} onClick={() => onConfirm(r)} />}
               </div>
             </article>
-          })}
-          {!feed.length && <p style={{ color: DTEXT_FAINT, fontSize: 11, padding: 12 }}>Nothing in this feed yet.</p>}
-        </div>
-      </>}
-    </aside>
+          </div>
+        })}
+        {!feed.length && <p style={{ color: DTEXT_FAINT, fontSize: 12, padding: 24, textAlign: 'center' }}>Nothing in this update view yet.</p>}
+      </div>
+    </section>
   )
 }
-
 function feedPill(background: string, color: string) {
   return { background, color, borderRadius: 999, padding: '2px 6px', fontSize: 8, fontStyle: 'normal', fontWeight: 800, letterSpacing: '0.06em' }
 }
@@ -3610,14 +3594,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               .filter(Boolean).join(' - ')}
           </span>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.04em' }}>
-              {r.availableDate ? 'Available' : (avail.text || 'Soon')}
+            <div style={{ fontSize: 9, color: offMarket ? '#E29B9B' : '#78A0F1', letterSpacing: '0.07em', fontWeight: 800 }}>
+              {offMarket || r.availableStatus === 'not_available' ? 'OFF MARKET' : 'ON MARKET'}
             </div>
-            {r.availableDate && (
-              <div style={{ fontSize: 12, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1 }}>
-                {fmtDateDots(r.availableDate)}
-              </div>
-            )}
+            <div style={{ fontSize: 10.5, color: r.availability?.kind === 'now' ? '#58B88F' : DTEXT_DIM, fontFamily: FM, fontWeight: 650, marginTop: 2 }}>
+              {r.availability?.kind === 'now' ? 'Available now'
+                : r.availability?.kind === 'date' ? `Free ${fmtDateDots(r.availability.date)}`
+                : 'Move-in date unclear'}
+            </div>
             {/* Kev, 2026-09-16 (WINTER tag, spec item 1): "until April" right
                 under Available — same r.availableUntil the WINTER badge
                 above reads, so the two facts can never disagree. */}
