@@ -2922,7 +2922,9 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           previousDay = day
           const needsAction = r.availableStatus === 'pending_check'
           const bookable = !!r.bookingsPossible
-          const eventLabel = touch?.kind === 'Uploaded' ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
+          const createdTime = r.createdAt ? Date.parse(r.createdAt) : NaN
+          const isNewListing = Number.isFinite(createdTime) && Date.now() - createdTime < 7 * 86400_000
+          const eventLabel = isNewListing ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
           const eventColor = eventLabel === 'NEW LISTING' ? '#4D7CE0' : eventLabel === 'CONFIRMED' ? '#2F8E68' : '#96772C'
           const progressLabel = needsAction ? 'CHECK AVAILABILITY' : bookable ? 'VIEWING READY' : null
           const market = !['rented', 'archived', 'not_available'].includes(r.availableStatus || '')
