@@ -2888,9 +2888,9 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
             <CircleHelp size={17} color="#E06A4D" style={{ flex: '0 0 auto', marginTop: 1 }} />
             <div>
-              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>What does ACTION mean? · {actionCount} open</strong>
+              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>Ready to progress · {actionCount} listings</strong>
               <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 11, lineHeight: 1.45, marginTop: 3 }}>
-                An agent can move this property forward now: book an owner-approved viewing, or verify an availability reply the system could not safely classify. Open the row to see the reason.
+                “New listing” and “Updated” tell you what changed. “Viewing ready” means booking can start; “Check availability” means an owner reply still needs a quick review.
               </span>
             </div>
           </div>
@@ -2905,7 +2905,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
         </div>
       </div>
       <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
-        {([['all', 'All updates'], ['action', 'Needs action'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
+        {([['all', 'All updates'], ['action', 'Ready to progress'], ['confirmed', 'Confirmed'], ['new', 'New listings']] as const).map(([value, label]) => (
           <button key={value} type="button" onClick={() => setFilter(value)} style={{
             border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
             background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
@@ -2922,8 +2922,9 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           previousDay = day
           const needsAction = r.availableStatus === 'pending_check'
           const bookable = !!r.bookingsPossible
-          const eventLabel = needsAction || bookable ? 'ACTION' : touch?.kind === 'Uploaded' ? 'NEW' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
-          const eventColor = eventLabel === 'ACTION' ? HOT : eventLabel === 'NEW' ? '#4D7CE0' : eventLabel === 'CONFIRMED' ? '#2F8E68' : '#96772C'
+          const eventLabel = touch?.kind === 'Uploaded' ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
+          const eventColor = eventLabel === 'NEW LISTING' ? '#4D7CE0' : eventLabel === 'CONFIRMED' ? '#2F8E68' : '#96772C'
+          const progressLabel = needsAction ? 'CHECK AVAILABILITY' : bookable ? 'VIEWING READY' : null
           const market = !['rented', 'archived', 'not_available'].includes(r.availableStatus || '')
           const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE NOW'
             : r.availability?.kind === 'date' ? `FREE ${r.availability.label}` : 'DATE UNCLEAR'
@@ -2940,6 +2941,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
               <button type="button" onClick={() => onOpen(r)} style={{ minWidth: 0, padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: DTEXT }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                   <b style={{ fontSize: 10, padding: '3px 7px', borderRadius: 999, color: '#FFF', background: eventColor }}>{eventLabel}</b>
+                  {progressLabel && <b style={{ fontSize: 9, padding: '3px 7px', borderRadius: 999, color: needsAction ? '#F4B09E' : BOOK_YELLOW, border: `1px solid ${needsAction ? 'rgba(224,106,77,.42)' : 'rgba(232,185,49,.42)'}`, background: needsAction ? 'rgba(199,57,26,.11)' : 'rgba(232,185,49,.10)' }}>{progressLabel}</b>}
                   <strong style={{ fontFamily: FM, fontSize: 12 }}>#{r.ref}</strong>
                   <small style={{ color: DTEXT_FAINT, marginLeft: 'auto' }}>{touch ? ago(touch.at) : '—'}</small>
                 </span>
