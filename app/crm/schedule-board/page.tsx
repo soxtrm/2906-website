@@ -1398,45 +1398,16 @@ function Board() {
       <div style={{ padding: isMobile ? 14 : 22 }}>
         {err && <Notice text={err} />}
 
-        {/* Active board ⇄ rented. "Needs recheck" no longer has its own tab —
-            those cards stay on the active board with a watermark instead. */}
+        {/* Two primary workspaces, then compact utility views. Rented stays
+            available for restoring a listing without competing with daily work. */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-          {([['board', 'Active board'], ['rented', 'Rented'],
-             ['favourites', 'Favourites']] as const).map(([v, label]) => {
-            const on = !updatesMode && view === v
-            const badge = v === 'rented' ? rentedCount : v === 'favourites' ? favCount : 0
-            return (
-              <button key={v} data-tab={v} onClick={() => {
-                setView(v)
-                setUpdatesMode(false)
-                // Drop the selection when the grid underneath it changes. A ref
-                // picked on the active board that is not in Favourites would
-                // still be sent — an invisible selection is the kind of thing
-                // that puts a dot in a group nobody meant to touch.
-                setSelected(new Set())
-              }} style={{
-                ...chip, borderRadius: 8,
-                background: on ? A : DCARD,
-                borderColor: on ? A : DBORDER,
-                color: on ? '#151C2C' : DTEXT_DIM,
-                fontWeight: on ? 700 : 500,
-                // Kev's redesign brief (2026-08-22): a thin gold trim on the
-                // active tab — same navy fill as before, now with the accent
-                // that was otherwise only living on the sidebar.
-                boxShadow: on ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
-              }}>
-                {label}
-                {badge > 0 && (
-                  <span style={{
-                    marginLeft: 6, fontFamily: FM, fontSize: 10,
-                    background: on ? 'rgba(255,255,255,0.22)' : AD,
-                    color: on ? '#FFF' : '#7A6534',
-                    padding: '1px 5px', borderRadius: 999,
-                  }}>{badge}</span>
-                )}
-              </button>
-            )
-          })}
+          <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }} style={{
+            ...chip, borderRadius: 8, background: !updatesMode && view === 'board' ? A : DCARD,
+            borderColor: !updatesMode && view === 'board' ? A : DBORDER,
+            color: !updatesMode && view === 'board' ? '#151C2C' : DTEXT_DIM,
+            fontWeight: !updatesMode && view === 'board' ? 800 : 600,
+            boxShadow: !updatesMode && view === 'board' ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
+          }}>Active Board</button>
           <button data-tab="updates" onClick={() => setUpdatesMode(true)} style={{
             ...chip, borderRadius: 8,
             background: updatesMode ? A : DCARD,
@@ -1445,9 +1416,19 @@ function Board() {
             fontWeight: updatesMode ? 800 : 600,
             boxShadow: updatesMode ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
           }}>
-            Updates
+            Update List
             <span style={{ marginLeft: 6, fontFamily: FM, fontSize: 10, opacity: .72 }}>{feedRows.length}</span>
           </button>
+          <div style={{ display: 'flex', gap: 5, marginLeft: isMobile ? 0 : 'auto' }}>
+            {([['favourites', 'Favourites', favCount], ['rented', 'Rented', rentedCount]] as const).map(([v, label, badge]) => {
+              const on = !updatesMode && view === v
+              return <button key={v} data-tab={v} onClick={() => { setView(v); setUpdatesMode(false); setSelected(new Set()) }} style={{
+                ...chip, borderRadius: 999, padding: '6px 9px', fontSize: 10,
+                background: on ? 'rgba(184,149,63,.17)' : 'transparent',
+                borderColor: on ? A : DBORDER, color: on ? A : DTEXT_FAINT, fontWeight: 700,
+              }}>{label}<span style={{ marginLeft: 5, fontFamily: FM, opacity: .76 }}>{badge}</span></button>
+            })}
+          </div>
           {/* The owner-reachout switch. Sits here rather than in a settings page
               because this is where you notice the robot's work, and it is where
               Kev asked for it (2026-08-16). Admin only, and read-only for
@@ -2859,20 +2840,20 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
   onConfirm: (r: Listing) => void
   busyRef: string | null
 }) {
-  const [filter, setFilter] = useState<'all' | 'action' | 'confirmed' | 'new'>('all')
+  const [filter, setFilter] = useState<'all' | 'progress' | 'confirmed' | 'new'>('all')
   const feed = useMemo(() => {
     const unique = new Map<string, Listing>()
     for (const row of rows) if (!unique.has(row.ref)) unique.set(row.ref, row)
     return [...unique.values()]
       .filter(r => filter === 'all'
-        || (filter === 'action' && (r.availableStatus === 'pending_check' || r.bookingsPossible))
+        || (filter === 'progress' && (r.availableStatus === 'pending_check' || r.bookingsPossible))
         || (filter === 'confirmed' && !!r.lastConfirmedAvailableAt)
         || (filter === 'new' && !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86400_000))
       .sort((a, b) => Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01'))
       .slice(0, 80)
   }, [rows, filter])
 
-  const actionCount = useMemo(() => rows.filter(r => r.availableStatus === 'pending_check' || r.bookingsPossible).length, [rows])
+  const progressCount = useMemo(() => rows.filter(r => r.availableStatus === 'pending_check' || r.bookingsPossible).length, [rows])
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   let previousDay = ''
@@ -2888,7 +2869,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
             <CircleHelp size={17} color="#E06A4D" style={{ flex: '0 0 auto', marginTop: 1 }} />
             <div>
-              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>Ready to progress · {actionCount} listings</strong>
+              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>Ready to progress · {progressCount} listings</strong>
               <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 11, lineHeight: 1.45, marginTop: 3 }}>
                 “New listing” and “Updated” tell you what changed. “Viewing ready” means booking can start; “Check availability” means an owner reply still needs a quick review.
               </span>
@@ -2905,7 +2886,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
         </div>
       </div>
       <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
-        {([['all', 'All updates'], ['action', 'Ready to progress'], ['confirmed', 'Confirmed'], ['new', 'New listings']] as const).map(([value, label]) => (
+        {([['all', 'All updates'], ['progress', 'Ready to progress'], ['confirmed', 'Confirmed'], ['new', 'New listings']] as const).map(([value, label]) => (
           <button key={value} type="button" onClick={() => setFilter(value)} style={{
             border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
             background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
@@ -2933,13 +2914,15 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           return <div key={r.ref}>
             {showDay && <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '9px 14px', background: 'linear-gradient(180deg, var(--crm-surface) 60%, transparent)', color: DTEXT_FAINT }}><span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 999, padding: '5px 11px', boxShadow: '0 3px 12px rgba(0,0,0,.18)', fontSize: 9, fontWeight: 850, letterSpacing: '.08em', textTransform: 'uppercase' }}>{dayLabel}</span></div>}
             <article style={{
-              display: 'grid', gridTemplateColumns: mobile ? '54px minmax(0,1fr)' : '64px minmax(0,1fr) auto',
+              display: 'grid', gridTemplateColumns: mobile ? '1fr' : '202px minmax(0,1fr) auto',
               gap: mobile ? 10 : 14, alignItems: 'center', padding: mobile ? 10 : '12px 14px',
               borderBottom: `1px solid ${DBORDER}`, background: needsAction ? 'rgba(199,57,26,.045)' : bookable ? 'rgba(232,185,49,.045)' : 'transparent',
             }}>
-              <button type="button" onClick={() => onOpen(r)} style={{ width: mobile ? 54 : 64, height: mobile ? 54 : 64, padding: 0, border: 0, borderRadius: 10, overflow: 'hidden', background: DTRAY, cursor: 'pointer' }}>
-                {r.images?.[0] ? <img src={r.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: DTEXT_FAINT }}>⌂</span>}
-              </button>
+              <div aria-label={`Three photos of #${r.ref}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 5, width: mobile ? '100%' : 202 }}>
+                {[0, 1, 2].map(index => <button key={index} type="button" onClick={() => onOpen(r)} style={{ height: mobile ? 72 : 64, minWidth: 0, padding: 0, border: 0, borderRadius: 9, overflow: 'hidden', background: DTRAY, cursor: 'pointer' }}>
+                  {r.images?.[index] ? <img src={r.images[index]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', color: DTEXT_FAINT }}>⌂</span>}
+                </button>)}
+              </div>
               <button type="button" onClick={() => onOpen(r)} style={{ minWidth: 0, padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: DTEXT }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                   <b style={{ fontSize: 10, padding: '3px 7px', borderRadius: 999, color: '#FFF', background: eventColor }}>{eventLabel}</b>
