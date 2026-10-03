@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -1465,6 +1465,7 @@ function Board() {
             onOpen={r => setDetail(r.ref)}
             onChat={r => setChatting(r)}
             onBook={r => setBooking(r)}
+            onTag={r => tagOne(r)}
             onConfirm={checkIn}
             busyRef={busyRef}
           />
@@ -2848,12 +2849,13 @@ function ReachoutSwitch() {
   )
 }
 
-function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }: {
+function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, busyRef }: {
   rows: Listing[]
   mobile: boolean
   onOpen: (r: Listing) => void
   onChat: (r: Listing) => void
   onBook: (r: Listing) => void
+  onTag: (r: Listing) => void
   onConfirm: (r: Listing) => void
   busyRef: string | null
 }) {
@@ -2870,14 +2872,38 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
       .slice(0, 80)
   }, [rows, filter])
 
+  const actionCount = useMemo(() => rows.filter(r => r.availableStatus === 'pending_check' || r.bookingsPossible).length, [rows])
+  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
   let previousDay = ''
   return (
-    <section aria-label="Property updates" style={{ maxWidth: 1040, margin: '0 auto 32px' }}>
-      <header style={{ padding: mobile ? '8px 2px 14px' : '12px 4px 18px' }}>
+    <section aria-label="Property updates" style={{ maxWidth: 1120, margin: '0 auto 32px' }}>
+      <header style={{ padding: mobile ? '8px 2px 12px' : '10px 4px 16px' }}>
         <span style={{ color: A, fontSize: 10, letterSpacing: '.16em', fontWeight: 850 }}>DAILY PROPERTY INBOX</span>
-        <h2 style={{ color: DTEXT, fontSize: mobile ? 22 : 28, margin: '5px 0 4px' }}>What changed today</h2>
-        <p style={{ color: DTEXT_DIM, fontSize: 12, margin: 0 }}>New listings, owner confirmations and items needing action — newest first.</p>
+        <h2 style={{ color: DTEXT, fontSize: mobile ? 23 : 30, margin: '4px 0 3px' }}>Today, at one glance</h2>
+        <p style={{ color: DTEXT_DIM, fontSize: 12, margin: 0 }}>Scroll through the days like a chat. Newest property activity stays at the top.</p>
       </header>
+      <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'minmax(0,1.35fr) minmax(0,1fr)', gap: 9, marginBottom: 12 }}>
+        <div style={{ border: `1px solid rgba(199,57,26,.45)`, borderRadius: 13, padding: '11px 13px', background: 'rgba(199,57,26,.07)', color: DTEXT }}>
+          <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+            <CircleHelp size={17} color="#E06A4D" style={{ flex: '0 0 auto', marginTop: 1 }} />
+            <div>
+              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>What does ACTION mean? · {actionCount} open</strong>
+              <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 11, lineHeight: 1.45, marginTop: 3 }}>
+                An agent can move this property forward now: book an owner-approved viewing, or verify an availability reply the system could not safely classify. Open the row to see the reason.
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style={{ border: `1px solid rgba(100,185,215,.35)`, borderRadius: 13, padding: '10px 12px', background: 'rgba(24,48,68,.72)', color: DTEXT }}>
+          <strong style={{ display: 'block', fontSize: 10, letterSpacing: '.12em', color: '#BDEBFA' }}>MALTA MOVING NOW</strong>
+          <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 10, lineHeight: 1.4, margin: '3px 0 8px' }}>Bus GPS and road traffic are separate sources.</span>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+            <a href="https://www.publictransport.com.mt/real-time/" target="_blank" rel="noreferrer" style={{ ...feedTransportLink, color: '#BDEBFA' }}><BusFront size={13} /> Tallinja live buses ↗</a>
+            <a href="/nexus-map" style={{ ...feedTransportLink, color: '#E8D9AD' }}><CarFront size={13} /> Malta road traffic</a>
+          </div>
+        </div>
+      </div>
       <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
         {([['all', 'All updates'], ['action', 'Needs action'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
           <button key={value} type="button" onClick={() => setFilter(value)} style={{
@@ -2887,10 +2913,11 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
           }}>{label}</button>
         ))}
       </nav>
-      <div style={{ border: `1px solid ${DBORDER}`, borderRadius: 15, overflow: 'hidden', background: DCARD }}>
+      <div style={{ border: `1px solid ${DBORDER}`, borderRadius: 15, overflowY: 'auto', overflowX: 'hidden', background: DCARD, maxHeight: mobile ? '68vh' : 'min(720px, calc(100vh - 300px))', scrollbarColor: `${A} ${DTRAY}` }}>
         {feed.map(r => {
           const touch = listingTouch(r)
           const day = touch ? new Date(touch.at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Older updates'
+          const dayLabel = day === today ? `TODAY · ${day}` : day
           const showDay = day !== previousDay
           previousDay = day
           const needsAction = r.availableStatus === 'pending_check'
@@ -2901,7 +2928,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
           const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE NOW'
             : r.availability?.kind === 'date' ? `FREE ${r.availability.label}` : 'DATE UNCLEAR'
           return <div key={r.ref}>
-            {showDay && <div style={{ padding: '9px 14px', background: DTRAY, borderBottom: `1px solid ${DBORDER}`, color: DTEXT_FAINT, fontSize: 10, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}>{day}</div>}
+            {showDay && <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '9px 14px', background: 'linear-gradient(180deg, var(--crm-surface) 60%, transparent)', color: DTEXT_FAINT }}><span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 999, padding: '5px 11px', boxShadow: '0 3px 12px rgba(0,0,0,.18)', fontSize: 9, fontWeight: 850, letterSpacing: '.08em', textTransform: 'uppercase' }}>{dayLabel}</span></div>}
             <article style={{
               display: 'grid', gridTemplateColumns: mobile ? '54px minmax(0,1fr)' : '64px minmax(0,1fr) auto',
               gap: mobile ? 10 : 14, alignItems: 'center', padding: mobile ? 10 : '12px 14px',
@@ -2927,6 +2954,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
                 <FeedAction label="Open" onClick={() => onOpen(r)} />
                 <FeedAction label="Chat" onClick={() => onChat(r)} />
                 <FeedAction label="Book" accent={bookable} onClick={() => onBook(r)} />
+                <FeedAction label="@ Tag" icon={<AtSign size={11} />} onClick={() => onTag(r)} />
                 {needsAction && <FeedAction label={busyRef === r.ref ? '…' : 'Confirm'} disabled={!!busyRef} onClick={() => onConfirm(r)} />}
               </div>
             </article>
@@ -2937,16 +2965,17 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onConfirm, busyRef }:
     </section>
   )
 }
+const feedTransportLink = { display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${DBORDER}`, borderRadius: 8, background: DTRAY, padding: '7px 9px', fontSize: 10, fontWeight: 750, textDecoration: 'none' }
 function feedPill(background: string, color: string) {
   return { background, color, borderRadius: 999, padding: '2px 6px', fontSize: 8, fontStyle: 'normal', fontWeight: 800, letterSpacing: '0.06em' }
 }
 
-function FeedAction({ label, onClick, accent = false, disabled = false }: { label: string; onClick: () => void; accent?: boolean; disabled?: boolean }) {
+function FeedAction({ label, onClick, icon, accent = false, disabled = false }: { label: string; onClick: () => void; icon?: React.ReactNode; accent?: boolean; disabled?: boolean }) {
   return <button type="button" onClick={onClick} disabled={disabled} style={{
     border: 0, borderRight: `1px solid ${DBORDER}`, background: accent ? 'rgba(232,185,49,.16)' : DTRAY,
-    color: accent ? BOOK_YELLOW : DTEXT_DIM, padding: '8px 4px', fontSize: 9, fontWeight: 750,
+    color: accent ? BOOK_YELLOW : DTEXT_DIM, padding: '8px 7px', fontSize: 9, fontWeight: 750, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 2,
     cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? .55 : 1,
-  }}>{label}</button>
+  }}>{icon}{label}</button>
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
