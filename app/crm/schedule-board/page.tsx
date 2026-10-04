@@ -11,14 +11,15 @@
 // "Request Viewing-Location" button.
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, CircleHelp, LayoutGrid, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets, Plus, CircleAlert } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup, LocationSelect } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
-import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
+import { RentalModePicker, RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
 import dynamic from 'next/dynamic'
@@ -1848,6 +1849,7 @@ function Board() {
           tagging={tagging}
           onStar={r => toggleStar(r)}
           onBook={r => { setDetail(null); setBooking(r) }}
+          onChanged={reload}
         />
       )}
 
@@ -2711,69 +2713,187 @@ async function downloadPhotos(r: Listing, onProgress: (done: number) => void) {
   }
 }
 
-// The button itself. Its own tiny component so the download state belongs to one
-// card and a click cannot bubble up into "open the listing".
-// Kev, 2026-09-17 ("settings rad bei die ...., Winterlet unso, nur Admins
-// können es direkt ändern"): a small classification control living next to
-// the "..." Tools button. Admins apply immediately via the ordinary
-// property PATCH; a non-admin's change comes back with `pendingChange` set
-// instead of being applied — the backend decides, this component just
-// reflects whichever happened.
-function ClassificationGear({ r, dark, isAdmin }: { r: Listing; dark: boolean; isAdmin: boolean }) {
+// The card gear is the listing editor. Owner identity and contact data are
+// intentionally absent: this surface edits the property record only.
+function ClassificationGear({ r, dark, isAdmin, onChanged }: {
+  r: Listing; dark: boolean; isAdmin: boolean; onChanged: () => void
+}) {
   const [open, setOpen] = useState(false)
-  const [value, setValue] = useState<string>(r.leaseType || 'long_let')
-  const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  const [form, setForm] = useState<any>(null)
+  const [images, setImages] = useState<any[]>([])
+  const uploadRef = useRef<HTMLInputElement>(null)
 
-  async function apply() {
-    if (value === (r.leaseType || 'long_let')) { setOpen(false); return }
-    setBusy(true)
+  const set = (key: string, value: any) => setForm((current: any) => ({ ...current, [key]: value }))
+  const date = (value: any, withTime = false) => value ? String(value).slice(0, withTime ? 16 : 10) : ''
+  const triState = (value: string) => value === 'true' ? true : value === 'false' ? false : null
+
+  const load = useCallback(async () => {
+    setLoading(true); setNote(null)
     try {
-      const d = await crmJson(`properties/${r.id}`, 'PATCH', { lease_type: value })
-      setNote(d?.pendingChange ? 'Queued for admin approval' : 'Updated')
-      setTimeout(() => { setOpen(false); setNote(null) }, 1400)
-    } catch (e: any) {
-      setNote(e?.data?.error || e?.message || 'Failed')
-    } finally { setBusy(false) }
+      const response = await crmFetch(`properties/${r.id}`)
+      const p = response.property
+      setImages(Array.isArray(p.images) ? p.images : [])
+      setForm({
+        property_type: p.type || '', town: p.location?.town || '', street: p.location?.street || '', apt: p.location?.apt || '',
+        bedrooms: p.beds ?? '', bathrooms: p.baths ?? '', size_sqm: p.sizeSqm ?? '',
+        longlet_price: p.prices?.longlet ?? '', sale_price: p.prices?.sale ?? '', shortlet: !!p.prices?.shortlet,
+        available_status: p.availableStatus || 'available', available_date: date(p.availableDate), available_until: date(p.availableUntil),
+        viewing_status: p.viewingStatus || 'none', viewing_date: date(p.viewingDate, true), viewing_notes: p.viewingNotes || '',
+        description: p.description || '', internal_notes: p.internalNotes || '', rental_modes: p.rentalModes || ['long_let'],
+        has_balcony: p.hasBalcony === true ? 'true' : p.hasBalcony === false ? 'false' : '', balcony_size: p.balconySize || '',
+        has_study_room: p.hasStudyRoom === true ? 'true' : p.hasStudyRoom === false ? 'false' : '',
+        parking_available: p.parkingAvailable === true ? 'true' : p.parkingAvailable === false ? 'false' : '',
+        is_exclusive: !!p.exclusive, exclusive_until: date(p.exclusiveUntil), published: !!p.published,
+      })
+    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Listing could not be loaded.') }
+    finally { setLoading(false) }
+  }, [r.id])
+
+  useEffect(() => { if (open) load() }, [open, load])
+  useEffect(() => {
+    if (!open) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', close)
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', close) }
+  }, [open])
+
+  async function save() {
+    if (!form || saving) return
+    setSaving(true); setNote(null)
+    try {
+      const payload = {
+        property_type: form.property_type, town: form.town, street: form.street, apt: form.apt,
+        bedrooms: form.bedrooms, bathrooms: form.bathrooms, size_sqm: form.size_sqm,
+        longlet_price: form.longlet_price, sale_price: form.sale_price, shortlet: !!form.shortlet,
+        available_status: form.available_status, available_date: form.available_date || null,
+        available_until: form.available_until || null, viewing_status: form.viewing_status,
+        viewing_date: form.viewing_date || null, viewing_notes: form.viewing_notes,
+        description: form.description, internal_notes: form.internal_notes, rental_modes: form.rental_modes,
+        has_balcony: triState(form.has_balcony), balcony_size: form.balcony_size || null,
+        has_study_room: triState(form.has_study_room), parking_available: triState(form.parking_available),
+        is_exclusive: !!form.is_exclusive, exclusive_until: form.exclusive_until || null, published: !!form.published,
+      }
+      const response = await crmJson(`properties/${r.id}`, 'PATCH', payload)
+      setNote(response?.pendingChange ? 'Changes sent for admin approval.' : 'Listing saved. The board is updating now.')
+      onChanged()
+    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Could not save this listing.') }
+    finally { setSaving(false) }
   }
 
-  return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        title="Change lease type"
-        style={{ ...trayMoreBtn(dark), width: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Settings size={15} />
-      </button>
-      {open && (
-        <div style={{
-          position: 'absolute', bottom: '110%', right: 0, zIndex: 40,
-          background: dark ? '#141B29' : '#fff', border: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : '#E5E1D8'}`,
-          borderRadius: 10, padding: 10, width: 200, boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-        }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: dark ? '#8B93A6' : '#8A8578', marginBottom: 6 }}>
-            {isAdmin ? 'Lease type' : 'Propose lease type'}
+  async function upload(files: FileList | null) {
+    if (!files?.length || uploading) return
+    const body = new FormData()
+    Array.from(files).forEach(file => body.append('images', file))
+    setUploading(true); setNote(null)
+    try {
+      const response = await crmFetch(`schedule-board/listings/${encodeURIComponent(r.ref)}/images`, { method: 'POST', body })
+      setImages(response.images || [])
+      setNote(`${response.added} photo${response.added === 1 ? '' : 's'} added.`)
+      onChanged()
+    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Photos could not be uploaded.') }
+    finally { setUploading(false) }
+  }
+
+  const editor = open && typeof document !== 'undefined' ? createPortal(
+    <div className="argus-listing-editor-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false) }}>
+      <section className="argus-listing-editor" role="dialog" aria-modal="true" aria-label={`Edit listing ${r.ref}`}>
+        <header>
+          <div className="argus-listing-editor-title">
+            <span><Settings size={19} /></span>
+            <div><small>PROPERTY SETTINGS</small><h2>Edit #{r.ref}</h2></div>
           </div>
-          <select value={value} onChange={e => setValue(e.target.value)} style={{
-            width: '100%', fontSize: 12, padding: '6px 8px', borderRadius: 7, marginBottom: 8,
-            background: dark ? '#0F1521' : '#F6F4EF', color: dark ? '#EDEAE1' : '#222',
-            border: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : '#E5E1D8'}`,
-          }}>
-            <option value="long_let">Long-let</option>
-            <option value="winter_let">Winter-let</option>
-            <option value="short_let">Short-let</option>
-            <option value="flexible">Flexible</option>
-          </select>
-          {note
-            ? <div style={{ fontSize: 11, color: dark ? '#EDEAE1' : '#222' }}>{note}</div>
-            : <button onClick={apply} disabled={busy} style={{
-                width: '100%', background: A, color: '#151C2C', border: 'none', borderRadius: 7,
-                padding: '6px 0', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-              }}>{busy ? '…' : isAdmin ? 'Apply' : 'Propose'}</button>}
-        </div>
-      )}
-    </div>
-  )
+          <button type="button" className="argus-listing-editor-close" onClick={() => setOpen(false)} aria-label="Close editor"><XGlyph size={18} /></button>
+        </header>
+
+        {loading && <div className="argus-listing-editor-loading">Loading the complete listing…</div>}
+        {!loading && form && <div className="argus-listing-editor-body">
+          <div className="argus-listing-editor-lock"><ShieldAlert size={15} /><span><b>Owner details are protected.</b> This editor changes the listing only; owner identity and contact details stay untouched.</span></div>
+
+          <EditorSection title="Photos" subtitle={`${images.length} saved · add new images without leaving the board`}>
+            <div className="argus-listing-editor-gallery">
+              {images.slice(0, 5).map((image: any, index: number) => <img key={index} src={image.thumbnail || image.url || image} alt="" />)}
+              <button type="button" onClick={() => uploadRef.current?.click()} disabled={uploading}><Camera size={17} /><span>{uploading ? 'Uploading…' : 'Add photos'}</span></button>
+              <input ref={uploadRef} hidden type="file" accept="image/*" multiple onChange={event => { upload(event.target.files); event.target.value = '' }} />
+            </div>
+          </EditorSection>
+
+          <EditorSection title="Property" subtitle="The facts shown on cards, links and the public listing">
+            <div className="argus-listing-editor-grid">
+              <EditorField label="Property type"><input value={form.property_type} onChange={e => set('property_type', e.target.value)} /></EditorField>
+              <EditorField label="Town / locality"><LocationSelect value={form.town} onChange={value => set('town', value)} /></EditorField>
+              <EditorField label="Street"><input value={form.street} onChange={e => set('street', e.target.value)} /></EditorField>
+              <EditorField label="Apartment / unit"><input value={form.apt} onChange={e => set('apt', e.target.value)} /></EditorField>
+              <EditorField label="Bedrooms"><input type="number" min="0" value={form.bedrooms} onChange={e => set('bedrooms', e.target.value)} /></EditorField>
+              <EditorField label="Bathrooms"><input type="number" min="0" value={form.bathrooms} onChange={e => set('bathrooms', e.target.value)} /></EditorField>
+              <EditorField label="Size m²"><input type="number" min="0" value={form.size_sqm} onChange={e => set('size_sqm', e.target.value)} /></EditorField>
+            </div>
+          </EditorSection>
+
+          <EditorSection title="Market & availability" subtitle="Price, status, dates and rental modes">
+            <div className="argus-listing-editor-grid">
+              <EditorField label="Long-let € / month"><input type="number" min="0" value={form.longlet_price} onChange={e => set('longlet_price', e.target.value)} /></EditorField>
+              <EditorField label="Sale price €"><input type="number" min="0" value={form.sale_price} onChange={e => set('sale_price', e.target.value)} /></EditorField>
+              <EditorField label="Availability"><select value={form.available_status} onChange={e => set('available_status', e.target.value)}><option value="available">Available</option><option value="available_confirmed">Available confirmed</option><option value="soon_available">Available soon</option><option value="reserved">Reserved</option><option value="rented">Rented</option></select></EditorField>
+              <EditorField label="Available from"><input type="date" value={form.available_date} onChange={e => set('available_date', e.target.value)} /></EditorField>
+              <EditorField label="Available until"><input type="date" value={form.available_until} onChange={e => set('available_until', e.target.value)} /></EditorField>
+              <EditorField label="Viewing status"><select value={form.viewing_status} onChange={e => set('viewing_status', e.target.value)}><option value="none">None</option><option value="requested">Requested</option><option value="scheduled">Scheduled</option><option value="done">Done</option></select></EditorField>
+              <EditorField label="Viewing date & time"><input type="datetime-local" value={form.viewing_date} onChange={e => set('viewing_date', e.target.value)} /></EditorField>
+            </div>
+            <div className="argus-listing-editor-modes"><label>Rental modes</label><RentalModePicker value={form.rental_modes || []} onChange={modes => set('rental_modes', modes)} />{!isAdmin && <small>Classification changes may require admin approval.</small>}</div>
+          </EditorSection>
+
+          <EditorSection title="Description & notes" subtitle="Public copy and private operational context">
+            <div className="argus-listing-editor-stack">
+              <EditorField label="Public description"><textarea rows={5} value={form.description} onChange={e => set('description', e.target.value)} /></EditorField>
+              <EditorField label="Viewing notes"><textarea rows={3} value={form.viewing_notes} onChange={e => set('viewing_notes', e.target.value)} /></EditorField>
+              <EditorField label="Internal notes · private"><textarea className="is-private" rows={3} value={form.internal_notes} onChange={e => set('internal_notes', e.target.value)} /></EditorField>
+            </div>
+          </EditorSection>
+
+          <EditorSection title="Verified amenities" subtitle="Unknown remains unknown; the system never guesses">
+            <div className="argus-listing-editor-grid">
+              <EditorField label="Balcony / terrace"><select value={form.has_balcony} onChange={e => set('has_balcony', e.target.value)}><option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option></select></EditorField>
+              {form.has_balcony === 'true' && <EditorField label="Balcony size"><select value={form.balcony_size} onChange={e => set('balcony_size', e.target.value)}><option value="">Unspecified</option><option value="small">Small</option><option value="large">Large</option></select></EditorField>}
+              <EditorField label="Study / office room"><select value={form.has_study_room} onChange={e => set('has_study_room', e.target.value)}><option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option></select></EditorField>
+              <EditorField label="Parking"><select value={form.parking_available} onChange={e => set('parking_available', e.target.value)}><option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option></select></EditorField>
+            </div>
+          </EditorSection>
+
+          <EditorSection title="Publishing" subtitle="Control how the property appears in the live inventory">
+            <div className="argus-listing-editor-checks">
+              <label><input type="checkbox" checked={form.published} onChange={e => set('published', e.target.checked)} /><span><b>Published</b><small>Show as a live listing</small></span></label>
+              <label><input type="checkbox" checked={form.shortlet} onChange={e => set('shortlet', e.target.checked)} /><span><b>Short-let</b><small>Also available short term</small></span></label>
+              <label><input type="checkbox" checked={form.is_exclusive} onChange={e => set('is_exclusive', e.target.checked)} /><span><b>Exclusive</b><small>Mark as agency exclusive</small></span></label>
+              {form.is_exclusive && <EditorField label="Exclusive until"><input type="date" value={form.exclusive_until} onChange={e => set('exclusive_until', e.target.value)} /></EditorField>}
+            </div>
+          </EditorSection>
+        </div>}
+
+        <footer>
+          <div aria-live="polite">{note || 'All listing fields can be edited here. Owner details remain protected.'}</div>
+          <span><button type="button" className="secondary" onClick={() => setOpen(false)}>Cancel</button><button type="button" className="primary" disabled={!form || saving || loading} onClick={save}>{saving ? 'Saving…' : isAdmin ? 'Save listing' : 'Save / submit changes'}</button></span>
+        </footer>
+      </section>
+    </div>, document.body) : null
+
+  return <>
+    <button type="button" onClick={() => setOpen(true)} title="Edit complete listing" aria-label={`Edit complete listing ${r.ref}`} style={{ ...trayMoreBtn(dark), width: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Settings size={15} /></button>
+    {editor}
+  </>
+}
+
+function EditorSection({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return <section className="argus-listing-editor-section"><header><h3>{title}</h3><p>{subtitle}</p></header>{children}</section>
+}
+
+function EditorField({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="argus-listing-editor-field"><span>{label}</span>{children}</label>
 }
 
 function PhotoDownload({ r }: { r: Listing }) {
@@ -4192,7 +4312,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               property_pending_changes row an admin must confirm (the bell in
               the sidebar), same PATCH endpoint either way — the backend
               decides which happens, this button never needs to know. */}
-          <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} />
+          <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} onChanged={onChanged} />
         </div>
 
         {menuOpen && (
@@ -4514,7 +4634,7 @@ function AgentInquiryModal({ propertyRef, agentName, onClose }: { propertyRef: s
 }
 
 // ── detail modal ────────────────────────────────────────────────────────────
-function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook }: {
+function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook, onChanged }: {
   refId: string
   onClose: () => void
   onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
@@ -4525,6 +4645,7 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook }: 
   // which the modal never touches) and mirrors the result back locally.
   onStar: (r: Listing) => Promise<void>
   onBook: (r: Listing) => void
+  onChanged: () => void
 }) {
   const { me } = useCrm()
   const isAdmin = me?.role === 'admin'
@@ -4692,6 +4813,8 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook }: 
                   style={{ ...btn, background: '#FFF', color: NAVY, border: `1px solid ${AB}`, fontWeight: 700 }}>
                   Book
                 </button>
+
+                <ClassificationGear r={d} dark={false} isAdmin={isAdmin} onChanged={onChanged} />
 
                 {(() => {
                   const off = lockedStatus(d.availableStatus)
