@@ -55,7 +55,9 @@ function displayTitle(property: Property) {
         normalized !== location &&
         !/€|\bbed(room)?s?\b|\bbath(room)?s?\b|^\d[\d,.]*$/.test(normalized)
     })
-  return usefulParts.join(' · ') || humanize(String(property.propertyType || 'Residence'))
+  if (usefulParts.length) return usefulParts.join(' · ')
+  const type = humanize(String(property.propertyType || 'Residence'))
+  return property.location ? `${type} in ${property.location}` : `Selected ${type}`
 }
 
 function formatPrice(property: Property) {
@@ -89,7 +91,7 @@ function ModernPropertyCard({ property, index, smartContext }: { property: Prope
         <img src={photo} alt={title} className={styles.propertyImage} loading={index > 1 ? 'lazy' : 'eager'} />
         <span className={styles.imageVeil} />
         <div className={styles.cardTopline}>
-          <span className={styles.statusMark}><span />{t(`status.${property.status}`)}</span>
+          <span className={styles.statusMark} data-status={property.status}><span />{t(`status.${property.status}`)}</span>
           <span className={styles.price}>{formatPrice(property)}</span>
         </div>
         <div className={styles.imageCopy}>
@@ -301,8 +303,8 @@ export function EstateModernHome() {
           <div className={styles.shell}><PropertySearch /></div>
         </div>
       </div>
-      <EditorialPromise />
       <PropertyCollection />
+      <EditorialPromise />
       <NexusInvitation />
       <MaltaMap />
       <MaltaLifestyle />

@@ -17,7 +17,9 @@ function cleanPropertyTitle(property: Property) {
     const normalized = part.toLowerCase()
     return normalized && normalized !== location && !/€|\bbed(room)?s?\b|\bbath(room)?s?\b|^\d[\d,.]*$/.test(normalized)
   })
-  return useful.join(' · ') || property.propertyType || 'Residence'
+  if (useful.length) return useful.join(' · ')
+  const type = property.propertyType || 'Residence'
+  return property.location ? `${type} in ${property.location}` : `Selected ${type}`
 }
 
 interface Property {
@@ -280,7 +282,7 @@ export default async function PropertyPage({
                 </div>
                 <div className="space-y-3">
                   <a
-                    href={`https://wa.me/35679010070?text=Hi, I'm interested in ${displayTitle}`}
+                    href={`https://wa.me/35679010070?text=${encodeURIComponent(`Hi, I am interested in ${displayTitle}${property.propertyReference ? ` (Ref. ${property.propertyReference})` : ''}. Is it still available, and when could I arrange a viewing?`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded bg-[#25D366] text-white font-medium hover:bg-[#20BD5A] transition-colors text-sm"

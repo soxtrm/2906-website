@@ -312,6 +312,16 @@
   box-shadow: 0 0 10px rgb(212 177 90 / 0.85);
 }
 
+.statusMark[data-status='available'] {
+  border-color: rgb(74 222 128 / 0.58);
+  background: rgb(14 92 58 / 0.9);
+}
+
+.statusMark[data-status='available'] > span {
+  background: #86efac;
+  box-shadow: 0 0 11px rgb(134 239 172 / 0.9);
+}
+
 .price {
   padding: 7px 10px;
   font-size: 0.72rem;

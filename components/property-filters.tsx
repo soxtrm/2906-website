@@ -7,13 +7,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { maltaLocations, propertyTypes, bedroomOptions, bathroomOptions, commercialPropertyTypes } from '@/lib/data'
 import { fetchFilterOptions, type PropertyFilterOptions } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { Slider } from '@/components/ui/slider'
 
 interface Filters {
   location: string
   propertyTypes: string[]
   bedrooms: string[]
   bathrooms: string[]
-  budget: string
+  budgetMin: number
+  budgetMax: number
   sqm: string
   // ARGUS property intelligence (2026-09-23)
   featureTags: string[]
@@ -37,7 +39,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     propertyTypes: searchParams.get('types')?.split(',').filter(Boolean) || [],
     bedrooms: searchParams.get('beds')?.split(',').filter(Boolean) || [],
     bathrooms: searchParams.get('baths')?.split(',').filter(Boolean) || [],
-    budget: searchParams.get('maxPrice') || '',
+    budgetMin: Number(searchParams.get('minPrice') || 500),
+    budgetMax: Number(searchParams.get('maxPrice') || 5000),
     sqm: searchParams.get('sqm') || '',
     featureTags: searchParams.get('featureTags')?.split(',').filter(Boolean) || [],
     localityIds: searchParams.get('localityIds')?.split(',').filter(Boolean) || [],
@@ -69,7 +72,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     if (filters.propertyTypes.length) params.set('types', filters.propertyTypes.join(','))
     if (!isCommercial && filters.bedrooms.length) params.set('beds', filters.bedrooms.join(','))
     if (filters.bathrooms.length) params.set('baths', filters.bathrooms.join(','))
-    if (filters.budget) params.set('maxPrice', filters.budget)
+    if (filters.budgetMin > 500) params.set('minPrice', String(filters.budgetMin))
+    if (filters.budgetMax < 5000) params.set('maxPrice', String(filters.budgetMax))
     if (isCommercial && filters.sqm) params.set('sqm', filters.sqm)
     if (filters.featureTags.length) params.set('featureTags', filters.featureTags.join(','))
     if (filters.localityIds.length) params.set('localityIds', filters.localityIds.join(','))
@@ -83,7 +87,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
       propertyTypes: [],
       bedrooms: [],
       bathrooms: [],
-      budget: '',
+      budgetMin: 500,
+      budgetMax: 5000,
       sqm: '',
       featureTags: [],
       localityIds: [],
@@ -95,6 +100,10 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
   }
 
   const toggleBedroom = (bed: string) => {
+    if (bed === 'All') {
+      setFilters(prev => ({ ...prev, bedrooms: [] }))
+      return
+    }
     setFilters(prev => ({
       ...prev,
       bedrooms: prev.bedrooms.includes(bed)
@@ -153,7 +162,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     filters.propertyTypes.length +
     filters.bedrooms.length +
     filters.bathrooms.length +
-    (filters.budget ? 1 : 0) +
+    (filters.budgetMin > 500 || filters.budgetMax < 5000 ? 1 : 0) +
     (filters.sqm ? 1 : 0) +
     filters.featureTags.length +
     filters.localityIds.length +
@@ -167,7 +176,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     ...filters.propertyTypes.map(t => ({ key: `pt-${t}`, label: t, onRemove: () => { const f = { ...filters, propertyTypes: filters.propertyTypes.filter(x => x !== t) }; setFilters(f); pushFilters(f) } })),
     ...filters.bedrooms.map(b => ({ key: `bed-${b}`, label: `${b} bed`, onRemove: () => { const f = { ...filters, bedrooms: filters.bedrooms.filter(x => x !== b) }; setFilters(f); pushFilters(f) } })),
     ...filters.bathrooms.map(b => ({ key: `bath-${b}`, label: `${b} bath`, onRemove: () => { const f = { ...filters, bathrooms: filters.bathrooms.filter(x => x !== b) }; setFilters(f); pushFilters(f) } })),
-    ...(filters.budget ? [{ key: 'budget', label: `≤ €${filters.budget}`, onRemove: () => { const f = { ...filters, budget: '' }; setFilters(f); pushFilters(f) } }] : []),
+    ...(filters.budgetMin > 500 || filters.budgetMax < 5000 ? [{ key: 'budget', label: `€${filters.budgetMin.toLocaleString()}–${filters.budgetMax >= 5000 ? '5,000+' : filters.budgetMax.toLocaleString()}/mo`, onRemove: () => { const f = { ...filters, budgetMin: 500, budgetMax: 5000 }; setFilters(f); pushFilters(f) } }] : []),
     ...(filters.sqm ? [{ key: 'sqm', label: `${filters.sqm} m²`, onRemove: () => { const f = { ...filters, sqm: '' }; setFilters(f); pushFilters(f) } }] : []),
     ...filters.featureTags.map(k => ({
       key: `ft-${k}`, label: filterOptions.featureTags.find(o => o.key === k)?.label || k,
@@ -192,7 +201,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     if (f.propertyTypes.length) params.set('types', f.propertyTypes.join(','))
     if (!isCommercial && f.bedrooms.length) params.set('beds', f.bedrooms.join(','))
     if (f.bathrooms.length) params.set('baths', f.bathrooms.join(','))
-    if (f.budget) params.set('maxPrice', f.budget)
+    if (f.budgetMin > 500) params.set('minPrice', String(f.budgetMin))
+    if (f.budgetMax < 5000) params.set('maxPrice', String(f.budgetMax))
     if (isCommercial && f.sqm) params.set('sqm', f.sqm)
     if (f.featureTags.length) params.set('featureTags', f.featureTags.join(','))
     if (f.localityIds.length) params.set('localityIds', f.localityIds.join(','))
@@ -432,7 +442,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
                           onClick={() => toggleBedroom(bed)}
                           className={cn(
                             'px-2.5 py-1.5 rounded text-xs font-medium transition-colors min-w-[36px]',
-                            filters.bedrooms.includes(bed)
+                          (bed === 'All' ? filters.bedrooms.length === 0 : filters.bedrooms.includes(bed))
                               ? 'bg-navy text-white'
                               : 'bg-off-white text-navy/60 hover:bg-navy/10'
                           )}
@@ -597,14 +607,21 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
             </div>
           )}
 
-          {/* Budget */}
-          <div className="flex items-center">
-            <input
-              type="text"
-              placeholder={isCommercial ? 'Budget €' : 'Preferred Budget'}
-              value={filters.budget}
-              onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value.replace(/\D/g, '') }))}
-              className="w-24 px-2 py-2 bg-off-white rounded text-xs text-navy placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"
+          {/* Monthly budget range */}
+          <div className="min-w-[210px] rounded bg-off-white px-3 py-2">
+            <div className="mb-2 flex items-center justify-between gap-2 text-[10px] text-navy/60">
+              <span>€{filters.budgetMin.toLocaleString()}</span>
+              <span>/month</span>
+              <span>{filters.budgetMax >= 5000 ? '€5,000+' : `€${filters.budgetMax.toLocaleString()}`}</span>
+            </div>
+            <Slider
+              aria-label="Monthly budget from and to"
+              min={500}
+              max={5000}
+              step={100}
+              value={[filters.budgetMin, filters.budgetMax]}
+              onValueChange={([budgetMin, budgetMax]) => setFilters(prev => ({ ...prev, budgetMin, budgetMax }))}
+              className="[&_[data-slot=slider-track]]:bg-navy/15 [&_[data-slot=slider-range]]:bg-gold [&_[data-slot=slider-thumb]]:border-gold"
             />
           </div>
 

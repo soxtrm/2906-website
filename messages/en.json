@@ -2,7 +2,7 @@
   "nav": {
     "home": "Home",
     "letting": "Letting",
-    "aesthetics": "Aesthetics",
+    "aesthetics": "Luxury",
     "commercial": "Commercial",
     "sales": "Sales",
     "about": "About",
@@ -10,9 +10,9 @@
   },
   "hero": {
     "tagline": "Malta's Premier Real Estate",
-    "headline": "Exceptional Properties.",
-    "headline2": "Trusted Service.",
-    "subheadline": "Discover properties across Malta's most sought-after locations",
+    "headline": "Rent a Property",
+    "headline2": "in 5 Minutes.",
+    "subheadline": "Available Malta homes, clear filters, and a direct line to an agent",
     "scroll": "Scroll"
   },
   "search": {
@@ -87,8 +87,8 @@
   },
   "aestheticsBanner": {
     "title": "Looking for Premium Luxury?",
-    "desc": "Explore our Aesthetics collection — exclusive properties starting from €2,500/month",
-    "cta": "View Aesthetics"
+    "desc": "Explore our Luxury collection — selected properties starting from €2,500/month",
+    "cta": "View Luxury"
   },
   "loading": "Loading properties…",
   "noProperties": "No Properties Found",
@@ -201,9 +201,9 @@
   "modernHome": {
     "collectionEyebrow": "A considered collection",
     "collectionTitle": "Homes with character. Decisions with context.",
-    "collectionIntro": "Explore a quieter, more considered presentation of Malta property, with verified listing facts and a direct path into Nexus Link intelligence.",
+    "collectionIntro": "Browse available homes first, then narrow the list by the facts that matter to you.",
     "collectionTabs": "Property collections",
-    "aestheticTab": "Aesthetic selection",
+    "aestheticTab": "Luxury selection",
     "allTab": "All properties",
     "viewCollection": "View collection",
     "viewProperty": "View property",
@@ -224,7 +224,7 @@
     "promise": {
       "eyebrow": "The 2906 approach",
       "title": "Personal real estate, made more precise.",
-      "text": "A refined property experience led by local judgment, clear information and technology that stays in the background until it is useful.",
+      "text": "Useful property facts first, backed by local agents who can confirm availability and arrange the next step.",
       "localTitle": "Local judgement",
       "localText": "Malta-specific market knowledge with a human point of view.",
       "verifiedTitle": "Clear property facts",

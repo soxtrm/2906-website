@@ -3,7 +3,7 @@ import { Property, Agent, RegionInfo, NavItem } from './types'
 export const navItems: NavItem[] = [
   { label: 'Home', href: '/' },
   { label: 'Letting', href: '/letting', accentColor: 'accent-letting' },
-  { label: 'Aesthetics', href: '/aesthetics', accentColor: 'accent-aesthetics' },
+  { label: 'Luxury', href: '/aesthetics', accentColor: 'accent-aesthetics' },
   { label: 'Commercial', href: '/commercial', accentColor: 'accent-commercial' },
   { label: 'Sales', href: '/sales', accentColor: 'accent-sales' },
   { label: 'About', href: '/about' },
@@ -43,27 +43,29 @@ export const maltaLocations = [
 ]
 
 // Property types from screenshot
+// Ordered by the way renters usually browse, not alphabetically. Broad,
+// high-volume types come first; specialist homes remain available below.
 export const propertyTypes = [
   "Apartments",
-  "Block",
-  "Bungalows",
+  "Penthouses",
+  "Maisonettes",
+  "Townhouses",
+  "Terraced Houses",
   "Detached Villa",
+  "Semi Detached Villa",
+  "House of Character",
+  "Bungalows",
   "Duplex Penthouse",
   "Farmhouses",
-  "House of Character",
-  "Maisonettes",
   "Palace/Castle/Manor",
-  "Penthouses",
-  "Semi Detached Villa",
   "Studio Apartments",
   "Studio Maisonette",
   "Studio Penthouse",
-  "Terraced Houses",
   "Top Floor Apartment",
-  "Townhouses",
+  "Block",
 ]
 
-export const bedroomOptions = ['Studio', '1', '2', '3', '4', '5+']
+export const bedroomOptions = ['All', '1', '2', '3', '4', '5+']
 
 export const bathroomOptions = ['1', '2', '3', '4+']
 

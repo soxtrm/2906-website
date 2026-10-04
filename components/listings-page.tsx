@@ -113,12 +113,12 @@ function ListingsContent({ category, title, description, subheadline, tagline, a
                       Looking for <span className="text-[#9a7935] font-semibold">Premium Luxury</span>?
                     </p>
                     <p className="text-navy/60 text-xs md:text-sm">
-                      Explore our Aesthetics collection — exclusive properties starting from €2,500/month
+                      Explore our Luxury collection — selected properties starting from €2,500/month
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-[#9a7935] text-sm font-medium shrink-0">
-                  <span className="hidden sm:inline">View Aesthetics</span>
+                  <span className="hidden sm:inline">View Luxury</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </motion.div>

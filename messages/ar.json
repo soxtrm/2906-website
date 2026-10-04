@@ -2,7 +2,7 @@
   "nav": {
     "home": "الرئيسية",
     "letting": "الإيجار",
-    "aesthetics": "Aesthetics",
+    "aesthetics": "Luxury",
     "commercial": "تجاري",
     "sales": "للبيع",
     "about": "من نحن",
@@ -87,8 +87,8 @@
   },
   "aestheticsBanner": {
     "title": "تبحث عن الفخامة الراقية؟",
-    "desc": "استكشف مجموعة Aesthetics — عقارات حصرية تبدأ من €2,500 شهرياً",
-    "cta": "عرض Aesthetics"
+    "desc": "استكشف مجموعة Luxury — عقارات مختارة تبدأ من €2,500 شهرياً",
+    "cta": "عرض Luxury"
   },
   "loading": "جارٍ تحميل العقارات…",
   "noProperties": "لا توجد عقارات",

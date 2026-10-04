@@ -2,7 +2,7 @@
   "nav": {
     "home": "Startseite",
     "letting": "Mieten",
-    "aesthetics": "Aesthetics",
+    "aesthetics": "Luxury",
     "commercial": "Gewerbe",
     "sales": "Kauf",
     "about": "Über uns",
@@ -10,9 +10,9 @@
   },
   "hero": {
     "tagline": "Maltas führender Immobilienmakler",
-    "headline": "Außergewöhnliche Immobilien.",
-    "headline2": "Vertrauenswürdiger Service.",
-    "subheadline": "Entdecken Sie Immobilien in Maltas begehrtesten Lagen",
+    "headline": "Wohnung mieten",
+    "headline2": "in 5 Minuten.",
+    "subheadline": "Verfügbare Immobilien, klare Filter und direkter Kontakt zu einem Agenten",
     "scroll": "Scrollen"
   },
   "search": {
@@ -87,8 +87,8 @@
   },
   "aestheticsBanner": {
     "title": "Auf der Suche nach Premium-Luxus?",
-    "desc": "Entdecken Sie unsere Aesthetics-Kollektion — exklusive Immobilien ab €2.500/Monat",
-    "cta": "Aesthetics ansehen"
+    "desc": "Entdecken Sie unsere Luxury-Auswahl — ausgewählte Immobilien ab €2.500/Monat",
+    "cta": "Luxury ansehen"
   },
   "loading": "Immobilien werden geladen…",
   "noProperties": "Keine Immobilien gefunden",

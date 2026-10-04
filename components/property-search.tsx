@@ -6,13 +6,15 @@ import { MapPin, X, ChevronDown, Home, Bed, Bath, SlidersHorizontal } from 'luci
 import { motion, AnimatePresence } from 'framer-motion'
 import { maltaLocations, propertyTypes, bedroomOptions, bathroomOptions } from '@/lib/data'
 import { cn } from '@/lib/utils'
+import { Slider } from '@/components/ui/slider'
 
 interface SearchFilters {
   location: string
   propertyTypes: string[]
   bedrooms: string[]
   bathrooms: string[]
-  budget: string
+  budgetMin: number
+  budgetMax: number
 }
 
 export function PropertySearch() {
@@ -22,7 +24,8 @@ export function PropertySearch() {
     propertyTypes: [],
     bedrooms: [],
     bathrooms: [],
-    budget: '',
+    budgetMin: 500,
+    budgetMax: 5000,
   })
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -49,11 +52,16 @@ export function PropertySearch() {
     if (filters.propertyTypes.length) params.set('types', filters.propertyTypes.join(','))
     if (filters.bedrooms.length) params.set('beds', filters.bedrooms.join(','))
     if (filters.bathrooms.length) params.set('baths', filters.bathrooms.join(','))
-    if (filters.budget) params.set('maxPrice', filters.budget)
+    if (filters.budgetMin > 500) params.set('minPrice', String(filters.budgetMin))
+    if (filters.budgetMax < 5000) params.set('maxPrice', String(filters.budgetMax))
     router.push(`/letting?${params.toString()}`)
   }
 
   const toggleBedroom = (bed: string) => {
+    if (bed === 'All') {
+      setFilters(prev => ({ ...prev, bedrooms: [] }))
+      return
+    }
     setFilters(prev => ({
       ...prev,
       bedrooms: prev.bedrooms.includes(bed)
@@ -256,7 +264,7 @@ export function PropertySearch() {
                         onClick={() => toggleBedroom(bed)}
                         className={cn(
                           'px-3 py-2 rounded text-xs font-medium transition-colors min-w-[40px]',
-                          filters.bedrooms.includes(bed)
+                          (bed === 'All' ? filters.bedrooms.length === 0 : filters.bedrooms.includes(bed))
                             ? 'bg-navy text-white'
                             : 'bg-off-white text-navy/70 hover:bg-navy/10'
                         )}
@@ -324,14 +332,21 @@ export function PropertySearch() {
           {/* Divider */}
           <div className="hidden lg:block w-px bg-white/20" />
 
-          {/* Budget € */}
-          <div className="flex items-center px-2">
-            <input
-              type="text"
-              placeholder="Budget €"
-              value={filters.budget}
-              onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value.replace(/\D/g, '') }))}
-              className="w-24 px-2 py-2 bg-transparent text-white text-sm placeholder:text-white/50 focus:outline-none"
+          {/* Monthly budget range */}
+          <div className="min-w-[190px] px-3 py-1.5">
+            <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium text-white/80">
+              <span>€{filters.budgetMin.toLocaleString()}</span>
+              <span className="text-white/45">monthly</span>
+              <span>{filters.budgetMax >= 5000 ? '€5,000+' : `€${filters.budgetMax.toLocaleString()}`}</span>
+            </div>
+            <Slider
+              aria-label="Monthly budget from and to"
+              min={500}
+              max={5000}
+              step={100}
+              value={[filters.budgetMin, filters.budgetMax]}
+              onValueChange={([budgetMin, budgetMax]) => setFilters(prev => ({ ...prev, budgetMin, budgetMax }))}
+              className="[&_[data-slot=slider-track]]:bg-white/20 [&_[data-slot=slider-range]]:bg-gold [&_[data-slot=slider-thumb]]:border-gold"
             />
           </div>
           </div>
