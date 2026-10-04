@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -1400,25 +1400,18 @@ function Board() {
 
         {/* Two primary workspaces, then compact utility views. Rented stays
             available for restoring a listing without competing with daily work. */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }} style={{
-            ...chip, borderRadius: 8, background: !updatesMode && view === 'board' ? A : DCARD,
-            borderColor: !updatesMode && view === 'board' ? A : DBORDER,
-            color: !updatesMode && view === 'board' ? '#151C2C' : DTEXT_DIM,
-            fontWeight: !updatesMode && view === 'board' ? 800 : 600,
-            boxShadow: !updatesMode && view === 'board' ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
-          }}>Active Board</button>
-          <button data-tab="updates" onClick={() => setUpdatesMode(true)} style={{
-            ...chip, borderRadius: 8,
-            background: updatesMode ? A : DCARD,
-            borderColor: updatesMode ? A : DBORDER,
-            color: updatesMode ? '#151C2C' : DTEXT_DIM,
-            fontWeight: updatesMode ? 800 : 600,
-            boxShadow: updatesMode ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
-          }}>
-            Daily Updates
-            <span style={{ marginLeft: 6, fontFamily: FM, fontSize: 10, opacity: .72 }}>{feedRows.length}</span>
-          </button>
+        <div className="argus-board-toolbar">
+          <div className="argus-view-switch" aria-label="Board view">
+            <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }} aria-pressed={!updatesMode && view === 'board'}>
+              <span className="argus-switch-icon"><LayoutGrid size={17} aria-hidden /></span>
+              <span><b>Active Board</b><small>Current inventory</small></span>
+            </button>
+            <button data-tab="updates" onClick={() => setUpdatesMode(true)} aria-pressed={updatesMode}>
+              <span className="argus-switch-icon"><RadioTower size={17} aria-hidden /></span>
+              <span><b>Daily Updates</b><small>Live property flow</small></span>
+              <em>{feedRows.length}</em>
+            </button>
+          </div>
           <div style={{ display: 'flex', gap: 5, marginLeft: isMobile ? 0 : 'auto' }}>
             {([['favourites', 'Favourites', favCount], ['rented', 'Rented', rentedCount]] as const).map(([v, label, badge]) => {
               const on = !updatesMode && view === v
