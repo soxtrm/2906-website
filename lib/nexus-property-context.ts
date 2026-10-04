@@ -193,7 +193,11 @@ export async function getPropertyLifeOverview(reference?: string | null, area?: 
 
     const areaKey = normaliseArea(area)
     if (!areaKey) return null
-    const locality = data.properties.find(item => normaliseArea(item.areaLabel) === areaKey)
+    const requestedTokens = areaKey.split(' ').filter(token => token.length > 1 && token !== 'ta')
+    const locality = data.properties
+      .map(item => ({ item, key: normaliseArea(item.areaLabel) }))
+      .filter(candidate => candidate.key === areaKey || requestedTokens.every(token => candidate.key.split(' ').includes(token)))
+      .sort((a, b) => Math.abs(a.key.length - areaKey.length) - Math.abs(b.key.length - areaKey.length))[0]?.item
     return locality ? buildLifeOverview(locality, data.places, { requestedReference, sourceBasis: 'locality' }) : null
   } catch {
     return null

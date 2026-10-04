@@ -1531,6 +1531,10 @@ function Board() {
               robot is chasing owners before deciding to chase one himself. */}
           <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)} style={{ ...chip, borderRadius: 8, borderColor: A, color: 'var(--crm-accent)', background: DCARD, fontWeight: 700 }}><Settings size={13} style={{ display: 'inline', marginRight: 6 }} />OPEN TO CHECK</button>
           <a href="/nexus-map" style={{ ...chip, borderRadius: 8, borderColor: '#64B9D7', color: '#BDEBFA', background: '#183044', fontWeight: 700, textDecoration: 'none' }}><Link2 size={13} style={{ display: 'inline', marginRight: 6 }} />NEXUS MAP</a>
+          <button type="button" onClick={() => {
+            setIntelligenceOpen(true)
+            window.requestAnimationFrame(() => document.getElementById('argus-smart-data')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+          }} style={{ ...chip, borderRadius: 8, borderColor: A, color: '#F4D58B', background: 'rgba(184,149,63,.10)', fontWeight: 700 }}><Sparkles size={13} style={{ display: 'inline', marginRight: 6 }} />SMART DATA</button>
           <ReachoutSwitch />
         </div>
 
@@ -1819,10 +1823,10 @@ function Board() {
         </>}
       </div>
 
-      {!updatesMode && <details style={{ margin: '12px 24px 30px', border: '1px solid #314452', borderRadius: 16, background: '#101a25', color: '#e8f4f4', overflow: 'hidden' }} onToggle={event=>setIntelligenceOpen(event.currentTarget.open)}>
-        <summary style={{ padding: '20px 24px', cursor: 'pointer', fontSize: 17, fontWeight: 750 }}>Smart Map · Locations &amp; Traffic <span style={{fontSize:11,color:'#92b3bf',marginLeft:12}}>Open map workspace</span></summary>
+      <details id="argus-smart-data" open={intelligenceOpen} style={{ margin: '12px 24px 30px', border: '1px solid #314452', borderRadius: 16, background: '#101a25', color: '#e8f4f4', overflow: 'hidden', scrollMarginTop: 18 }} onToggle={event=>setIntelligenceOpen(event.currentTarget.open)}>
+        <summary style={{ padding: '20px 24px', cursor: 'pointer', fontSize: 17, fontWeight: 750 }}>2906 Smart Data · Locations &amp; Traffic <span style={{fontSize:11,color:'#92b3bf',marginLeft:12}}>Nexus property intelligence workspace</span></summary>
         {intelligenceOpen && <BoardIntelligenceMap />}
-      </details>}
+      </details>
       {detail && (
         <DetailModal
           refId={detail}
