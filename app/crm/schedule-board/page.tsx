@@ -1416,7 +1416,7 @@ function Board() {
             fontWeight: updatesMode ? 800 : 600,
             boxShadow: updatesMode ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
           }}>
-            Update List
+            Daily Updates
             <span style={{ marginLeft: 6, fontFamily: FM, fontSize: 10, opacity: .72 }}>{feedRows.length}</span>
           </button>
           <div style={{ display: 'flex', gap: 5, marginLeft: isMobile ? 0 : 'auto' }}>
@@ -2854,47 +2854,55 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
   }, [rows, filter])
 
   const progressCount = useMemo(() => rows.filter(r => r.availableStatus === 'pending_check' || r.bookingsPossible).length, [rows])
+  const newCount = useMemo(() => rows.filter(r => !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86400_000).length, [rows])
+  const confirmedCount = useMemo(() => rows.filter(r => !!r.lastConfirmedAvailableAt).length, [rows])
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   let previousDay = ''
   return (
-    <section aria-label="Property updates" style={{ maxWidth: 1120, margin: '0 auto 32px' }}>
-      <header style={{ padding: mobile ? '8px 2px 12px' : '10px 4px 16px' }}>
-        <span style={{ color: A, fontSize: 10, letterSpacing: '.16em', fontWeight: 850 }}>DAILY PROPERTY INBOX</span>
-        <h2 style={{ color: DTEXT, fontSize: mobile ? 23 : 30, margin: '4px 0 3px' }}>Today, at one glance</h2>
-        <p style={{ color: DTEXT_DIM, fontSize: 12, margin: 0 }}>Scroll through the days like a chat. Newest property activity stays at the top.</p>
+    <section aria-label="Property updates" style={{ maxWidth: 1180, margin: '0 auto 32px' }}>
+      <header style={{ position: 'relative', overflow: 'hidden', border: `1px solid ${DBORDER}`, borderRadius: 18, padding: mobile ? '18px 16px' : '22px 24px', marginBottom: 12, background: 'radial-gradient(circle at 88% 12%, rgba(232,185,49,.15), transparent 34%), linear-gradient(135deg, rgba(19,30,48,.98), rgba(12,20,33,.98))', boxShadow: '0 18px 48px rgba(0,0,0,.20)' }}>
+        <div aria-hidden="true" style={{ position: 'absolute', right: -34, top: -62, width: 180, height: 180, border: '1px solid rgba(232,185,49,.16)', borderRadius: '50%' }} />
+        <span style={{ color: A, fontSize: 10, letterSpacing: '.18em', fontWeight: 850 }}>ARGUS · DAILY PROPERTY FLOW</span>
+        <h2 style={{ color: DTEXT, fontSize: mobile ? 25 : 34, lineHeight: 1.05, letterSpacing: '-.035em', margin: '7px 0 6px' }}>What changed. What moves next.</h2>
+        <p style={{ color: DTEXT_DIM, fontSize: 12, lineHeight: 1.5, margin: 0, maxWidth: 610 }}>A chronological inbox for new stock, confirmed availability and listings that need an agent. Newest activity stays at the top.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 7, marginTop: 18, maxWidth: 520 }}>
+          <FeedMetric label="New this week" value={newCount} tone="#78A0F1" />
+          <FeedMetric label="Confirmed" value={confirmedCount} tone="#58B88F" />
+          <FeedMetric label="Next action" value={progressCount} tone={BOOK_YELLOW} />
+        </div>
       </header>
-      <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'minmax(0,1.35fr) minmax(0,1fr)', gap: 9, marginBottom: 12 }}>
-        <div style={{ border: `1px solid rgba(199,57,26,.45)`, borderRadius: 13, padding: '11px 13px', background: 'rgba(199,57,26,.07)', color: DTEXT }}>
+      <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'minmax(0,1.45fr) minmax(280px,.55fr)', gap: 9, marginBottom: 12 }}>
+        <div style={{ border: `1px solid rgba(232,185,49,.28)`, borderRadius: 13, padding: '11px 13px', background: 'rgba(232,185,49,.055)', color: DTEXT }}>
           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-            <CircleHelp size={17} color="#E06A4D" style={{ flex: '0 0 auto', marginTop: 1 }} />
+            <CircleHelp size={17} color={BOOK_YELLOW} style={{ flex: '0 0 auto', marginTop: 1 }} />
             <div>
-              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>Ready to progress · {progressCount} listings</strong>
+              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.02em' }}>How to read the feed</strong>
               <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 11, lineHeight: 1.45, marginTop: 3 }}>
-                “New listing” and “Updated” tell you what changed. “Viewing ready” means booking can start; “Check availability” means an owner reply still needs a quick review.
+                New and Updated describe the event. Viewing ready and Check availability are the next step — they never mean delete.
               </span>
             </div>
           </div>
         </div>
-        <div style={{ border: `1px solid rgba(100,185,215,.35)`, borderRadius: 13, padding: '10px 12px', background: 'rgba(24,48,68,.72)', color: DTEXT }}>
-          <strong style={{ display: 'block', fontSize: 10, letterSpacing: '.12em', color: '#BDEBFA' }}>MALTA MOVING NOW</strong>
-          <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 10, lineHeight: 1.4, margin: '3px 0 8px' }}>Bus GPS and road traffic are separate sources.</span>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-            <a href="https://www.publictransport.com.mt/real-time/" target="_blank" rel="noreferrer" style={{ ...feedTransportLink, color: '#BDEBFA' }}><BusFront size={13} /> Tallinja live buses ↗</a>
-            <a href="/nexus-map" style={{ ...feedTransportLink, color: '#E8D9AD' }}><CarFront size={13} /> Malta road traffic</a>
+        <div style={{ border: `1px solid rgba(100,185,215,.30)`, borderRadius: 13, padding: '10px 12px', background: 'rgba(24,48,68,.62)', color: DTEXT }}>
+          <strong style={{ display: 'block', fontSize: 9, letterSpacing: '.13em', color: '#BDEBFA' }}>MALTA MOBILITY</strong>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
+            <a href="https://www.publictransport.com.mt/real-time/" target="_blank" rel="noreferrer" style={{ ...feedTransportLink, color: '#BDEBFA' }}><BusFront size={13} /> Live buses ↗</a>
+            <a href="/nexus-map" style={{ ...feedTransportLink, color: '#E8D9AD' }}><CarFront size={13} /> Road traffic</a>
           </div>
         </div>
       </div>
       <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
         {([['all', 'All updates'], ['progress', 'Ready to progress'], ['confirmed', 'Confirmed'], ['new', 'New listings']] as const).map(([value, label]) => (
-          <button key={value} type="button" onClick={() => setFilter(value)} style={{
+          <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} style={{
             border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
             background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
-            padding: '8px 13px', fontSize: 11, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
+            padding: '9px 14px', minHeight: 38, fontSize: 11, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
+            transition: 'transform 160ms ease, background 160ms ease, border-color 160ms ease',
           }}>{label}</button>
         ))}
       </nav>
-      <div style={{ border: `1px solid ${DBORDER}`, borderRadius: 15, overflowY: 'auto', overflowX: 'hidden', background: DCARD, maxHeight: mobile ? '68vh' : 'min(720px, calc(100vh - 300px))', scrollbarColor: `${A} ${DTRAY}` }}>
+      <div style={{ border: `1px solid ${DBORDER}`, borderRadius: 18, overflowY: 'auto', overflowX: 'hidden', background: 'linear-gradient(180deg, rgba(255,255,255,.018), transparent 180px), var(--crm-surface)', boxShadow: '0 20px 52px rgba(0,0,0,.18)', maxHeight: mobile ? '68vh' : 'min(760px, calc(100vh - 250px))', scrollbarColor: `${A} ${DTRAY}` }}>
         {feed.map(r => {
           const touch = listingTouch(r)
           const day = touch ? new Date(touch.at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Older updates'
@@ -2915,8 +2923,10 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
             {showDay && <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '9px 14px', background: 'linear-gradient(180deg, var(--crm-surface) 60%, transparent)', color: DTEXT_FAINT }}><span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 999, padding: '5px 11px', boxShadow: '0 3px 12px rgba(0,0,0,.18)', fontSize: 9, fontWeight: 850, letterSpacing: '.08em', textTransform: 'uppercase' }}>{dayLabel}</span></div>}
             <article style={{
               display: 'grid', gridTemplateColumns: mobile ? '1fr' : '202px minmax(0,1fr) auto',
-              gap: mobile ? 10 : 14, alignItems: 'center', padding: mobile ? 10 : '12px 14px',
-              borderBottom: `1px solid ${DBORDER}`, background: needsAction ? 'rgba(199,57,26,.045)' : bookable ? 'rgba(232,185,49,.045)' : 'transparent',
+              gap: mobile ? 10 : 16, alignItems: 'center', padding: mobile ? 11 : '14px 16px',
+              borderBottom: `1px solid ${DBORDER}`, borderLeft: `3px solid ${eventColor}`,
+              background: needsAction ? 'rgba(199,57,26,.04)' : bookable ? 'rgba(232,185,49,.04)' : 'transparent',
+              transition: 'background 160ms ease, transform 160ms ease',
             }}>
               <div aria-label={`Three photos of #${r.ref}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 5, width: mobile ? '100%' : 202 }}>
                 {[0, 1, 2].map(index => <button key={index} type="button" onClick={() => onOpen(r)} style={{ height: mobile ? 72 : 64, minWidth: 0, padding: 0, border: 0, borderRadius: 9, overflow: 'hidden', background: DTRAY, cursor: 'pointer' }}>
@@ -2925,12 +2935,12 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
               </div>
               <button type="button" onClick={() => onOpen(r)} style={{ minWidth: 0, padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: DTEXT }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                  <b style={{ fontSize: 10, padding: '3px 7px', borderRadius: 999, color: '#FFF', background: eventColor }}>{eventLabel}</b>
+                  <b style={{ fontSize: 9, letterSpacing: '.075em', padding: '4px 7px', borderRadius: 999, color: '#FFF', background: eventColor }}>{eventLabel}</b>
                   {progressLabel && <b style={{ fontSize: 9, padding: '3px 7px', borderRadius: 999, color: needsAction ? '#F4B09E' : BOOK_YELLOW, border: `1px solid ${needsAction ? 'rgba(224,106,77,.42)' : 'rgba(232,185,49,.42)'}`, background: needsAction ? 'rgba(199,57,26,.11)' : 'rgba(232,185,49,.10)' }}>{progressLabel}</b>}
                   <strong style={{ fontFamily: FM, fontSize: 12 }}>#{r.ref}</strong>
                   <small style={{ color: DTEXT_FAINT, marginLeft: 'auto' }}>{touch ? ago(touch.at) : '—'}</small>
                 </span>
-                <strong style={{ display: 'block', marginTop: 6, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.town || 'Malta'} · {r.type || 'Property'}{r.price ? ` · €${r.price.toLocaleString('en-GB')}` : ''}</strong>
+                <strong style={{ display: 'block', marginTop: 7, fontSize: 15, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.town || 'Malta'} · {r.type || 'Property'}{r.price ? ` · €${r.price.toLocaleString('en-GB')}` : ''}</strong>
                 <span style={{ display: 'flex', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
                   <em style={feedPill(market ? 'rgba(77,124,224,.14)' : 'rgba(120,125,135,.16)', market ? '#78A0F1' : DTEXT_FAINT)}>{market ? 'ON MARKET' : 'OFF MARKET'}</em>
                   <em style={feedPill(r.availability?.kind === 'now' ? 'rgba(47,142,104,.17)' : 'rgba(150,119,44,.15)', r.availability?.kind === 'now' ? '#58B88F' : '#C2A75E')}>{availabilityText}</em>
@@ -2953,6 +2963,12 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
   )
 }
 const feedTransportLink = { display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${DBORDER}`, borderRadius: 8, background: DTRAY, padding: '7px 9px', fontSize: 10, fontWeight: 750, textDecoration: 'none' }
+function FeedMetric({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return <div style={{ minWidth: 0, border: `1px solid ${DBORDER}`, borderRadius: 11, padding: '9px 10px', background: 'rgba(255,255,255,.035)' }}>
+    <strong style={{ display: 'block', color: tone, fontFamily: FM, fontSize: 19, lineHeight: 1 }}>{value}</strong>
+    <span style={{ display: 'block', marginTop: 5, color: DTEXT_FAINT, fontSize: 9, fontWeight: 750, letterSpacing: '.055em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+  </div>
+}
 function feedPill(background: string, color: string) {
   return { background, color, borderRadius: 999, padding: '2px 6px', fontSize: 8, fontStyle: 'normal', fontWeight: 800, letterSpacing: '0.06em' }
 }
