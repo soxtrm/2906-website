@@ -475,17 +475,18 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
   const [moreOpen, setMoreOpen] = useState(false)
+  const [islandOpen, setIslandOpen] = useState(false)
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
-  useEffect(() => { setMoreOpen(false) }, [pathname])
+  useEffect(() => { setMoreOpen(false); setIslandOpen(false) }, [pathname])
   const navItem = (item: typeof NAV[number]) => {
     const Icon = NAV_ICONS[item.key]
     return item.disabled
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
       : <Link key={item.key} className="crm-nav-item" href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
   }
-  return <div className={`crm-workspace${mobileIsland ? ' crm-mobile-island-workspace' : ''}`}>
+  return <div className={`crm-workspace${mobileIsland ? ` crm-mobile-island-workspace${islandOpen ? ' island-open' : ''}` : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
     <aside className="crm-sidebar">
       <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-logo-wide.png" alt="Argus" /><i aria-hidden="true" /></span></Link>
@@ -499,7 +500,12 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
     <div className="crm-main">
       <header className={`crm-header${mobileIsland ? ' crm-header-island' : ''}`}><div className="crm-header-copy"><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
         <div className="crm-header-actions">
-          {mobileIsland && <Link className="crm-mobile-island-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-logo-wide.png" alt="Argus" /><i aria-hidden="true" /></span></Link>}
+          {mobileIsland && <>
+            <button className="crm-mobile-island-brand" type="button" onClick={() => setIslandOpen(v => !v)} aria-expanded={islandOpen} aria-label={islandOpen ? 'Close Argus controls' : 'Open Argus controls'}>
+              <img src="/argus-logo.png" alt="" aria-hidden="true" />
+            </button>
+            <span className="crm-mobile-island-title">{title}</span>
+          </>}
           <a className="crm-icon-button crm-nexus" href="https://2906.estate/Link" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><svg width="20" height="20" viewBox="0 0 100 100" aria-hidden><path d="M3 3C26 22 38 33 50 33S74 22 97 3C78 26 67 38 67 50S78 74 97 97C74 78 62 67 50 67S26 78 3 97C22 74 33 62 33 50S22 26 3 3Z" fill="currentColor" /></svg></a>
           <button className="crm-icon-button" onClick={() => toggleTheme(dark)} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Light mode' : 'Dark mode'}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
           {onAdd && <button onClick={onAdd} className="crm-button primary">+ Add</button>}

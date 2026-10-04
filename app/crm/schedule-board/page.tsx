@@ -3180,7 +3180,7 @@ function CollectionCard({ r, onOpen, onStar, onChanged }: { r: Listing; onOpen: 
         <span className="argus-collection-photo">
           {images[photo] ? <img src={images[photo]} alt="" /> : <span className="argus-collection-photo-empty"><Camera size={22} />No photo</span>}
           <span className="argus-collection-ref">#{r.ref}</span>
-          {images.length > 1 && <span className="argus-collection-photo-count">{photo + 1}/{images.length}</span>}
+          {images.length > 0 && <span className="argus-collection-photo-count"><Camera size={10} aria-hidden="true" /> {photo + 1}/{images.length}</span>}
         </span>
         <span className="argus-collection-copy">
           <span className="argus-collection-title"><b>{r.town || 'Malta'}</b><strong>{price != null ? `€${Number(price).toLocaleString('en-GB')}` : 'Price on request'}</strong></span>
@@ -4037,8 +4037,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {/* Image count, bottom right. */}
         {r.imageCount > 0 && (
-          <span style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '3px 7px', borderRadius: 999 }}>
-            {r.imageCount}
+          <span title={`${r.imageCount} photos`} style={{ position: 'absolute', bottom: 8, right: 8, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(0,0,0,0.62)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '4px 7px', border: '1px solid rgba(255,255,255,.28)', borderRadius: 999, backdropFilter: 'blur(8px)' }}>
+            <Camera size={11} aria-hidden="true" /> {r.imageCount}
           </span>
         )}
 
@@ -4510,6 +4510,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {menuOpen && (
           <div style={menuPanel(dark)}>
+            <div style={menuSection(dark)}>Quick tools</div>
+            <div className="argus-card-mini-tools" aria-label="Listing quick tools">
+              <PhotoDownload r={r} />
+              {(r.isMine || isAdmin) && <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoUploadBusy} title="Add photos"><Camera size={14} /><span>Add</span></button>}
+              <button type="button" onClick={handleCopyLink} disabled={copyBusy} title="Copy listing link"><Copy size={14} /><span>Link</span></button>
+              <button type="button" onClick={handlePriceEdit} title="Update price"><Euro size={14} /><span>Price</span></button>
+              {isAdmin && <button type="button" onClick={onAvDate} title="Correct availability and viewing dates"><CalendarClock size={14} /><span>Dates</span></button>}
+            </div>
             {/* Kev, 2026-09-11: "sieht zu unübersichtlich aus" — a tall list
                 of full-width text rows read as clutter next to the Tools
                 icon row he liked. Same actions, laid out as a compact grid
