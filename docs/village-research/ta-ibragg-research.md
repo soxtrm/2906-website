@@ -1,6 +1,6 @@
 # Tal-Ibraġ edition — evidence and release gate
 
-Status: RELEASE CANDIDATE, 4 October 2026. The page has passed local build and responsive checks; live publication still requires the targeted commit, deployment and HTTP verification recorded below.
+Status: PUBLISHED, 4 October 2026. English edition live at https://www.2906.estate/link-marketplace/areas/tal-ibrag.html from commit `11cd13b`; production returned HTTP 200 with the expected title, self-canonical, one H1 and no noindex directive. Marketplace navigation and the neighbourhood sitemap both contain the edition URL.
 
 ## Editorial boundary
 
@@ -88,3 +88,11 @@ The remaining geosearch frames west of the Xagħrat group were visually reviewed
 - Run mobile and desktop visual checks, build, then deploy through the existing path with a reversible commit.
 
 No opening hours, accessibility, parking availability, safety, journey times or pedestrian routes are currently verified for publication.
+
+## Publication verification
+
+- Local build and responsive checks: passed at 390 × 844 and 1440 × 1000 on 4 October 2026.
+- Production page: HTTP 200, title `Living in Tal-Ibraġ, Malta — 2906`, self-canonical present, one H1, no noindex directive.
+- Discovery: `/link-marketplace/index.html` links to the edition and `/neighbourhood-sitemap.xml` contains the canonical URL.
+- Rollback: revert commit `11cd13b` (and the later documentation-only verification commit) rather than removing unrelated work.
+- No external backlink was published as part of this release.
