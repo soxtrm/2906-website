@@ -126,6 +126,7 @@ html[data-crm-theme="dark"] .crm-content { background: radial-gradient(circle at
 .crm-filterbar input { min-width: 140px; }
 .crm-notice { padding: 10px 28px; background: #fff2cf; color: #6f4900; font-size: 12px; }
 .crm-bottom-nav { display: none; }
+.crm-mobile-island-brand { display: none; }
 .crm-mobile-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding-top: 12px; }
 .crm-group-workspace { padding: 24px 28px; max-width: 1600px; margin: auto; }
 .crm-group-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -282,6 +283,27 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
 @media(prefers-reduced-motion:no-preference){.crm-header{animation:argus-arrive .28s ease-out}@keyframes argus-arrive{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}}
 @media(prefers-reduced-motion:no-preference){.crm-brand-mark:before{animation:argus-signal 2.8s ease-out infinite}.crm-brand-mark:after{animation:argus-signal 2.8s 1.4s ease-out infinite}.crm-brand-mark i{animation:argus-online 2.4s ease-in-out infinite}.argus-view-switch button[aria-pressed=true] .argus-switch-icon svg{animation:argus-icon-arrive .42s cubic-bezier(.2,.9,.2,1)}.argus-view-switch button[data-tab=updates][aria-pressed=true] .argus-switch-icon:after{position:absolute;width:5px;height:5px;border-radius:50%;background:#35d6c4;box-shadow:0 0 9px #35d6c4;content:"";transform:translate(11px,-11px);animation:argus-online 1.8s ease-in-out infinite}@keyframes argus-signal{0%{opacity:.55;transform:translate(-50%,-50%) scale(.35)}70%,100%{opacity:0;transform:translate(-50%,-50%) scale(4.2)}}@keyframes argus-online{50%{opacity:.45;transform:scale(.78)}}@keyframes argus-icon-arrive{0%{opacity:.35;transform:scale(.68) rotate(-9deg)}100%{opacity:1;transform:none}}}
 @media(max-width:700px){.argus-board-toolbar{align-items:stretch}.argus-view-switch{width:100%;grid-template-columns:1fr 1fr}.argus-view-switch button{grid-template-columns:30px minmax(0,1fr);padding:7px;min-height:50px}.argus-view-switch button em{position:absolute;top:4px;right:4px;min-width:19px;height:19px;padding:0 4px;font-size:8px}.argus-switch-icon{width:30px;height:30px}.argus-view-switch small{font-size:7px}.argus-view-switch b{font-size:11px}}
+
+/* The mobile board chrome lives in one compact Argus island. It stays useful
+   without taking a permanent title-and-filter row away from the listings. */
+@media(max-width:700px){
+  .crm-mobile-island-workspace .crm-main{position:relative}
+  .crm-mobile-island-workspace .crm-header-island{position:relative;z-index:70;min-height:58px;padding:7px 12px;justify-content:center;border-bottom:0;background:var(--crm-bg);box-shadow:none;backdrop-filter:none}
+  .crm-mobile-island-workspace .crm-header-copy{display:none}
+  .crm-mobile-island-workspace .crm-header-actions{position:relative;min-height:44px;padding:4px 46px 4px 7px;gap:3px;border:1px solid color-mix(in srgb,var(--crm-accent) 22%,var(--crm-border));border-radius:999px;background:color-mix(in srgb,var(--crm-surface) 94%,transparent);box-shadow:0 12px 34px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.05);backdrop-filter:blur(18px)}
+  .crm-mobile-island-workspace .crm-header-actions .crm-icon-button{width:34px;height:34px;min-height:34px;padding:7px;border:0;border-radius:999px;background:transparent}
+  .crm-mobile-island-workspace .crm-header-actions .crm-icon-button:hover,.crm-mobile-island-workspace .crm-header-actions .crm-icon-button:active{background:var(--crm-accent-soft);transform:scale(.94)}
+  .crm-mobile-island-brand{display:flex;height:34px;padding:0 9px 0 6px;align-items:center;border-right:1px solid var(--crm-border);text-decoration:none}
+  .crm-mobile-island-brand .crm-brand-mark img{display:block;width:50px;filter:brightness(0)}
+  html[data-crm-theme="dark"] .crm-mobile-island-brand .crm-brand-mark img{filter:none}
+  .crm-mobile-island-brand .crm-brand-mark i{right:-4px;width:5px;height:5px}
+  .crm-mobile-island-workspace .crm-filterbar-island{position:absolute;z-index:90;top:11px;left:calc(50% + 63px);display:block;width:36px;height:36px;padding:0;border:0;background:transparent}
+  .crm-mobile-island-workspace .crm-filterbar-island>div{position:static!important;width:36px!important;max-width:none!important}
+  .crm-mobile-island-workspace .crm-filterbar-island .board-filter-toggle{width:36px!important;height:36px;min-height:36px!important;padding:0!important;justify-content:center;gap:0;border:0!important;border-radius:999px!important;background:transparent!important;color:var(--crm-text)!important;box-shadow:none!important;backdrop-filter:none!important}
+  .crm-mobile-island-workspace .crm-filterbar-island .board-filter-toggle:hover,.crm-mobile-island-workspace .crm-filterbar-island .board-filter-toggle:active{background:var(--crm-accent-soft)!important;transform:scale(.94)}
+  .crm-mobile-island-workspace .crm-filterbar-island .board-filter-toggle>span{display:none!important}
+  .crm-mobile-island-workspace .crm-filterbar-island .board-filter-panel{position:fixed!important;z-index:120!important;top:68px!important;left:12px!important;right:12px!important;width:auto!important;max-height:calc(100dvh - 150px)!important;margin:0!important;padding:12px!important;overflow-y:auto;border:1px solid color-mix(in srgb,var(--crm-accent) 24%,var(--crm-border))!important;border-radius:18px!important;background:color-mix(in srgb,var(--crm-surface) 97%,transparent)!important;box-shadow:0 24px 70px rgba(0,0,0,.38)!important;backdrop-filter:blur(20px)!important}
+}
 
 /* Schedule Board preferences: deliberately compact, because these controls
    tune the workspace rather than becoming another dashboard inside it. */

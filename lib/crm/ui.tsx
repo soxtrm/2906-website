@@ -466,8 +466,8 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
 }
 const NAV_ICONS = { dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database }
 
-export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: darkDefault }:
-  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean }) {
+export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: darkDefault, mobileIsland = false }:
+  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileIsland?: boolean }) {
   const pathname = usePathname() || '/'
   const { me, reveals, nav, logout, theme, toggleTheme } = useCrm()
   const dark = theme != null ? theme === 'dark' : !!darkDefault
@@ -485,7 +485,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
       : <Link key={item.key} className="crm-nav-item" href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
   }
-  return <div className="crm-workspace">
+  return <div className={`crm-workspace${mobileIsland ? ' crm-mobile-island-workspace' : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
     <aside className="crm-sidebar">
       <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-logo-wide.png" alt="Argus" /><i aria-hidden="true" /></span></Link>
@@ -497,15 +497,16 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       </div>
     </aside>
     <div className="crm-main">
-      <header className="crm-header"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
+      <header className={`crm-header${mobileIsland ? ' crm-header-island' : ''}`}><div className="crm-header-copy"><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
         <div className="crm-header-actions">
+          {mobileIsland && <Link className="crm-mobile-island-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-logo-wide.png" alt="Argus" /><i aria-hidden="true" /></span></Link>}
           <a className="crm-icon-button crm-nexus" href="https://2906.estate/Link" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><svg width="20" height="20" viewBox="0 0 100 100" aria-hidden><path d="M3 3C26 22 38 33 50 33S74 22 97 3C78 26 67 38 67 50S78 74 97 97C74 78 62 67 50 67S26 78 3 97C22 74 33 62 33 50S22 26 3 3Z" fill="currentColor" /></svg></a>
           <button className="crm-icon-button" onClick={() => toggleTheme(dark)} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Light mode' : 'Dark mode'}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
           {onAdd && <button onClick={onAdd} className="crm-button primary">+ Add</button>}
         </div>
       </header>
       {hasReveals && reveals.used >= 40 && <div className="crm-notice" role="status">{reveals.used >= reveals.limit ? 'Reveal limit reached. Contact admin to raise your limit.' : `You have used ${reveals.used} of ${reveals.limit} contact reveals today.`}</div>}
-      {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
+      {filterBar !== undefined && <div className={`crm-filterbar${mobileIsland ? ' crm-filterbar-island' : ''}`}>{filterBar}</div>}
       <main id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation">

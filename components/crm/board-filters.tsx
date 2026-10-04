@@ -214,7 +214,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         type="button"
         onClick={() => setMobileOpen(o => !o)}
         className={cn(
-          'lg:hidden flex items-center gap-2 text-sm font-medium min-h-[42px] transition-all duration-200',
+          'board-filter-toggle lg:hidden flex items-center gap-2 text-sm font-medium min-h-[42px] transition-all duration-200',
           compactMobile
             ? 'w-auto rounded-full border border-white/15 bg-[#10182a]/95 px-3 shadow-[0_10px_30px_rgba(0,0,0,.42)] backdrop-blur-xl'
             : 'w-full py-1',
@@ -235,7 +235,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       </button>
 
       <div className={cn(
-        'flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-3 w-full',
+        'board-filter-panel flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-3 w-full',
         mobileOpen ? 'flex mt-3' : 'hidden lg:flex',
         compactMobile && mobileOpen && 'max-lg:fixed max-lg:top-[124px] max-lg:left-3 max-lg:right-3 max-lg:w-auto max-lg:max-h-[68vh] max-lg:overflow-y-auto max-lg:rounded-2xl max-lg:border max-lg:border-white/10 max-lg:bg-[#10182a]/98 max-lg:p-3 max-lg:shadow-2xl max-lg:backdrop-blur-xl',
       )}>

@@ -1493,6 +1493,7 @@ function Board() {
       subtitle={me ? 'Availability and viewing locations across the whole team' : undefined}
       filterBar={filterBar}
       dark
+      mobileIsland
     >
       <div style={{ padding: isMobile ? 9 : 22 }}>
         {err && <Notice text={err} />}
@@ -4619,11 +4620,11 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook }: 
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
                 <div>
                   <div style={{ fontFamily: FM, fontSize: 12, color: A }}>#{d.ref}</div>
-                  <h2 style={{ margin: '3px 0 0', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>
+                  <h2 style={{ margin: '3px 0 0', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#172033' }}>
                     {townLabel(d.town)}
                   </h2>
                 </div>
-                <div style={{ fontFamily: FM, fontSize: 19, fontWeight: 500 }}>
+                <div style={{ fontFamily: FM, fontSize: 19, fontWeight: 700, color: '#172033' }}>
                   {d.price ? `€${d.price.toLocaleString()}` : d.salePrice ? `€${d.salePrice.toLocaleString()}` : '—'}
                 </div>
               </div>
