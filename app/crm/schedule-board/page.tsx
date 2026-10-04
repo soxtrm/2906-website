@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -63,6 +63,20 @@ const HOT_GLOW = { border: `1px solid rgba(199,57,26,0.6)`, glow: '0 0 0 1px rgb
 // wins if one is set, but it would be inlined into a publicly downloadable
 // chunk — and this repo is public — so the served key is the better default.
 const BUNDLED_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''
+
+type BoardPreferences = {
+  defaultWorkspace: 'board' | 'updates'
+  mapVisible: boolean
+  compactCards: boolean
+  showFeedGuide: boolean
+}
+const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
+  defaultWorkspace: 'board',
+  mapVisible: true,
+  compactCards: false,
+  showFeedGuide: true,
+}
+const BOARD_PREFERENCES_KEY = 'argus.schedule-board.preferences.v1'
 
 type Listing = {
   id: number; ref: string; town: string | null; subLocation: string | null
@@ -448,11 +462,43 @@ function Board() {
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
   const [updatesMode, setUpdatesMode] = useState(false)
+  const [boardSettingsOpen, setBoardSettingsOpen] = useState(false)
+  const [boardPreferences, setBoardPreferences] = useState<BoardPreferences>(DEFAULT_BOARD_PREFERENCES)
+  const [boardPreferencesReady, setBoardPreferencesReady] = useState(false)
   // The agent feed is deliberately fetched without the board's current
   // filters. It stays useful while an agent is looking at one town, a price
   // range or Favourites: recent team activity must not disappear just because
   // the grid underneath has been narrowed.
   const [feedRows, setFeedRows] = useState<Listing[]>([])
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(BOARD_PREFERENCES_KEY)
+      const next = saved ? { ...DEFAULT_BOARD_PREFERENCES, ...JSON.parse(saved) } : DEFAULT_BOARD_PREFERENCES
+      setBoardPreferences(next)
+      setMapOpen(next.mapVisible)
+      if (!params.get('view')) setUpdatesMode(next.defaultWorkspace === 'updates')
+    } catch { /* a damaged local preference should never block the board */ }
+    setBoardPreferencesReady(true)
+  // Deliberately mount-only: later URL/filter changes must never overwrite a
+  // preference the agent just changed in this open board session.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!boardPreferencesReady) return
+    window.localStorage.setItem(BOARD_PREFERENCES_KEY, JSON.stringify(boardPreferences))
+  }, [boardPreferences, boardPreferencesReady])
+
+  const updateBoardPreference = useCallback(<K extends keyof BoardPreferences>(key: K, value: BoardPreferences[K]) => {
+    setBoardPreferences(current => ({ ...current, [key]: value }))
+    if (key === 'mapVisible') setMapOpen(Boolean(value))
+  }, [])
+
+  const resetBoardPreferences = useCallback(() => {
+    setBoardPreferences(DEFAULT_BOARD_PREFERENCES)
+    setMapOpen(DEFAULT_BOARD_PREFERENCES.mapVisible)
+  }, [])
 
   const showToast = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
     setToast({ kind, text })
@@ -1422,6 +1468,16 @@ function Board() {
               }}>{label}<span style={{ marginLeft: 5, fontFamily: FM, opacity: .76 }}>{badge}</span></button>
             })}
           </div>
+          <button
+            type="button"
+            className="argus-board-settings-button"
+            aria-expanded={boardSettingsOpen}
+            aria-controls="argus-board-settings"
+            onClick={() => setBoardSettingsOpen(open => !open)}
+          >
+            <SlidersHorizontal size={14} aria-hidden />
+            Board settings
+          </button>
           {/* The owner-reachout switch. Sits here rather than in a settings page
               because this is where you notice the robot's work, and it is where
               Kev asked for it (2026-08-16). Admin only, and read-only for
@@ -1432,10 +1488,20 @@ function Board() {
           <ReachoutSwitch />
         </div>
 
+        {boardSettingsOpen && (
+          <BoardSettingsPanel
+            preferences={boardPreferences}
+            onChange={updateBoardPreference}
+            onReset={resetBoardPreferences}
+            onClose={() => setBoardSettingsOpen(false)}
+          />
+        )}
+
         {updatesMode && (
           <AgentFeed
             rows={feedRows}
             mobile={isMobile}
+            showGuide={boardPreferences.showFeedGuide}
             onOpen={r => setDetail(r.ref)}
             onChat={r => setChatting(r)}
             onBook={r => setBooking(r)}
@@ -1647,7 +1713,7 @@ function Board() {
         )}
 
         <button
-          onClick={() => setMapOpen(v => !v)}
+          onClick={() => updateBoardPreference('mapVisible', !mapOpen)}
           style={{
             ...chip, marginBottom: mapOpen ? 8 : 14, background: DCARD,
             borderColor: DBORDER, color: DTEXT_DIM, fontWeight: 600,
@@ -1671,14 +1737,14 @@ function Board() {
         {/* Gap 14→20 (Kev's redesign brief, 2026-08-22) — more editorial
             breathing room between cards, less packed-admin-table. */}
         <div style={{
-          display: 'grid', gap: isMobile ? 10 : 20, marginTop: 20,
+          display: 'grid', gap: isMobile ? 10 : boardPreferences.compactCards ? 12 : 20, marginTop: boardPreferences.compactCards ? 12 : 20,
           // Kev, 2026-08-22: 268 was too narrow — the action row could not fit
           // its buttons and the on/off-market pair got clipped off the right
           // edge of the card. Wider minimum = one fewer card per row, and the
           // buttons have room to sit on one line instead of overflowing.
           // Kev, 2026-09-11: tried two smaller cards per row on mobile, but it
           // made the board unreadable — reverted to one full-width card per row.
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(340px,1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : `repeat(auto-fill,minmax(${boardPreferences.compactCards ? 320 : 340}px,1fr))`,
         }}>
           {visible.map(r => (
             <Card
@@ -1711,6 +1777,7 @@ function Board() {
               photoUploadBusy={photoBusyRef === r.ref}
               onDelete={() => deleteOneListing(r)}
               onChanged={reload}
+              compact={boardPreferences.compactCards}
             />
           ))}
         </div>
@@ -2823,9 +2890,82 @@ function ReachoutSwitch() {
   )
 }
 
-function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, busyRef }: {
+function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
+  preferences: BoardPreferences
+  onChange: <K extends keyof BoardPreferences>(key: K, value: BoardPreferences[K]) => void
+  onReset: () => void
+  onClose: () => void
+}) {
+  return (
+    <section id="argus-board-settings" className="argus-board-settings" aria-label="Board settings">
+      <header>
+        <span className="argus-settings-heading">
+          <span><SlidersHorizontal size={17} aria-hidden /></span>
+          <span><b>Board settings</b><small>Saved on this device</small></span>
+        </span>
+        <button type="button" className="argus-settings-close" onClick={onClose} aria-label="Close board settings"><XGlyph size={16} /></button>
+      </header>
+      <div className="argus-settings-grid">
+        <fieldset>
+          <legend>Start in</legend>
+          <div className="argus-settings-choice">
+            <button type="button" aria-pressed={preferences.defaultWorkspace === 'board'} onClick={() => onChange('defaultWorkspace', 'board')}><LayoutGrid size={15} />Active Board</button>
+            <button type="button" aria-pressed={preferences.defaultWorkspace === 'updates'} onClick={() => onChange('defaultWorkspace', 'updates')}><RadioTower size={15} />Daily Updates</button>
+          </div>
+          <small>The workspace opened first on your next visit.</small>
+        </fieldset>
+        <fieldset>
+          <legend>Property cards</legend>
+          <div className="argus-settings-choice">
+            <button type="button" aria-pressed={!preferences.compactCards} onClick={() => onChange('compactCards', false)}><LayoutGrid size={15} />Comfortable</button>
+            <button type="button" aria-pressed={preferences.compactCards} onClick={() => onChange('compactCards', true)}><Rows3 size={15} />Compact</button>
+          </div>
+          <small>Compact fits more properties into the same screen.</small>
+        </fieldset>
+        <SettingsToggle
+          icon={<MapPinned size={16} />}
+          title="Open map automatically"
+          description="Show the Malta map when the board opens."
+          checked={preferences.mapVisible}
+          onChange={value => onChange('mapVisible', value)}
+        />
+        <SettingsToggle
+          icon={<CircleHelp size={16} />}
+          title="Daily Updates guide"
+          description="Keep the feed explanation and mobility shortcuts visible."
+          checked={preferences.showFeedGuide}
+          onChange={value => onChange('showFeedGuide', value)}
+        />
+      </div>
+      <footer>
+        <button type="button" onClick={onReset}><RotateCcw size={13} />Reset defaults</button>
+        <span>Changes apply immediately.</span>
+      </footer>
+    </section>
+  )
+}
+
+function SettingsToggle({ icon, title, description, checked, onChange }: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  checked: boolean
+  onChange: (value: boolean) => void
+}) {
+  return (
+    <label className="argus-settings-toggle">
+      <span className="argus-settings-toggle-icon">{icon}</span>
+      <span><b>{title}</b><small>{description}</small></span>
+      <input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
+      <i aria-hidden="true" />
+    </label>
+  )
+}
+
+function AgentFeed({ rows, mobile, showGuide, onOpen, onChat, onBook, onTag, onConfirm, busyRef }: {
   rows: Listing[]
   mobile: boolean
+  showGuide: boolean
   onOpen: (r: Listing) => void
   onChat: (r: Listing) => void
   onBook: (r: Listing) => void
@@ -2865,7 +3005,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           <FeedMetric label="Next action" value={progressCount} tone={BOOK_YELLOW} />
         </div>
       </header>
-      <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'minmax(0,1.45fr) minmax(280px,.55fr)', gap: 9, marginBottom: 12 }}>
+      {showGuide && <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'minmax(0,1.45fr) minmax(280px,.55fr)', gap: 9, marginBottom: 12 }}>
         <div style={{ border: `1px solid rgba(232,185,49,.28)`, borderRadius: 13, padding: '11px 13px', background: 'rgba(232,185,49,.055)', color: DTEXT }}>
           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
             <CircleHelp size={17} color={BOOK_YELLOW} style={{ flex: '0 0 auto', marginTop: 1 }} />
@@ -2884,7 +3024,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
             <a href="/nexus-map" style={{ ...feedTransportLink, color: '#E8D9AD' }}><CarFront size={13} /> Road traffic</a>
           </div>
         </div>
-      </div>
+      </div>}
       <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
         {([['all', 'All updates'], ['progress', 'Ready to progress'], ['confirmed', 'Confirmed'], ['new', 'New listings']] as const).map(([value, label]) => (
           <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} style={{
@@ -2976,7 +3116,7 @@ function FeedAction({ label, onClick, icon, accent = false, disabled = false }: 
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
-                onAddPhotos, photoUploadBusy, onDelete, onChanged }: {
+                onAddPhotos, photoUploadBusy, onDelete, onChanged, compact }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -3029,6 +3169,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // Admin-only — the card hides the control for everyone else.
   onDelete: () => void
   onChanged: () => void
+  compact: boolean
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
@@ -3379,7 +3520,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         onClick={onOpen}
         onMouseEnter={startPhotoHover}
         onMouseLeave={stopPhotoHover}
-        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? 152 : 200, flexShrink: 0, background: '#111' }}
+        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? (compact ? 132 : 152) : (compact ? 164 : 200), flexShrink: 0, background: '#111', transition: 'height 180ms ease' }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
           ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -3579,7 +3720,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           Available and the tray below it read as dead space — bottom
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
-      <div style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div style={{ padding: isMobile ? '10px 11px 2px' : compact ? '10px 12px 3px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
