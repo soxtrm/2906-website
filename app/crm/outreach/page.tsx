@@ -238,11 +238,25 @@ function ArgusConsole() {
   }
 
   return (
-    <CrmShell title="Outreach Planner" subtitle="Your accounts, queues and schedules." dark><div className="argus-workspace" style={{ minHeight: '100vh', background: `radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(224,56,159,0.06), transparent), radial-gradient(ellipse 1000px 500px at 90% 0%, rgba(79,123,242,0.06), transparent), ${BG}`, color: TEXT, fontFamily: F, paddingBottom: 60 }}>
+    <CrmShell title="Outreach" subtitle="Accounts, queues and reviewed owner contact." dark><div className="argus-workspace" style={{ minHeight: '100vh', color: TEXT, fontFamily: F, paddingBottom: 60 }}>
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <div style={{ padding: '22px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, borderBottom: `1px solid ${HAIRLINE}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: '8px 14px' }}>
+      <section className="outreach-hero">
+        <div className="outreach-hero-copy">
+          <span><Radio size={12} aria-hidden /> ARGUS / OUTREACH SYSTEM</span>
+          <h2>Every account.<br /><strong>In sync.</strong></h2>
+          <p>One control layer for outreach identities, protected timing and reviewed owner contact.</p>
+          <div className="outreach-hero-signals" aria-label="System principles">
+            <span><ShieldCheck size={13} /> Reviewed sends</span>
+            <span><Clock3 size={13} /> 24h 15m protection</span>
+            <span><Layers size={13} /> Separate identities</span>
+          </div>
+        </div>
+        <div className="outreach-orbit" aria-hidden="true">
+          <i /><i /><i />
+          <span><Zap size={25} /><b>ARGUS</b><small>OUTREACH</small></span>
+        </div>
+        <div className="outreach-hero-status">
+          <div className="outreach-status-card">
             <div style={{ fontSize: 9, color: FAINT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Connected Accounts</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
               {orderedAccounts.map((a, i) => (
@@ -251,12 +265,15 @@ function ArgusConsole() {
               <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 6 }}>{connectedCount} / {orderedAccounts.length} connected</span>
             </div>
           </div>
-          <div style={{ background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: '8px 14px', textAlign: 'right' }}>
+          <div className="outreach-status-card time">
             <div style={{ fontSize: 9, color: FAINT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Europe/Malta</div>
             <div style={{ fontSize: 15, fontWeight: 700, fontFamily: FM }}>{clock.time} <span style={{ fontSize: 10, color: MUTED, fontFamily: F }}>{clock.date}</span></div>
           </div>
+          <div className="outreach-status-card wide">
+            <span>OPEN REVIEW</span><b>{dueReminders.rows.length + rechecks.tasks.length}</b><small>reminders and owner rechecks</small>
+          </div>
         </div>
-      </div>
+      </section>
 
       <nav className="outreach-main-tabs" aria-label="Outreach workspace">
         <button aria-pressed={activeTab === 'tools'} onClick={() => setActiveTab('tools')}>Outreach tools <span>{outreachAccounts.length}</span></button>
