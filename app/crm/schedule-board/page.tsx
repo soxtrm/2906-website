@@ -2863,9 +2863,9 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
     <section aria-label="Property updates" style={{ maxWidth: 1180, margin: '0 auto 32px' }}>
       <header style={{ position: 'relative', overflow: 'hidden', border: `1px solid ${DBORDER}`, borderRadius: 18, padding: mobile ? '18px 16px' : '22px 24px', marginBottom: 12, background: 'radial-gradient(circle at 88% 12%, rgba(232,185,49,.15), transparent 34%), linear-gradient(135deg, rgba(19,30,48,.98), rgba(12,20,33,.98))', boxShadow: '0 18px 48px rgba(0,0,0,.20)' }}>
         <div aria-hidden="true" style={{ position: 'absolute', right: -34, top: -62, width: 180, height: 180, border: '1px solid rgba(232,185,49,.16)', borderRadius: '50%' }} />
-        <span style={{ color: A, fontSize: 10, letterSpacing: '.18em', fontWeight: 850 }}>ARGUS · DAILY PROPERTY FLOW</span>
-        <h2 style={{ color: DTEXT, fontSize: mobile ? 25 : 34, lineHeight: 1.05, letterSpacing: '-.035em', margin: '7px 0 6px' }}>What changed. What moves next.</h2>
-        <p style={{ color: DTEXT_DIM, fontSize: 12, lineHeight: 1.5, margin: 0, maxWidth: 610 }}>A chronological inbox for new stock, confirmed availability and listings that need an agent. Newest activity stays at the top.</p>
+        <span style={{ color: '#E8B931', fontSize: 10, letterSpacing: '.18em', fontWeight: 850 }}>ARGUS · DAILY PROPERTY FLOW</span>
+        <h2 style={{ color: '#F8F4EA', fontSize: mobile ? 25 : 34, lineHeight: 1.05, letterSpacing: '-.035em', margin: '7px 0 6px' }}>What changed. What moves next.</h2>
+        <p style={{ color: 'rgba(248,244,234,.66)', fontSize: 12, lineHeight: 1.5, margin: 0, maxWidth: 610 }}>A chronological inbox for new stock, confirmed availability and listings that need an agent. Newest activity stays at the top.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 7, marginTop: 18, maxWidth: 520 }}>
           <FeedMetric label="New this week" value={newCount} tone="#78A0F1" />
           <FeedMetric label="Confirmed" value={confirmedCount} tone="#58B88F" />
@@ -2966,7 +2966,7 @@ const feedTransportLink = { display: 'inline-flex', alignItems: 'center', gap: 5
 function FeedMetric({ label, value, tone }: { label: string; value: number; tone: string }) {
   return <div style={{ minWidth: 0, border: `1px solid ${DBORDER}`, borderRadius: 11, padding: '9px 10px', background: 'rgba(255,255,255,.035)' }}>
     <strong style={{ display: 'block', color: tone, fontFamily: FM, fontSize: 19, lineHeight: 1 }}>{value}</strong>
-    <span style={{ display: 'block', marginTop: 5, color: DTEXT_FAINT, fontSize: 9, fontWeight: 750, letterSpacing: '.055em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+    <span style={{ display: 'block', marginTop: 5, color: 'rgba(248,244,234,.54)', fontSize: 9, fontWeight: 750, letterSpacing: '.055em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
   </div>
 }
 function feedPill(background: string, color: string) {
