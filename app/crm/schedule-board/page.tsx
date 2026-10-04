@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -64,7 +64,7 @@ const HOT_GLOW = { border: `1px solid rgba(199,57,26,0.6)`, glow: '0 0 0 1px rgb
 // chunk — and this repo is public — so the served key is the better default.
 const BUNDLED_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''
 
-type DiscoveryKey = 'popular-new' | 'seafront' | 'beds-3' | 'beds-2' | 'beds-1' | 'apartments' | 'villas'
+type DiscoveryKey = 'popular-new' | 'seafront' | 'beds-3' | 'beds-2' | 'beds-1' | 'apartments' | 'villas' | 'luxury' | 'penthouses' | 'pool'
 const DISCOVERY_ITEMS: { key: DiscoveryKey; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { key: 'popular-new', label: 'Popular & New', icon: Sparkles },
   { key: 'seafront', label: 'Seafronts', icon: Waves },
@@ -73,11 +73,14 @@ const DISCOVERY_ITEMS: { key: DiscoveryKey; label: string; icon: React.Component
   { key: 'beds-1', label: '1 Bedroom', icon: BedDouble },
   { key: 'apartments', label: 'Apartments', icon: Building2 },
   { key: 'villas', label: 'Villas', icon: House },
+  { key: 'luxury', label: 'Luxury', icon: Gem },
+  { key: 'penthouses', label: 'Penthouses', icon: Crown },
+  { key: 'pool', label: 'Pool', icon: Droplets },
 ]
 
 type BoardPreferences = {
+  discoveryVersion: 2
   defaultWorkspace: 'board' | 'updates'
-  defaultSort: string
   mapVisible: boolean
   compactCards: boolean
   showFeedGuide: boolean
@@ -90,8 +93,8 @@ type BoardPreferences = {
   discoveryKeys: DiscoveryKey[]
 }
 const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
+  discoveryVersion: 2,
   defaultWorkspace: 'board',
-  defaultSort: 'newest',
   mapVisible: true,
   compactCards: false,
   showFeedGuide: true,
@@ -271,18 +274,8 @@ const EMPTY: Filters = {
   pets: '', sharing: '', sublet: false, updated: '', rental: '',
 }
 
-// Newest-first is the default because it is what the board is for: the listing
-// that just came in is the one being asked about. The backend owns the actual
-// ORDER BY (routes/crmScheduleBoard.js SORTS) — these are the options it
-// accepts, and the label the menu shows.
-const SORTS: Array<[string, string]> = [
-  ['newest', 'Newest first'],
-  ['oldest', 'Oldest first'],
-  ['stalest', 'Needs confirming'],
-  ['confirmed', 'Just confirmed'],
-  ['price_low', 'Price ↑'],
-  ['price_high', 'Price ↓'],
-]
+// The board always follows the newest meaningful property activity. A single
+// order keeps the first screen dependable for every agent and every device.
 const DEFAULT_SORT = 'newest'
 
 type BoardView = 'board' | 'rented' | 'favourites'
@@ -398,10 +391,9 @@ function Board() {
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
   const [circ, setCirc] = useState<Circ | null>(() => parseCirc(params.get('circ')))
-  const [sort, setSort] = useState<string>(() => {
-    const s = params.get('sort') || ''
-    return SORTS.some(([v]) => v === s) ? s : DEFAULT_SORT
-  })
+  // One predictable board order: the latest real property activity first.
+  // Agents should never have to discover or repair a stale saved sort.
+  const sort = DEFAULT_SORT
   // 'board' = the active worklist (available + available_confirmed), which
   // ALSO now includes pending_check ("needs recheck") listings — they carry
   // a watermark badge and sort to the bottom (see the ORDER BY on the
@@ -502,11 +494,16 @@ function Board() {
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(BOARD_PREFERENCES_KEY)
-      const next = saved ? { ...DEFAULT_BOARD_PREFERENCES, ...JSON.parse(saved) } : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
+      const parsed = saved ? JSON.parse(saved) : null
+      const migratedDiscoveryKeys = parsed?.discoveryVersion === 2 && Array.isArray(parsed.discoveryKeys)
+        ? parsed.discoveryKeys
+        : [...new Set([...(Array.isArray(parsed?.discoveryKeys) ? parsed.discoveryKeys : DEFAULT_BOARD_PREFERENCES.discoveryKeys), 'luxury', 'penthouses', 'pool'])]
+      const next = parsed
+        ? { ...DEFAULT_BOARD_PREFERENCES, ...parsed, discoveryVersion: 2 as const, discoveryKeys: migratedDiscoveryKeys }
+        : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
       setBoardPreferences(next)
       setMapOpen(next.mapVisible)
       if (!params.get('view')) setUpdatesMode(next.defaultWorkspace === 'updates')
-      if (!params.get('sort') && SORTS.some(([value]) => value === next.defaultSort)) setSort(next.defaultSort)
     } catch { /* a damaged local preference should never block the board */ }
     setBoardPreferencesReady(true)
   // Deliberately mount-only: later URL/filter changes must never overwrite a
@@ -808,6 +805,9 @@ function Board() {
         if (discovery.startsWith('beds-') && r.beds !== Number(discovery.slice(-1))) return false
         if (discovery === 'apartments' && !/apartment|penthouse|maisonette/.test(copy)) return false
         if (discovery === 'villas' && !/villa/.test(copy)) return false
+        if (discovery === 'luxury' && !/luxury|luxurious|designer|high[- ]end|premium|prestigious|upmarket/.test(copy)) return false
+        if (discovery === 'penthouses' && !/penthouse/.test(copy)) return false
+        if (discovery === 'pool' && !/pool|swimming/.test(copy)) return false
       }
       // ── tenancy rules ─────────────────────────────────────────────────────
       // Three states, so match EXACTLY: 'yes' keeps only true, 'no' keeps only
@@ -855,7 +855,7 @@ function Board() {
         if (horizon === 'future' && !farFuture) return false
       }
       return true
-    })
+    }).sort((a, b) => Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01'))
   }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon, discovery])
 
   const mineCount = visible.filter(r => r.isMine).length
@@ -1382,36 +1382,6 @@ function Board() {
       dark
       extra={
         <>
-          {/* Sort. Newest-first is the default and the reason the board reads
-              top-left-first: the listing that just arrived is the one being
-              asked about. The backend does the ordering.
-              Kev, 2026-08-22: was its own bg-off-white/no-shadow className,
-              copy-pasted separately from board-filters.tsx's TRIGGER — so
-              when TRIGGER got the raised-pill shadow treatment, these three
-              controls silently fell behind and stood out as "the ones that
-              still look like plain HTML". Now the same shell, and the native
-              select arrow (which read as a different design system on its
-              own) is hidden behind the same ChevronDown every other trigger
-              uses. */}
-          <div className="relative">
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value)}
-              disabled={view === 'favourites'}
-              title={view === 'favourites'
-                ? 'Favourites are ordered by when you saved them, newest first'
-                : view === 'rented'
-                ? 'Order the rented list'
-                : 'Order the board'}
-              className="appearance-none pl-3 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded
-                         text-sm text-navy/70 hover:text-navy transition-all
-                         focus:outline-none focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
-            >
-              {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <ChevronDown className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-navy/40 pointer-events-none" />
-          </div>
-
           {/* Only listings somebody has actually stood behind, with a timestamp
               to prove it. */}
           {view === 'board' && (
@@ -2981,11 +2951,11 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
           <small>Compact fits more properties into the same screen.</small>
         </fieldset>
         <fieldset>
-          <legend>Default sorting</legend>
-          <select value={preferences.defaultSort} onChange={event => onChange('defaultSort', event.target.value)} style={{width:'100%',minHeight:42,border:`1px solid ${DBORDER}`,borderRadius:10,padding:'0 12px',background:DTRAY,color:DTEXT,fontSize:12}}>
-            {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <small>A future tagged appointment always stays above ordinary listings.</small>
+          <legend>Board order</legend>
+          <div style={{ minHeight: 42, border: `1px solid ${DBORDER}`, borderRadius: 10, padding: '0 12px', background: DTRAY, color: DTEXT, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Clock3 size={15} color={A} />Latest updates first
+          </div>
+          <small>New uploads, edits and confirmed availability automatically move to the top.</small>
         </fieldset>
         <fieldset>
           <legend>Swipe shortcuts</legend>
