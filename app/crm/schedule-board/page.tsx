@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -66,15 +66,29 @@ const BUNDLED_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''
 
 type BoardPreferences = {
   defaultWorkspace: 'board' | 'updates'
+  defaultSort: string
   mapVisible: boolean
   compactCards: boolean
   showFeedGuide: boolean
+  showTownFilters: boolean
+  showBookingBadges: boolean
+  showAgentNames: boolean
+  showDescriptions: boolean
+  showBookingDetails: boolean
+  showQuickTools: boolean
 }
 const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
   defaultWorkspace: 'board',
+  defaultSort: 'newest',
   mapVisible: true,
   compactCards: false,
   showFeedGuide: true,
+  showTownFilters: true,
+  showBookingBadges: true,
+  showAgentNames: true,
+  showDescriptions: true,
+  showBookingDetails: true,
+  showQuickTools: true,
 }
 const BOARD_PREFERENCES_KEY = 'argus.schedule-board.preferences.v1'
 
@@ -478,6 +492,7 @@ function Board() {
       setBoardPreferences(next)
       setMapOpen(next.mapVisible)
       if (!params.get('view')) setUpdatesMode(next.defaultWorkspace === 'updates')
+      if (!params.get('sort') && SORTS.some(([value]) => value === next.defaultSort)) setSort(next.defaultSort)
     } catch { /* a damaged local preference should never block the board */ }
     setBoardPreferencesReady(true)
   // Deliberately mount-only: later URL/filter changes must never overwrite a
@@ -1693,7 +1708,7 @@ function Board() {
         </div>
 
         {/* villages */}
-        {townOptions.length > 0 && (
+        {boardPreferences.showTownFilters && townOptions.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
             {townOptions.map(t => {
               const on = f.towns.includes(t.key)
@@ -1778,6 +1793,7 @@ function Board() {
               onDelete={() => deleteOneListing(r)}
               onChanged={reload}
               compact={boardPreferences.compactCards}
+              preferences={boardPreferences}
             />
           ))}
         </div>
@@ -2922,6 +2938,13 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
           </div>
           <small>Compact fits more properties into the same screen.</small>
         </fieldset>
+        <fieldset>
+          <legend>Default sorting</legend>
+          <select value={preferences.defaultSort} onChange={event => onChange('defaultSort', event.target.value)} style={{width:'100%',minHeight:42,border:`1px solid ${DBORDER}`,borderRadius:10,padding:'0 12px',background:DTRAY,color:DTEXT,fontSize:12}}>
+            {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+          <small>A future tagged appointment always stays above ordinary listings.</small>
+        </fieldset>
         <SettingsToggle
           icon={<MapPinned size={16} />}
           title="Open map automatically"
@@ -2936,6 +2959,12 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
           checked={preferences.showFeedGuide}
           onChange={value => onChange('showFeedGuide', value)}
         />
+        <SettingsToggle icon={<MapPinned size={16} />} title="Town shortcuts" description="Show the quick town filter row above the cards." checked={preferences.showTownFilters} onChange={value => onChange('showTownFilters', value)} />
+        <SettingsToggle icon={<CalendarDays size={16} />} title="Booking signals" description="Show viewing-ready and appointment labels on cards." checked={preferences.showBookingBadges} onChange={value => onChange('showBookingBadges', value)} />
+        <SettingsToggle icon={<UserRound size={16} />} title="Agent names" description="Show the responsible agent on every listing." checked={preferences.showAgentNames} onChange={value => onChange('showAgentNames', value)} />
+        <SettingsToggle icon={<MessageCircle size={16} />} title="Descriptions" description="Keep property descriptions visible inside cards." checked={preferences.showDescriptions} onChange={value => onChange('showDescriptions', value)} />
+        <SettingsToggle icon={<Clock3 size={16} />} title="Booking details" description="Show the next viewing date and booking context." checked={preferences.showBookingDetails} onChange={value => onChange('showBookingDetails', value)} />
+        <SettingsToggle icon={<Zap size={16} />} title="Quick tools" description="Keep the main card action row visible." checked={preferences.showQuickTools} onChange={value => onChange('showQuickTools', value)} />
       </div>
       <footer>
         <button type="button" onClick={onReset}><RotateCcw size={13} />Reset defaults</button>
@@ -3116,7 +3145,7 @@ function FeedAction({ label, onClick, icon, accent = false, disabled = false }: 
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
-                onAddPhotos, photoUploadBusy, onDelete, onChanged, compact }: {
+                onAddPhotos, photoUploadBusy, onDelete, onChanged, compact, preferences }: {
   r: Listing
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
@@ -3170,6 +3199,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   onDelete: () => void
   onChanged: () => void
   compact: boolean
+  preferences: BoardPreferences
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
@@ -3573,7 +3603,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             Hot
           </span>
         )}
-        {r.bookingsPossible && (
+        {preferences.showBookingBadges && r.bookingsPossible && (
           <span data-bookings-possible={r.ref}
             title={r.viewingWindow ? 'Owner confirmed a viewing time — book a slot' : 'Owner confirmed a viewings-from date — request a time'}
             style={{ position: 'absolute', top: 40, left: 10, background: BOOK_YELLOW, color: '#151C2C', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5, boxShadow: '0 1px 4px rgba(0,0,0,0.35)' }}>
@@ -3627,7 +3657,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           }}>
             {isFreshlyUpdated && '✦ '}{freshBadgeLabel(r)}
           </span>
-          {r.listedBy.displayName && (
+          {preferences.showAgentNames && r.listedBy.displayName && (
             <span style={{
               background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
               padding: '2px 7px', borderRadius: 999, whiteSpace: 'nowrap',
@@ -3787,7 +3817,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         )}
 
         {/* ── description preview ──────────────────────────────────────────── */}
-        {r.description && !isMobile && (
+        {preferences.showDescriptions && r.description && !isMobile && (
           <div onClick={onOpen} title="Click to read the full listing" style={{ marginTop: 9, cursor: 'pointer' }}>
             <p style={{
               fontSize: 11.5, color: DTEXT_DIM, lineHeight: 1.5, margin: 0,
@@ -3802,7 +3832,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         {/* Viewable date — desktop only; the ~170px mobile column has no room
             for a second stat row alongside Still Available/Confirmed, which
             now live at the bottom of the body, right above the tray. */}
-        {!isMobile && (
+        {preferences.showBookingDetails && !isMobile && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
@@ -4052,7 +4082,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           are already click-to-open. Every onClick/disabled condition below
           is the SAME one the previous three-row layout used; only where it
           lives changed. */}
-      {!!r.bookings?.length && (
+      {preferences.showBookingDetails && !!r.bookings?.length && (
         <div data-card-bookings={r.ref} style={{
           padding: '7px 12px', borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
           background: dark ? DCARD : CARD, display: 'flex', flexDirection: 'column', gap: 3,
@@ -4070,7 +4100,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           )}
         </div>
       )}
-      <div style={{
+      {preferences.showQuickTools && <div style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
         padding: '9px 11px', position: 'relative',
       }} ref={menuRef}>
@@ -4263,7 +4293,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             )}
           </div>
         )}
-      </div>
+      </div>}
       {inquiryOpen && (
         <AgentInquiryModal
           propertyRef={r.ref}

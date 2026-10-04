@@ -121,6 +121,15 @@ export function PropertyLifeOverview({ overview, description = '', features = []
     {label:'Amenities',value:Math.min(96,68+amenityPlaces*2),hint:`${amenityPlaces} useful places mapped`},
     {label:'Mobility',value:Math.min(94,68+mobilityPlaces*7+(overview.mappedCount>8?5:0)),hint:mobilityPlaces?`${mobilityPlaces} nearby connections`:'Area routes available'},
   ]
+  const coastScore = nearest.coast ? Math.max(62, Math.min(94, 96 - Math.round(nearest.coast.distanceKm * 8))) : 68
+  const convenienceScore = Math.min(95, 66 + Math.min(overview.mappedCount, 14) * 2)
+  const radarSignals = [...signals, {label:'Coast', value:coastScore}, {label:'Convenience', value:convenienceScore}]
+  const radarPoint = (index: number, value: number) => {
+    const angle = (-90 + index * 60) * Math.PI / 180
+    const radius = 68 * value / 100
+    return `${100 + Math.cos(angle) * radius},${100 + Math.sin(angle) * radius}`
+  }
+  const radarRing = (value: number) => radarSignals.map((_, index) => radarPoint(index, value)).join(' ')
 
   return <section className={styles.frame} aria-labelledby="life-overview-title">
     <header className={styles.heading}>
@@ -133,7 +142,18 @@ export function PropertyLifeOverview({ overview, description = '', features = []
     </header>
 
     <div className={styles.smartSnapshot} aria-label="Property and area snapshot">
-      <div className={styles.signalPanel}><span>PROPERTY FIT</span><h3>Four reasons this home works.</h3><div className={styles.signalBars}>{signals.map(signal=><div key={signal.label}><header><b>{signal.label}</b><small>{signal.hint}</small></header><i><span style={{width:`${signal.value}%`}} /></i></div>)}</div></div>
+      <div className={styles.signalPanel}>
+        <div className={styles.signalHeading}><span>PROPERTY FIT</span><h3>One clear read.</h3><p>Six practical signals, based on the home description and mapped surroundings.</p></div>
+        <div className={styles.radarLayout}>
+          <svg className={styles.hexRadar} viewBox="0 0 200 200" role="img" aria-label={radarSignals.map(signal=>`${signal.label} ${signal.value} out of 100`).join(', ')}>
+            {[100,70,40].map(value=><polygon key={value} points={radarRing(value)} className={styles.radarRing} />)}
+            {radarSignals.map((signal,index)=><line key={signal.label} x1="100" y1="100" x2={radarPoint(index,100).split(',')[0]} y2={radarPoint(index,100).split(',')[1]} className={styles.radarAxis} />)}
+            <motion.polygon points={radarSignals.map((signal,index)=>radarPoint(index,signal.value)).join(' ')} className={styles.radarShape} initial={{opacity:0,scale:.82,transformOrigin:'100px 100px'}} whileInView={{opacity:1,scale:1}} viewport={{once:true}} transition={{duration:.55,ease:[.2,.8,.2,1]}} />
+            {radarSignals.map((signal,index)=>{const [cx,cy]=radarPoint(index,signal.value).split(',');return <circle key={signal.label} cx={cx} cy={cy} r="3" className={styles.radarDot} />})}
+          </svg>
+          <div className={styles.radarLegend}>{radarSignals.map(signal=><div key={signal.label}><span>{signal.label}</span><b>{signal.value}</b></div>)}</div>
+        </div>
+      </div>
       <div className={styles.miniMapPanel}>
         <div className={styles.miniMapToolbar}><nav aria-label="Mini map category">{overview.categories.filter(item=>['restaurant','groceries','coast','movement'].includes(item.key)).map(item=>{const ItemIcon=icons[item.key];return <button key={item.key} type="button" aria-pressed={active===item.key} onClick={()=>setActive(item.key)}><ItemIcon aria-hidden="true" />{item.key==='restaurant'?'Eat':item.key==='groceries'?'Shop':item.key==='coast'?'Coast':'Move'}</button>})}</nav><label>Radius <select value={radiusKm} onChange={event=>setRadiusKm(Number(event.target.value))}><option value={1}>1 km</option><option value={2}>2 km</option><option value={3}>3 km</option></select></label></div>
         <iframe ref={miniFrame} className={styles.miniMap} src="/link-marketplace/estate-area-map.html" title="Quick map of useful places near this property" loading="lazy" onLoad={()=>setMiniMapReady(n=>n+1)} />
@@ -141,7 +161,7 @@ export function PropertyLifeOverview({ overview, description = '', features = []
       <div className={styles.quickFacts}>{overview.categories.filter(c=>['groceries','coast','health'].includes(c.key)).flatMap(c=>c.places.slice(0,1).map(p=><span key={p.id}><Check aria-hidden="true" /><b>{p.name}</b><small>{minutes(routes[p.id]?.walkingSeconds)?`${minutes(routes[p.id]?.walkingSeconds)} walk`:distance(p.distanceKm)}</small></span>))}</div>
     </div>
 
-    <details className={styles.fullExplorer}><summary><span>Open full area explorer</span><small>Large map, routes, traffic and every mapped place</small><ArrowUpRight aria-hidden="true" /></summary>
+    <details className={styles.fullExplorer} open><summary><span>Full area explorer</span><small>Large map, routes, traffic and every mapped place</small><ArrowUpRight aria-hidden="true" /></summary>
 
     <div className={styles.explorer}>
       <div className={styles.explorerTop}>
