@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, CircleHelp, LayoutGrid, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets, Plus, CircleAlert } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, GripVertical, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, CircleHelp, LayoutGrid, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets, Plus, CircleAlert } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup, LocationSelect } from '@/lib/crm/ui'
@@ -79,9 +79,20 @@ const DISCOVERY_ITEMS: { key: DiscoveryKey; label: string; icon: React.Component
   { key: 'pool', label: 'Pool', icon: Droplets },
 ]
 
+type CollectionKey = 'seafront' | 'beds-1' | 'beds-2' | 'beds-3' | 'luxury' | 'houses'
+const COLLECTION_ITEMS: { key: CollectionKey; label: string; eyebrow: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { key: 'seafront', label: 'Seafront', eyebrow: 'Waterfront living', icon: Waves },
+  { key: 'beds-1', label: '1 Bedroom', eyebrow: 'Simple & efficient', icon: BedDouble },
+  { key: 'beds-2', label: '2 Bedrooms', eyebrow: 'Most requested', icon: BedDouble },
+  { key: 'beds-3', label: '3 Bedrooms', eyebrow: 'Room to grow', icon: BedDouble },
+  { key: 'luxury', label: 'Luxury', eyebrow: 'Premium homes', icon: Gem },
+  { key: 'houses', label: 'Houses & Villas', eyebrow: 'Independent living', icon: House },
+]
+
 type BoardPreferences = {
   discoveryVersion: 2
-  defaultWorkspace: 'board' | 'updates'
+  collectionVersion: 1
+  defaultWorkspace: 'board' | 'collections' | 'updates'
   mapVisible: boolean
   compactCards: boolean
   showFeedGuide: boolean
@@ -92,9 +103,11 @@ type BoardPreferences = {
   showBookingDetails: boolean
   showQuickTools: boolean
   discoveryKeys: DiscoveryKey[]
+  collectionOrder: CollectionKey[]
 }
 const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
   discoveryVersion: 2,
+  collectionVersion: 1,
   defaultWorkspace: 'board',
   mapVisible: true,
   compactCards: false,
@@ -106,6 +119,7 @@ const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
   showBookingDetails: true,
   showQuickTools: true,
   discoveryKeys: DISCOVERY_ITEMS.map(item => item.key),
+  collectionOrder: COLLECTION_ITEMS.map(item => item.key),
 }
 const BOARD_PREFERENCES_KEY = 'argus.schedule-board.preferences.v1'
 
@@ -489,6 +503,7 @@ function Board() {
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
   const [updatesMode, setUpdatesMode] = useState(false)
+  const [collectionsMode, setCollectionsMode] = useState(false)
   const [discovery, setDiscovery] = useState<DiscoveryKey | null>(null)
   const [boardSettingsOpen, setBoardSettingsOpen] = useState(false)
   const [boardPreferences, setBoardPreferences] = useState<BoardPreferences>(DEFAULT_BOARD_PREFERENCES)
@@ -506,12 +521,22 @@ function Board() {
       const migratedDiscoveryKeys = parsed?.discoveryVersion === 2 && Array.isArray(parsed.discoveryKeys)
         ? parsed.discoveryKeys
         : [...new Set([...(Array.isArray(parsed?.discoveryKeys) ? parsed.discoveryKeys : DEFAULT_BOARD_PREFERENCES.discoveryKeys), 'luxury', 'penthouses', 'pool'])]
+      const savedCollectionOrder = Array.isArray(parsed?.collectionOrder)
+        ? parsed.collectionOrder.filter((key: unknown): key is CollectionKey => COLLECTION_ITEMS.some(item => item.key === key))
+        : []
+      const migratedCollectionOrder = [
+        ...savedCollectionOrder,
+        ...COLLECTION_ITEMS.map(item => item.key).filter(key => !savedCollectionOrder.includes(key)),
+      ]
       const next = parsed
-        ? { ...DEFAULT_BOARD_PREFERENCES, ...parsed, discoveryVersion: 2 as const, discoveryKeys: migratedDiscoveryKeys }
+        ? { ...DEFAULT_BOARD_PREFERENCES, ...parsed, discoveryVersion: 2 as const, collectionVersion: 1 as const, discoveryKeys: migratedDiscoveryKeys, collectionOrder: migratedCollectionOrder }
         : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
       setBoardPreferences(next)
       setMapOpen(next.mapVisible)
-      if (!params.get('view')) setUpdatesMode(next.defaultWorkspace === 'updates')
+      if (!params.get('view')) {
+        setUpdatesMode(next.defaultWorkspace === 'updates')
+        setCollectionsMode(next.defaultWorkspace === 'collections')
+      }
     } catch { /* a damaged local preference should never block the board */ }
     setBoardPreferencesReady(true)
   // Deliberately mount-only: later URL/filter changes must never overwrite a
@@ -1503,20 +1528,25 @@ function Board() {
             available for restoring a listing without competing with daily work. */}
         <div className="argus-board-toolbar">
           <div className="argus-view-switch" aria-label="Board view">
-            <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }} aria-pressed={!updatesMode && view === 'board'}>
+            <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setCollectionsMode(false); setSelected(new Set()) }} aria-pressed={!updatesMode && !collectionsMode && view === 'board'}>
               <span className="argus-switch-icon"><LayoutGrid size={17} aria-hidden /></span>
               <span><b>Standard</b><small>Property overview</small></span>
             </button>
-            <button data-tab="updates" onClick={() => setUpdatesMode(true)} aria-pressed={updatesMode}>
+            <button data-tab="collections" onClick={() => { setView('board'); setUpdatesMode(false); setCollectionsMode(true); setDiscovery(null); setSelected(new Set()) }} aria-pressed={collectionsMode}>
               <span className="argus-switch-icon"><Rows3 size={17} aria-hidden /></span>
+              <span><b>Rows</b><small>Swipe collections</small></span>
+              <em>{visible.length}</em>
+            </button>
+            <button data-tab="updates" onClick={() => { setUpdatesMode(true); setCollectionsMode(false) }} aria-pressed={updatesMode}>
+              <span className="argus-switch-icon"><Clock3 size={17} aria-hidden /></span>
               <span><b>List</b><small>Updates by time</small></span>
               <em>{feedRows.length}</em>
             </button>
           </div>
           <div style={{ display: 'flex', gap: 5, marginLeft: isMobile ? 0 : 'auto' }}>
             {([['favourites', 'Favourites', favCount], ['rented', 'Rented', rentedCount]] as const).map(([v, label, badge]) => {
-              const on = !updatesMode && view === v
-              return <button key={v} data-tab={v} onClick={() => { setView(v); setUpdatesMode(false); setSelected(new Set()) }} style={{
+              const on = !updatesMode && !collectionsMode && view === v
+              return <button key={v} data-tab={v} onClick={() => { setView(v); setUpdatesMode(false); setCollectionsMode(false); setSelected(new Set()) }} style={{
                 ...chip, borderRadius: 999, padding: '6px 9px', fontSize: 10,
                 background: on ? 'rgba(184,149,63,.17)' : 'transparent',
                 borderColor: on ? A : DBORDER, color: on ? A : DTEXT_FAINT, fontWeight: 700,
@@ -1573,7 +1603,7 @@ function Board() {
             a separate fetch, and only means anything on that tab. Defaults
             to Active so a listing 6 months out is never mixed into the
             normal board by accident. */}
-        {view === 'board' && (
+        {view === 'board' && !collectionsMode && (
           <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
             {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
               const on = horizon === h
@@ -1595,7 +1625,7 @@ function Board() {
           </div>
         )}
 
-        {view === 'board' && (
+        {view === 'board' && !collectionsMode && (
           <div aria-label="Quick property collections" style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', padding: '1px 1px 12px', marginBottom: 2, scrollbarWidth: 'none' }}>
             {DISCOVERY_ITEMS.filter(item => boardPreferences.discoveryKeys.includes(item.key)).map(item => {
               const Icon = item.icon
@@ -1637,6 +1667,7 @@ function Board() {
           </div>
         )}
 
+        {!collectionsMode && <>
         {/* ── WATag toolbar ──────────────────────────────────────────────────
             The multi-select half of WATag. It appears only once something is
             picked, so the board is not carrying a dead bar around all day, and
@@ -1803,11 +1834,22 @@ function Board() {
           selectedTowns={f.towns}
           isMobile={isMobile}
         />}
+        </>}
+
+        {collectionsMode && view === 'board' && (
+          <AirbnbCollectionRows
+            rows={visible}
+            order={boardPreferences.collectionOrder}
+            onOpen={r => setDetail(r.ref)}
+            onStar={toggleStar}
+            onChanged={reload}
+          />
+        )}
 
         {/* cards */}
         {/* Gap 14→20 (Kev's redesign brief, 2026-08-22) — more editorial
             breathing room between cards, less packed-admin-table. */}
-        <div style={{
+        {!collectionsMode && <div style={{
           display: 'grid', gap: isMobile ? 10 : boardPreferences.compactCards ? 12 : 20, marginTop: boardPreferences.compactCards ? 12 : 20,
           // Kev, 2026-08-22: 268 was too narrow — the action row could not fit
           // its buttons and the on/off-market pair got clipped off the right
@@ -1818,7 +1860,7 @@ function Board() {
           gridTemplateColumns: isMobile ? '1fr' : `repeat(auto-fill,minmax(${boardPreferences.compactCards ? 320 : 340}px,1fr))`,
         }}>
           {visible.map(renderPropertyCard)}
-        </div>
+        </div>}
 
         {!loading && !visible.length && !err && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: '#BBB', fontSize: 13 }}>
@@ -3047,6 +3089,151 @@ function ReachoutSwitch() {
   )
 }
 
+function matchesCollection(r: Listing, key: CollectionKey): boolean {
+  const copy = [r.type, r.town, r.subLocation, r.description].filter(Boolean).join(' ').toLowerCase()
+  if (key === 'seafront') return /(sea\s*front|seafront|waterfront|frontline|sea[ -]?view)/i.test(copy)
+  if (key.startsWith('beds-')) return r.beds === Number(key.slice(-1))
+  if (key === 'luxury') return r.category === 'aesthetics' || /luxury|luxurious|designer|high[- ]end|premium|prestigious|upmarket/i.test(copy)
+  return /house|villa|townhouse|farmhouse|bungalow/i.test(copy)
+}
+
+function collectionSort(a: Listing, b: Listing): number {
+  const at = listingTouch(a)?.at || a.latestUpdateAt || '1970-01-01'
+  const bt = listingTouch(b)?.at || b.latestUpdateAt || '1970-01-01'
+  return Date.parse(bt) - Date.parse(at) || b.ref.localeCompare(a.ref)
+}
+
+function AirbnbCollectionRows({ rows, order, onOpen, onStar, onChanged }: {
+  rows: Listing[]
+  order: CollectionKey[]
+  onOpen: (r: Listing) => void
+  onStar: (r: Listing) => void
+  onChanged: () => void
+}) {
+  const normalized = [...order, ...COLLECTION_ITEMS.map(item => item.key).filter(key => !order.includes(key))]
+  return (
+    <section className="argus-collection-board" aria-label="Swipeable property collections">
+      <header className="argus-collection-intro">
+        <span><Sparkles size={14} />CURATED LIVE INVENTORY</span>
+        <h2>Find the right property faster.</h2>
+        <p>Swipe each row. Every home is ordered by its freshest upload, edit or availability confirmation.</p>
+      </header>
+      {normalized.map(key => {
+        const item = COLLECTION_ITEMS.find(candidate => candidate.key === key)
+        if (!item) return null
+        const matches = rows.filter(row => matchesCollection(row, key)).sort(collectionSort)
+        return <CollectionRow key={key} item={item} rows={matches} onOpen={onOpen} onStar={onStar} onChanged={onChanged} />
+      })}
+    </section>
+  )
+}
+
+function CollectionRow({ item, rows, onOpen, onStar, onChanged }: {
+  item: (typeof COLLECTION_ITEMS)[number]
+  rows: Listing[]
+  onOpen: (r: Listing) => void
+  onStar: (r: Listing) => void
+  onChanged: () => void
+}) {
+  const rail = useRef<HTMLDivElement | null>(null)
+  const Icon = item.icon
+  const scroll = (direction: -1 | 1) => rail.current?.scrollBy({ left: direction * Math.max(260, rail.current.clientWidth * .78), behavior: 'smooth' })
+  return (
+    <section className="argus-property-row" aria-labelledby={`collection-${item.key}`}>
+      <header>
+        <span className="argus-property-row-heading">
+          <i><Icon size={16} /></i>
+          <span><small>{item.eyebrow}</small><b id={`collection-${item.key}`}>{item.label}</b></span>
+          <em>{rows.length}</em>
+        </span>
+        <span className="argus-property-row-controls">
+          <button type="button" onClick={() => scroll(-1)} aria-label={`Scroll ${item.label} left`}><ChevronLeft size={16} /></button>
+          <button type="button" onClick={() => scroll(1)} aria-label={`Scroll ${item.label} right`}><ChevronRight size={16} /></button>
+        </span>
+      </header>
+      {rows.length ? (
+        <div ref={rail} className="argus-property-rail">
+          {rows.map(row => <CollectionCard key={row.ref} r={row} onOpen={() => onOpen(row)} onStar={() => onStar(row)} onChanged={onChanged} />)}
+        </div>
+      ) : <div className="argus-collection-empty">No matching properties in the current filters.</div>}
+    </section>
+  )
+}
+
+function CollectionCard({ r, onOpen, onStar, onChanged }: { r: Listing; onOpen: () => void; onStar: () => void; onChanged: () => void }) {
+  const { me, theme } = useCrm()
+  const [hovered, setHovered] = useState(false)
+  const [photo, setPhoto] = useState(0)
+  const images = r.images || []
+  useEffect(() => {
+    if (!hovered || images.length < 2) return
+    const timer = window.setInterval(() => setPhoto(current => (current + 1) % images.length), 2000)
+    return () => window.clearInterval(timer)
+  }, [hovered, images.length])
+  useEffect(() => setPhoto(0), [r.ref])
+  const touch = listingTouch(r)
+  const available = r.availability?.kind === 'now' || r.availableStatus === 'available_confirmed'
+  const price = r.price ?? r.salePrice
+  return (
+    <article className="argus-collection-card" onMouseEnter={() => setHovered(true)} onMouseLeave={() => { setHovered(false); setPhoto(0) }}>
+      <button type="button" className="argus-collection-card-open" onClick={onOpen} aria-label={`Open ${r.town || 'property'} ${r.ref}`}>
+        <span className="argus-collection-photo">
+          {images[photo] ? <img src={images[photo]} alt="" /> : <span className="argus-collection-photo-empty"><Camera size={22} />No photo</span>}
+          <span className="argus-collection-ref">#{r.ref}</span>
+          {images.length > 1 && <span className="argus-collection-photo-count">{photo + 1}/{images.length}</span>}
+        </span>
+        <span className="argus-collection-copy">
+          <span className="argus-collection-title"><b>{r.town || 'Malta'}</b><strong>{price != null ? `€${Number(price).toLocaleString('en-GB')}` : 'Price on request'}</strong></span>
+          <span className="argus-collection-meta">{[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type].filter(Boolean).join(' · ') || 'Property'}</span>
+          <span className="argus-collection-status-row">
+            <span className={available ? 'is-available' : r.availableDate ? 'is-dated' : ''}>{available ? 'Available now' : r.availableDate ? `Available ${fmtDateDots(r.availableDate)}` : 'On market'}</span>
+            <small>{touch ? ago(touch.at) : 'Live'}</small>
+          </span>
+        </span>
+      </button>
+      <button type="button" className="argus-collection-star" onClick={event => { event.stopPropagation(); onStar() }} aria-label={`Favourite ${r.ref}`} aria-pressed={starStepOf(r) > 0}>
+        <StarGlyph filled={starStepOf(r) > 0} size={17} color={starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : '#fff'} />
+      </button>
+      <span className="argus-collection-gear" onClick={event => event.stopPropagation()}>
+        <ClassificationGear r={r} dark={theme === 'dark'} isAdmin={me?.role === 'admin'} onChanged={onChanged} />
+      </span>
+    </article>
+  )
+}
+
+function CollectionOrderEditor({ order, onChange }: { order: CollectionKey[]; onChange: (order: CollectionKey[]) => void }) {
+  const [dragged, setDragged] = useState<CollectionKey | null>(null)
+  const normalized = [...order, ...COLLECTION_ITEMS.map(item => item.key).filter(key => !order.includes(key))]
+  const move = (key: CollectionKey, direction: -1 | 1) => {
+    const index = normalized.indexOf(key)
+    const nextIndex = index + direction
+    if (index < 0 || nextIndex < 0 || nextIndex >= normalized.length) return
+    const next = [...normalized]
+    ;[next[index], next[nextIndex]] = [next[nextIndex], next[index]]
+    onChange(next)
+  }
+  const drop = (target: CollectionKey) => {
+    if (!dragged || dragged === target) return setDragged(null)
+    const next = normalized.filter(key => key !== dragged)
+    next.splice(next.indexOf(target), 0, dragged)
+    onChange(next)
+    setDragged(null)
+  }
+  return (
+    <div className="argus-collection-order">
+      {normalized.map((key, index) => {
+        const item = COLLECTION_ITEMS.find(candidate => candidate.key === key)!
+        const Icon = item.icon
+        return <div key={key} draggable onDragStart={() => setDragged(key)} onDragEnd={() => setDragged(null)} onDragOver={event => event.preventDefault()} onDrop={() => drop(key)} className={dragged === key ? 'is-dragging' : ''}>
+          <GripVertical size={14} aria-hidden /><Icon size={14} /><b>{item.label}</b>
+          <button type="button" onClick={() => move(key, -1)} disabled={index === 0} aria-label={`Move ${item.label} up`}><ArrowUp size={13} /></button>
+          <button type="button" onClick={() => move(key, 1)} disabled={index === normalized.length - 1} aria-label={`Move ${item.label} down`}><ArrowDown size={13} /></button>
+        </div>
+      })}
+    </div>
+  )
+}
+
 function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
   preferences: BoardPreferences
   onChange: <K extends keyof BoardPreferences>(key: K, value: BoardPreferences[K]) => void
@@ -3065,8 +3252,9 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
       <div className="argus-settings-grid">
         <fieldset>
           <legend>Start in</legend>
-          <div className="argus-settings-choice">
+          <div className="argus-settings-choice three">
             <button type="button" aria-pressed={preferences.defaultWorkspace === 'board'} onClick={() => onChange('defaultWorkspace', 'board')}><LayoutGrid size={15} />Standard</button>
+            <button type="button" aria-pressed={preferences.defaultWorkspace === 'collections'} onClick={() => onChange('defaultWorkspace', 'collections')}><Rows3 size={15} />Rows</button>
             <button type="button" aria-pressed={preferences.defaultWorkspace === 'updates'} onClick={() => onChange('defaultWorkspace', 'updates')}><Rows3 size={15} />List</button>
           </div>
           <small>The workspace opened first on your next visit.</small>
@@ -3095,7 +3283,12 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
               return <button key={item.key} type="button" aria-pressed={enabled} onClick={() => onChange('discoveryKeys', enabled ? preferences.discoveryKeys.filter(key => key !== item.key) : [...preferences.discoveryKeys, item.key])} style={{ border: `1px solid ${enabled ? A : DBORDER}`, borderRadius: 999, background: enabled ? 'rgba(184,149,63,.12)' : DTRAY, color: enabled ? A : DTEXT_FAINT, padding: '7px 9px', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, cursor: 'pointer' }}><Icon size={12} />{item.label}</button>
             })}
           </div>
-          <small>Choose the horizontal quick rows shown above listings.</small>
+          <small>Choose the quick filter chips shown above the standard board.</small>
+        </fieldset>
+        <fieldset className="argus-collection-order-fieldset">
+          <legend>Swipe row order</legend>
+          <CollectionOrderEditor order={preferences.collectionOrder} onChange={order => onChange('collectionOrder', order)} />
+          <small>Drag rows into position or use the arrows. The order is saved on this device.</small>
         </fieldset>
         <SettingsToggle
           icon={<MapPinned size={16} />}
