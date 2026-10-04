@@ -565,7 +565,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
       <motion.div {...fade} onClick={onClose} className="fixed inset-0 z-[199] bg-black/50 backdrop-blur-[3px]" />
       <motion.div
         {...rise}
-        className="fixed z-[200] shadow-2xl flex flex-col overflow-hidden
+        className="crm-chat-dialog fixed z-[200] shadow-2xl flex flex-col overflow-hidden
                    inset-x-0 bottom-0 rounded-t-2xl h-[88vh]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
                    sm:w-[440px] sm:h-[680px] sm:rounded-2xl sm:max-h-[88vh]"
@@ -591,10 +591,10 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               <MessageCircle className="w-4 h-4 text-gold" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-white tracking-tight truncate">
+              <h2 className="truncate text-base font-bold tracking-tight text-white">
                 {state?.ownerLabel || 'Owner'}
               </h2>
-              <p className="text-[11px] text-white/40 truncate">
+              <p className="mt-0.5 truncate text-xs text-white/60">
                 #{refId}{town ? ` · ${town}` : ''}{closed ? ' · closed' : ''}
               </p>
             </div>
@@ -603,14 +603,14 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             {state?.persona && (
               <span
                 title="The account you're texting from — stay in character"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px]
+                className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 py-1 text-xs
                            font-semibold tracking-wide bg-gold/10 border border-gold/30 text-gold-light whitespace-nowrap"
               >
                 @{state.persona}
               </span>
             )}
             <button onClick={onClose} aria-label="Close"
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-white/70 transition-colors hover:bg-white/10 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -626,7 +626,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
           <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 border-b border-white/[0.06] shrink-0 relative z-10">
             {onBook && (
               <button onClick={onBook} title="Book a viewing"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold
                            bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
                 <Calendar className="w-3 h-3" /> Book
               </button>
@@ -642,7 +642,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               return (
                 <button onClick={ready ? onCreateGroup : undefined} disabled={!ready || already} title={title}
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-colors',
+                    'inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors',
                     ready && !already
                       ? 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
                       : 'bg-transparent text-white/25 border border-dashed border-white/15 cursor-not-allowed',
@@ -657,7 +657,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
         {/* ── milchglas: other agents' activity with this same owner ───────────── */}
         {!!state?.otherActivity.length && (
           <div className="px-4 sm:px-5 pt-3 pb-1 shrink-0 relative z-10">
-            <div className="flex items-center gap-1.5 mb-2 text-[9px] uppercase tracking-[0.14em] text-white/30 font-semibold">
+            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/60">
               <EyeOff className="w-3 h-3" /> Also in touch with this owner
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -669,7 +669,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
                     <div className="absolute inset-0 backdrop-blur-md bg-white/[0.06]" />
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-white/50">
                       <Icon className="w-3.5 h-3.5" />
-                      <span className="text-[8px] tracking-wide">{agoShort(a.at)}</span>
+                      <span className="text-[11px] font-medium tracking-wide">{agoShort(a.at)}</span>
                     </div>
                     <div className="absolute inset-x-2 bottom-1.5 h-1 rounded-full bg-white/20 blur-[2px]" />
                   </div>
@@ -680,16 +680,16 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
         )}
 
         {state?.privateDeviceChat && (
-          <div className="mx-4 sm:mx-5 mt-3 rounded-xl border border-white/10 bg-white/[0.045] px-3.5 py-3 text-white/55 shrink-0">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
+          <div className="mx-4 mt-3 shrink-0 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-3 text-white/70 sm:mx-5">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/70">
               <EyeOff className="h-3.5 w-3.5" /> Private device chat · live activity
             </div>
             {!!state.preferenceRules?.length && (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {state.preferenceRules.map(rule => <span key={rule} className="rounded-full border border-gold/20 bg-gold/10 px-2 py-1 text-[10.5px] text-gold-light">{rule}</span>)}
+                {state.preferenceRules.map(rule => <span key={rule} className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-xs font-medium text-gold-light">{rule}</span>)}
               </div>
             )}
-            <p className="mt-2 text-[10.5px] leading-relaxed text-white/35">Message content stays private. Direction and timestamps remain visible and refresh live.</p>
+            <p className="mt-2 text-xs leading-relaxed text-white/60">Message content stays private. Direction and timestamps remain visible and refresh live.</p>
           </div>
         )}
 
@@ -705,13 +705,13 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
           {err && <ErrorLine text={err} />}
 
           {!state && !err && (
-            <div className="flex items-center justify-center h-full text-white/25 text-xs">Loading…</div>
+            <div className="flex h-full items-center justify-center text-sm text-white/60">Loading…</div>
           )}
 
           {state && timeline.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               <MessageCircle className="w-8 h-8 text-white/10 mb-2" />
-              <p className="text-xs text-white/35 leading-relaxed">
+              <p className="text-sm leading-relaxed text-white/65">
                 No conversation yet — just type below to start one, or use{' '}
                 <span className="font-semibold text-white/55">Ask</span> / <span className="font-semibold text-white/55">Book</span>{' '}
                 if you'd rather compose something first. Either way it goes straight to the owner.
@@ -725,10 +725,10 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               const Icon = copy?.icon || MessageCircle
               return (
                 <div key={`ev-${item.at}-${item.event.kind}`} className="flex justify-center py-1">
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/45 text-[10.5px]">
+                  <div className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs text-white/70">
                     <Icon className="w-3 h-3" />
                     <span>{copy?.label || item.event.kind}</span>
-                    <span className="text-white/25">· {timeOnly(item.at)}</span>
+                    <span className="text-white/55">· {timeOnly(item.at)}</span>
                   </div>
                 </div>
               )
@@ -738,7 +738,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             return (
               <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                 <div className={cn(
-                  'max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-snug whitespace-pre-wrap break-words',
+                  'max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap break-words sm:max-w-[78%] sm:text-sm',
                   mine
                     ? 'bg-gradient-to-br from-gold/25 to-gold/10 border border-gold/25 text-white rounded-br-sm'
                     : 'bg-white/[0.06] border border-white/[0.08] text-white/90 rounded-bl-sm',
@@ -749,7 +749,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
                       <div className="mt-1.5 h-2 w-[62%] rounded-full bg-current opacity-20 blur-[2.5px]" />
                     </div>
                   ) : m.text}
-                  <div className={cn('text-[9px] mt-1 text-right', mine ? 'text-gold-light/50' : 'text-white/25')}>
+                  <div className={cn('mt-1 text-right text-[11px] font-medium', mine ? 'text-gold-light/70' : 'text-white/55')}>
                     {timeOnly(m.at)}
                   </div>
                 </div>
@@ -768,14 +768,14 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             rows={1}
             disabled={closed}
             placeholder={closed ? 'This conversation has closed' : 'Type a message — sent to the owner as-is…'}
-            className="flex-1 resize-none px-3.5 py-2.5 bg-white/[0.05] border border-white/[0.08] rounded-full text-sm text-white
-                       placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/40
+            className="min-h-11 flex-1 resize-none rounded-2xl border border-white/15 bg-white/[0.07] px-4 py-3 text-base text-white
+                       placeholder:text-white/55 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/40
                        disabled:opacity-40 max-h-24"
           />
           <button
             onClick={send}
             disabled={!draft.trim() || sending || closed}
-            className="w-10 h-10 rounded-full bg-gold text-navy flex items-center justify-center shrink-0
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gold text-navy
                        disabled:opacity-25 disabled:cursor-not-allowed hover:bg-gold-light transition-colors"
             aria-label="Send"
           >

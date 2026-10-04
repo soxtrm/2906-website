@@ -118,6 +118,14 @@ html[data-crm-theme="dark"] .crm-brand img { filter: none; }
 .crm-root .crm-filterbar [class~="bg-navy"] { background: var(--crm-action); color: var(--crm-inverse); }
 .crm-root [data-slot="dialog-overlay"] { z-index: 200; }
 .crm-root [data-slot="dialog-content"] { z-index: 201; color: var(--crm-text); }
+.crm-chat-dialog {
+  --crm-text: #f7f8fb;
+  --crm-muted: #c6ceda;
+  --crm-faint: #aab5c5;
+  --crm-border: rgba(255,255,255,.16);
+  --crm-raised: rgba(255,255,255,.08);
+  color-scheme: dark;
+}
 .crm-root [class~="bg-off-white"] { background-color: var(--crm-raised); }
 .crm-root [class~="text-red-400"] { color: var(--crm-danger); }
 html:not([data-crm-theme="dark"]) .crm-root [class~="text-blue-400"] { color: #1f57a8; }

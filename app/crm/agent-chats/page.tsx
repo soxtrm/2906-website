@@ -51,7 +51,7 @@ const STATUS_MAP: Record<string, { bg: string; text: string; dot: string; label:
 function statusPill(status: string) {
   const s = STATUS_MAP[status] || { bg: '#F3F4F6', text: '#6B7280', dot: '#9CA3AF', label: status }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
       style={{ background: s.bg, color: s.text }}>
       <span className="w-[5px] h-[5px] rounded-full" style={{ background: s.dot }} />{s.label}
     </span>
@@ -73,47 +73,50 @@ function fmtTime(iso: string) {
 function ChatCard({ c, open, onToggle }: { c: AgentChat; open: boolean; onToggle: () => void }) {
   const last = c.messages[c.messages.length - 1]
   return (
-    <div className="rounded-lg border border-white/10 bg-[#141B29] overflow-hidden">
-      <div onClick={onToggle} className="p-4 cursor-pointer hover:border-gold/40 transition-colors flex gap-3 items-start">
+    <article className="overflow-hidden rounded-2xl border border-[var(--crm-border)] bg-[var(--crm-surface)] shadow-[0_10px_30px_rgba(10,20,40,.08)]">
+      <button type="button" onClick={onToggle} aria-expanded={open}
+        className="flex min-h-24 w-full items-start gap-3 p-4 text-left transition-colors hover:bg-[var(--crm-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--crm-accent)] sm:p-5">
         {c.image
-          ? <img src={c.image} alt={c.ref} className="w-11 h-11 rounded object-cover flex-shrink-0 bg-white/5" />
-          : <div className="w-11 h-11 rounded flex-shrink-0 bg-white/5" />}
+          ? <img src={c.image} alt="" className="h-14 w-14 flex-shrink-0 rounded-xl bg-[var(--crm-raised)] object-cover sm:h-16 sm:w-16" />
+          : <div className="h-14 w-14 flex-shrink-0 rounded-xl bg-[var(--crm-raised)] sm:h-16 sm:w-16" aria-hidden />}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="font-semibold text-sm text-white">
+            <div className="min-w-0 pr-1">
+              <div className="break-words text-[15px] font-bold leading-snug text-[var(--crm-text)] sm:text-base">
                 #{c.ref}{c.town ? ` · ${c.town}` : ''}
               </div>
-              <div className="text-[11px] text-white/40">
+              <div className="mt-1 text-xs leading-relaxed text-[var(--crm-muted)] sm:text-[13px]">
                 {c.beds != null ? `${c.beds} bed${c.beds === 1 ? '' : 's'} · ` : ''}
                 {c.price ? `€${Number(c.price).toLocaleString()}` : ''}
               </div>
             </div>
             {statusPill(c.status)}
           </div>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold/10 text-gold font-semibold">{c.agentName}</span>
-            <span className="text-[10px] text-white/30">↔ {c.ownerLabel}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-[var(--crm-accent-soft)] px-2 py-1 text-xs font-bold text-[var(--crm-accent)]">{c.agentName}</span>
+            <span className="text-xs font-medium text-[var(--crm-muted)]">↔ {c.ownerLabel}</span>
           </div>
           {last && (
-            <div className="text-[11px] text-white/50 mt-2 truncate">
-              <span className="text-white/30">{last.direction === 'owner_to_agent' ? 'Owner: ' : `${c.agentName}: `}</span>
-              {last.redacted ? <span className="inline-block h-2 w-24 rounded-full bg-white/25 blur-[2.5px]" aria-label="Private message hidden" /> : last.text}
+            <div className="mt-2 line-clamp-2 break-words text-[13px] leading-relaxed text-[var(--crm-muted)]">
+              <span className="font-semibold text-[var(--crm-text)]">{last.direction === 'owner_to_agent' ? 'Owner: ' : `${c.agentName}: `}</span>
+              {last.redacted ? <span className="inline-block h-2 w-24 rounded-full bg-current opacity-25 blur-[2.5px]" aria-label="Private message hidden" /> : last.text}
             </div>
           )}
-          <div className="text-[10px] text-white/25 mt-1">{fmtTimeAgo(c.updatedAt)} · {c.messages.length} message{c.messages.length === 1 ? '' : 's'}</div>
+          <div className="mt-1.5 text-xs font-medium text-[var(--crm-faint)]">{fmtTimeAgo(c.updatedAt)} · {c.messages.length} message{c.messages.length === 1 ? '' : 's'}</div>
         </div>
-      </div>
+      </button>
       {open && (
-        <div className="border-t border-white/10 bg-black/20 p-4 max-h-80 overflow-y-auto">
-          {c.messages.length === 0 && <div className="text-[11px] text-white/30 italic">No messages logged for this thread.</div>}
+        <div className="max-h-[55dvh] overflow-y-auto border-t border-[var(--crm-border)] bg-[var(--crm-raised)] p-4 sm:max-h-96 sm:p-5">
+          {c.messages.length === 0 && <div className="text-sm italic text-[var(--crm-muted)]">No messages logged for this thread.</div>}
           {c.messages.map((m, i) => (
             <div key={i} className="mb-2.5 last:mb-0">
-              <div className="text-[10px] text-white/30 mb-0.5">
+              <div className="mb-1 text-xs font-medium text-[var(--crm-muted)]">
                 {m.direction === 'owner_to_agent' ? c.ownerLabel : c.agentName} · {fmtTime(m.at)}
               </div>
-              <div className={`text-[12px] leading-snug rounded-lg px-3 py-1.5 inline-block max-w-full ${
-                m.direction === 'owner_to_agent' ? 'bg-white/10 text-white/85' : 'bg-gold/15 text-white'
+              <div className={`inline-block max-w-[92%] whitespace-pre-wrap break-words rounded-2xl border px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[78%] ${
+                m.direction === 'owner_to_agent'
+                  ? 'border-[var(--crm-border)] bg-[var(--crm-surface)] text-[var(--crm-text)]'
+                  : 'border-[color-mix(in_srgb,var(--crm-accent)_35%,transparent)] bg-[var(--crm-accent-soft)] text-[var(--crm-text)]'
               }`}>
                 {m.redacted ? (
                   <span className="block min-w-[118px] py-1" aria-label="Private message content hidden">
@@ -126,7 +129,7 @@ function ChatCard({ c, open, onToggle }: { c: AgentChat; open: boolean; onToggle
           ))}
         </div>
       )}
-    </div>
+    </article>
   )
 }
 
@@ -164,41 +167,41 @@ function AgentChatsInner() {
   if (me && me.role !== 'admin') {
     return (
       <CrmShell title="Agent Chats" subtitle="Admins only" dark>
-        <p className="text-sm text-white/40">This dashboard is admin-only.</p>
+        <p className="text-sm text-[var(--crm-muted)]">This dashboard is admin-only.</p>
       </CrmShell>
     )
   }
 
   return (
     <CrmShell title="Agent Chats" subtitle={`${openCount} open · ${chats.length} in the last 14 days`} dark>
-      <p className="text-xs text-white/30 mb-4 max-w-2xl">
+      <p className="mb-5 max-w-2xl text-sm leading-relaxed text-[var(--crm-muted)]">
         Every agent's owner conversation in one place. Owner identity is anonymized here the same way it is in each
         agent's own chat window — this is a monitor for agent activity, not an owner lookup.
       </p>
 
-      {err && <div className="mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded p-2">{err}</div>}
+      {err && <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm font-medium text-red-600 dark:text-red-300">{err}</div>}
 
       {agentNames.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap mb-4">
+        <div className="mb-5 flex flex-wrap gap-2" aria-label="Filter chats by agent">
           <button onClick={() => setAgentFilter('all')}
-            className={`px-3 py-1 text-[11px] font-semibold rounded-full border transition-colors ${
-              agentFilter === 'all' ? 'border-gold text-gold bg-gold/10' : 'border-white/10 text-white/40 hover:text-white/70'
+            aria-pressed={agentFilter === 'all'} className={`min-h-11 rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
+              agentFilter === 'all' ? 'border-[var(--crm-accent)] bg-[var(--crm-accent-soft)] text-[var(--crm-accent)]' : 'border-[var(--crm-border)] bg-[var(--crm-surface)] text-[var(--crm-muted)] hover:text-[var(--crm-text)]'
             }`}>All agents</button>
           {agentNames.map(name => (
             <button key={name} onClick={() => setAgentFilter(name)}
-              className={`px-3 py-1 text-[11px] font-semibold rounded-full border transition-colors ${
-                agentFilter === name ? 'border-gold text-gold bg-gold/10' : 'border-white/10 text-white/40 hover:text-white/70'
+              aria-pressed={agentFilter === name} className={`min-h-11 rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
+                agentFilter === name ? 'border-[var(--crm-accent)] bg-[var(--crm-accent-soft)] text-[var(--crm-accent)]' : 'border-[var(--crm-border)] bg-[var(--crm-surface)] text-[var(--crm-muted)] hover:text-[var(--crm-text)]'
               }`}>{name}</button>
           ))}
         </div>
       )}
 
       {loading ? (
-        <p className="text-sm text-white/40">Loading…</p>
+        <p className="text-sm text-[var(--crm-muted)]">Loading…</p>
       ) : visible.length === 0 ? (
-        <p className="text-sm text-white/40">No agent chats in the last 14 days{agentFilter !== 'all' ? ` for ${agentFilter}` : ''}.</p>
+        <p className="text-sm text-[var(--crm-muted)]">No agent chats in the last 14 days{agentFilter !== 'all' ? ` for ${agentFilter}` : ''}.</p>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
           {visible.map(c => (
             <ChatCard key={c.threadId} c={c} open={openId === c.threadId}
               onToggle={() => setOpenId(openId === c.threadId ? null : c.threadId)} />
