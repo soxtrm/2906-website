@@ -110,6 +110,19 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
     { key: 'health' as const, label: 'Health · walk', value: nearest.health ? (minutes(routes[nearest.health.id]?.walkingSeconds) || 'Time pending') : 'Mapping', detail: nearest.health?.name || 'Health option pending', Icon: HeartPulse },
     { key: 'movement' as const, label: 'Area signals', value: String(overview.mappedCount), detail: 'mapped within 3 km', Icon: MapPinned },
   ]
+  const statStrength = (item: typeof summaryStats[number]) => {
+    if (item.key === 'movement') return Math.max(28, Math.min(96, 28 + overview.mappedCount * 2.2))
+    const seconds = item.key === 'groceries' ? routes[nearest.groceries?.id || '']?.walkingSeconds
+      : item.key === 'coast' ? routes[nearest.coast?.id || '']?.walkingSeconds
+        : routes[nearest.health?.id || '']?.walkingSeconds
+    if (!Number.isFinite(seconds)) return 22
+    return Math.max(24, Math.min(96, 104 - Number(seconds) / 18))
+  }
+  const radarPoints = summaryStats.map((item, index) => {
+    const angle = (-90 + index * 90) * Math.PI / 180
+    const radius = 43 * statStrength(item) / 100
+    return `${50 + Math.cos(angle) * radius},${50 + Math.sin(angle) * radius}`
+  }).join(' ')
 
   return <section className={styles.frame} aria-labelledby="life-overview-title">
     <header className={styles.heading}>
@@ -121,12 +134,32 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
       <div className={styles.powered}><Sparkles aria-hidden="true" /><span>Intelligence by<br /><b>Nexus Link</b></span></div>
     </header>
 
-    <div className={styles.statRail} aria-label="Property area highlights">
-      {summaryStats.map(item => <button key={item.key} type="button" onClick={() => setActive(item.key)} aria-pressed={active === item.key}>
-        <span className={styles.statIcon}><item.Icon aria-hidden="true" /></span>
-        <span><small>{item.label}</small><b>{item.value}</b><em>{item.detail}</em></span>
-        <ArrowUpRight aria-hidden="true" />
-      </button>)}
+    <div className={styles.statDeck} aria-label="Nexus Link daily-life snapshot">
+      <div className={styles.radarCard}>
+        <div className={styles.radarIntro}><span>DAILY SNAPSHOT</span><b>Four signals.<br />One clear view.</b><small>Shape shows relative access and mapped coverage. The real values stay beside it.</small></div>
+        <div className={styles.radarVisual} aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <polygon className={styles.radarGridOuter} points="50,7 93,50 50,93 7,50" />
+            <polygon className={styles.radarGridInner} points="50,25 75,50 50,75 25,50" />
+            <path className={styles.radarAxis} d="M50 7V93M7 50H93" />
+            <polygon className={styles.radarShape} points={radarPoints} />
+            {summaryStats.map((item, index) => {
+              const angle = (-90 + index * 90) * Math.PI / 180
+              const radius = 43 * statStrength(item) / 100
+              return <circle key={item.key} cx={50 + Math.cos(angle) * radius} cy={50 + Math.sin(angle) * radius} r="2.2" />
+            })}
+          </svg>
+          <span className={styles.radarNorth}>SHOP</span><span className={styles.radarEast}>COAST</span><span className={styles.radarSouth}>HEALTH</span><span className={styles.radarWest}>AREA</span>
+        </div>
+      </div>
+      <div className={styles.statRail}>
+        {summaryStats.map((item, index) => <button key={item.key} type="button" onClick={() => setActive(item.key)} aria-pressed={active === item.key}>
+          <span className={styles.statIndex}>0{index + 1}</span>
+          <span className={styles.statIcon}><item.Icon aria-hidden="true" /></span>
+          <span className={styles.statCopy}><small>{item.label}</small><b>{item.value}</b><em>{item.detail}</em></span>
+          <ArrowUpRight aria-hidden="true" />
+        </button>)}
+      </div>
     </div>
 
     <div className={styles.verdictGrid}>
