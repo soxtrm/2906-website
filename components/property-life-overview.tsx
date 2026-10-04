@@ -12,7 +12,7 @@ type RouteEvidence = { id: string; routeVerified?: boolean; walkingSeconds?: num
 const distance = (value: number) => value < 1 ? `${Math.max(50, Math.round(value * 1000 / 50) * 50)} m` : `${value.toFixed(1)} km`
 const minutes = (value?: number | null) => Number.isFinite(value) ? `${Math.max(1, Math.round(Number(value) / 60))} MIN` : null
 
-export function PropertyLifeOverview({ overview }: { overview: Overview }) {
+export function PropertyLifeOverview({ overview, description = '', features = [] }: { overview: Overview; description?: string; features?: string[] }) {
   const [active, setActive] = useState<Overview['categories'][number]['key']>('commute')
   const [routes, setRoutes] = useState<Record<string, RouteEvidence>>({})
   const category = overview.categories.find(item => item.key === active) || overview.categories[0]
@@ -40,12 +40,15 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
   const [days, setDays] = useState(5)
   const [budget, setBudget] = useState(20)
   const frame = useRef<HTMLIFrameElement>(null)
+  const miniFrame = useRef<HTMLIFrameElement>(null)
   const [mapReady, setMapReady] = useState(0)
+  const [miniMapReady, setMiniMapReady] = useState(0)
+  const [radiusKm, setRadiusKm] = useState(2)
   const [origin, setOrigin] = useState(overview.origin)
   const allPlaces = useMemo(() => overview.categories.flatMap(c => c.places.map(p => ({...p, connector:c.key}))), [overview])
   useEffect(() => {
     const receive = (event: MessageEvent) => {
-      if (event.origin !== location.origin || event.source !== frame.current?.contentWindow || event.data?.channel !== 'estate-area-map') return
+      if (event.origin !== location.origin || ![frame.current?.contentWindow, miniFrame.current?.contentWindow].includes(event.source as Window) || event.data?.channel !== 'estate-area-map') return
       if (event.data.ready) setMapReady(n => n + 1)
       if (allPlaces.some(p => p.id === event.data.selected)) {
         setChosen(event.data.selected)
@@ -59,6 +62,10 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
   useEffect(() => {
     frame.current?.contentWindow?.postMessage({channel:'estate-area-map', intelligence:{origin,precision:'AREA_ONLY',places:allPlaces},category:active,places:category.places,selected:selected?.id,geometry: selected && (mode === 'walk' ? routes[selected.id]?.walkingSeconds != null : mode !== 'bus' && routes[selected.id]?.drivingSeconds != null) ? geometry : null,mode:mode === 'taxi' ? 'car' : mode}, location.origin)
   }, [mapReady, origin, allPlaces, active, category, selected, geometry, mode, routes])
+  useEffect(() => {
+    const nearby = allPlaces.filter(place => place.distanceKm <= radiusKm)
+    miniFrame.current?.contentWindow?.postMessage({channel:'estate-area-map', intelligence:{origin,precision:'AREA_ONLY',places:nearby},category:active,places:nearby.filter(place => place.connector === active),selected:null,geometry:null,mode:'walk'}, location.origin)
+  }, [miniMapReady, origin, allPlaces, active, radiusKm])
   useEffect(() => {
     setGeometry(null); setBus(null); setFerry(null)
     if (!selected) return
@@ -104,25 +111,16 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
     coast: overview.categories.find(item => item.key === 'coast')?.places[0],
     health: overview.categories.find(item => item.key === 'health')?.places[0],
   }), [overview.categories])
-  const summaryStats = [
-    { key: 'groceries' as const, label: 'Weekly shop · walk', value: nearest.groceries ? (minutes(routes[nearest.groceries.id]?.walkingSeconds) || 'Time pending') : 'Mapping', detail: nearest.groceries?.name || 'Large store pending', Icon: ShoppingBasket },
-    { key: 'coast' as const, label: 'Coast · walk', value: nearest.coast ? (minutes(routes[nearest.coast.id]?.walkingSeconds) || 'Time pending') : 'Mapping', detail: nearest.coast?.name || 'Coastal option pending', Icon: Waves },
-    { key: 'health' as const, label: 'Health · walk', value: nearest.health ? (minutes(routes[nearest.health.id]?.walkingSeconds) || 'Time pending') : 'Mapping', detail: nearest.health?.name || 'Health option pending', Icon: HeartPulse },
-    { key: 'movement' as const, label: 'Area signals', value: String(overview.mappedCount), detail: 'mapped within 3 km', Icon: MapPinned },
+  const copy = `${description} ${features.join(' ')}`.toLowerCase()
+  const keywordScore = (terms: RegExp[], base = 66, step = 6) => Math.min(96, base + terms.filter(term => term.test(copy)).length * step)
+  const mobilityPlaces = overview.categories.find(item => item.key === 'movement')?.places.length || 0
+  const amenityPlaces = overview.categories.filter(item => ['groceries','health','restaurant','cafe'].includes(item.key)).reduce((sum,item)=>sum+item.places.length,0)
+  const signals = [
+    {label:'Quality',value:keywordScore([/designer|high.?end|premium|luxur/,/appliance|dishwasher|air.?condition|fully equipped/,/newly|renovated|finished|modern/,/furnished|furniture/]),hint:'Finish & equipment'},
+    {label:'Ambience',value:keywordScore([/terrace|balcony|outdoor|garden|yard/,/sea view|views|bright|natural light/,/pool|deck|promenade/,/quiet|peaceful|luxur|designer/]),hint:'Light, comfort & outdoor'},
+    {label:'Amenities',value:Math.min(96,68+amenityPlaces*2),hint:`${amenityPlaces} useful places mapped`},
+    {label:'Mobility',value:Math.min(94,68+mobilityPlaces*7+(overview.mappedCount>8?5:0)),hint:mobilityPlaces?`${mobilityPlaces} nearby connections`:'Area routes available'},
   ]
-  const statStrength = (item: typeof summaryStats[number]) => {
-    if (item.key === 'movement') return Math.max(28, Math.min(96, 28 + overview.mappedCount * 2.2))
-    const seconds = item.key === 'groceries' ? routes[nearest.groceries?.id || '']?.walkingSeconds
-      : item.key === 'coast' ? routes[nearest.coast?.id || '']?.walkingSeconds
-        : routes[nearest.health?.id || '']?.walkingSeconds
-    if (!Number.isFinite(seconds)) return 22
-    return Math.max(24, Math.min(96, 104 - Number(seconds) / 18))
-  }
-  const radarPoints = summaryStats.map((item, index) => {
-    const angle = (-90 + index * 90) * Math.PI / 180
-    const radius = 43 * statStrength(item) / 100
-    return `${50 + Math.cos(angle) * radius},${50 + Math.sin(angle) * radius}`
-  }).join(' ')
 
   return <section className={styles.frame} aria-labelledby="life-overview-title">
     <header className={styles.heading}>
@@ -134,38 +132,16 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
       <div className={styles.powered}><Sparkles aria-hidden="true" /><span>Intelligence by<br /><b>Nexus Link</b></span></div>
     </header>
 
-    <div className={styles.statDeck} aria-label="Nexus Link daily-life snapshot">
-      <div className={styles.radarCard}>
-        <div className={styles.radarIntro}><span>DAILY SNAPSHOT</span><b>Four signals.<br />One clear view.</b><small>Shape shows relative access and mapped coverage. The real values stay beside it.</small></div>
-        <div className={styles.radarVisual} aria-hidden="true">
-          <svg viewBox="0 0 100 100">
-            <polygon className={styles.radarGridOuter} points="50,7 93,50 50,93 7,50" />
-            <polygon className={styles.radarGridInner} points="50,25 75,50 50,75 25,50" />
-            <path className={styles.radarAxis} d="M50 7V93M7 50H93" />
-            <polygon className={styles.radarShape} points={radarPoints} />
-            {summaryStats.map((item, index) => {
-              const angle = (-90 + index * 90) * Math.PI / 180
-              const radius = 43 * statStrength(item) / 100
-              return <circle key={item.key} cx={50 + Math.cos(angle) * radius} cy={50 + Math.sin(angle) * radius} r="2.2" />
-            })}
-          </svg>
-          <span className={styles.radarNorth}>SHOP</span><span className={styles.radarEast}>COAST</span><span className={styles.radarSouth}>HEALTH</span><span className={styles.radarWest}>AREA</span>
-        </div>
+    <div className={styles.smartSnapshot} aria-label="Property and area snapshot">
+      <div className={styles.signalPanel}><span>PROPERTY FIT</span><h3>Four reasons this home works.</h3><div className={styles.signalBars}>{signals.map(signal=><div key={signal.label}><header><b>{signal.label}</b><small>{signal.hint}</small></header><i><span style={{width:`${signal.value}%`}} /></i></div>)}</div></div>
+      <div className={styles.miniMapPanel}>
+        <div className={styles.miniMapToolbar}><nav aria-label="Mini map category">{overview.categories.filter(item=>['restaurant','groceries','coast','movement'].includes(item.key)).map(item=>{const ItemIcon=icons[item.key];return <button key={item.key} type="button" aria-pressed={active===item.key} onClick={()=>setActive(item.key)}><ItemIcon aria-hidden="true" />{item.key==='restaurant'?'Eat':item.key==='groceries'?'Shop':item.key==='coast'?'Coast':'Move'}</button>})}</nav><label>Radius <select value={radiusKm} onChange={event=>setRadiusKm(Number(event.target.value))}><option value={1}>1 km</option><option value={2}>2 km</option><option value={3}>3 km</option></select></label></div>
+        <iframe ref={miniFrame} className={styles.miniMap} src="/link-marketplace/estate-area-map.html" title="Quick map of useful places near this property" loading="lazy" onLoad={()=>setMiniMapReady(n=>n+1)} />
       </div>
-      <div className={styles.statRail}>
-        {summaryStats.map((item, index) => <button key={item.key} type="button" onClick={() => setActive(item.key)} aria-pressed={active === item.key}>
-          <span className={styles.statIndex}>0{index + 1}</span>
-          <span className={styles.statIcon}><item.Icon aria-hidden="true" /></span>
-          <span className={styles.statCopy}><small>{item.label}</small><b>{item.value}</b><em>{item.detail}</em></span>
-          <ArrowUpRight aria-hidden="true" />
-        </button>)}
-      </div>
+      <div className={styles.quickFacts}>{overview.categories.filter(c=>['groceries','coast','health'].includes(c.key)).flatMap(c=>c.places.slice(0,1).map(p=><span key={p.id}><Check aria-hidden="true" /><b>{p.name}</b><small>{minutes(routes[p.id]?.walkingSeconds)?`${minutes(routes[p.id]?.walkingSeconds)} walk`:distance(p.distanceKm)}</small></span>))}</div>
     </div>
 
-    <div className={styles.verdictGrid}>
-      <article className={styles.advantages}><span>AT A GLANCE · ADVANTAGES</span><ul>{overview.categories.filter(c => ['groceries','coast','health'].includes(c.key)).flatMap(c => c.places.slice(0,1).map(p => `${p.name}: ${minutes(routes[p.id]?.walkingSeconds) ? `${minutes(routes[p.id]?.walkingSeconds)} on foot` : 'walking time not verified'} · ${distance(p.distanceKm)} straight-line.`)).map(item => <li key={item}><i><Check aria-hidden="true" /></i><span>{item}</span></li>)}</ul></article>
-      <article className={styles.considerations}><span>CHECK BEFORE YOU DECIDE</span><ul>{overview.considerations.map(item => <li key={item}><CircleAlert aria-hidden="true" /><span>{item}</span></li>)}</ul></article>
-    </div>
+    <details className={styles.fullExplorer}><summary><span>Open full area explorer</span><small>Large map, routes, traffic and every mapped place</small><ArrowUpRight aria-hidden="true" /></summary>
 
     <div className={styles.explorer}>
       <div className={styles.explorerTop}>
@@ -225,6 +201,7 @@ export function PropertyLifeOverview({ overview }: { overview: Overview }) {
       })}</div> : <p className={styles.empty}>This category is not sufficiently mapped yet. It stays unknown instead of becoming a made-up score.</p>}
       {false && category.places.length>6 && <button className={styles.trafficCheck} type="button" onClick={()=>setExpanded(!expanded)}>{expanded?'Show fewer':`Show all ${category.places.length} mapped options`}</button>}
     </div>
+    </details>
 
     <footer className={styles.footer}>
       <span>{overview.sourceBasis === 'property' ? 'Privacy-safe property area' : `${overview.area} locality model`} · mapped places · route evidence labelled separately</span>

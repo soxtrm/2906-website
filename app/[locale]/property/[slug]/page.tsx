@@ -215,7 +215,7 @@ export default async function PropertyPage({
                   </div>
                 )}
 
-                {lifeOverview && <PropertyLifeOverview overview={lifeOverview} />}
+                {lifeOverview && <PropertyLifeOverview overview={lifeOverview} description={description} features={property.features || []} />}
 
                 {description && (
                   <div className="py-5">

@@ -3437,9 +3437,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // exact precedence (Hot beats a personal Favourite), so the frame reads
   // the same signal the star glyph does rather than re-deriving it.
   const step = starStepOf(r)
-  // Booking engine (Kev, 2026-09-23): an owner-confirmed viewing time puts the
-  // listing in the red top-properties frame, same as Hot.
-  const frame = (step === 2 || r.bookingsPossible) ? HOT_GLOW : step === 1 ? FAV_GLOW : null
+  // HOT is an explicit editorial signal. A bookable property keeps its own
+  // neutral badge and must not inherit the red HOT treatment.
+  const frame = step === 2 ? HOT_GLOW : step === 1 ? FAV_GLOW : null
   // Kev, 2026-09-04: "freshly updated" glow, first 48h — same fact
   // (routes/crmScheduleBoard.js's updatedAt, bumped by crm.js's PATCH
   // /properties/:id on every edit) already used to nudge these listings
