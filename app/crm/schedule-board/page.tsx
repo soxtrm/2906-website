@@ -5007,10 +5007,11 @@ const trayPrimaryBtn = (dark: boolean): React.CSSProperties => ({
 // small dot next to the label (see the JSX) is the only thing that still
 // varies with `fresh`.
 const stillAvailableBtn = (dark: boolean): React.CSSProperties => ({
-  padding: '8px 12px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
-  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
-  border: '1px solid rgba(47,111,87,0.4)',
-  background: dark ? '#1B2333' : '#EAF5F0', color: 'var(--crm-success)',
+  padding: '9px 13px', borderRadius: 999, fontSize: 11, fontFamily: F,
+  fontWeight: 750, letterSpacing: '.015em', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 38,
+  border: '1px solid rgba(103,211,158,.5)',
+  background: dark ? 'linear-gradient(135deg,#173F34,#235C49)' : 'linear-gradient(135deg,#DDF4E9,#C8EADB)', color: dark ? '#D9F9E9' : '#174C3A',
+  boxShadow: dark ? 'inset 0 1px 0 rgba(255,255,255,.09),0 7px 18px rgba(3,18,13,.24)' : 'inset 0 1px 0 rgba(255,255,255,.75),0 6px 15px rgba(28,93,67,.12)',
   flex: '1 1 0', minWidth: 0, textAlign: 'center',
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
 })
