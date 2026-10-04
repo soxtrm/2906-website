@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, CircleHelp, LayoutGrid, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -1444,6 +1444,42 @@ function Board() {
     />
   )
 
+  const renderPropertyCard = (r: Listing) => (
+    <Card
+      key={r.ref}
+      r={r}
+      focused={focusRef === r.ref}
+      innerRef={el => { cardRefs.current[r.ref] = el }}
+      onOpen={() => setDetail(r.ref)}
+      onAct={act}
+      onBook={() => setBooking(r)}
+      onAsk={() => setAsking(r)}
+      onChat={() => setChatting(r)}
+      onCreateGroup={() => createGroup(r)}
+      onCheckIn={() => checkIn(r)}
+      onStatus={action => setStatusing({ r, action })}
+      onOptOut={next => optOut(r, next)}
+      busy={busyRef === r.ref}
+      selected={selected.has(r.ref)}
+      onSelect={() => toggleSelect(r.ref)}
+      onTag={() => tagOne(r)}
+      tagging={tagging}
+      onStar={() => toggleStar(r)}
+      onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
+      onReport={() => reportListing(r)}
+      onFbQueue={() => toggleFbQueue(r)}
+      fbQueueBusy={fbBusyRef === r.ref}
+      onMatch={() => setMatchRef(r.ref)}
+      onAvDate={() => setAvDateEditing(r)}
+      onAddPhotos={files => addPhotos(r, files)}
+      photoUploadBusy={photoBusyRef === r.ref}
+      onDelete={() => deleteOneListing(r)}
+      onChanged={reload}
+      compact={boardPreferences.compactCards}
+      preferences={boardPreferences}
+    />
+  )
+
   return (
     <CrmShell
       title="Schedule Board"
@@ -1460,11 +1496,11 @@ function Board() {
           <div className="argus-view-switch" aria-label="Board view">
             <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }} aria-pressed={!updatesMode && view === 'board'}>
               <span className="argus-switch-icon"><LayoutGrid size={17} aria-hidden /></span>
-              <span><b>Active Board</b><small>Current inventory</small></span>
+              <span><b>Standard</b><small>Property overview</small></span>
             </button>
             <button data-tab="updates" onClick={() => setUpdatesMode(true)} aria-pressed={updatesMode}>
-              <span className="argus-switch-icon"><RadioTower size={17} aria-hidden /></span>
-              <span><b>Daily Updates</b><small>Live property flow</small></span>
+              <span className="argus-switch-icon"><Rows3 size={17} aria-hidden /></span>
+              <span><b>List</b><small>Updates by time</small></span>
               <em>{feedRows.length}</em>
             </button>
           </div>
@@ -1512,12 +1548,7 @@ function Board() {
             rows={feedRows}
             mobile={isMobile}
             showGuide={boardPreferences.showFeedGuide}
-            onOpen={r => setDetail(r.ref)}
-            onChat={r => setChatting(r)}
-            onBook={r => setBooking(r)}
-            onTag={r => tagOne(r)}
-            onConfirm={checkIn}
-            busyRef={busyRef}
+            renderCard={renderPropertyCard}
           />
         )}
 
@@ -1773,41 +1804,7 @@ function Board() {
           // made the board unreadable — reverted to one full-width card per row.
           gridTemplateColumns: isMobile ? '1fr' : `repeat(auto-fill,minmax(${boardPreferences.compactCards ? 320 : 340}px,1fr))`,
         }}>
-          {visible.map(r => (
-            <Card
-              key={r.ref}
-              r={r}
-              focused={focusRef === r.ref}
-              innerRef={el => { cardRefs.current[r.ref] = el }}
-              onOpen={() => setDetail(r.ref)}
-              onAct={act}
-              onBook={() => setBooking(r)}
-              onAsk={() => setAsking(r)}
-              onChat={() => setChatting(r)}
-              onCreateGroup={() => createGroup(r)}
-              onCheckIn={() => checkIn(r)}
-              onStatus={action => setStatusing({ r, action })}
-              onOptOut={next => optOut(r, next)}
-              busy={busyRef === r.ref}
-              selected={selected.has(r.ref)}
-              onSelect={() => toggleSelect(r.ref)}
-              onTag={() => tagOne(r)}
-              tagging={tagging}
-              onStar={() => toggleStar(r)}
-              onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
-              onReport={() => reportListing(r)}
-              onFbQueue={() => toggleFbQueue(r)}
-              fbQueueBusy={fbBusyRef === r.ref}
-              onMatch={() => setMatchRef(r.ref)}
-              onAvDate={() => setAvDateEditing(r)}
-              onAddPhotos={(files) => addPhotos(r, files)}
-              photoUploadBusy={photoBusyRef === r.ref}
-              onDelete={() => deleteOneListing(r)}
-              onChanged={reload}
-              compact={boardPreferences.compactCards}
-              preferences={boardPreferences}
-            />
-          ))}
+          {visible.map(renderPropertyCard)}
         </div>
 
         {!loading && !visible.length && !err && (
@@ -2937,8 +2934,8 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
         <fieldset>
           <legend>Start in</legend>
           <div className="argus-settings-choice">
-            <button type="button" aria-pressed={preferences.defaultWorkspace === 'board'} onClick={() => onChange('defaultWorkspace', 'board')}><LayoutGrid size={15} />Active Board</button>
-            <button type="button" aria-pressed={preferences.defaultWorkspace === 'updates'} onClick={() => onChange('defaultWorkspace', 'updates')}><RadioTower size={15} />Daily Updates</button>
+            <button type="button" aria-pressed={preferences.defaultWorkspace === 'board'} onClick={() => onChange('defaultWorkspace', 'board')}><LayoutGrid size={15} />Standard</button>
+            <button type="button" aria-pressed={preferences.defaultWorkspace === 'updates'} onClick={() => onChange('defaultWorkspace', 'updates')}><Rows3 size={15} />List</button>
           </div>
           <small>The workspace opened first on your next visit.</small>
         </fieldset>
@@ -2977,8 +2974,8 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
         />
         <SettingsToggle
           icon={<CircleHelp size={16} />}
-          title="Daily Updates guide"
-          description="Keep the feed explanation and mobility shortcuts visible."
+          title="List guide"
+          description="Show extra context above the chronological list."
           checked={preferences.showFeedGuide}
           onChange={value => onChange('showFeedGuide', value)}
         />
@@ -3014,156 +3011,74 @@ function SettingsToggle({ icon, title, description, checked, onChange }: {
   )
 }
 
-function AgentFeed({ rows, mobile, showGuide, onOpen, onChat, onBook, onTag, onConfirm, busyRef }: {
+function AgentFeed({ rows, mobile, showGuide, renderCard }: {
   rows: Listing[]
   mobile: boolean
   showGuide: boolean
-  onOpen: (r: Listing) => void
-  onChat: (r: Listing) => void
-  onBook: (r: Listing) => void
-  onTag: (r: Listing) => void
-  onConfirm: (r: Listing) => void
-  busyRef: string | null
+  renderCard: (r: Listing) => React.ReactNode
 }) {
-  const [filter, setFilter] = useState<'all' | 'progress' | 'confirmed' | 'new'>('all')
+  const [filter, setFilter] = useState<'all' | 'today' | 'confirmed' | 'new'>('all')
   const feed = useMemo(() => {
     const unique = new Map<string, Listing>()
     for (const row of rows) if (!unique.has(row.ref)) unique.set(row.ref, row)
     return [...unique.values()]
-      .filter(r => filter === 'all'
-        || (filter === 'progress' && (r.availableStatus === 'pending_check' || r.bookingsPossible))
-        || (filter === 'confirmed' && !!r.lastConfirmedAvailableAt)
-        || (filter === 'new' && !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86400_000))
+      .filter(r => {
+        const touch = listingTouch(r)
+        if (filter === 'today') return !!touch && Date.now() - Date.parse(touch.at) < 86_400_000
+        if (filter === 'confirmed') return touch?.kind === 'Confirmed'
+        if (filter === 'new') return !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86_400_000
+        return true
+      })
       .sort((a, b) => Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01'))
-      .slice(0, 80)
+      .slice(0, 100)
   }, [rows, filter])
-
-  const progressCount = useMemo(() => rows.filter(r => r.availableStatus === 'pending_check' || r.bookingsPossible).length, [rows])
-  const newCount = useMemo(() => rows.filter(r => !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86400_000).length, [rows])
-  const confirmedCount = useMemo(() => rows.filter(r => !!r.lastConfirmedAvailableAt).length, [rows])
-  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   let previousDay = ''
   return (
-    <section aria-label="Property updates" style={{ maxWidth: 1180, margin: '0 auto 32px' }}>
-      <header style={{ position: 'relative', overflow: 'hidden', border: `1px solid ${DBORDER}`, borderRadius: 18, padding: mobile ? '18px 16px' : '22px 24px', marginBottom: 12, background: 'radial-gradient(circle at 88% 12%, rgba(232,185,49,.15), transparent 34%), linear-gradient(135deg, rgba(19,30,48,.98), rgba(12,20,33,.98))', boxShadow: '0 18px 48px rgba(0,0,0,.20)' }}>
-        <div aria-hidden="true" style={{ position: 'absolute', right: -34, top: -62, width: 180, height: 180, border: '1px solid rgba(232,185,49,.16)', borderRadius: '50%' }} />
-        <span style={{ color: '#E8B931', fontSize: 10, letterSpacing: '.18em', fontWeight: 850 }}>ARGUS · DAILY PROPERTY FLOW</span>
-        <h2 style={{ color: '#F8F4EA', fontSize: mobile ? 25 : 34, lineHeight: 1.05, letterSpacing: '-.035em', margin: '7px 0 6px' }}>What changed. What moves next.</h2>
-        <p style={{ color: 'rgba(248,244,234,.66)', fontSize: 12, lineHeight: 1.5, margin: 0, maxWidth: 610 }}>A chronological inbox for new stock, confirmed availability and listings that need an agent. Newest activity stays at the top.</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 7, marginTop: 18, maxWidth: 520 }}>
-          <FeedMetric label="New this week" value={newCount} tone="#78A0F1" />
-          <FeedMetric label="Confirmed" value={confirmedCount} tone="#58B88F" />
-          <FeedMetric label="Next action" value={progressCount} tone={BOOK_YELLOW} />
-        </div>
-      </header>
-      {showGuide && <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'minmax(0,1.45fr) minmax(280px,.55fr)', gap: 9, marginBottom: 12 }}>
-        <div style={{ border: `1px solid rgba(232,185,49,.28)`, borderRadius: 13, padding: '11px 13px', background: 'rgba(232,185,49,.055)', color: DTEXT }}>
-          <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-            <CircleHelp size={17} color={BOOK_YELLOW} style={{ flex: '0 0 auto', marginTop: 1 }} />
-            <div>
-              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.02em' }}>How to read the feed</strong>
-              <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 11, lineHeight: 1.45, marginTop: 3 }}>
-                New and Updated describe the event. Viewing ready and Check availability are the next step — they never mean delete.
-              </span>
-            </div>
-          </div>
-        </div>
-        <div style={{ border: `1px solid rgba(100,185,215,.30)`, borderRadius: 13, padding: '10px 12px', background: 'rgba(24,48,68,.62)', color: DTEXT }}>
-          <strong style={{ display: 'block', fontSize: 9, letterSpacing: '.13em', color: '#BDEBFA' }}>MALTA MOBILITY</strong>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
-            <a href="https://www.publictransport.com.mt/real-time/" target="_blank" rel="noreferrer" style={{ ...feedTransportLink, color: '#BDEBFA' }}><BusFront size={13} /> Live buses ↗</a>
-            <a href="/nexus-map" style={{ ...feedTransportLink, color: '#E8D9AD' }}><CarFront size={13} /> Road traffic</a>
-          </div>
-        </div>
-      </div>}
-      <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
-        {([['all', 'All updates'], ['progress', 'Ready to progress'], ['confirmed', 'Confirmed'], ['new', 'New listings']] as const).map(([value, label]) => (
+    <section aria-label="Property update list" style={{ maxWidth: 900, margin: '0 auto 32px' }}>
+      {showGuide && <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '2px 0 12px', padding: mobile ? '10px 11px' : '12px 15px', border: `1px solid ${DBORDER}`, borderRadius: 14, background: 'linear-gradient(135deg, rgba(24,48,68,.72), rgba(16,26,37,.94))' }}>
+        <span style={{ minWidth: 0 }}>
+          <b style={{ display: 'block', color: DTEXT, fontSize: 13 }}>Update list</b>
+          <small style={{ display: 'block', color: DTEXT_FAINT, marginTop: 2 }}>Same property cards, ordered by their latest activity.</small>
+        </span>
+        <Clock3 size={18} color={A} style={{ flex: '0 0 auto' }} />
+      </header>}
+      <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {([['all', 'All updates'], ['today', 'Today'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
           <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} style={{
             border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
             background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
-            padding: '9px 14px', minHeight: 38, fontSize: 11, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
-            transition: 'transform 160ms ease, background 160ms ease, border-color 160ms ease',
+            padding: '8px 12px', minHeight: 36, fontSize: 10.5, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
           }}>{label}</button>
         ))}
       </nav>
-      <div style={{ border: `1px solid ${DBORDER}`, borderRadius: 18, overflowY: 'auto', overflowX: 'hidden', background: 'linear-gradient(180deg, rgba(255,255,255,.018), transparent 180px), var(--crm-surface)', boxShadow: '0 20px 52px rgba(0,0,0,.18)', maxHeight: mobile ? '68vh' : 'min(760px, calc(100vh - 250px))', scrollbarColor: `${A} ${DTRAY}` }}>
+      <div style={{ position: 'relative' }}>
+        <span aria-hidden="true" style={{ position: 'absolute', left: mobile ? 42 : 76, top: 23, bottom: 10, width: 1, background: `linear-gradient(${A}, ${DBORDER} 18%, ${DBORDER})` }} />
         {feed.map(r => {
           const touch = listingTouch(r)
-          const day = touch ? new Date(touch.at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Older updates'
-          const dayLabel = day === today ? `TODAY · ${day}` : day
+          const date = touch ? new Date(touch.at) : null
+          const day = date ? date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Earlier'
           const showDay = day !== previousDay
           previousDay = day
-          const needsAction = r.availableStatus === 'pending_check'
-          const bookable = !!r.bookingsPossible
-          const createdTime = r.createdAt ? Date.parse(r.createdAt) : NaN
-          const isNewListing = Number.isFinite(createdTime) && Date.now() - createdTime < 7 * 86400_000
-          const eventLabel = isNewListing ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
-          const eventColor = eventLabel === 'NEW LISTING' ? '#4D7CE0' : eventLabel === 'CONFIRMED' ? '#2F8E68' : '#96772C'
-          const progressLabel = needsAction ? 'CHECK AVAILABILITY' : bookable ? 'VIEWING READY' : null
-          const market = !['rented', 'archived', 'not_available'].includes(r.availableStatus || '')
-          const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE NOW'
-            : r.availability?.kind === 'date' ? `FREE ${r.availability.label}` : 'DATE UNCLEAR'
           return <div key={r.ref}>
-            {showDay && <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '9px 14px', background: 'linear-gradient(180deg, var(--crm-surface) 60%, transparent)', color: DTEXT_FAINT }}><span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 999, padding: '5px 11px', boxShadow: '0 3px 12px rgba(0,0,0,.18)', fontSize: 9, fontWeight: 850, letterSpacing: '.08em', textTransform: 'uppercase' }}>{dayLabel}</span></div>}
-            <article style={{
-              display: 'grid', gridTemplateColumns: mobile ? '1fr' : '202px minmax(0,1fr) auto',
-              gap: mobile ? 10 : 16, alignItems: 'center', padding: mobile ? 11 : '14px 16px',
-              borderBottom: `1px solid ${DBORDER}`, borderLeft: `3px solid ${eventColor}`,
-              background: needsAction ? 'rgba(199,57,26,.04)' : bookable ? 'rgba(232,185,49,.04)' : 'transparent',
-              transition: 'background 160ms ease, transform 160ms ease',
-            }}>
-              <div aria-label={`Three photos of #${r.ref}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 5, width: mobile ? '100%' : 202 }}>
-                {[0, 1, 2].map(index => <button key={index} type="button" onClick={() => onOpen(r)} style={{ height: mobile ? 72 : 64, minWidth: 0, padding: 0, border: 0, borderRadius: 9, overflow: 'hidden', background: DTRAY, cursor: 'pointer' }}>
-                  {r.images?.[index] ? <img src={r.images[index]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', color: DTEXT_FAINT }}>⌂</span>}
-                </button>)}
+            {showDay && <div style={{ display: 'grid', gridTemplateColumns: mobile ? '52px minmax(0,1fr)' : '92px minmax(0,1fr)', alignItems: 'center', margin: '5px 0 8px' }}>
+              <span />
+              <strong style={{ color: A, fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase' }}>{day}</strong>
+            </div>}
+            <div style={{ display: 'grid', gridTemplateColumns: mobile ? '52px minmax(0,1fr)' : '92px minmax(0,1fr)', alignItems: 'start', marginBottom: mobile ? 10 : 14 }}>
+              <div style={{ position: 'relative', padding: mobile ? '10px 10px 0 0' : '12px 20px 0 0', textAlign: 'right', color: DTEXT_FAINT }}>
+                <b style={{ display: 'block', color: DTEXT_DIM, fontFamily: FM, fontSize: mobile ? 9 : 11 }}>{date ? date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}</b>
+                {!mobile && <small style={{ display: 'block', fontSize: 8, marginTop: 3 }}>{touch?.kind || 'Update'}</small>}
+                <i aria-hidden="true" style={{ position: 'absolute', right: mobile ? 5 : 13, top: mobile ? 13 : 16, width: 9, height: 9, borderRadius: '50%', background: A, border: `2px solid ${DCARD}`, boxShadow: `0 0 0 2px rgba(184,149,63,.22)` }} />
               </div>
-              <button type="button" onClick={() => onOpen(r)} style={{ minWidth: 0, padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: DTEXT }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                  <b style={{ fontSize: 9, letterSpacing: '.075em', padding: '4px 7px', borderRadius: 999, color: '#FFF', background: eventColor }}>{eventLabel}</b>
-                  {progressLabel && <b style={{ fontSize: 9, padding: '3px 7px', borderRadius: 999, color: needsAction ? '#F4B09E' : BOOK_YELLOW, border: `1px solid ${needsAction ? 'rgba(224,106,77,.42)' : 'rgba(232,185,49,.42)'}`, background: needsAction ? 'rgba(199,57,26,.11)' : 'rgba(232,185,49,.10)' }}>{progressLabel}</b>}
-                  <strong style={{ fontFamily: FM, fontSize: 12 }}>#{r.ref}</strong>
-                  <small style={{ color: DTEXT_FAINT, marginLeft: 'auto' }}>{touch ? ago(touch.at) : '—'}</small>
-                </span>
-                <strong style={{ display: 'block', marginTop: 7, fontSize: 15, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.town || 'Malta'} · {r.type || 'Property'}{r.price ? ` · €${r.price.toLocaleString('en-GB')}` : ''}</strong>
-                <span style={{ display: 'flex', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
-                  <em style={feedPill(market ? 'rgba(77,124,224,.14)' : 'rgba(120,125,135,.16)', market ? '#78A0F1' : DTEXT_FAINT)}>{market ? 'ON MARKET' : 'OFF MARKET'}</em>
-                  <em style={feedPill(r.availability?.kind === 'now' ? 'rgba(47,142,104,.17)' : 'rgba(150,119,44,.15)', r.availability?.kind === 'now' ? '#58B88F' : '#C2A75E')}>{availabilityText}</em>
-                  {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let')) && <em style={feedPill('rgba(126,200,227,.15)', '#7EC8E3')}>WINTER</em>}
-                </span>
-              </button>
-              <div style={{ gridColumn: mobile ? '1 / -1' : undefined, display: 'flex', gap: 6, justifyContent: mobile ? 'stretch' : 'flex-end' }}>
-                <FeedAction label="Open" onClick={() => onOpen(r)} />
-                <FeedAction label="Chat" onClick={() => onChat(r)} />
-                <FeedAction label="Book" accent={bookable} onClick={() => onBook(r)} />
-                <FeedAction label="@ Tag" icon={<AtSign size={11} />} onClick={() => onTag(r)} />
-                {needsAction && <FeedAction label={busyRef === r.ref ? '…' : 'Confirm'} disabled={!!busyRef} onClick={() => onConfirm(r)} />}
-              </div>
-            </article>
+              <div style={{ minWidth: 0 }}>{renderCard(r)}</div>
+            </div>
           </div>
         })}
-        {!feed.length && <p style={{ color: DTEXT_FAINT, fontSize: 12, padding: 24, textAlign: 'center' }}>Nothing in this update view yet.</p>}
+        {!feed.length && <p style={{ color: DTEXT_FAINT, fontSize: 12, padding: 28, textAlign: 'center' }}>No updates match this view.</p>}
       </div>
     </section>
   )
-}
-const feedTransportLink = { display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${DBORDER}`, borderRadius: 8, background: DTRAY, padding: '7px 9px', fontSize: 10, fontWeight: 750, textDecoration: 'none' }
-function FeedMetric({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return <div style={{ minWidth: 0, border: `1px solid ${DBORDER}`, borderRadius: 11, padding: '9px 10px', background: 'rgba(255,255,255,.035)' }}>
-    <strong style={{ display: 'block', color: tone, fontFamily: FM, fontSize: 19, lineHeight: 1 }}>{value}</strong>
-    <span style={{ display: 'block', marginTop: 5, color: 'rgba(248,244,234,.54)', fontSize: 9, fontWeight: 750, letterSpacing: '.055em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-  </div>
-}
-function feedPill(background: string, color: string) {
-  return { background, color, borderRadius: 999, padding: '2px 6px', fontSize: 8, fontStyle: 'normal', fontWeight: 800, letterSpacing: '0.06em' }
-}
-
-function FeedAction({ label, onClick, icon, accent = false, disabled = false }: { label: string; onClick: () => void; icon?: React.ReactNode; accent?: boolean; disabled?: boolean }) {
-  return <button type="button" onClick={onClick} disabled={disabled} style={{
-    border: 0, borderRight: `1px solid ${DBORDER}`, background: accent ? 'rgba(232,185,49,.16)' : DTRAY,
-    color: accent ? BOOK_YELLOW : DTEXT_DIM, padding: '8px 7px', fontSize: 9, fontWeight: 750, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 2,
-    cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? .55 : 1,
-  }}>{icon}{label}</button>
 }
 
 function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
