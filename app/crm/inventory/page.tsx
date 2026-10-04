@@ -134,7 +134,7 @@ function Inventory() {
         </div>
       )}
       {isMobile
-        ? <div style={{ padding: '12px 14px' }}>{visibleRows.map(p => <MobileCard key={p.id} p={p} isAdmin={isAdmin} selected={selected.has(p.id)} onToggleSelect={() => toggleSelect(p.id)} onDelete={() => deleteOne(p.id)} onOwner={setOwnerPanel} onOpen={() => router.push(`/property/${p.id}`)} />)}{!visibleRows.length && <Empty />}</div>
+        ? <div style={{ padding: '10px 9px' }}>{visibleRows.map(p => <MobileCard key={p.id} p={p} isAdmin={isAdmin} selected={selected.has(p.id)} onToggleSelect={() => toggleSelect(p.id)} onDelete={() => deleteOne(p.id)} onOwner={setOwnerPanel} onOpen={() => router.push(`/property/${p.id}`)} />)}{!visibleRows.length && <Empty />}</div>
         : <DesktopTable rows={visibleRows} isAdmin={isAdmin} selected={selected} onToggleSelect={toggleSelect} onDelete={deleteOne} onOwner={setOwnerPanel} onOpen={(id) => router.push(`/property/${id}`)} />}
     </CrmShell>
   )
@@ -151,7 +151,7 @@ function DesktopTable({ rows, isAdmin, selected, onToggleSelect, onDelete, onOwn
   if (!rows.length) return <Empty />
   const headers = isAdmin ? ['', 'Ref · Gallery', '', 'Owner', 'Location', 'Price', 'Bd/Ba', 'Available', 'Viewing', 'Profile', ''] : ['Ref · Gallery', '', 'Owner', 'Location', 'Price', 'Bd/Ba', 'Available', 'Viewing', 'Profile', '']
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1050 }}>
+    <table className="inventory-desktop-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 1180 }}>
       <thead><tr>{headers.map((h, i) => <th key={i} style={thS}>{h}</th>)}</tr></thead>
       <tbody>
         {rows.map(p => {
@@ -172,7 +172,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
   useEffect(() => { if (isOpen && !acts) crmFetch(`properties/${p.id}`).then(d => setActs(d.activities || [])).catch(() => setActs([])) }, [isOpen])
   return (
     <>
-      <tr style={{ background: DCARD, borderLeft: p.exclusive ? `3px solid ${A}` : incomplete ? '3px solid #EF4444' : '3px solid transparent' }}>
+      <tr className="inventory-desktop-row" style={{ background: DCARD, borderLeft: p.exclusive ? `3px solid ${A}` : incomplete ? '3px solid #EF4444' : '3px solid transparent' }}>
         {isAdmin && (
           <td style={{ ...tdS, width: 30 }}>
             <input type="checkbox" checked={checked} onChange={onToggleSelect} style={{ accentColor: A, width: 15, height: 15, cursor: 'pointer' }} />
@@ -180,7 +180,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
         )}
         <td style={tdS}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Thumbs images={p.images} count={p.imageCount} exclusive={p.exclusive} dark />
+            <InventoryImageStrip images={p.images} count={p.imageCount} exclusive={p.exclusive} />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: p.published ? A : DTEXT_FAINT, fontFamily: FM, cursor: 'pointer' }} onClick={() => onOpen(p.id)}>{p.ref}</span>
@@ -260,6 +260,26 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
         </tr>
       )}
     </>
+  )
+}
+
+function InventoryImageStrip({ images = [], count, exclusive }: { images?: any[]; count?: number; exclusive?: boolean }) {
+  const total = count ?? images.length
+  return (
+    <div className="inventory-image-strip" aria-label={`${total} property photos`}>
+      {[0, 1, 2].map(i => {
+        const image = images[i]
+        const url = image && (image.thumbnail || image.url || image)
+        return (
+          <div key={i} className="inventory-image-slot" style={url ? { backgroundImage: `url(${url})` } : undefined}>
+            {!url && i < total && <span>Photo</span>}
+            {i >= total && <span>·</span>}
+          </div>
+        )
+      })}
+      {exclusive && <span className="inventory-exclusive-lock">🔒 Exclusive</span>}
+      {total > 3 && <span className="inventory-image-count">+{total - 3}</span>}
+    </div>
   )
 }
 

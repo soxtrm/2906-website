@@ -1441,7 +1441,7 @@ function Board() {
       filterBar={filterBar}
       dark
     >
-      <div style={{ padding: isMobile ? 14 : 22 }}>
+      <div style={{ padding: isMobile ? 9 : 22 }}>
         {err && <Notice text={err} />}
 
         {/* Two primary workspaces, then compact utility views. Rented stays
@@ -3520,7 +3520,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         onClick={onOpen}
         onMouseEnter={startPhotoHover}
         onMouseLeave={stopPhotoHover}
-        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? (compact ? 132 : 152) : (compact ? 164 : 200), flexShrink: 0, background: '#111', transition: 'height 180ms ease' }}
+        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? (compact ? 106 : 122) : (compact ? 164 : 200), flexShrink: 0, background: '#111', transition: 'height 180ms ease' }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
           ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -3536,20 +3536,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0) 22%, ' +
             'rgba(0,0,0,0) 72%, rgba(0,0,0,0.42) 100%)',
         }} />
-
-        {/* The wordmark, dead centre of the photo's top edge (Kev's mockup,
-            2026-08-22). Set as text rather than /logo-wide.png: the asset is
-            dark-on-transparent and would disappear against half the photos on
-            the board. pointerEvents none so it never steals the open-listing
-            click from the photo underneath it. */}
-        <span aria-hidden style={{
-          position: 'absolute', top: 9, left: '50%', transform: 'translateX(-50%)',
-          pointerEvents: 'none', fontFamily: FM, fontSize: 9, fontWeight: 700,
-          letterSpacing: '0.34em', textIndent: '0.34em',
-          color: 'rgba(255,255,255,0.78)',
-        }}>
-          2906
-        </span>
 
         {/* The star. Top-left corner, Kev's call (2026-08-16). Three steps
             (migration 031): outline = normal, gold = your Favourite, red = Hot
@@ -3720,7 +3706,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           Available and the tray below it read as dead space — bottom
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
-      <div style={{ padding: isMobile ? '10px 11px 2px' : compact ? '10px 12px 3px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div style={{ padding: isMobile ? '8px 10px 2px' : compact ? '10px 12px 3px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
