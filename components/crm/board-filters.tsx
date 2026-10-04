@@ -139,7 +139,19 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [compactMobile, setCompactMobile] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let frame = 0
+    const update = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => setCompactMobile(window.scrollY > 230))
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', update) }
+  }, [])
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
@@ -180,7 +192,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   })()
 
   return (
-    <div ref={ref} className="w-full">
+    <div ref={ref} className={cn(
+      'w-full',
+      compactMobile && 'max-lg:fixed max-lg:top-[74px] max-lg:right-3 max-lg:z-[80] max-lg:w-auto',
+    )}>
       {/* Mobile: one toggle, exactly like the public listings page. */}
       {/* min-h-[38px]: below ~30px this is a miss on a phone, and this is the
           one control that gates every other filter. */}
@@ -188,24 +203,31 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         type="button"
         onClick={() => setMobileOpen(o => !o)}
         className={cn(
-          'lg:hidden flex items-center gap-2 text-sm font-medium w-full min-h-[38px] py-1',
+          'lg:hidden flex items-center gap-2 text-sm font-medium min-h-[42px] transition-all duration-200',
+          compactMobile
+            ? 'w-auto rounded-full border border-white/15 bg-[#10182a]/95 px-3 shadow-[0_10px_30px_rgba(0,0,0,.42)] backdrop-blur-xl'
+            : 'w-full py-1',
           dark ? 'text-[#EDEAE1]' : 'text-navy',
         )}
+        aria-label={mobileOpen ? 'Close filters' : 'Open filters'}
       >
         <SlidersHorizontal className="w-4 h-4" />
-        Filters
+        <span className={cn(compactMobile && 'sr-only')}>Filters</span>
         {activeCount > 0 && (
           <span className="bg-gold text-navy text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
             {activeCount}
           </span>
         )}
-        <span className={cn('ml-auto text-xs font-normal tabular-nums', dark ? 'text-[#EDEAE1]/40' : 'text-navy/40')}>
+        <span className={cn('ml-auto text-xs font-normal tabular-nums', compactMobile && 'hidden', dark ? 'text-[#EDEAE1]/40' : 'text-navy/40')}>
           {loading ? '…' : `${count} listing${count === 1 ? '' : 's'}`}
         </span>
       </button>
 
-      <div className={cn('flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-3 w-full',
-        mobileOpen ? 'flex mt-3' : 'hidden lg:flex')}>
+      <div className={cn(
+        'flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-3 w-full',
+        mobileOpen ? 'flex mt-3' : 'hidden lg:flex',
+        compactMobile && mobileOpen && 'max-lg:fixed max-lg:top-[124px] max-lg:left-3 max-lg:right-3 max-lg:w-auto max-lg:max-h-[68vh] max-lg:overflow-y-auto max-lg:rounded-2xl max-lg:border max-lg:border-white/10 max-lg:bg-[#10182a]/98 max-lg:p-3 max-lg:shadow-2xl max-lg:backdrop-blur-xl',
+      )}>
 
         {/* Search — ref, town or area. The board's own listings are local, so
             this filters instantly rather than round-tripping. */}

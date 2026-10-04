@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, LayoutGrid, RadioTower, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -64,6 +64,17 @@ const HOT_GLOW = { border: `1px solid rgba(199,57,26,0.6)`, glow: '0 0 0 1px rgb
 // chunk — and this repo is public — so the served key is the better default.
 const BUNDLED_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''
 
+type DiscoveryKey = 'popular-new' | 'seafront' | 'beds-3' | 'beds-2' | 'beds-1' | 'apartments' | 'villas'
+const DISCOVERY_ITEMS: { key: DiscoveryKey; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { key: 'popular-new', label: 'Popular & New', icon: Sparkles },
+  { key: 'seafront', label: 'Seafronts', icon: Waves },
+  { key: 'beds-3', label: '3 Bedrooms', icon: BedDouble },
+  { key: 'beds-2', label: '2 Bedrooms', icon: BedDouble },
+  { key: 'beds-1', label: '1 Bedroom', icon: BedDouble },
+  { key: 'apartments', label: 'Apartments', icon: Building2 },
+  { key: 'villas', label: 'Villas', icon: House },
+]
+
 type BoardPreferences = {
   defaultWorkspace: 'board' | 'updates'
   defaultSort: string
@@ -76,6 +87,7 @@ type BoardPreferences = {
   showDescriptions: boolean
   showBookingDetails: boolean
   showQuickTools: boolean
+  discoveryKeys: DiscoveryKey[]
 }
 const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
   defaultWorkspace: 'board',
@@ -89,6 +101,7 @@ const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
   showDescriptions: true,
   showBookingDetails: true,
   showQuickTools: true,
+  discoveryKeys: DISCOVERY_ITEMS.map(item => item.key),
 }
 const BOARD_PREFERENCES_KEY = 'argus.schedule-board.preferences.v1'
 
@@ -476,6 +489,7 @@ function Board() {
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
   const [updatesMode, setUpdatesMode] = useState(false)
+  const [discovery, setDiscovery] = useState<DiscoveryKey | null>(null)
   const [boardSettingsOpen, setBoardSettingsOpen] = useState(false)
   const [boardPreferences, setBoardPreferences] = useState<BoardPreferences>(DEFAULT_BOARD_PREFERENCES)
   const [boardPreferencesReady, setBoardPreferencesReady] = useState(false)
@@ -488,7 +502,7 @@ function Board() {
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(BOARD_PREFERENCES_KEY)
-      const next = saved ? { ...DEFAULT_BOARD_PREFERENCES, ...JSON.parse(saved) } : DEFAULT_BOARD_PREFERENCES
+      const next = saved ? { ...DEFAULT_BOARD_PREFERENCES, ...JSON.parse(saved) } : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
       setBoardPreferences(next)
       setMapOpen(next.mapVisible)
       if (!params.get('view')) setUpdatesMode(next.defaultWorkspace === 'updates')
@@ -781,8 +795,19 @@ function Board() {
     return positioned.filter(r => {
       if (f.towns.length && !f.towns.includes(r.tkey)) return false
       if (needle) {
-        const hay = [r.ref, r.town, r.subLocation, r.type].filter(Boolean).join(' ').toLowerCase()
+        const hay = [r.ref, r.town, r.subLocation, r.type, r.description].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(needle)) return false
+      }
+      if (discovery) {
+        const copy = [r.type, r.town, r.subLocation, r.description].filter(Boolean).join(' ').toLowerCase()
+        if (discovery === 'popular-new') {
+          const touched = Date.parse(r.updatedAt || r.createdAt || '')
+          if (!r.isHotProperty && !r.isFavourite && (!Number.isFinite(touched) || Date.now() - touched > 10 * 86_400_000)) return false
+        }
+        if (discovery === 'seafront' && !/(sea\s*front|seafront|waterfront|frontline)/i.test(copy)) return false
+        if (discovery.startsWith('beds-') && r.beds !== Number(discovery.slice(-1))) return false
+        if (discovery === 'apartments' && !/apartment|penthouse|maisonette/.test(copy)) return false
+        if (discovery === 'villas' && !/villa/.test(copy)) return false
       }
       // ── tenancy rules ─────────────────────────────────────────────────────
       // Three states, so match EXACTLY: 'yes' keeps only true, 'no' keeps only
@@ -831,7 +856,7 @@ function Board() {
       }
       return true
     })
-  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon])
+  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon, discovery])
 
   const mineCount = visible.filter(r => r.isMine).length
   // Count for the +3 Months tab badge — always computed off the 'active'
@@ -844,7 +869,7 @@ function Board() {
   function toggleTown(k: string) {
     setF(s => ({ ...s, towns: s.towns.includes(k) ? s.towns.filter(x => x !== k) : [...s.towns, k] }))
   }
-  function reset() { setF(EMPTY); setRect(null); setCirc(null) }
+  function reset() { setF(EMPTY); setRect(null); setCirc(null); setDiscovery(null) }
 
   const onMarkerClick = useCallback((ref: string) => {
     setFocusRef(ref)
@@ -1556,6 +1581,23 @@ function Board() {
           </div>
         )}
 
+        {view === 'board' && (
+          <div aria-label="Quick property collections" style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', padding: '1px 1px 12px', marginBottom: 2, scrollbarWidth: 'none' }}>
+            {DISCOVERY_ITEMS.filter(item => boardPreferences.discoveryKeys.includes(item.key)).map(item => {
+              const Icon = item.icon
+              const on = discovery === item.key
+              return <button key={item.key} type="button" aria-pressed={on} onClick={() => setDiscovery(current => current === item.key ? null : item.key)} style={{
+                border: `1px solid ${on ? 'rgba(236,166,67,.75)' : DBORDER}`,
+                background: on ? 'linear-gradient(135deg,rgba(236,166,67,.24),rgba(232,185,49,.10))' : 'rgba(20,29,47,.88)',
+                color: on ? '#FFD18A' : DTEXT_DIM, borderRadius: 999, padding: '9px 13px', minHeight: 40,
+                display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap', cursor: 'pointer',
+                fontSize: 11.5, fontWeight: 750, boxShadow: on ? '0 7px 20px rgba(226,139,35,.16)' : 'none',
+                transform: on ? 'translateY(-1px)' : 'none', transition: 'transform .18s, box-shadow .18s, border-color .18s',
+              }}><Icon size={14} />{item.label}</button>
+            })}
+          </div>
+        )}
+
         {view === 'rented' && (
           <div style={{
             background: 'rgba(185,28,28,0.10)', border: '1px solid rgba(185,28,28,0.28)', borderRadius: 10,
@@ -1709,7 +1751,7 @@ function Board() {
 
         {/* villages */}
         {boardPreferences.showTownFilters && townOptions.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 5 : 0, marginBottom: 14, scrollbarWidth: 'none' }}>
             {townOptions.map(t => {
               const on = f.towns.includes(t.key)
               return (
@@ -2945,6 +2987,17 @@ function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
           </select>
           <small>A future tagged appointment always stays above ordinary listings.</small>
         </fieldset>
+        <fieldset>
+          <legend>Swipe shortcuts</legend>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {DISCOVERY_ITEMS.map(item => {
+              const enabled = preferences.discoveryKeys.includes(item.key)
+              const Icon = item.icon
+              return <button key={item.key} type="button" aria-pressed={enabled} onClick={() => onChange('discoveryKeys', enabled ? preferences.discoveryKeys.filter(key => key !== item.key) : [...preferences.discoveryKeys, item.key])} style={{ border: `1px solid ${enabled ? A : DBORDER}`, borderRadius: 999, background: enabled ? 'rgba(184,149,63,.12)' : DTRAY, color: enabled ? A : DTEXT_FAINT, padding: '7px 9px', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, cursor: 'pointer' }}><Icon size={12} />{item.label}</button>
+            })}
+          </div>
+          <small>Choose the horizontal quick rows shown above listings.</small>
+        </fieldset>
         <SettingsToggle
           icon={<MapPinned size={16} />}
           title="Open map automatically"
@@ -3487,6 +3540,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const hoverPhotoTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   function startPhotoHover() {
     if ((r.images || []).length < 2) return
+    if (hoverPhotoTimer.current) clearInterval(hoverPhotoTimer.current)
     hoverPhotoTimer.current = setInterval(() => {
       setHoverPhotoIdx(i => (i + 1) % r.images.length)
     }, 2000)
@@ -3505,12 +3559,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   return (
     <div
       ref={innerRef}
+      className="transition-transform duration-200 hover:-translate-y-1 active:scale-[0.995]"
       // The ref on the DOM node, so a test can assert "this listing's card shows
       // that icon" instead of matching on position in the grid.
       data-ref={r.ref}
       style={{
         background: DCARD,
-        borderRadius: 20,
+        borderRadius: isMobile ? 16 : 20,
         // Kev, 2026-09-12: the "..." popover (menuPanel below) is an
         // absolutely-positioned child of this card — with the card clipping
         // its own overflow and no stacking order of its own, the next card
@@ -3550,6 +3605,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         onClick={onOpen}
         onMouseEnter={startPhotoHover}
         onMouseLeave={stopPhotoHover}
+        onTouchStart={startPhotoHover}
+        onTouchEnd={stopPhotoHover}
+        onTouchCancel={stopPhotoHover}
         style={{ cursor: 'pointer', position: 'relative', height: isMobile ? (compact ? 106 : 122) : (compact ? 164 : 200), flexShrink: 0, background: '#111', transition: 'height 180ms ease' }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
@@ -3776,10 +3834,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               .filter(Boolean).join(' - ')}
           </span>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: 9, color: offMarket ? '#E29B9B' : '#78A0F1', letterSpacing: '0.07em', fontWeight: 800 }}>
+            <div style={{ fontSize: 9, color: offMarket ? '#E29B9B' : '#58C894', letterSpacing: '0.07em', fontWeight: 850 }}>
               {offMarket || r.availableStatus === 'not_available' ? 'OFF MARKET' : 'ON MARKET'}
             </div>
-            <div style={{ fontSize: 10.5, color: r.availability?.kind === 'now' ? '#58B88F' : DTEXT_DIM, fontFamily: FM, fontWeight: 650, marginTop: 2 }}>
+            <div style={{ fontSize: 10.5, color: r.availability?.kind === 'soon' ? DTEXT_DIM : '#FFB14A', fontFamily: FM, fontWeight: 750, marginTop: 3, textShadow: r.availability?.kind === 'soon' ? 'none' : '0 0 13px rgba(255,145,36,.55)' }}>
               {r.availability?.kind === 'now' ? 'Available now'
                 : r.availability?.kind === 'date' ? `Free ${fmtDateDots(r.availability.date)}`
                 : 'Move-in date unclear'}
@@ -3936,10 +3994,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
               cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
             }}>
-            <span style={{
-              display: 'inline-block', width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-              background: fresh.tier === 'fresh' ? 'rgb(47,111,87)' : fresh.tier === 'ageing' ? '#C98A1A' : '#8A8477',
-            }} />
+            {fresh.tier === 'fresh' ? <CheckCircle2 size={14} /> : <CircleHelp size={14} />}
             {avBusy ? 'Checking…' : 'Still available?'}
           </button>
           {/* Kev, screenshot: "ich hab kb dass sich das verschiebt" — this
@@ -4110,29 +4165,32 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             exactly where it already is (still under menuSection "Tools"). */}
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
+            aria-label={r.lastChatAt ? `Owner chat, last active ${ago(r.lastChatAt)}` : 'Owner chat'}
             title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}
             style={{ ...trayPrimaryBtn(dark), ...futureActionStyle }}>
-            Chat{r.lastChatAt ? ` · ${ago(r.lastChatAt)}` : ''}
+            <MessageCircle size={17} />
           </button>
           <button onClick={() => guardedFutureAction('Create booking request', onBook)} data-book-btn={r.ref}
             className={r.bookingsPossible ? 'crm-book-button-live' : undefined}
+            aria-label="Book a viewing"
             disabled={futureLocked && !isAdmin}
             title={r.bookingsPossible ? 'Bookings possible — owner-confirmed viewing time' : 'Book a viewing'}
             style={{ ...(r.bookingsPossible
               ? { ...trayPrimaryBtn(dark), background: BOOK_YELLOW, borderColor: BOOK_YELLOW, color: '#151C2C', fontWeight: 700 }
               : trayPrimaryBtn(dark)), ...futureActionStyle }}>
-            Book
+            <CalendarDays size={17} />
           </button>
           <button
             data-watag-one={r.ref}
             onClick={() => canTag && !tagging && guardedFutureAction('Send Property Chat tag', onTag)}
             disabled={!canTag || tagging || (futureLocked && !isAdmin)}
+            aria-label="Tag this listing"
             title={tagWhy}
             style={{
               ...trayPrimaryBtn(dark), ...futureActionStyle,
               color: canTag ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: canTag && !tagging ? 'pointer' : 'not-allowed',
             }}>
-            @Tag
+            <AtSign size={17} />
           </button>
           <button
             onClick={() => setMenuOpen(v => !v)}
@@ -4997,6 +5055,7 @@ const trayPrimaryBtn = (dark: boolean): React.CSSProperties => ({
   fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
   background: dark ? '#1B2333' : LSURFACE, border: `1px solid ${dark ? DBORDER : LBORDER}`, color: dark ? DTEXT : LTEXT,
   flex: '1 1 0', minWidth: 0, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
 })
 // Kev, 2026-09-11: "still available soll neben Confirmed weil das der
 // wichtigste Button ist" — a real, always-on button (not tucked in "...").

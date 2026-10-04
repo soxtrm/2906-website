@@ -20,7 +20,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle, Calendar, Clock, EyeOff, HelpCircle, Home, ImagePlus,
-  Loader2, MessageCircle, Send, Sparkles, Users, X,
+  Loader2, MessageCircle, Paperclip, Send, Sparkles, Users, X,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
@@ -503,6 +503,9 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
   const [err, setErr] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const imageInput = useRef<HTMLInputElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
   const reduceMotion = useReducedMotion()
@@ -541,6 +544,26 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not send that.')
     } finally { setSending(false) }
+  }
+
+  async function sendAttachments(files: FileList | null) {
+    if (!files?.length || uploading || closed) return
+    setUploading(true)
+    setErr(null)
+    try {
+      const form = new FormData()
+      Array.from(files).slice(0, 5).forEach(file => form.append('files', file))
+      if (draft.trim()) form.append('caption', draft.trim())
+      await crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/relay/attachments`, { method: 'POST', body: form })
+      setDraft('')
+      await load()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not send the attachment.')
+    } finally {
+      setUploading(false)
+      if (imageInput.current) imageInput.current.value = ''
+      if (fileInput.current) fileInput.current.value = ''
+    }
   }
 
   const closed = state?.open === false && state?.messages && state.messages.length > 0
@@ -761,6 +784,16 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
         {/* ── composer ───────────────────────────────────────────────────────── */}
         <div className="px-3.5 py-3.5 border-t border-white/[0.06] shrink-0 flex items-end gap-2 relative z-10
                         pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
+          <input ref={imageInput} type="file" accept="image/*" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
+          <input ref={fileInput} type="file" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
+          <button type="button" onClick={() => imageInput.current?.click()} disabled={closed || uploading} aria-label="Add images" title="Add images"
+            className="w-10 h-10 rounded-full border border-white/10 bg-white/[0.05] text-white/60 flex items-center justify-center shrink-0 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-30">
+            <ImagePlus className="w-4 h-4" />
+          </button>
+          <button type="button" onClick={() => fileInput.current?.click()} disabled={closed || uploading} aria-label="Add files" title="Add files"
+            className="w-10 h-10 rounded-full border border-white/10 bg-white/[0.05] text-white/60 flex items-center justify-center shrink-0 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-30">
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+          </button>
           <textarea
             value={draft}
             onChange={e => setDraft(e.target.value)}
