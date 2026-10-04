@@ -18,8 +18,50 @@ html[data-crm-theme="dark"] .crm-root {
 .crm-root *, .crm-root *::before, .crm-root *::after { box-sizing: border-box; }
 .crm-root :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible { outline: 3px solid var(--crm-focus); outline-offset: 3px; }
 .crm-root :is(button,select,summary) { cursor: pointer; }
-.crm-root button { font-family: inherit; transition: background-color .15s, border-color .15s, box-shadow .15s; }
+.crm-root button { font-family: inherit; transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .22s ease, transform .16s ease; }
 .crm-root button:disabled { cursor: not-allowed; opacity: .55; }
+.crm-root :is(button,a,summary) > svg,
+.crm-root :is(button,a,summary) > span > svg {
+  transform-origin: center;
+  transition: transform .24s cubic-bezier(.2,.8,.2,1), color .18s ease, filter .18s ease;
+}
+.crm-root :is(button,a,summary):active:not(:disabled) { transform: translateY(1px) scale(.985); }
+
+/* One restrained motion language across the CRM. It keeps controls feeling
+   responsive without making a dense operational board visually noisy. */
+@media (hover: hover) and (pointer: fine) {
+  .crm-root :is(.crm-button,.crm-icon-button,.crm-nav-item,.crm-group-tabs a,.crm-bottom-nav a,.crm-bottom-nav button):hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--crm-accent) 12%, transparent);
+  }
+  .crm-root :is(button,a,summary):hover:not(:disabled) > svg,
+  .crm-root :is(button,a,summary):hover:not(:disabled) > span > svg {
+    transform: translateY(-1px) scale(1.12) rotate(-3deg);
+    filter: drop-shadow(0 3px 5px color-mix(in srgb, currentColor 20%, transparent));
+  }
+  .crm-root :is(button,a,summary):hover:not(:disabled) > svg:last-child:not(:first-child) {
+    transform: translateX(2px) scale(1.08);
+  }
+  .crm-root .crm-icon-button:hover:not(:disabled) > svg { transform: scale(1.16) rotate(7deg); }
+  .crm-root .crm-nav-item:hover:not(:disabled) > svg { transform: translateX(2px) scale(1.1); }
+  .crm-root [data-ref]:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--crm-accent) 34%, var(--crm-border));
+    box-shadow: 0 14px 32px color-mix(in srgb, #091426 14%, transparent);
+  }
+  .crm-root article:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px color-mix(in srgb, #091426 12%, transparent);
+  }
+}
+
+.crm-root [data-ref], .crm-root article {
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), border-color .2s ease, box-shadow .24s ease;
+}
+.crm-root :is(button,a)[aria-current="page"] > svg,
+.crm-root :is(button,a)[aria-pressed="true"] > svg {
+  filter: drop-shadow(0 3px 7px color-mix(in srgb, var(--crm-accent) 28%, transparent));
+}
 .crm-root input::placeholder, .crm-root textarea::placeholder { color: var(--crm-faint); opacity: 1; }
 .crm-workspace { height: 100dvh; display: flex; overflow: hidden; font-family: var(--font-bricolage), sans-serif; font-size: 14px; color: var(--crm-text); }
 .crm-sidebar { width: 218px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--crm-surface); border-right: 1px solid var(--crm-border); }
@@ -126,6 +168,7 @@ html[data-crm-theme="dark"] .crm-brand img { filter: none; }
   --crm-raised: rgba(255,255,255,.08);
   color-scheme: dark;
 }
+.crm-chat-dialog button:not(:disabled):active { transform: scale(.96); }
 .crm-root [class~="bg-off-white"] { background-color: var(--crm-raised); }
 .crm-root [class~="text-red-400"] { color: var(--crm-danger); }
 html:not([data-crm-theme="dark"]) .crm-root [class~="text-blue-400"] { color: #1f57a8; }
@@ -186,6 +229,19 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-group-stats { gap: 7px; }
   .crm-group-stat { padding: 13px 11px; }
   .crm-group-stat strong { font-size: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crm-root *, .crm-root *::before, .crm-root *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .crm-root :is(button,a,summary):hover,
+  .crm-root :is(button,a,summary):active,
+  .crm-root [data-ref]:hover,
+  .crm-root article:hover { transform: none !important; }
 }
 @media (prefers-reduced-motion: reduce) { .crm-root * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
