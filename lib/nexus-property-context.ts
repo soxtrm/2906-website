@@ -1,4 +1,5 @@
 import anchors from '../ops/property-routing/anchors.json'
+import placeBindings from '../public/Link/argus-export/place-bindings.json'
 export type SmartPriority = 'weekly-shop' | 'swimming' | 'health' | 'gym'
 
 export type NexusPlace = {
@@ -183,7 +184,7 @@ const normaliseArea = (value?: string | null) => String(value || '')
   .trim()
   .toLowerCase()
 
-export async function getPropertyLifeOverview(reference?: string | null, area?: string | null) {
+export async function getPropertyLifeOverview(reference?: string | null, area?: string | null, localityId?: number | null) {
   if (!reference) return null
   try {
     const data = await fetchNexusContext()
@@ -198,7 +199,27 @@ export async function getPropertyLifeOverview(reference?: string | null, area?: 
       .map(item => ({ item, key: normaliseArea(item.areaLabel) }))
       .filter(candidate => candidate.key === areaKey || requestedTokens.every(token => candidate.key.split(' ').includes(token)))
       .sort((a, b) => Math.abs(a.key.length - areaKey.length) - Math.abs(b.key.length - areaKey.length))[0]?.item
-    return locality ? buildLifeOverview(locality, data.places, { requestedReference, sourceBasis: 'locality' }) : null
+    if (locality) return buildLifeOverview(locality, data.places, { requestedReference, sourceBasis: 'locality' })
+
+    // New website properties can arrive before the periodic Nexus inventory
+    // export. The canonical public locality binding is available immediately,
+    // so build an honestly labelled locality model instead of hiding the whole
+    // Smart Area Brief until the next export catches up.
+    const bindings = (placeBindings as { bindings?: Array<{ argus_village_id?: number; argus_label?: string; public_coordinates?: number[] | null }> }).bindings || []
+    const binding = bindings.find(item => localityId != null && item.argus_village_id === localityId)
+      || bindings
+        .map(item => ({ item, key: normaliseArea(item.argus_label) }))
+        .filter(candidate => candidate.key === areaKey || requestedTokens.every(token => candidate.key.split(' ').includes(token)))
+        .sort((a, b) => Math.abs(a.key.length - areaKey.length) - Math.abs(b.key.length - areaKey.length))[0]?.item
+    if (binding?.public_coordinates?.length === 2) {
+      return buildLifeOverview({
+        id: requestedReference,
+        coordinates: [Number(binding.public_coordinates[0]), Number(binding.public_coordinates[1])],
+        locationDisclosure: 'locality',
+        areaLabel: binding.argus_label || area || 'Malta',
+      }, data.places, { requestedReference, sourceBasis: 'locality' })
+    }
+    return null
   } catch {
     return null
   }

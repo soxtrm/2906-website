@@ -46,6 +46,7 @@ interface Property {
   features: string[]
   availableFrom: string
   propertyReference: string
+  localityId?: number | null
   featured: boolean
   documents?: Array<{ filename: string; url: string }>
 }
@@ -70,7 +71,7 @@ export default async function PropertyPage({
 
   if (!property) notFound()
 
-  const lifeOverview = await getPropertyLifeOverview(property.propertyReference, property.location)
+  const lifeOverview = await getPropertyLifeOverview(property.propertyReference, property.location, property.localityId)
 
   const isCommercial =
     property.category === 'commercial' ||
