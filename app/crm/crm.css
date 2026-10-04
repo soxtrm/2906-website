@@ -304,7 +304,7 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-mobile-island-workspace.island-open .crm-header-actions .crm-icon-button{display:inline-flex;opacity:1;transform:none}
   .crm-mobile-island-workspace .crm-header-actions .crm-icon-button:hover,.crm-mobile-island-workspace .crm-header-actions .crm-icon-button:active{background:var(--crm-accent-soft);transform:scale(.94)}
   .crm-mobile-island-brand{display:grid;flex:0 0 40px;width:40px;height:32px;padding:0;place-items:center;border:0;border-radius:999px;background:#fff;cursor:pointer}
-  .crm-mobile-island-brand img{display:block;width:25px;height:25px;object-fit:contain;filter:brightness(0);transition:transform .25s cubic-bezier(.2,.85,.2,1)}
+  .crm-mobile-island-brand img{display:block;width:36px;height:20px;object-fit:contain;filter:brightness(0);transition:transform .25s cubic-bezier(.2,.85,.2,1)}
   .crm-mobile-island-workspace.island-open .crm-mobile-island-brand img{transform:rotate(-8deg) scale(1.06)}
   .crm-mobile-island-title{display:none;max-width:92px;overflow:hidden;color:#111827;font-size:10px;font-weight:800;letter-spacing:-.015em;text-overflow:ellipsis;white-space:nowrap;opacity:0}
   .crm-mobile-island-workspace.island-open .crm-mobile-island-title{display:block;opacity:1;animation:argus-island-copy .2s ease .06s both}
