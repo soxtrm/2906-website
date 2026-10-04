@@ -3584,7 +3584,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         border: focused ? `2px solid ${A}` : (frame?.border || `1px solid ${DCARD_BORDER}`),
         boxShadow: focused ? '0 6px 16px rgba(212,137,26,0.28)' : (frame?.glow || '0 1px 3px rgba(0,0,0,0.35)'),
         transition: 'box-shadow 0.18s, border-color 0.18s',
-        display: 'flex', flexDirection: 'column',
+        display: isMobile ? 'grid' : 'flex',
+        flexDirection: isMobile ? undefined : 'column',
+        gridTemplateColumns: isMobile ? '116px minmax(0,1fr)' : undefined,
+        alignItems: isMobile ? 'stretch' : undefined,
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
         // the card past its own column and clip against the next one. 0 makes
@@ -3608,7 +3611,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         onTouchStart={startPhotoHover}
         onTouchEnd={stopPhotoHover}
         onTouchCancel={stopPhotoHover}
-        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? (compact ? 106 : 122) : (compact ? 164 : 200), flexShrink: 0, background: '#111', transition: 'height 180ms ease' }}
+        style={{
+          cursor: 'pointer', position: 'relative',
+          height: isMobile ? '100%' : (compact ? 164 : 200),
+          minHeight: isMobile ? 142 : undefined,
+          gridColumn: isMobile ? 1 : undefined,
+          gridRow: isMobile ? 1 : undefined,
+          flexShrink: 0, background: '#111', transition: 'height 180ms ease',
+        }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
           ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -3758,6 +3768,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </span>
         )}
 
+        {isMobile && (
+          <span style={{
+            position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+            maxWidth: 88, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            borderRadius: 999, padding: '3px 7px', background: 'rgba(7,12,22,.72)',
+            color: '#fff', fontFamily: FM, fontSize: 8.5, letterSpacing: '.03em',
+            backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,.16)',
+          }}>#{r.ref}</span>
+        )}
+
         {/* Dashboard photo upload (Kev, 2026-09-02) — own listing or admin
             only, same rule the backend route enforces; hidden rather than
             shown-disabled so a click can never 403. */}
@@ -3794,7 +3814,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           Available and the tray below it read as dead space — bottom
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
-      <div style={{ padding: isMobile ? '8px 10px 2px' : compact ? '10px 12px 3px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div style={{
+        padding: isMobile ? '9px 10px 7px' : compact ? '10px 12px 3px' : '13px 15px 4px',
+        display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0,
+        gridColumn: isMobile ? 2 : undefined, gridRow: isMobile ? 1 : undefined,
+      }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
@@ -3849,7 +3873,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         </div>
 
-        {!!r.units && r.units.total > 1 && (
+        {!!r.units && r.units.total > 1 && !isMobile && (
           <div data-unit-stock={r.ref} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
             marginTop: 6, padding: '4px 7px', borderRadius: 7,
@@ -3863,7 +3887,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {/* The street, where we have one. Number never shown, and only on your
             own listing — see streetWithoutNumber() on the server. */}
-        {r.streetName && <div style={{ fontSize: 11, color: 'var(--crm-accent)', opacity: 0.85, marginTop: 3 }}>{r.streetName}</div>}
+        {r.streetName && <div style={{ fontSize: isMobile ? 9.5 : 11, color: 'var(--crm-accent)', opacity: 0.85, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.streetName}</div>}
 
         {/* Sharing / pets, whenever the listing actually says. Nothing is
             drawn when it does not — see RuleIcon. */}
@@ -3922,7 +3946,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             see menuSection "Tools". */}
 
         {/* Why it last moved — the review queue is unusable without it. */}
-        {r.statusChangeReason && (
+        {r.statusChangeReason && !isMobile && (
           <div style={{ fontSize: 9.5, color: '#D3A876', marginTop: 8, lineHeight: 1.35 }}>{r.statusChangeReason}</div>
         )}
 
@@ -3938,14 +3962,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             slack itself, so the button sits flush against the tray on
             EVERY card regardless of how much is above it, not just the ones
             that happened to be tall enough already. */}
-        <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+        <div style={{ marginTop: 'auto', paddingTop: isMobile ? 6 : 12 }}>
         {/* Kev, 2026-09-16 ("die minicions vlt über das still available
             anheften, da ist ja garnix"): moved up from the tray below — this
             row above the button had nothing in it, and that's a better home
             for these than buried under Chat/Book/Tag. Facebook stays behind
             "..." exactly where it was; only download/copy/price/AV-date
             moved again. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
+        <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
           <PhotoDownload r={r} />
           <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
             <Copy size={14} />
@@ -3991,6 +4015,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             title={c.reason || fresh.label}
             style={{
               ...stillAvailableBtn(dark),
+              ...(isMobile ? { minHeight: 30, padding: '6px 8px', fontSize: 9.5, gap: 4, boxShadow: 'none' } : {}),
               opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
               cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
             }}>
@@ -4002,7 +4027,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               ("Never" vs "10d ago" vs "3h ago"), so the flex:1 button next
               to it landed at a different width on every card. Fixed width
               here instead, so the button's right edge never moves. */}
-          <div style={{ textAlign: 'right', flexShrink: 0, width: 62 }}>
+          <div style={{ textAlign: 'right', flexShrink: 0, width: isMobile ? 48 : 62 }}>
             <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Confirmed</div>
             <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'}
@@ -4042,7 +4067,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         )}
 
-        {isAdmin && !isUpcoming && !c.canAsk && (
+        {isAdmin && !isUpcoming && !c.canAsk && !isMobile && (
           <div data-contact-block-reason={r.ref} style={{
             marginTop: 7, padding: '8px 9px', borderRadius: 9,
             border: '1px solid rgba(226,155,155,.24)', background: 'rgba(185,28,28,.07)',
@@ -4137,7 +4162,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           are already click-to-open. Every onClick/disabled condition below
           is the SAME one the previous three-row layout used; only where it
           lives changed. */}
-      {preferences.showBookingDetails && !!r.bookings?.length && (
+      {preferences.showBookingDetails && !!r.bookings?.length && !isMobile && (
         <div data-card-bookings={r.ref} style={{
           padding: '7px 12px', borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
           background: dark ? DCARD : CARD, display: 'flex', flexDirection: 'column', gap: 3,
@@ -4157,7 +4182,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       )}
       {preferences.showQuickTools && <div style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: '9px 11px', position: 'relative',
+        padding: isMobile ? '6px 8px' : '9px 11px', position: 'relative',
+        gridColumn: isMobile ? '1 / -1' : undefined,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
             to live here moved up above the Still Available button — see the
@@ -4403,6 +4429,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         background: DTRAY, color: DTEXT_DIM, fontFamily: FM, fontSize: 10.5,
         letterSpacing: '0.04em', padding: '7px 14px', display: 'flex', alignItems: 'center',
         justifyContent: 'center', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
+        gridColumn: isMobile ? '1 / -1' : undefined,
+        ...(isMobile ? { display: 'none' } : {}),
       }}>
         <span style={{ color: DTEXT, fontWeight: 700 }}>REFERENCE {r.ref}</span>
         <span style={{ opacity: 0.4 }}>—</span>
