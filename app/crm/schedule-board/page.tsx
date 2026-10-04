@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, CircleHelp, LayoutGrid, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets } from 'lucide-react'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, CircleHelp, LayoutGrid, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets, Plus, CircleAlert } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -138,6 +138,13 @@ type Listing = {
   // Bumped by any edit (crm.js PATCH /properties/:id). Drives the "freshly
   // updated" glow + sort nudge, first 48h only — see Card()'s isFreshlyUpdated.
   updatedAt?: string | null
+  // Exact feed events supplied by the board backend. Price changes come from
+  // property_activities, so the € view never guesses from a generic edit.
+  latestPriceChangeAt?: string | null
+  latestPriceOld?: number | null
+  latestPriceNew?: number | null
+  latestUpdateAt?: string | null
+  latestUpdateType?: string | null
   // When somebody last pressed "Available" on this card, and why it last moved.
   lastConfirmedAvailableAt: string | null
   statusChangeReason: string | null
@@ -3015,25 +3022,73 @@ function SettingsToggle({ icon, title, description, checked, onChange }: {
   )
 }
 
+type FeedFilter = 'all' | 'price' | 'new' | 'updated'
+type FeedEvent = {
+  kind: Exclude<FeedFilter, 'all'>
+  at: string
+  label: string
+  shortLabel: string
+  detail: string | null
+  icon: React.ReactNode
+  color: string
+  border: string
+  background: string
+  halo: string
+}
+
+function validFeedDate(value: string | null | undefined): value is string {
+  return !!value && Number.isFinite(Date.parse(value))
+}
+
+function feedEvent(r: Listing, filter: FeedFilter): FeedEvent | null {
+  const money = (value: number | null | undefined) => value == null ? null : `€${Number(value).toLocaleString('en-GB')}`
+  const price: FeedEvent | null = validFeedDate(r.latestPriceChangeAt) ? {
+    kind: 'price', at: r.latestPriceChangeAt, label: 'Price changed', shortLabel: '€ PRICE',
+    detail: money(r.latestPriceOld) && money(r.latestPriceNew) ? `${money(r.latestPriceOld)} → ${money(r.latestPriceNew)}` : money(r.latestPriceNew),
+    icon: <Euro size={11} />, color: '#F5C96B', border: 'rgba(245,201,107,.38)',
+    background: 'rgba(245,201,107,.11)', halo: 'rgba(245,201,107,.28)',
+  } : null
+  const uploaded: FeedEvent | null = validFeedDate(r.createdAt) ? {
+    kind: 'new', at: r.createdAt, label: 'New upload', shortLabel: '+ NEW', detail: null,
+    icon: <Plus size={11} />, color: '#69D8AE', border: 'rgba(105,216,174,.38)',
+    background: 'rgba(105,216,174,.1)', halo: 'rgba(105,216,174,.26)',
+  } : null
+  const updated: FeedEvent | null = validFeedDate(r.latestUpdateAt) ? {
+    kind: 'updated', at: r.latestUpdateAt, label: 'Updated', shortLabel: '! UPDATE',
+    detail: humanUpdateType(r.latestUpdateType), icon: <CircleAlert size={11} />, color: '#8FB7FF',
+    border: 'rgba(143,183,255,.38)', background: 'rgba(143,183,255,.1)', halo: 'rgba(143,183,255,.26)',
+  } : null
+  if (filter === 'price') return price
+  if (filter === 'new') return uploaded
+  if (filter === 'updated') return updated
+  return [price, uploaded, updated]
+    .filter((event): event is FeedEvent => !!event)
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0] || null
+}
+
+function humanUpdateType(value: string | null | undefined): string | null {
+  if (!value) return null
+  if (/photo/i.test(value)) return 'Photos changed'
+  if (/available|availability|check_in|returned|reactivated/i.test(value)) return 'Availability changed'
+  if (/rented|archive|check_out/i.test(value)) return 'Status changed'
+  if (/date|upcoming/i.test(value)) return 'Date changed'
+  if (/spec|bedroom|location/i.test(value)) return 'Property details changed'
+  return 'Property details changed'
+}
+
 function AgentFeed({ rows, mobile, showGuide, renderCard }: {
   rows: Listing[]
   mobile: boolean
   showGuide: boolean
   renderCard: (r: Listing) => React.ReactNode
 }) {
-  const [filter, setFilter] = useState<'all' | 'today' | 'confirmed' | 'new'>('all')
+  const [filter, setFilter] = useState<FeedFilter>('all')
   const feed = useMemo(() => {
     const unique = new Map<string, Listing>()
     for (const row of rows) if (!unique.has(row.ref)) unique.set(row.ref, row)
     return [...unique.values()]
-      .filter(r => {
-        const touch = listingTouch(r)
-        if (filter === 'today') return !!touch && Date.now() - Date.parse(touch.at) < 86_400_000
-        if (filter === 'confirmed') return touch?.kind === 'Confirmed'
-        if (filter === 'new') return !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86_400_000
-        return true
-      })
-      .sort((a, b) => Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01'))
+      .filter(r => !!feedEvent(r, filter))
+      .sort((a, b) => Date.parse(feedEvent(b, filter)?.at || '1970-01-01') - Date.parse(feedEvent(a, filter)?.at || '1970-01-01'))
       .slice(0, 100)
   }, [rows, filter])
 
@@ -3048,19 +3103,25 @@ function AgentFeed({ rows, mobile, showGuide, renderCard }: {
         <Clock3 size={18} color={A} style={{ flex: '0 0 auto' }} />
       </header>}
       <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
-        {([['all', 'All updates'], ['today', 'Today'], ['confirmed', 'Confirmed'], ['new', 'New']] as const).map(([value, label]) => (
+        {([
+          ['all', 'All', <Rows3 size={13} key="all" />],
+          ['price', 'Price changes', <Euro size={13} key="price" />],
+          ['new', 'New uploads', <Plus size={13} key="new" />],
+          ['updated', 'Updated', <CircleAlert size={13} key="updated" />],
+        ] as const).map(([value, label, icon]) => (
           <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} style={{
             border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
             background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
             padding: '8px 12px', minHeight: 36, fontSize: 10.5, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
-          }}>{label}</button>
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}>{icon}{label}</button>
         ))}
       </nav>
       <div style={{ position: 'relative' }}>
         <span aria-hidden="true" style={{ position: 'absolute', left: mobile ? 42 : 76, top: 23, bottom: 10, width: 1, background: `linear-gradient(${A}, ${DBORDER} 18%, ${DBORDER})` }} />
         {feed.map(r => {
-          const touch = listingTouch(r)
-          const date = touch ? new Date(touch.at) : null
+          const event = feedEvent(r, filter)
+          const date = event ? new Date(event.at) : null
           const day = date ? date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Earlier'
           const showDay = day !== previousDay
           previousDay = day
@@ -3072,10 +3133,20 @@ function AgentFeed({ rows, mobile, showGuide, renderCard }: {
             <div style={{ display: 'grid', gridTemplateColumns: mobile ? '52px minmax(0,1fr)' : '92px minmax(0,1fr)', alignItems: 'start', marginBottom: mobile ? 10 : 14 }}>
               <div style={{ position: 'relative', padding: mobile ? '10px 10px 0 0' : '12px 20px 0 0', textAlign: 'right', color: DTEXT_FAINT }}>
                 <b style={{ display: 'block', color: DTEXT_DIM, fontFamily: FM, fontSize: mobile ? 9 : 11 }}>{date ? date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}</b>
-                {!mobile && <small style={{ display: 'block', fontSize: 8, marginTop: 3 }}>{touch?.kind || 'Update'}</small>}
-                <i aria-hidden="true" style={{ position: 'absolute', right: mobile ? 5 : 13, top: mobile ? 13 : 16, width: 9, height: 9, borderRadius: '50%', background: A, border: `2px solid ${DCARD}`, boxShadow: `0 0 0 2px rgba(184,149,63,.22)` }} />
+                {!mobile && <small style={{ display: 'block', fontSize: 8, marginTop: 3 }}>{event?.shortLabel || 'Update'}</small>}
+                <i aria-hidden="true" style={{ position: 'absolute', right: mobile ? 5 : 13, top: mobile ? 13 : 16, width: 9, height: 9, borderRadius: '50%', background: event?.color || A, border: `2px solid ${DCARD}`, boxShadow: `0 0 0 2px ${event?.halo || 'rgba(184,149,63,.22)'}` }} />
               </div>
-              <div style={{ minWidth: 0 }}>{renderCard(r)}</div>
+              <div style={{ minWidth: 0 }}>
+                {event && <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 3px 6px', minWidth: 0 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${event.border}`, borderRadius: 999, background: event.background, color: event.color, padding: '4px 8px', fontSize: 9.5, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' }}>
+                    {event.icon}{event.label}
+                  </span>
+                  <span title={date?.toLocaleString('en-GB')} style={{ color: DTEXT_FAINT, fontSize: 9.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ago(event.at)}{event.detail ? ` · ${event.detail}` : ''}
+                  </span>
+                </div>}
+                {renderCard(r)}
+              </div>
             </div>
           </div>
         })}
