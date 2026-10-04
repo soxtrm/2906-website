@@ -144,13 +144,24 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
   useEffect(() => {
     let frame = 0
-    const update = () => {
+    const update = (event?: Event) => {
       cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => setCompactMobile(window.scrollY > 230))
+      frame = requestAnimationFrame(() => {
+        const targetTop = event?.target instanceof HTMLElement ? event.target.scrollTop : 0
+        const pageTop = Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop)
+        setCompactMobile(Math.max(targetTop, pageTop) > 230)
+      })
     }
     update()
     window.addEventListener('scroll', update, { passive: true })
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', update) }
+    // CrmShell scrolls its content pane instead of the window. Capture scrolls
+    // from either surface so the compact island behaves the same everywhere.
+    document.addEventListener('scroll', update, { passive: true, capture: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', update)
+      document.removeEventListener('scroll', update, true)
+    }
   }, [])
 
   useEffect(() => {
