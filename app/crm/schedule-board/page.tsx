@@ -3093,14 +3093,22 @@ function ReachoutSwitch() {
   )
 }
 
+function hasDirectSeafrontClaim(text: string): boolean {
+  return text.split(/(?<=[.;!?])\s+|\n+/).some(clause => {
+    const match = /\bsea\s*-?front\b/i.exec(clause)
+    if (!match) return false
+    const before = clause.slice(Math.max(0, match.index - 55), match.index)
+    return !/(?:close|near|nearby|next)\s+(?:to\s+)?(?:the\s+)?$|(?:easy|direct|private|convenient)?\s*access\s+to\s+(?:the\s+)?$|(?:walk(?:ing)?|minutes?|mins?|metres?|meters?|km|steps?)\b[^.;!?]{0,24}$|(?:from|off|opposite|behind|towards?|view|views|glimpse)\s+(?:of\s+|the\s+)?$/i.test(before)
+  })
+}
+
 function matchesCollection(r: Listing, key: CollectionKey): boolean {
   const copy = [r.type, r.town, r.subLocation, r.description].filter(Boolean).join(' ').toLowerCase()
-  // The category publisher is the source of truth for Seafront. Its classifier
-  // explicitly rejects nearby/sea-view wording, while the former UI regex put
-  // both false positives and missed group posts into this row. Text remains a
-  // fallback for older listings that predate publication tracking.
-  if (key === 'seafront') return r.categoryGroups?.includes('seafront') === true
-    || /(direct(?:ly)?\s+(?:on\s+)?the\s+(?:sea|water)|sea\s*front|seafront|beach\s*front|beachfront|frontline)/i.test(copy)
+  // Seafront is literal evidence only. A historic group post, sea view,
+  // waterfront wording, "frontline" or proximity to the promenade must not
+  // keep a listing in this row. The publishing classifier applies the same
+  // rule and separately rejects phrases such as "access to the seafront".
+  if (key === 'seafront') return hasDirectSeafrontClaim(copy)
   if (key.startsWith('beds-')) return r.beds === Number(key.slice(-1))
   if (key === 'luxury') return r.category === 'aesthetics' || /luxury|luxurious|designer|high[- ]end|premium|prestigious|upmarket/i.test(copy)
   return /house|villa|townhouse|farmhouse|bungalow/i.test(copy)
