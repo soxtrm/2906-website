@@ -172,3 +172,12 @@ dialog{padding:0;border:0;background:transparent;max-width:none;max-height:none}
 .matrix-banner h1{font-family:Manrope,'Segoe UI',sans-serif;font-style:normal;font-weight:800;font-size:clamp(34px,4vw,58px);line-height:1.06}
 .market-modes button[aria-pressed=true]{border-color:#6c7ff0;background:#edf0ff;color:#354cc5;box-shadow:none}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline-color:#4b63ee}
+/* Audit 2026-10-05: readable controls and visible search context. */
+.global-search input{font-size:14px!important}.global-search small{font-size:11px!important}
+.filter-head span,.filter-panel legend,.filter-panel>label,.filter-pair label,.availability-tree button{font-size:14px!important}
+.filter-panel select,.market-modes button,.apply-filters{font-size:14px!important}
+.filter-state{display:flex!important;font-size:12px!important}
+.results-head #result-meta,.results-head #result-kicker,#active-filters{display:flex!important}
+.results-head #result-kicker{font-size:11px!important}.results-head #result-meta{font-size:13px!important}
+.active-filters{min-height:36px!important;margin-bottom:12px!important}.active-filters span{font-size:12px!important;padding:8px 12px!important}
+@media(max-width:720px){.global-search input{font-size:16px!important}.filter-panel legend,.filter-panel>label,.filter-pair label,.availability-tree button,.filter-panel select,.market-modes button,.apply-filters{font-size:14px!important}.source-pill,.availability-pill{font-size:10px!important}.card-place,.card-meta,.card-price small{font-size:11px!important}}

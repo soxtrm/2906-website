@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { PropertyGallery } from './gallery'
 import { PropertyLifeOverview } from '@/components/property-life-overview'
 import { getPropertyLifeOverview } from '@/lib/nexus-property-context'
+import { isPubliclyPlausibleProperty } from '@/lib/public-property-safety'
 
 const VPS = 'http://178.104.162.193:3001'
 const COMMERCIAL_TYPES = ['Office', 'Retail', 'Warehouse']
@@ -55,7 +56,8 @@ async function getProperty(slug: string): Promise<Property | null> {
   try {
     const res = await fetch(`${VPS}/api/properties/${slug}`, { next: { revalidate: 60 } })
     if (!res.ok) return null
-    return res.json()
+    const property = await res.json()
+    return isPubliclyPlausibleProperty(property) ? property : null
   } catch {
     return null
   }

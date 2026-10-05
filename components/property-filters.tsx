@@ -32,6 +32,10 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
   const router = useRouter()
   const searchParams = useSearchParams()
   const isCommercial = category === 'commercial'
+  const isSales = category === 'sales'
+  const priceFloor = isSales ? 100000 : 500
+  const priceCeiling = isSales ? 3000000 : 5000
+  const priceStep = isSales ? 25000 : 100
 
   const [isOpen, setIsOpen] = useState(false)
   const [filters, setFilters] = useState<Filters>({
@@ -39,8 +43,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     propertyTypes: searchParams.get('types')?.split(',').filter(Boolean) || [],
     bedrooms: searchParams.get('beds')?.split(',').filter(Boolean) || [],
     bathrooms: searchParams.get('baths')?.split(',').filter(Boolean) || [],
-    budgetMin: Number(searchParams.get('minPrice') || 500),
-    budgetMax: Number(searchParams.get('maxPrice') || 5000),
+    budgetMin: Number(searchParams.get('minPrice') || priceFloor),
+    budgetMax: Number(searchParams.get('maxPrice') || priceCeiling),
     sqm: searchParams.get('sqm') || '',
     featureTags: searchParams.get('featureTags')?.split(',').filter(Boolean) || [],
     localityIds: searchParams.get('localityIds')?.split(',').filter(Boolean) || [],
@@ -72,8 +76,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     if (filters.propertyTypes.length) params.set('types', filters.propertyTypes.join(','))
     if (!isCommercial && filters.bedrooms.length) params.set('beds', filters.bedrooms.join(','))
     if (filters.bathrooms.length) params.set('baths', filters.bathrooms.join(','))
-    if (filters.budgetMin > 500) params.set('minPrice', String(filters.budgetMin))
-    if (filters.budgetMax < 5000) params.set('maxPrice', String(filters.budgetMax))
+    if (filters.budgetMin > priceFloor) params.set('minPrice', String(filters.budgetMin))
+    if (filters.budgetMax < priceCeiling) params.set('maxPrice', String(filters.budgetMax))
     if (isCommercial && filters.sqm) params.set('sqm', filters.sqm)
     if (filters.featureTags.length) params.set('featureTags', filters.featureTags.join(','))
     if (filters.localityIds.length) params.set('localityIds', filters.localityIds.join(','))
@@ -87,8 +91,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
       propertyTypes: [],
       bedrooms: [],
       bathrooms: [],
-      budgetMin: 500,
-      budgetMax: 5000,
+      budgetMin: priceFloor,
+      budgetMax: priceCeiling,
       sqm: '',
       featureTags: [],
       localityIds: [],
@@ -162,7 +166,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     filters.propertyTypes.length +
     filters.bedrooms.length +
     filters.bathrooms.length +
-    (filters.budgetMin > 500 || filters.budgetMax < 5000 ? 1 : 0) +
+    (filters.budgetMin > priceFloor || filters.budgetMax < priceCeiling ? 1 : 0) +
     (filters.sqm ? 1 : 0) +
     filters.featureTags.length +
     filters.localityIds.length +
@@ -176,7 +180,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     ...filters.propertyTypes.map(t => ({ key: `pt-${t}`, label: t, onRemove: () => { const f = { ...filters, propertyTypes: filters.propertyTypes.filter(x => x !== t) }; setFilters(f); pushFilters(f) } })),
     ...filters.bedrooms.map(b => ({ key: `bed-${b}`, label: `${b} bed`, onRemove: () => { const f = { ...filters, bedrooms: filters.bedrooms.filter(x => x !== b) }; setFilters(f); pushFilters(f) } })),
     ...filters.bathrooms.map(b => ({ key: `bath-${b}`, label: `${b} bath`, onRemove: () => { const f = { ...filters, bathrooms: filters.bathrooms.filter(x => x !== b) }; setFilters(f); pushFilters(f) } })),
-    ...(filters.budgetMin > 500 || filters.budgetMax < 5000 ? [{ key: 'budget', label: `€${filters.budgetMin.toLocaleString()}–${filters.budgetMax >= 5000 ? '5,000+' : filters.budgetMax.toLocaleString()}/mo`, onRemove: () => { const f = { ...filters, budgetMin: 500, budgetMax: 5000 }; setFilters(f); pushFilters(f) } }] : []),
+    ...(filters.budgetMin > priceFloor || filters.budgetMax < priceCeiling ? [{ key: 'budget', label: `€${filters.budgetMin.toLocaleString()}–${filters.budgetMax >= priceCeiling ? `${priceCeiling.toLocaleString()}+` : filters.budgetMax.toLocaleString()}${isSales ? '' : '/mo'}`, onRemove: () => { const f = { ...filters, budgetMin: priceFloor, budgetMax: priceCeiling }; setFilters(f); pushFilters(f) } }] : []),
     ...(filters.sqm ? [{ key: 'sqm', label: `${filters.sqm} m²`, onRemove: () => { const f = { ...filters, sqm: '' }; setFilters(f); pushFilters(f) } }] : []),
     ...filters.featureTags.map(k => ({
       key: `ft-${k}`, label: filterOptions.featureTags.find(o => o.key === k)?.label || k,
@@ -201,8 +205,8 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
     if (f.propertyTypes.length) params.set('types', f.propertyTypes.join(','))
     if (!isCommercial && f.bedrooms.length) params.set('beds', f.bedrooms.join(','))
     if (f.bathrooms.length) params.set('baths', f.bathrooms.join(','))
-    if (f.budgetMin > 500) params.set('minPrice', String(f.budgetMin))
-    if (f.budgetMax < 5000) params.set('maxPrice', String(f.budgetMax))
+    if (f.budgetMin > priceFloor) params.set('minPrice', String(f.budgetMin))
+    if (f.budgetMax < priceCeiling) params.set('maxPrice', String(f.budgetMax))
     if (isCommercial && f.sqm) params.set('sqm', f.sqm)
     if (f.featureTags.length) params.set('featureTags', f.featureTags.join(','))
     if (f.localityIds.length) params.set('localityIds', f.localityIds.join(','))
@@ -553,7 +557,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
           </div>
 
           {/* Rental modes (Long / Winter / Short Let, OR) — ARGUS 2026-09-23 */}
-          <div className="relative">
+          {!isSales && <div className="relative">
             <button
               onClick={() => setActiveDropdown(activeDropdown === 'rentalModes' ? null : 'rentalModes')}
               className="flex items-center gap-2 px-3 py-2 bg-off-white rounded text-sm text-navy/70 hover:text-navy"
@@ -592,7 +596,7 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </div>}
 
           {/* SQM — commercial only */}
           {isCommercial && (
@@ -611,14 +615,14 @@ export function PropertyFilters({ accentColor, category }: PropertyFiltersProps)
           <div className="min-w-[210px] rounded bg-off-white px-3 py-2">
             <div className="mb-2 flex items-center justify-between gap-2 text-[10px] text-navy/60">
               <span>€{filters.budgetMin.toLocaleString()}</span>
-              <span>/month</span>
-              <span>{filters.budgetMax >= 5000 ? '€5,000+' : `€${filters.budgetMax.toLocaleString()}`}</span>
+              <span>{isSales ? 'purchase price' : '/month'}</span>
+              <span>{filters.budgetMax >= priceCeiling ? `€${priceCeiling.toLocaleString()}+` : `€${filters.budgetMax.toLocaleString()}`}</span>
             </div>
             <Slider
-              aria-label="Monthly budget from and to"
-              min={500}
-              max={5000}
-              step={100}
+              aria-label={isSales ? 'Purchase price from and to' : 'Monthly budget from and to'}
+              min={priceFloor}
+              max={priceCeiling}
+              step={priceStep}
               value={[filters.budgetMin, filters.budgetMax]}
               onValueChange={([budgetMin, budgetMax]) => setFilters(prev => ({ ...prev, budgetMin, budgetMax }))}
               className="[&_[data-slot=slider-track]]:bg-navy/15 [&_[data-slot=slider-range]]:bg-gold [&_[data-slot=slider-thumb]]:border-gold"

@@ -67,7 +67,7 @@ export default function ContactPage() {
             {tab === 'search' && (
               <div>
                 <h2 className="font-serif text-xl text-navy mb-1">Let us find your Home</h2>
-                <p className="text-navy/50 text-sm mb-6">Tell us what you&apos;re looking for and we&apos;ll match you with 20,000+ Malta properties.</p>
+                <p className="text-navy/50 text-sm mb-6">Tell us what you&apos;re looking for and we&apos;ll check the connected Malta inventory.</p>
                 <ContactForm />
               </div>
             )}

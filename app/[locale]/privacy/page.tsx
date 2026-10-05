@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <section className="pt-28 pb-12 bg-navy">
         <div className="container mx-auto px-4 lg:px-8 text-center">
           <h1 className="font-serif text-3xl md:text-4xl text-white mb-3">Privacy Policy</h1>
-          <p className="text-white/60 text-sm">Last updated: 2025</p>
+          <p className="text-white/60 text-sm">Last updated: 5 October 2026</p>
         </div>
       </section>
 
@@ -29,9 +29,6 @@ export default function PrivacyPage() {
                 information. This Privacy Policy explains how we collect, use, and safeguard your data when
                 you use our website or engage with our services.
               </p>
-              <p className="mt-2 text-gold text-sm italic">
-                [Kevin — please review and expand this section with your specific practices.]
-              </p>
             </div>
 
             <div>
@@ -42,9 +39,6 @@ export default function PrivacyPage() {
                 <li>Communication records (WhatsApp messages, emails)</li>
                 <li>Usage data collected automatically when you browse our website</li>
               </ul>
-              <p className="mt-2 text-gold text-sm italic">
-                [Kevin — add or remove items as appropriate.]
-              </p>
             </div>
 
             <div>
@@ -71,9 +65,6 @@ export default function PrivacyPage() {
               <p>
                 We retain your personal data for as long as necessary to provide our services or as
                 required by law. You may request deletion of your data at any time.
-              </p>
-              <p className="mt-2 text-gold text-sm italic">
-                [Kevin — specify your actual retention period.]
               </p>
             </div>
 

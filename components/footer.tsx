@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Instagram, Linkedin, Mail, MapPin, Phone } from 'lucide-react'
+import { Mail, MapPin, Phone } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { navItems } from '@/lib/data'
 
@@ -21,14 +21,6 @@ export function Footer() {
             <p className="text-white/50 text-xs leading-relaxed mb-4 mx-auto md:mx-0 max-w-[200px]">
               {t('footer.tagline')}
             </p>
-            <div className="flex gap-3 justify-center md:justify-start">
-              <a href="#" className="text-white/40 hover:text-gold transition-colors" aria-label="Instagram">
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a href="#" className="text-white/40 hover:text-gold transition-colors" aria-label="LinkedIn">
-                <Linkedin className="w-4 h-4" />
-              </a>
-            </div>
           </div>
 
           {/* Links — Navigation */}
@@ -46,13 +38,13 @@ export function Footer() {
                 </li>
               ))}
               <li className="pt-1 border-t border-white/10 mt-2">
-                <Link href="/add-property" className="text-white/60 hover:text-gold transition-colors text-xs">
-                  Add Your Property
+                <Link href="/contact?intent=owner" className="text-white/60 hover:text-gold transition-colors text-xs">
+                  List a Property
                 </Link>
               </li>
               <li>
-                <Link href="/add-client" className="text-white/60 hover:text-gold transition-colors text-xs">
-                  Add Your Search
+                <Link href="/contact?intent=search" className="text-white/60 hover:text-gold transition-colors text-xs">
+                  Find a Property
                 </Link>
               </li>
               <li>

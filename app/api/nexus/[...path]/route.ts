@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const PUBLIC_ROUTES = new Set(['inventory', 'taxonomy', 'places', 'workplaces/search'])
+const QUARANTINED_PUBLIC_REFERENCES = new Set(['2906-9398'])
+
+function publicInventory(payload: any) {
+  if (!Array.isArray(payload?.properties)) return payload
+  return {
+    ...payload,
+    properties: payload.properties.filter((property: any) => {
+      if (QUARANTINED_PUBLIC_REFERENCES.has(String(property.id))) return false
+      const rental = property.market !== 'sales'
+      return !(rental && Number(property.rent) < 100)
+    }),
+  }
+}
 export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const path = (await ctx.params).path.join('/')
   if (!PUBLIC_ROUTES.has(path)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -9,7 +22,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
     if (path === 'workplaces/search') upstream.searchParams.set('q', req.nextUrl.searchParams.get('q') || '')
     const response = await fetch(upstream, { cache: 'no-store', signal: AbortSignal.timeout(15000) })
     if (!response.ok) return NextResponse.json({ error: 'Nexus inventory unavailable' }, { status: 503 })
-    return NextResponse.json(await response.json(), { headers: { 'Cache-Control': 'no-store' } })
+    const payload = await response.json()
+    return NextResponse.json(path === 'inventory' ? publicInventory(payload) : payload, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     return NextResponse.json({ error: 'Nexus inventory unavailable' }, { status: 503 })
   }

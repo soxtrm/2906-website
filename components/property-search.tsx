@@ -42,13 +42,29 @@ export function PropertySearch() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const location = params.get('location') || ''
+    setFilters(prev => ({
+      ...prev,
+      location,
+      propertyTypes: (params.get('types') || '').split(',').filter(Boolean),
+      bedrooms: (params.get('beds') || '').split(',').filter(Boolean),
+      bathrooms: (params.get('baths') || '').split(',').filter(Boolean),
+      budgetMin: Number(params.get('minPrice')) || prev.budgetMin,
+      budgetMax: Number(params.get('maxPrice')) || prev.budgetMax,
+    }))
+    setLocationSearch(location)
+  }, [])
+
   const filteredLocations = maltaLocations.filter(loc =>
     loc.toLowerCase().includes(locationSearch.toLowerCase())
   )
 
   const handleSearch = () => {
     const params = new URLSearchParams()
-    if (filters.location) params.set('location', filters.location)
+    const requestedLocation = filters.location || locationSearch.trim()
+    if (requestedLocation) params.set('location', requestedLocation)
     if (filters.propertyTypes.length) params.set('types', filters.propertyTypes.join(','))
     if (filters.bedrooms.length) params.set('beds', filters.bedrooms.join(','))
     if (filters.bathrooms.length) params.set('baths', filters.bathrooms.join(','))
@@ -89,7 +105,7 @@ export function PropertySearch() {
   }
 
   return (
-    <div ref={searchRef} className="w-full">
+    <form ref={searchRef} className="w-full" onSubmit={(event) => { event.preventDefault(); handleSearch() }}>
       <div className="bg-white/10 backdrop-blur-md rounded-lg border border-white/20 p-3">
         <div className="flex flex-col lg:flex-row gap-2">
 
@@ -353,7 +369,7 @@ export function PropertySearch() {
 
           {/* Search Button */}
           <button
-            onClick={handleSearch}
+            type="submit"
             className={cn(
               'flex items-center justify-center px-5 py-2.5 rounded-md',
               'bg-gold hover:bg-gold-light text-navy text-sm font-medium',
@@ -364,6 +380,6 @@ export function PropertySearch() {
           </button>
         </div>
       </div>
-    </div>
+    </form>
   )
 }

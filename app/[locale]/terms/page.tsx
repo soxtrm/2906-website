@@ -14,7 +14,7 @@ export default function TermsPage() {
       <section className="pt-28 pb-12 bg-navy">
         <div className="container mx-auto px-4 lg:px-8 text-center">
           <h1 className="font-serif text-3xl md:text-4xl text-white mb-3">Terms &amp; Conditions</h1>
-          <p className="text-white/60 text-sm">Last updated: 2025</p>
+          <p className="text-white/60 text-sm">Last updated: 5 October 2026</p>
         </div>
       </section>
 
@@ -27,9 +27,6 @@ export default function TermsPage() {
               <p>
                 By accessing or using the 2906 Real Estate Malta website, you agree to be bound by
                 these Terms &amp; Conditions. If you do not agree, please do not use our services.
-              </p>
-              <p className="mt-2 text-gold text-sm italic">
-                [Kevin — review and expand with your specific terms.]
               </p>
             </div>
 
@@ -56,9 +53,6 @@ export default function TermsPage() {
               <p>
                 Agency fees and commission structures will be communicated clearly prior to entering
                 into any agreement.
-              </p>
-              <p className="mt-2 text-gold text-sm italic">
-                [Kevin — add your standard fee structure here.]
               </p>
             </div>
 

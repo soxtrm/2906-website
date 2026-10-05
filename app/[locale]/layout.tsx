@@ -19,6 +19,7 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.2906.estate'),
   title: '2906 Real Estate Malta | Exceptional Properties. Trusted Service.',
   description: "Malta's Premier Real Estate. Discover exceptional properties in Malta with 2906 Real Estate - your trusted partner for luxury rentals, sales, and commercial properties.",
   keywords: ['Malta real estate', 'luxury properties Malta', 'Malta rentals', 'Sliema apartments', "St Julian's property", 'Malta commercial', 'Gozo real estate'],
@@ -28,7 +29,10 @@ export const metadata: Metadata = {
     description: "Malta's Premier Real Estate. Discover exceptional properties in Malta.",
     type: 'website',
     locale: 'en_MT',
+    url: '/',
+    images: [{ url: '/hero-loading.webp', width: 1280, height: 720, alt: '2906 Real Estate Malta' }],
   },
+  alternates: { canonical: '/' },
 }
 
 export const viewport: Viewport = {
