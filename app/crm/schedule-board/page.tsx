@@ -240,6 +240,10 @@ type Listing = {
   // | 'sales') — 'aesthetics' is the site's existing Luxury collection. Reused
   // here as-is rather than inventing a parallel classification field.
   category?: string | null
+  // Normalized, non-sensitive category keys for the WhatsApp property groups
+  // this listing was actually published into. Group ids and names stay on the
+  // backend; the board only needs the stable classification keys.
+  categoryGroups?: string[]
   description?: string | null
   // Per-property state of the existing Facebook posting campaign
   // (services/facebookCampaign.js). Admin-only control; absent/undefined on a
@@ -834,7 +838,7 @@ function Board() {
           const touched = Date.parse(r.updatedAt || r.createdAt || '')
           if (!r.isHotProperty && !r.isFavourite && (!Number.isFinite(touched) || Date.now() - touched > 10 * 86_400_000)) return false
         }
-        if (discovery === 'seafront' && !/(sea\s*front|seafront|waterfront|frontline)/i.test(copy)) return false
+        if (discovery === 'seafront' && !matchesCollection(r, 'seafront')) return false
         if (discovery.startsWith('beds-') && r.beds !== Number(discovery.slice(-1))) return false
         if (discovery === 'apartments' && !/apartment|penthouse|maisonette/.test(copy)) return false
         if (discovery === 'villas' && !/villa/.test(copy)) return false
@@ -3091,7 +3095,12 @@ function ReachoutSwitch() {
 
 function matchesCollection(r: Listing, key: CollectionKey): boolean {
   const copy = [r.type, r.town, r.subLocation, r.description].filter(Boolean).join(' ').toLowerCase()
-  if (key === 'seafront') return /(sea\s*front|seafront|waterfront|frontline|sea[ -]?view)/i.test(copy)
+  // The category publisher is the source of truth for Seafront. Its classifier
+  // explicitly rejects nearby/sea-view wording, while the former UI regex put
+  // both false positives and missed group posts into this row. Text remains a
+  // fallback for older listings that predate publication tracking.
+  if (key === 'seafront') return r.categoryGroups?.includes('seafront') === true
+    || /(direct(?:ly)?\s+(?:on\s+)?the\s+(?:sea|water)|sea\s*front|seafront|beach\s*front|beachfront|frontline)/i.test(copy)
   if (key.startsWith('beds-')) return r.beds === Number(key.slice(-1))
   if (key === 'luxury') return r.category === 'aesthetics' || /luxury|luxurious|designer|high[- ]end|premium|prestigious|upmarket/i.test(copy)
   return /house|villa|townhouse|farmhouse|bungalow/i.test(copy)

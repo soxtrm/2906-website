@@ -80,7 +80,10 @@ function maltaHM(d: Date) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
 }
 
-const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
+// Keep one minute of headroom below the 15-minute daily account staggering.
+// The time picker works in whole minutes while sends retain seconds, so an
+// exact 24h15 suggestion could otherwise miss eligibility by a few seconds.
+const OUTREACH_COOLDOWN_MS = (24 * 60 + 14) * 60_000
 const OUTREACH_STARTER_BATCH_MAX = 10
 const OUTREACH_LIST_MAX = 50
 function isArgusManager(account: Account) {
@@ -106,7 +109,7 @@ function cooldownState(account: Account) {
   const readyAt = new Date(new Date(account.lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS)
   const ready = readyAt.getTime() <= Date.now()
   const moment = `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(readyAt)} · ${maltaHM(readyAt)}`
-  return { ready, label: ready ? 'Ready after 24h 15m check' : `Protected until ${moment}` }
+  return { ready, label: ready ? 'Ready after 24h 14m check' : `Protected until ${moment}` }
 }
 
 // Kev, 2026-09-11: "checkt wann der letzte !outreach gemacht wurde und
@@ -247,7 +250,7 @@ function ArgusConsole() {
           <p>One control layer for outreach identities, protected timing and reviewed owner contact.</p>
           <div className="outreach-hero-signals" aria-label="System principles">
             <span><ShieldCheck size={13} /> Reviewed sends</span>
-            <span><Clock3 size={13} /> 24h 15m protection</span>
+            <span><Clock3 size={13} /> 24h 14m protection</span>
             <span><Layers size={13} /> Separate identities</span>
           </div>
         </div>
@@ -313,7 +316,7 @@ function ArgusConsole() {
         </section>
 
         {selectedAccount && <div className="outreach-active-console">
-          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Drafts prepare automatically 2h before the 24h 15m window. Send remains reviewed and runs the final owner checks.</small></div>
+          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Drafts prepare automatically 2h before the 24h 14m window. Send remains reviewed and runs the final owner checks.</small></div>
           <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
         </div>
         }
@@ -679,7 +682,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/arm`, 'POST', { time: armTime })
       if (r.ok === false) {
-        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
+        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', account_24h14_cooldown: 'This account is still inside its 24h 14m protection window.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
         setNote(reasons[r.reason] || r.reason)
       } else { setNote(`Armed for ${armTime}.`) }
       await refresh()
@@ -734,7 +737,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             {account.connected ? 'CONNECTED' : 'DISCONNECTED'}
           </div>
           {/* Real last-send time from outreach_log; the next window observes
-              the shared 24h15 account cooldown. */}
+              the shared 24h14 account cooldown. */}
           <div style={{ fontSize: 9.5, color: FAINT, textAlign: 'right' }}>
             Last outreach: {account.lastOutreachAt
               ? `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} · ${maltaHM(new Date(account.lastOutreachAt))}`
@@ -872,7 +875,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       )}
 
       </section>
-      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 15m account cooldown. Owner checks run again before sending.</p>
+      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 14m account cooldown. Owner checks run again before sending.</p>
       {/* schedule / arm */}
       {!isCompleted && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
