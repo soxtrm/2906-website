@@ -34,7 +34,7 @@ function MiniAreaMap({ origin, places, active, radiusKm, onSelect }: {
     return () => removeEventListener('message', receive)
   }, [places, onSelect])
   useEffect(() => {
-    frame.current?.contentWindow?.postMessage({ channel:'estate-mini-map', origin, places:places.slice(0, 40), active, radiusKm }, location.origin)
+    frame.current?.contentWindow?.postMessage({ channel:'estate-mini-map', origin, places, active, radiusKm }, location.origin)
   }, [ready, origin, places, active, radiusKm])
   return <div className={styles.miniDiagram} aria-label={`Rotating street map with ${places.length} mapped places within ${radiusKm} kilometres`}>
     <iframe ref={frame} src="/link-marketplace/estate-mini-map.html?v=5" title="Rotating street map around this home" onLoad={() => setReady(value => value + 1)} />
