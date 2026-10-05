@@ -56,6 +56,18 @@ let pendingContext: Promise<NexusContext> | null = null
 
 const NEXUS_ORIGIN = process.env.NEXUS_UPSTREAM_URL || 'http://178.104.162.193:3001'
 const LARGE_GROCER = /\b(lidl|welbee|greens|pavi|pama|smart supermarket|tower supermarket|scotts|spar|arkadia|queen'?s?|quick)\b/i
+// Education coverage is supplemented from named OpenStreetMap features around
+// St Julian's. These public coordinates identify institutions, never homes.
+const CURATED_EDUCATION: NexusPlace[] = [
+  { id:'osm-education-ec-malta', name:'EC Malta', kind:'language_school', coordinates:[14.4883191,35.9225781] },
+  { id:'osm-education-ese', name:'ESE · European School of English', kind:'language_school', coordinates:[14.4911154,35.9233716] },
+  { id:'osm-education-ace', name:'ACE English Malta', kind:'college', coordinates:[14.4873846,35.9245698] },
+  { id:'osm-education-ef', name:'EF Language School Malta', kind:'language_school', coordinates:[14.4870762,35.9235157] },
+  { id:'osm-education-maltalingua', name:'Maltalingua School of English', kind:'language_school', coordinates:[14.493075,35.9165285] },
+  { id:'osm-education-st-julians-primary', name:'St Julian’s Primary School', kind:'school', coordinates:[14.4887636,35.916311] },
+  { id:'osm-education-verdala', name:'Verdala International School', kind:'school', coordinates:[14.4810147,35.9268622] },
+  { id:'osm-education-pembroke-secondary', name:'Pembroke Middle and Secondary School', kind:'school', coordinates:[14.4717769,35.930057] },
+]
 
 const placeRole = (place: NexusPlace): PlaceDistance['role'] | null => {
   const kind = String(place.kind || '').toLowerCase()
@@ -66,7 +78,7 @@ const placeRole = (place: NexusPlace): PlaceDistance['role'] | null => {
   if (['pharmacy', 'medical', 'healthcare', 'hospital', 'doctor'].includes(kind)) return 'health'
   if (kind==='restaurant') return 'restaurant'
   if (kind==='cafe') return 'cafe'
-  if (['education', 'school', 'kindergarten'].includes(kind)) return 'school'
+  if (['education', 'school', 'kindergarten', 'college', 'university', 'language_school'].includes(kind)) return 'school'
   if (['gym', 'outdoor_gym', 'sport', 'park'].includes(kind)) return 'gym'
   if (['bus_stop', 'ferry', 'transit'].includes(kind)) return 'mobility'
   return null
@@ -108,7 +120,8 @@ const first = (places: PlaceDistance[], role: PlaceDistance['role'], limit: numb
   places.filter(place => place.role === role && place.distanceKm <= maxKm).slice(0, limit)
 
 export function buildLifeOverview(property: NexusInventoryProperty, places: NexusPlace[], options?: { requestedReference?: string; sourceBasis?: 'property' | 'locality' }): PropertyLifeOverview {
-  const nearby = nearestPlaces(property.coordinates, places)
+  const education = CURATED_EDUCATION.filter(curated => !places.some(place => place.id === curated.id || place.name.toLowerCase() === curated.name.toLowerCase()))
+  const nearby = nearestPlaces(property.coordinates, [...places, ...education])
   const weekly = first(nearby, 'weekly-shop', 4, 8)
   const topUp = first(nearby, 'top-up', 1, 2.5)
   const coast = first(nearby, 'swimming', 3, 8)
@@ -146,7 +159,7 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
       {key:'restaurant',label:'Restaurants',summary:'Mapped dining choices; cuisine appears only where supported.',places:first(nearby,'restaurant',24,3)},
       {key:'cafe',label:'Cafés',summary:'Coffee and social stops around the area.',places:first(nearby,'cafe',24,3)},
       { key: 'commute', label: 'The Standards', summary: 'Compare a regular journey. These are area landmarks, not your exact workplace.', places: anchors.map(a => ({id:a.id,name:a.name,coordinates:a.coordinates as [number,number],kind:'destination',role:'commute' as const,distanceKm:distanceKm(property.coordinates,a.coordinates as [number,number])})) },
-      { key: 'school', label: 'Schools', summary: 'Mapped education locations; check age range, admission and the exact entrance.', places: first(nearby, 'school', 3, 5) },
+      { key: 'school', label: 'Schools', summary: 'Mapped schools, colleges and language schools; check programmes, admission and the exact entrance.', places: first(nearby, 'school', 10, 5) },
       { key: 'groceries', label: 'Weekly shopping', summary: weekly.length ? `${weekly.length} full-size options mapped` : 'Large store coverage incomplete', places: [...weekly, ...topUp] },
       { key: 'coast', label: 'Coast & swimming', summary: coast.length ? `${coast.length} coastal options mapped` : 'No connected coastal option yet', places: coast },
       { key: 'health', label: 'Health', summary: health.length ? `${health.length} nearby options mapped` : 'Health coverage incomplete', places: health },
