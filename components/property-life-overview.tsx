@@ -13,37 +13,34 @@ const distance = (value: number) => value < 1 ? `${Math.max(50, Math.round(value
 const minutes = (value?: number | null) => Number.isFinite(value) ? `${Math.max(1, Math.round(Number(value) / 60))} MIN` : null
 
 type MiniPlace = PlaceDistance & { connector: Overview['categories'][number]['key'] }
-const miniColours: Record<string, string> = { restaurant:'#e3b866',cafe:'#d98f71',groceries:'#7fc3a5',coast:'#6bbbd1',movement:'#a59ce5',health:'#e2838e',school:'#e2ca79',commute:'#8ca9c8' }
 
-function MiniAreaDiagram({ origin, places, active, radiusKm, onSelect }: {
+function MiniAreaMap({ origin, places, active, radiusKm, onSelect }: {
   origin: [number, number]
   places: MiniPlace[]
   active: Overview['categories'][number]['key']
   radiusKm: number
   onSelect: (connector: Overview['categories'][number]['key'], id: string) => void
 }) {
-  const points = useMemo(() => places.slice(0, 28).map(place => {
-    const eastKm = (place.coordinates[0] - origin[0]) * 111 * Math.cos(origin[1] * Math.PI / 180)
-    const northKm = (place.coordinates[1] - origin[1]) * 111
-    const scale = 82 / Math.max(1, radiusKm)
-    return { ...place, x: 180 + eastKm * scale, y: 109 - northKm * scale }
-  }).filter(place => place.x >= 80 && place.x <= 280 && place.y >= 9 && place.y <= 209), [origin, places, radiusKm])
-  return <div className={styles.miniDiagram} role="img" aria-label={`Clean area diagram with ${points.length} mapped places within ${radiusKm} kilometres`}>
-    <svg viewBox="0 0 360 218" aria-hidden="true">
-      <defs><radialGradient id="mini-area-glow"><stop offset="0" stopColor="#214b49"/><stop offset="1" stopColor="#0a2526"/></radialGradient></defs>
-      <rect width="360" height="218" fill="url(#mini-area-glow)" />
-      {[27,55,82].map((r,index)=><circle key={r} cx="180" cy="109" r={r} className={styles.miniRing} opacity={.58-index*.11} />)}
-      <path d="M98 109H262M180 27V191" className={styles.miniAxis} />
-      <circle cx="180" cy="109" r="7" className={styles.miniHomeHalo} />
-      <path d="M180 102l7 6v9h-14v-9z" className={styles.miniHome} />
-      {points.map((place,index) => <g key={`${place.connector}:${place.id}`} transform={`translate(${place.x} ${place.y})`} opacity={place.connector===active?1:.38} role="button" tabIndex={0} aria-label={`${place.name}, ${distance(place.distanceKm)}`} onClick={()=>onSelect(place.connector,place.id)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelect(place.connector,place.id)}}}>
-        <circle r={place.connector===active?6:4.5} fill={miniColours[place.connector] || '#dfc47e'} className={styles.miniPoint} />
-        {place.connector===active && index<10 && <text x="9" y="3">{place.name.length>19?`${place.name.slice(0,17)}…`:place.name}</text>}
-      </g>)}
-      <text x="14" y="24" className={styles.miniRadius}>{radiusKm} KM · AREA VIEW</text>
-      <text x="346" y="24" textAnchor="end" className={styles.miniNorth}>N</text>
-    </svg>
-    <span className={styles.miniLegend}><i /> Home area <b>{points.length}</b> places</span>
+  const frame = useRef<HTMLIFrameElement>(null)
+  const [ready, setReady] = useState(0)
+  useEffect(() => {
+    const receive = (event: MessageEvent) => {
+      if (event.origin !== location.origin || event.source !== frame.current?.contentWindow || event.data?.channel !== 'estate-mini-map') return
+      if (event.data.ready) setReady(value => value + 1)
+      const place = places.find(item => item.id === event.data.selected)
+      if (place) onSelect(place.connector, place.id)
+    }
+    addEventListener('message', receive)
+    return () => removeEventListener('message', receive)
+  }, [places, onSelect])
+  useEffect(() => {
+    frame.current?.contentWindow?.postMessage({ channel:'estate-mini-map', origin, places:places.slice(0, 40), active, radiusKm }, location.origin)
+  }, [ready, origin, places, active, radiusKm])
+  return <div className={styles.miniDiagram} aria-label={`Rotating street map with ${places.length} mapped places within ${radiusKm} kilometres`}>
+    <iframe ref={frame} src="/link-marketplace/estate-mini-map.html" title="Rotating street map around this home" onLoad={() => setReady(value => value + 1)} />
+    <span className={styles.miniRadius}>{radiusKm} KM · AREA VIEW</span>
+    <span className={styles.miniNorth}>N</span>
+    <span className={styles.miniLegend}><i /> Home area <b>{places.length}</b> places</span>
   </div>
 }
 
@@ -185,7 +182,7 @@ export function PropertyLifeOverview({ overview, description = '', features = []
       </div>
       <div className={styles.miniMapPanel}>
         <div className={styles.miniMapToolbar}><nav aria-label="Mini map category">{overview.categories.filter(item=>['restaurant','cafe','groceries','coast','movement','health','school'].includes(item.key)).map(item=>{const ItemIcon=icons[item.key];const shortLabel=item.key==='restaurant'?'Eat':item.key==='cafe'?'Coffee':item.key==='groceries'?'Shop':item.key==='coast'?'Coast':item.key==='movement'?'Move':item.key==='health'?'Health':'Schools';return <button key={item.key} type="button" aria-pressed={active===item.key} onClick={()=>setActive(item.key)} title={`${item.label}: ${item.places.length} mapped places`}><ItemIcon aria-hidden="true" /><span>{shortLabel}</span><b>{item.places.length}</b></button>})}</nav><label>Radius <select value={radiusKm} onChange={event=>setRadiusKm(Number(event.target.value))}><option value={1}>1 km</option><option value={2}>2 km</option><option value={3}>3 km</option></select></label></div>
-        <MiniAreaDiagram origin={origin} places={allPlaces.filter(place => place.distanceKm <= radiusKm)} active={active} radiusKm={radiusKm} onSelect={(connector,id)=>{setActive(connector);setChosen(id)}} />
+          <MiniAreaMap origin={origin} places={allPlaces.filter(place => place.distanceKm <= radiusKm)} active={active} radiusKm={radiusKm} onSelect={(connector,id)=>{setActive(connector);setChosen(id)}} />
       </div>
       <div className={styles.quickFacts}>{overview.categories.filter(c=>['groceries','coast','health'].includes(c.key)).flatMap(c=>c.places.slice(0,1).map(p=><span key={p.id}><Check aria-hidden="true" /><b>{p.name}</b><small>{minutes(routes[p.id]?.walkingSeconds)?`${minutes(routes[p.id]?.walkingSeconds)} walk`:distance(p.distanceKm)}</small></span>))}</div>
     </div>

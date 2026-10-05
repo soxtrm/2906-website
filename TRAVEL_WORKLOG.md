@@ -128,3 +128,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 02:07 Malta, 05.10: SEO-Hierarchie der vier live veroeffentlichten Swieqi-Cluster-Editionen erweitert. Swieqi, Tal-Ibrag, Madliena und Pembroke enthalten nun jeweils ein sichtbaren Inhalten entsprechendes BreadcrumbList-JSON-LD mit 2906 Estate > Malta neighbourhoods > aktuelle Edition; keine Bewertungen, Rankings oder nicht sichtbaren Ortsfakten markiert. Umsetzung folgt Googles aktueller Empfehlung fuer JSON-LD-Breadcrumbs. Alle vier JSON-Bloecke geparst, Positionen/Canonicals abgeglichen, git diff --check und npm run build (50 Seiten) bestanden. Noch nicht live behauptet: gezielter Commit/Push und Produktionspruefung folgen. Keine externen Backlinks, Outreach-, WhatsApp-, Backend- oder Scheduler-Aenderung.
 
 02:10 Malta, 05.10: Breadcrumb-SEO-Deploy live verifiziert. Vercel-Status fuer Commit a7f625e erfolgreich; alle vier Produktionsseiten liefern HTTP200 und jeweils genau einen BreadcrumbList-Block. Rollback per gezieltem Revert von a7f625e. Keine externen Backlinks, Outreach-, WhatsApp-, Backend- oder Scheduler-Aenderung.
+
+## 2026-10-06 — Upper 2906 property minimap upgraded
+- Replaced the schematic point-only radar in the upper Smart Area Brief with a dedicated compact OpenStreetMap street view.
+- The property stays fixed in the centre while the street layer moves with a restrained compass animation; mapped POIs remain category-coloured and clickable.
+- Radius and category controls continue to update the upper minimap. The full area explorer remains a separate detailed map below.
+- Added reduced-motion handling and kept the public area marker approximate.
+- Validation: project TypeScript reached one pre-existing unrelated `property-search.tsx:108` ref-type error; the changed property overview introduced no reported TypeScript error. Full Turbopack build could not run from the isolated worktree because Turbopack rejects an external node_modules junction.
