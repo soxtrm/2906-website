@@ -150,6 +150,9 @@ export function PropertyLifeOverview({ overview, description = '', features = []
   const coastScore = nearest.coast ? Math.max(62, Math.min(94, 96 - Math.round(nearest.coast.distanceKm * 8))) : 68
   const convenienceScore = Math.min(95, 66 + Math.min(overview.mappedCount, 14) * 2)
   const radarSignals = [...signals, {label:'Coast', value:coastScore}, {label:'Convenience', value:convenienceScore}]
+  const quickPlaces = selected
+    ? [selected, ...category.places.filter(place => place.id !== selected.id)].slice(0, 3)
+    : category.places.slice(0, 3)
   const radarPoint = (index: number, value: number) => {
     const angle = (-90 + index * 60) * Math.PI / 180
     const radius = 68 * value / 100
@@ -181,10 +184,10 @@ export function PropertyLifeOverview({ overview, description = '', features = []
         </div>
       </div>
       <div className={styles.miniMapPanel}>
-          <div className={styles.miniMapToolbar}><nav aria-label="Mini map category">{overview.categories.filter(item=>['restaurant','cafe','groceries','coast','movement','health','school'].includes(item.key)).map(item=>{const ItemIcon=icons[item.key];return <button key={item.key} type="button" aria-label={`${item.label}: ${item.places.length} mapped places`} aria-pressed={active===item.key} onClick={()=>setActive(item.key)} title={`${item.label}: ${item.places.length} mapped places`}><ItemIcon aria-hidden="true" /><span className={styles.srOnly}>{item.label}</span><b>{item.places.length}</b></button>})}</nav><label>Radius <select value={radiusKm} onChange={event=>setRadiusKm(Number(event.target.value))}><option value={1}>1 km</option><option value={2}>2 km</option><option value={3}>3 km</option></select></label></div>
+          <div className={styles.miniMapToolbar}><nav aria-label="Mini map category">{overview.categories.filter(item=>item.places.length>0&&['restaurant','cafe','groceries','coast','movement','health','school'].includes(item.key)).map(item=>{const ItemIcon=icons[item.key];return <button key={item.key} type="button" aria-label={`${item.label}: ${item.places.length} mapped places`} aria-pressed={active===item.key} onClick={()=>setActive(item.key)} title={`${item.label}: ${item.places.length} mapped places`}><ItemIcon aria-hidden="true" /><span className={styles.srOnly}>{item.label}</span><b>{item.places.length}</b></button>})}</nav><label>Radius <select value={radiusKm} onChange={event=>setRadiusKm(Number(event.target.value))}><option value={1}>1 km</option><option value={2}>2 km</option><option value={3}>3 km</option></select></label></div>
           <MiniAreaMap origin={origin} places={allPlaces.filter(place => place.distanceKm <= radiusKm)} active={active} radiusKm={radiusKm} onSelect={(connector,id)=>{setActive(connector);setChosen(id)}} />
       </div>
-      <div className={styles.quickFacts} aria-live="polite">{category.places.slice(0,3).map(p=><button type="button" key={`${category.key}:${p.id}`} onClick={()=>setChosen(p.id)} aria-pressed={selected?.id===p.id}><Check aria-hidden="true" /><b>{p.name}</b><small>{minutes(routes[p.id]?.walkingSeconds)?`${minutes(routes[p.id]?.walkingSeconds)} walk`:distance(p.distanceKm)}</small></button>)}</div>
+      <div className={styles.quickFacts} aria-live="polite">{quickPlaces.map(p=><button type="button" key={`${category.key}:${p.id}`} onClick={()=>setChosen(p.id)} aria-pressed={selected?.id===p.id}><Check aria-hidden="true" /><b>{p.name}</b><small>{minutes(routes[p.id]?.walkingSeconds)?`${minutes(routes[p.id]?.walkingSeconds)} walk`:distance(p.distanceKm)}</small></button>)}</div>
     </div>
 
     <details className={styles.fullExplorer} open><summary><span>Full area explorer</span><small>Large map, routes, traffic and every mapped place</small><ArrowUpRight aria-hidden="true" /></summary>
