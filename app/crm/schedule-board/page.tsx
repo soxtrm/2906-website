@@ -2625,11 +2625,6 @@ function listingTouch(r: Pick<Listing, 'createdAt' | 'updatedAt' | 'lastConfirme
   return events[0] || null
 }
 
-function freshBadgeLabel(r: Pick<Listing, 'createdAt' | 'updatedAt' | 'lastConfirmedAvailableAt'>): string {
-  const latest = listingTouch(r)
-  return latest ? `${latest.kind} ${ago(latest.at)}` : 'Uploaded —'
-}
-
 // Same fact, upper-case and bare, for the small metadata row under the price.
 function daysAgoCaps(iso: string | null | undefined): string {
   if (!iso) return '—'
@@ -3822,25 +3817,47 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const latestTouch = listingTouch(r)
   const isFreshlyUpdated = !!latestTouch && (Date.now() - Date.parse(latestTouch.at) < 48 * 3600_000)
 
-  // Kev, 2026-09-17: "wenn man mit der maus über ein listing hoverd, dass
-  // die blätter im 2 sekunden switchen, nur über dem bild selber" — cycle
-  // through the listing's own photos on hover, scoped to the image itself
-  // (not the whole card, so hovering the text/tray below doesn't do this).
-  // Stops and resets to the cover photo the instant the mouse leaves.
+  // Cycle the photos of visible cards automatically. Off-screen cards and a
+  // background browser tab keep no interval alive; reduced-motion keeps the
+  // cover image. A short ref-based stagger avoids every card flipping at once.
   const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
-  const hoverPhotoTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  function startPhotoHover() {
-    if ((r.images || []).length < 2) return
-    if (hoverPhotoTimer.current) clearInterval(hoverPhotoTimer.current)
-    hoverPhotoTimer.current = setInterval(() => {
-      setHoverPhotoIdx(i => (i + 1) % r.images.length)
-    }, 2000)
-  }
-  function stopPhotoHover() {
-    if (hoverPhotoTimer.current) { clearInterval(hoverPhotoTimer.current); hoverPhotoTimer.current = null }
-    setHoverPhotoIdx(0)
-  }
-  useEffect(() => () => { if (hoverPhotoTimer.current) clearInterval(hoverPhotoTimer.current) }, [])
+  const photoStageRef = useRef<HTMLDivElement>(null)
+  const photoCount = (r.images || []).length
+  useEffect(() => {
+    const stage = photoStageRef.current
+    if (!stage || photoCount < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let interval: ReturnType<typeof setInterval> | null = null
+    let delay: ReturnType<typeof setTimeout> | null = null
+    let visible = false
+    const stop = () => {
+      if (delay) clearTimeout(delay)
+      if (interval) clearInterval(interval)
+      delay = null
+      interval = null
+    }
+    const start = () => {
+      stop()
+      if (!visible || document.hidden) return
+      const stagger = 450 + [...String(r.ref)].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 1250
+      delay = setTimeout(() => {
+        setHoverPhotoIdx(index => (index + 1) % photoCount)
+        interval = setInterval(() => setHoverPhotoIdx(index => (index + 1) % photoCount), 3600)
+      }, stagger)
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting
+      if (visible) start()
+      else stop()
+    }, { threshold: 0.25 })
+    const onVisibility = () => document.hidden ? stop() : start()
+    observer.observe(stage)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      stop()
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [photoCount, r.ref])
 
   // First four photos as thumbnails, "+N" for the rest — matches the count
   // badge on the photo (4 shown + N more = imageCount).
@@ -3896,12 +3913,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           matter how many columns fit. `objectFit: cover` still crops rather
           than distorts, so nothing is squashed. */}
       <div
+        ref={photoStageRef}
         onClick={onOpen}
-        onMouseEnter={startPhotoHover}
-        onMouseLeave={stopPhotoHover}
-        onTouchStart={startPhotoHover}
-        onTouchEnd={stopPhotoHover}
-        onTouchCancel={stopPhotoHover}
         style={{
           cursor: 'pointer', position: 'relative',
           height: isMobile ? '100%' : (compact ? 164 : 200),
@@ -4000,22 +4013,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </span>
         )}
 
-        {/* Upload age (or last-confirmed age, whichever is the more recent
-            fact — see freshBadgeLabel) + responsible agent, top right. */}
+        {/* Responsible agent stays on the photo. The age is grouped beneath
+            the reference instead of floating over the property image. */}
         <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <span title={
-            (isFreshlyUpdated ? 'Edited within the last 48h. ' : '') +
-            (r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB') : 'no upload date')
-          } style={isFreshlyUpdated ? {
-            background: 'rgba(184,149,63,0.92)', color: '#FFF', fontSize: 9, fontWeight: 700, fontFamily: FM,
-            padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap',
-            boxShadow: '0 0 0 1px rgba(255,255,255,0.5), 0 0 10px 2px rgba(184,149,63,0.85)',
-          } : {
-            background: 'rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.9)', fontSize: 9, fontFamily: FM,
-            padding: '3px 7px', borderRadius: 999, whiteSpace: 'nowrap',
-          }}>
-            {isFreshlyUpdated && '✦ '}{freshBadgeLabel(r)}
-          </span>
           {preferences.showAgentNames && r.listedBy.displayName && (
             <span style={{
               background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
@@ -4066,7 +4066,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             borderRadius: 999, padding: '3px 7px', background: 'rgba(7,12,22,.72)',
             color: '#fff', fontFamily: FM, fontSize: 8.5, letterSpacing: '.03em',
             backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,.16)',
-          }}>#{r.ref}</span>
+          }}>
+            <strong>#{r.ref}</strong>
+            <small style={{ display: 'block', marginTop: 1, color: isFreshlyUpdated ? '#E8C96F' : 'rgba(255,255,255,.72)', fontSize: 7.5, fontWeight: 600 }}>
+              {latestTouch ? ago(latestTouch.at) : '—'}
+            </small>
+          </span>
         )}
 
         {/* Dashboard photo upload (Kev, 2026-09-02) — own listing or admin
@@ -4480,7 +4485,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             to live here moved up above the Still Available button — see the
             block right before `isUpcoming` above. Facebook stays inside "..."
             exactly where it already is (still under menuSection "Tools"). */}
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
           <button onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
             aria-label={r.lastChatAt ? `Owner chat, last active ${ago(r.lastChatAt)}` : 'Owner chat'}
             title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}
@@ -4516,19 +4521,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             style={{ ...trayMoreBtn(dark), background: menuOpen ? A : trayMoreBtn(dark).background, color: menuOpen ? '#151C2C' : (dark ? DTEXT_DIM : LTEXT_DIM), borderColor: menuOpen ? A : (dark ? DBORDER : LBORDER) }}>
             <MoreHorizontal size={16} />
           </button>
-          {/* Kev, 2026-09-17: "settings rad bei die ...." — classification
-              (lease_type / winter-let) change, separate from the Tools menu.
-              Admins apply immediately; a non-admin's change queues as a
-              property_pending_changes row an admin must confirm (the bell in
-              the sidebar), same PATCH endpoint either way — the backend
-              decides which happens, this button never needs to know. */}
-          <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} onChanged={onChanged} />
         </div>
 
         {menuOpen && (
           <div style={menuPanel(dark)}>
             <div style={menuSection(dark)}>Quick tools</div>
             <div className="argus-card-mini-tools" aria-label="Listing quick tools">
+              <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} onChanged={onChanged} />
               <PhotoDownload r={r} />
               {(r.isMine || isAdmin) && <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoUploadBusy} title="Add photos"><Camera size={14} /><span>Add</span></button>}
               <button type="button" onClick={handleCopyLink} disabled={copyBusy} title="Copy listing link"><Copy size={14} /><span>Link</span></button>
@@ -4727,12 +4726,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       <div style={{
         background: DTRAY, color: DTEXT_DIM, fontFamily: FM, fontSize: 10.5,
         letterSpacing: '0.04em', padding: '7px 14px', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
+        justifyContent: 'space-between', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
         gridColumn: isMobile ? '1 / -1' : undefined,
         ...(isMobile ? { display: 'none' } : {}),
       }}>
-        <span style={{ color: DTEXT, fontWeight: 700 }}>REFERENCE {r.ref}</span>
-        <span style={{ opacity: 0.4 }}>—</span>
+        <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.15 }}>
+          <strong style={{ color: DTEXT, fontWeight: 700 }}>REFERENCE {r.ref}</strong>
+          <small title={latestTouch ? `${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}` : 'No update recorded'} style={{ marginTop: 3, color: isFreshlyUpdated ? A : DTEXT_FAINT, fontSize: 9, fontWeight: 600, letterSpacing: 0 }}>
+            {latestTouch ? ago(latestTouch.at) : '—'}
+          </small>
+        </span>
         <span>
           {[r.beds != null ? `${r.beds}B` : '', r.baths != null ? `${r.baths}B` : ''].join('')} {townLabel(r.town)?.toUpperCase()}
         </span>
@@ -5381,10 +5384,10 @@ const iconRowBtn = (dark: boolean): React.CSSProperties => ({
 // of times a day; every rarer control moved into menuPanel below instead of
 // competing for the same row.
 const trayPrimaryBtn = (dark: boolean): React.CSSProperties => ({
-  padding: '8px 6px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
+  width: 34, height: 34, padding: 0, borderRadius: 10, fontSize: 11.5, fontFamily: F,
   fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
   background: dark ? '#1B2333' : LSURFACE, border: `1px solid ${dark ? DBORDER : LBORDER}`, color: dark ? DTEXT : LTEXT,
-  flex: '1 1 0', minWidth: 0, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
+  flex: '0 0 34px', minWidth: 34, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
 })
 // Kev, 2026-09-11: "still available soll neben Confirmed weil das der
