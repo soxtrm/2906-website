@@ -195,7 +195,7 @@ export function PropertyLifeOverview({ overview, description = '', features = []
     <div className={styles.explorer}>
       <div className={styles.explorerTop}>
         <div><span>EXPLORE THE AREA</span><h3>What would your day look like here?</h3></div>
-        <nav aria-label="Explore area facts">{overview.categories.map(item => { const ItemIcon = icons[item.key]; return <button key={item.key} type="button" aria-pressed={active === item.key} onClick={() => setActive(item.key)}><ItemIcon aria-hidden="true" /><span>{item.label}</span></button> })}</nav>
+        <nav aria-label="Explore area facts">{overview.categories.map(item => { const ItemIcon = icons[item.key]; return <button key={item.key} type="button" aria-label={item.label} title={item.label} aria-pressed={active === item.key} onClick={() => setActive(item.key)}><ItemIcon aria-hidden="true" /><span className={styles.srOnly}>{item.label}</span></button> })}</nav>
       </div>
       <div className={styles.categoryHeading}>
         <span className={styles.categoryIcon}><Icon aria-hidden="true" /></span>
