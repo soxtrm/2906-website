@@ -1860,6 +1860,10 @@ function Board() {
             breathing room between cards, less packed-admin-table. */}
         {!collectionsMode && <div style={{
           display: 'grid', gap: isMobile ? 10 : boardPreferences.compactCards ? 12 : 20, marginTop: boardPreferences.compactCards ? 12 : 20,
+          // Cards size to their own content. Grid's default `stretch` created
+          // the large empty middle area whenever one listing in a row had
+          // more metadata than its neighbours.
+          alignItems: 'start',
           // Kev, 2026-08-22: 268 was too narrow — the action row could not fit
           // its buttons and the on/off-market pair got clipped off the right
           // edge of the card. Wider minimum = one fewer card per row, and the
@@ -3108,8 +3112,12 @@ function matchesCollection(r: Listing, key: CollectionKey): boolean {
   // waterfront wording, "frontline" or proximity to the promenade must not
   // keep a listing in this row. The publishing classifier applies the same
   // rule and separately rejects phrases such as "access to the seafront".
-  if (key === 'seafront') return hasDirectSeafrontClaim(copy)
-  if (key.startsWith('beds-')) return r.beds === Number(key.slice(-1))
+  const isDirectSeafront = hasDirectSeafrontClaim(copy)
+  if (key === 'seafront') return isDirectSeafront
+  // Collections are exclusive: a listing only leaves its bedroom row when
+  // the listing copy explicitly claims seafront. Sea views, nearby coast and
+  // promenade access stay in the relevant bedroom collection.
+  if (key.startsWith('beds-')) return !isDirectSeafront && r.beds === Number(key.slice(-1))
   if (key === 'luxury') return r.category === 'aesthetics' || /luxury|luxurious|designer|high[- ]end|premium|prestigious|upmarket/i.test(copy)
   return /house|villa|townhouse|farmhouse|bungalow/i.test(copy)
 }
@@ -3132,7 +3140,9 @@ function AirbnbCollectionRows({ rows, order, onOpen, onStar, onChat, onBook, onT
   busyRef: string | null
   onChanged: () => void
 }) {
-  const normalized = [...order, ...COLLECTION_ITEMS.map(item => item.key).filter(key => !order.includes(key))]
+  // Seafront is the first, fixed collection. Older saved preferences could
+  // append this newer key at the bottom, which made it look missing.
+  const normalized: CollectionKey[] = ['seafront', ...order.filter(key => key !== 'seafront'), ...COLLECTION_ITEMS.map(item => item.key).filter(key => key !== 'seafront' && !order.includes(key))]
   return (
     <section className="argus-collection-board" aria-label="Swipeable property collections">
       <header className="argus-collection-intro">
@@ -3942,7 +3952,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         onClick={onOpen}
         style={{
           cursor: 'pointer', position: 'relative',
-          height: isMobile ? '100%' : (compact ? 164 : 200),
+          height: isMobile ? '100%' : (compact ? 148 : 164),
           minHeight: isMobile ? 142 : undefined,
           gridColumn: isMobile ? 1 : undefined,
           gridRow: isMobile ? 1 : undefined,
@@ -4136,8 +4146,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
       <div style={{
-        padding: isMobile ? '9px 10px 7px' : compact ? '10px 12px 3px' : '13px 15px 4px',
-        display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0,
+        padding: isMobile ? '8px 9px 6px' : compact ? '8px 11px 3px' : '10px 12px 3px',
+        display: 'flex', flexDirection: 'column', minWidth: 0,
         gridColumn: isMobile ? 2 : undefined, gridRow: isMobile ? 1 : undefined,
       }}>
         {/* ── town + price ──────────────────────────────────────────────────
@@ -4221,14 +4231,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {/* ── description preview ──────────────────────────────────────────── */}
         {preferences.showDescriptions && r.description && !isMobile && (
-          <div onClick={onOpen} title="Click to read the full listing" style={{ marginTop: 9, cursor: 'pointer' }}>
+          <div onClick={onOpen} title="Click to read the full listing" style={{ marginTop: 5, cursor: 'pointer' }}>
             <p style={{
-              fontSize: 11.5, color: DTEXT_DIM, lineHeight: 1.5, margin: 0,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              fontSize: 10.5, color: DTEXT_DIM, lineHeight: 1.35, margin: 0,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {r.description}
             </p>
-            <span style={{ fontSize: 11.5, color: DTEXT_FAINT, letterSpacing: '0.08em' }}>···</span>
           </div>
         )}
 
@@ -4236,7 +4245,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             for a second stat row alongside Still Available/Confirmed, which
             now live at the bottom of the body, right above the tray. */}
         {preferences.showBookingDetails && !isMobile && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 3 }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
               {/* Kev, 2026-09-08 (real bug, live on #2906-9193): this read
@@ -4283,14 +4292,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             slack itself, so the button sits flush against the tray on
             EVERY card regardless of how much is above it, not just the ones
             that happened to be tall enough already. */}
-        <div style={{ marginTop: 'auto', paddingTop: isMobile ? 6 : 12 }}>
+        <div style={{ marginTop: isMobile ? 4 : 6, paddingTop: 0 }}>
         {/* Kev, 2026-09-16 ("die minicions vlt über das still available
             anheften, da ist ja garnix"): moved up from the tray below — this
             row above the button had nothing in it, and that's a better home
             for these than buried under Chat/Book/Tag. Facebook stays behind
             "..." exactly where it was; only download/copy/price/AV-date
             moved again. */}
-        <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
+        <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
           <PhotoDownload r={r} />
           <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
             <Copy size={14} />
@@ -4503,7 +4512,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       )}
       {preferences.showQuickTools && <div style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: isMobile ? '6px 8px' : '9px 11px', position: 'relative',
+        padding: isMobile ? '5px 7px' : '6px 9px', position: 'relative',
         gridColumn: isMobile ? '1 / -1' : undefined,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
@@ -4750,14 +4759,14 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           reads as the card's closing stamp, not one more left-aligned row. */}
       <div style={{
         background: DTRAY, color: DTEXT_DIM, fontFamily: FM, fontSize: 10.5,
-        letterSpacing: '0.04em', padding: '7px 14px', display: 'flex', alignItems: 'center',
+        letterSpacing: '0.04em', padding: '5px 11px', display: 'flex', alignItems: 'center',
         justifyContent: 'space-between', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
         gridColumn: isMobile ? '1 / -1' : undefined,
         ...(isMobile ? { display: 'none' } : {}),
       }}>
         <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.15 }}>
           <strong style={{ color: DTEXT, fontWeight: 700 }}>REFERENCE {r.ref}</strong>
-          <small title={latestTouch ? `${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}` : 'No update recorded'} style={{ marginTop: 3, color: isFreshlyUpdated ? A : DTEXT_FAINT, fontSize: 9, fontWeight: 600, letterSpacing: 0 }}>
+          <small title={latestTouch ? `${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}` : 'No update recorded'} style={{ marginTop: 1, color: isFreshlyUpdated ? A : DTEXT_FAINT, fontSize: 8.5, fontWeight: 600, letterSpacing: 0 }}>
             {latestTouch ? ago(latestTouch.at) : '—'}
           </small>
         </span>
