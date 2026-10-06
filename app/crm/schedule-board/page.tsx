@@ -4113,6 +4113,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </span>
         )}
 
+        {!isMobile && (
+          <span title={`Reference ${r.ref}`} style={{
+            position: 'absolute', bottom: 8, left: canSelect ? 42 : 8,
+            borderRadius: 999, padding: '4px 7px', background: 'rgba(7,12,22,.72)',
+            border: '1px solid rgba(255,255,255,.18)', color: '#fff',
+            fontFamily: FM, fontSize: 8, fontWeight: 750, letterSpacing: '.02em',
+            backdropFilter: 'blur(8px)',
+          }}>#{r.ref}</span>
+        )}
+
         {isMobile && (
           <span style={{
             position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
@@ -4249,56 +4259,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         )}
 
         {/* ── description preview ──────────────────────────────────────────── */}
-        {preferences.showDescriptions && r.description && !isMobile && (
-          <div onClick={onOpen} title="Click to read the full listing" style={{ marginTop: 5, cursor: 'pointer' }}>
-            <p style={{
-              fontSize: 10.5, color: DTEXT_DIM, lineHeight: 1.35, margin: 0,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {r.description}
-            </p>
-          </div>
-        )}
-
-        {/* Viewable date — desktop only; the ~170px mobile column has no room
-            for a second stat row alongside Still Available/Confirmed, which
-            now live at the bottom of the body, right above the tray. */}
-        {preferences.showBookingDetails && !isMobile && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 3 }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
-              {/* Kev, 2026-09-08 (real bug, live on #2906-9193): this read
-                  r.availableDate — the SAME field the "Available" column
-                  above already shows — so editing Viewing date/time
-                  separately on the property page never visibly changed
-                  anything here; both columns always mirrored the Available
-                  date. Now reads the actual viewing_date field. */}
-              <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
-                {r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'}
-              </div>
-              {/* ARGUS V3 (Kev, 2026-09-16): "mache bei allen properties die
-                  zeitlich begrenzt sind auf shortlets und winterperiod so ein
-                  schneeflocke icon unter viewable" — winter/short-let stock
-                  gets a snowflake right under Viewable so it reads as
-                  time-limited at a glance, distinct from a normal long-let. */}
-              {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
-                <div style={{ fontSize: 10, color: '#7EC8E3', marginTop: 3, whiteSpace: 'nowrap' }} title="Time-limited — winter/short-let, excluded from normal !match search">
-                  ❄️ {r.leaseType === 'winter_let' ? 'Winter let' : 'Short let'}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* The download/copy/price/AV-date/Facebook tools that used to live
             in a row here moved into the "..." menu below (Kev, 2026-09-11) —
             see menuSection "Tools". */}
 
         {/* Why it last moved — the review queue is unusable without it. */}
-        {r.statusChangeReason && !isMobile && (
-          <div style={{ fontSize: 9.5, color: '#D3A876', marginTop: 8, lineHeight: 1.35 }}>{r.statusChangeReason}</div>
-        )}
-
         {/* ── Still Available + Confirmed ──────────────────────────────────
             Kev, 2026-09-11 (5th pass): "der fucking available button einfach
             unten anheften wie rechts" — being the last child in a flex:1
@@ -4318,21 +4283,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             for these than buried under Chat/Book/Tag. Facebook stays behind
             "..." exactly where it was; only download/copy/price/AV-date
             moved again. */}
-        <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
-          <PhotoDownload r={r} />
-          <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
-            <Copy size={14} />
-          </button>
-          <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
-            <Euro size={14} />
-          </button>
-          {isAdmin && (
-            <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
-              <CalendarClock size={14} />
-            </button>
-          )}
-          {rowMsg && <span style={{ fontSize: 10.5, color: 'var(--crm-accent)', marginLeft: 2 }}>{rowMsg}</span>}
-        </div>
+        {rowMsg && <span style={{ display: 'block', marginBottom: 4, fontSize: 9, color: 'var(--crm-accent)' }}>{rowMsg}</span>}
         {/* Kev, 2026-09-14 (spec item 1): an owner-confirmed future date means
             "still available?" is the wrong question to even offer — no button,
             just the fact and when we'll check again. */}
@@ -4778,10 +4729,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           reads as the card's closing stamp, not one more left-aligned row. */}
       <div style={{
         background: DTRAY, color: DTEXT_DIM, fontFamily: FM, fontSize: 10.5,
-        letterSpacing: '0.04em', padding: '5px 11px', display: 'flex', alignItems: 'center',
+        letterSpacing: '0.04em', padding: '5px 11px', display: 'none', alignItems: 'center',
         justifyContent: 'space-between', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
         gridColumn: isMobile ? '1 / -1' : undefined,
-        ...(isMobile ? { display: 'none' } : {}),
       }}>
         <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.15 }}>
           <strong style={{ color: DTEXT, fontWeight: 700 }}>REFERENCE {r.ref}</strong>
