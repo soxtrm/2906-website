@@ -3948,7 +3948,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         flexDirection: isMobile ? undefined : 'column',
         gridTemplateColumns: isMobile ? '116px minmax(0,1fr)' : undefined,
         alignItems: isMobile ? 'stretch' : undefined,
-        height: isMobile ? 166 : (compact ? 308 : 340),
+        height: isMobile ? undefined : (compact ? 308 : 340),
+        minHeight: isMobile ? 166 : undefined,
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
         // the card past its own column and clip against the next one. 0 makes
@@ -4173,6 +4174,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       <div style={{
         padding: isMobile ? '8px 9px 6px' : compact ? '8px 11px 3px' : '10px 12px 3px',
         display: 'flex', flexDirection: 'column', minWidth: 0,
+        flex: isMobile ? undefined : '1 1 0', overflow: 'hidden',
         gridColumn: isMobile ? 2 : undefined, gridRow: isMobile ? 1 : undefined,
       }}>
         {/* ── town + price ──────────────────────────────────────────────────
@@ -4449,7 +4451,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       )}
       {preferences.showQuickTools && <div style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: isMobile ? '5px 7px' : '6px 9px', position: 'relative',
+        padding: isMobile ? '5px 7px' : '6px 9px', position: 'relative', marginTop: 'auto', flexShrink: 0,
         gridColumn: isMobile ? '1 / -1' : undefined,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
