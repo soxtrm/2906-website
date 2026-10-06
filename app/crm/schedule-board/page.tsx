@@ -3948,6 +3948,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         flexDirection: isMobile ? undefined : 'column',
         gridTemplateColumns: isMobile ? '116px minmax(0,1fr)' : undefined,
         alignItems: isMobile ? 'stretch' : undefined,
+        height: isMobile ? 166 : (compact ? 308 : 340),
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
         // the card past its own column and clip against the next one. 0 makes
