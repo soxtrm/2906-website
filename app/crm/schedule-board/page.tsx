@@ -2550,6 +2550,16 @@ function ago(iso: string): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
+// Photo badges have very little room. Keep the age readable at a glance and
+// deliberately continue in hours (24h, 48h, …) instead of switching to words.
+function compactAge(iso: string): string {
+  const then = Date.parse(iso)
+  if (!Number.isFinite(then)) return 'now'
+  const mins = Math.max(0, Math.floor((Date.now() - then) / 60000))
+  if (mins < 60) return `${Math.max(1, mins)}m`
+  return `${Math.floor(mins / 60)}h`
+}
+
 // "13 Aug", or "13 Aug 25" once it is not this year — a bare "13 Aug" on a
 // listing from last April reads as recent, which is the opposite of the point.
 function fmtDay(iso: string | null | undefined): string {
@@ -3112,7 +3122,11 @@ function matchesCollection(r: Listing, key: CollectionKey): boolean {
   // waterfront wording, "frontline" or proximity to the promenade must not
   // keep a listing in this row. The publishing classifier applies the same
   // rule and separately rejects phrases such as "access to the seafront".
-  const isDirectSeafront = hasDirectSeafrontClaim(copy)
+  // The publishing group is the authoritative classification: these are the
+  // listings agents deliberately placed in the direct Seafront group. Text is
+  // only a fallback for older listings without normalized group metadata.
+  const isInSeafrontGroup = r.categoryGroups?.some(group => group.trim().toLowerCase().replace(/[\s_-]+/g, '') === 'seafront') ?? false
+  const isDirectSeafront = isInSeafrontGroup || hasDirectSeafrontClaim(copy)
   if (key === 'seafront') return isDirectSeafront
   // Collections are exclusive: a listing only leaves its bedroom row when
   // the listing copy explicitly claims seafront. Sea views, nearby coast and
@@ -3219,6 +3233,10 @@ function CollectionCard({ r, onOpen, onStar, onChat, onBook, onTag, onConfirm, b
           {images[photo] ? <img src={images[photo]} alt="" /> : <span className="argus-collection-photo-empty"><Camera size={22} />No photo</span>}
           <span className="argus-collection-ref">#{r.ref}</span>
           {images.length > 0 && <span className="argus-collection-photo-count"><Camera size={10} aria-hidden="true" /> {photo + 1}/{images.length}</span>}
+          {(r.listedBy.displayName || touch) && <span className="argus-collection-agent">
+            {r.listedBy.displayName && <b>{r.listedBy.displayName}</b>}
+            {touch && <small title={new Date(touch.at).toLocaleString('en-GB')}><Clock3 size={9} />{compactAge(touch.at)}</small>}
+          </span>}
         </span>
         <span className="argus-collection-copy">
           <span className="argus-collection-title"><b>{r.town || 'Malta'}</b><strong>{price != null ? `€${Number(price).toLocaleString('en-GB')}` : 'Price on request'}</strong></span>
@@ -3229,7 +3247,6 @@ function CollectionCard({ r, onOpen, onStar, onChat, onBook, onTag, onConfirm, b
         </span>
       </button>
       <div className="argus-collection-actions">
-        <small title={touch ? new Date(touch.at).toLocaleString('en-GB') : 'Live listing'}>{touch ? ago(touch.at) : 'Live'}</small>
         <span>
           <button type="button" onClick={onOpen} aria-label={`Open ${r.ref}`} title="Open listing"><ChevronRight size={14} /></button>
           <button type="button" onClick={onChat} aria-label={`Chat about ${r.ref}`} title="Owner chat"><MessageCircle size={13} /></button>
@@ -4054,9 +4071,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           {preferences.showAgentNames && r.listedBy.displayName && (
             <span style={{
               background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
-              padding: '2px 7px', borderRadius: 999, whiteSpace: 'nowrap',
+              padding: '3px 7px', borderRadius: 999, whiteSpace: 'nowrap',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
             }}>
               {r.listedBy.displayName}
+              {latestTouch && <small title={new Date(latestTouch.at).toLocaleString('en-GB')} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800, opacity: .9 }}><Clock3 size={9} />{compactAge(latestTouch.at)}</small>}
             </span>
           )}
         </div>
