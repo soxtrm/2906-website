@@ -4039,17 +4039,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             Yours
           </span>
         )}
-        {/* ARGUS V3 (Kev, 2026-09-16): visible on mobile too (unlike the
-            Viewable-row snowflake below, which is desktop-only) — a
-            winter/short-let card needs to read as "special/time-limited" at
-            a glance everywhere, not just on desktop. */}
-        {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
-          <span
-            title="Time-limited — winter/short-let, excluded from normal !match search"
-            style={{ position: 'absolute', top: 10, right: 10, background: '#1B3A4B', color: '#7EC8E3', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
-            ❄️ {r.leaseType === 'winter_let' ? 'Winter' : 'Short'}
-          </span>
-        )}
         {/* Kev, 2026-09-10: the "needs recheck" tab is gone — pending_check
             listings stay right here on the active board (sorted to the
             bottom server-side) with this watermark instead. Bottom-left: top
