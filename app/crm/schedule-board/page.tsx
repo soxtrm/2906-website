@@ -3241,9 +3241,9 @@ function CollectionCard({ r, onOpen, onStar, onChat, onBook, onTag, onConfirm, b
         <span className="argus-collection-copy">
           <span className="argus-collection-title"><b>{r.town || 'Malta'}</b><strong>{price != null ? `€${Number(price).toLocaleString('en-GB')}` : 'Price on request'}</strong></span>
           <span className="argus-collection-meta">{[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type].filter(Boolean).join(' · ') || 'Property'}</span>
-          <span className="argus-collection-status-row">
-            <span className={available ? 'is-available' : r.availableDate ? 'is-dated' : ''}>{available ? 'Available now' : r.availableDate ? `Available ${fmtDateDots(r.availableDate)}` : 'On market'}</span>
-          </span>
+          {(available || r.availableDate) && <span className="argus-collection-status-row">
+            <span className={available ? 'is-available' : 'is-dated'}>{available ? 'Available now' : `Available ${fmtDateDots(r.availableDate)}`}</span>
+          </span>}
         </span>
       </button>
       <div className="argus-collection-actions">
@@ -4067,16 +4067,22 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {/* Responsible agent stays on the photo. The age is grouped beneath
             the reference instead of floating over the property image. */}
-        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
           {preferences.showAgentNames && r.listedBy.displayName && (
+            <>
+            {latestTouch && <span title={new Date(latestTouch.at).toLocaleString('en-GB')} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 2, padding: '3px 6px',
+              borderRadius: 999, background: 'rgba(7,12,22,.78)', border: '1px solid rgba(255,255,255,.2)',
+              color: '#fff', fontSize: 8, fontWeight: 800, backdropFilter: 'blur(8px)',
+            }}><Clock3 size={9} />{compactAge(latestTouch.at)}</span>}
             <span style={{
               background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
               padding: '3px 7px', borderRadius: 999, whiteSpace: 'nowrap',
-              display: 'inline-flex', alignItems: 'center', gap: 5,
+              display: 'inline-flex', alignItems: 'center',
             }}>
               {r.listedBy.displayName}
-              {latestTouch && <small title={new Date(latestTouch.at).toLocaleString('en-GB')} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800, opacity: .9 }}><Clock3 size={9} />{compactAge(latestTouch.at)}</small>}
             </span>
+            </>
           )}
         </div>
 
@@ -4218,9 +4224,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               .filter(Boolean).join(' - ')}
           </span>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: 9, color: offMarket ? '#E29B9B' : '#58C894', letterSpacing: '0.07em', fontWeight: 850 }}>
-              {offMarket || r.availableStatus === 'not_available' ? 'OFF MARKET' : 'ON MARKET'}
-            </div>
+            {(offMarket || r.availableStatus === 'not_available') && <div style={{ fontSize: 9, color: '#E29B9B', letterSpacing: '0.07em', fontWeight: 850 }}>OFF MARKET</div>}
             <div style={{ fontSize: 10.5, color: r.availability?.kind === 'soon' ? DTEXT_DIM : '#FFB14A', fontFamily: FM, fontWeight: 750, marginTop: 3, textShadow: r.availability?.kind === 'soon' ? 'none' : '0 0 13px rgba(255,145,36,.55)' }}>
               {r.availability?.kind === 'now' ? 'Available now'
                 : r.availability?.kind === 'date' ? `Free ${fmtDateDots(r.availability.date)}`
@@ -4307,34 +4311,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               </button>
             )}
           </div>
-        ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            onClick={() => c.canAsk && askStillAvailable(false)}
-            disabled={!c.canAsk || avBusy}
-            title={c.reason || fresh.label}
-            style={{
-              ...stillAvailableBtn(dark),
-              ...(isMobile ? { minHeight: 30, padding: '6px 8px', fontSize: 9.5, gap: 4, boxShadow: 'none' } : {}),
-              opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
-              cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
-            }}>
-            {fresh.tier === 'fresh' ? <CheckCircle2 size={14} /> : <CircleHelp size={14} />}
-            {avBusy ? 'Checking…' : 'Still available?'}
-          </button>
-          {/* Kev, screenshot: "ich hab kb dass sich das verschiebt" — this
-              column used to size itself to whatever "Confirmed" said
-              ("Never" vs "10d ago" vs "3h ago"), so the flex:1 button next
-              to it landed at a different width on every card. Fixed width
-              here instead, so the button's right edge never moves. */}
-          <div style={{ textAlign: 'right', flexShrink: 0, width: isMobile ? 48 : 62 }}>
-            <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Confirmed</div>
-            <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'}
-            </div>
-          </div>
-        </div>
-        )}
+        ) : null}
 
         {futureOverride && (
           <div data-future-override={r.ref} style={{
@@ -4489,7 +4466,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             to live here moved up above the Still Available button — see the
             block right before `isUpcoming` above. Facebook stays inside "..."
             exactly where it already is (still under menuSection "Tools"). */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+          {!isUpcoming && <button
+            onClick={() => c.canAsk && askStillAvailable(false)}
+            disabled={!c.canAsk || avBusy}
+            title={`${c.reason || fresh.label}${r.lastConfirmedAvailableAt ? ` · confirmed ${ago(r.lastConfirmedAvailableAt)}` : ''}`}
+            style={{
+              ...stillAvailableBtn(dark), flex: '1 1 auto', minWidth: 0,
+              minHeight: 32, padding: '6px 8px', fontSize: 9.5, gap: 4, boxShadow: 'none',
+              opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
+              cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
+            }}>
+            {fresh.tier === 'fresh' ? <CheckCircle2 size={13} /> : <CircleHelp size={13} />}
+            {avBusy ? 'Checking…' : 'Still available?'}
+          </button>}
           <button onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
             aria-label={r.lastChatAt ? `Owner chat, last active ${ago(r.lastChatAt)}` : 'Owner chat'}
             title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}
