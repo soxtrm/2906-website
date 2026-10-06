@@ -1846,6 +1846,11 @@ function Board() {
             order={boardPreferences.collectionOrder}
             onOpen={r => setDetail(r.ref)}
             onStar={toggleStar}
+            onChat={r => setChatting(r)}
+            onBook={r => setBooking(r)}
+            onTag={r => tagOne(r)}
+            onConfirm={checkIn}
+            busyRef={busyRef}
             onChanged={reload}
           />
         )}
@@ -3115,11 +3120,16 @@ function collectionSort(a: Listing, b: Listing): number {
   return Date.parse(bt) - Date.parse(at) || b.ref.localeCompare(a.ref)
 }
 
-function AirbnbCollectionRows({ rows, order, onOpen, onStar, onChanged }: {
+function AirbnbCollectionRows({ rows, order, onOpen, onStar, onChat, onBook, onTag, onConfirm, busyRef, onChanged }: {
   rows: Listing[]
   order: CollectionKey[]
   onOpen: (r: Listing) => void
   onStar: (r: Listing) => void
+  onChat: (r: Listing) => void
+  onBook: (r: Listing) => void
+  onTag: (r: Listing) => void
+  onConfirm: (r: Listing) => void
+  busyRef: string | null
   onChanged: () => void
 }) {
   const normalized = [...order, ...COLLECTION_ITEMS.map(item => item.key).filter(key => !order.includes(key))]
@@ -3134,17 +3144,22 @@ function AirbnbCollectionRows({ rows, order, onOpen, onStar, onChanged }: {
         const item = COLLECTION_ITEMS.find(candidate => candidate.key === key)
         if (!item) return null
         const matches = rows.filter(row => matchesCollection(row, key)).sort(collectionSort)
-        return <CollectionRow key={key} item={item} rows={matches} onOpen={onOpen} onStar={onStar} onChanged={onChanged} />
+        return <CollectionRow key={key} item={item} rows={matches} onOpen={onOpen} onStar={onStar} onChat={onChat} onBook={onBook} onTag={onTag} onConfirm={onConfirm} busyRef={busyRef} onChanged={onChanged} />
       })}
     </section>
   )
 }
 
-function CollectionRow({ item, rows, onOpen, onStar, onChanged }: {
+function CollectionRow({ item, rows, onOpen, onStar, onChat, onBook, onTag, onConfirm, busyRef, onChanged }: {
   item: (typeof COLLECTION_ITEMS)[number]
   rows: Listing[]
   onOpen: (r: Listing) => void
   onStar: (r: Listing) => void
+  onChat: (r: Listing) => void
+  onBook: (r: Listing) => void
+  onTag: (r: Listing) => void
+  onConfirm: (r: Listing) => void
+  busyRef: string | null
   onChanged: () => void
 }) {
   const rail = useRef<HTMLDivElement | null>(null)
@@ -3165,14 +3180,14 @@ function CollectionRow({ item, rows, onOpen, onStar, onChanged }: {
       </header>
       {rows.length ? (
         <div ref={rail} className="argus-property-rail">
-          {rows.map(row => <CollectionCard key={row.ref} r={row} onOpen={() => onOpen(row)} onStar={() => onStar(row)} onChanged={onChanged} />)}
+          {rows.map(row => <CollectionCard key={row.ref} r={row} onOpen={() => onOpen(row)} onStar={() => onStar(row)} onChat={() => onChat(row)} onBook={() => onBook(row)} onTag={() => onTag(row)} onConfirm={() => onConfirm(row)} busy={busyRef === row.ref} onChanged={onChanged} />)}
         </div>
       ) : <div className="argus-collection-empty">No matching properties in the current filters.</div>}
     </section>
   )
 }
 
-function CollectionCard({ r, onOpen, onStar, onChanged }: { r: Listing; onOpen: () => void; onStar: () => void; onChanged: () => void }) {
+function CollectionCard({ r, onOpen, onStar, onChat, onBook, onTag, onConfirm, busy, onChanged }: { r: Listing; onOpen: () => void; onStar: () => void; onChat: () => void; onBook: () => void; onTag: () => void; onConfirm: () => void; busy: boolean; onChanged: () => void }) {
   const { me, theme } = useCrm()
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(0)
@@ -3185,6 +3200,7 @@ function CollectionCard({ r, onOpen, onStar, onChanged }: { r: Listing; onOpen: 
   useEffect(() => setPhoto(0), [r.ref])
   const touch = listingTouch(r)
   const available = r.availability?.kind === 'now' || r.availableStatus === 'available_confirmed'
+  const confirmationFresh = freshness(r.lastConfirmedAvailableAt).tier === 'fresh'
   const price = r.price ?? r.salePrice
   return (
     <article className="argus-collection-card" onMouseEnter={() => setHovered(true)} onMouseLeave={() => { setHovered(false); setPhoto(0) }}>
@@ -3199,10 +3215,19 @@ function CollectionCard({ r, onOpen, onStar, onChanged }: { r: Listing; onOpen: 
           <span className="argus-collection-meta">{[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type].filter(Boolean).join(' · ') || 'Property'}</span>
           <span className="argus-collection-status-row">
             <span className={available ? 'is-available' : r.availableDate ? 'is-dated' : ''}>{available ? 'Available now' : r.availableDate ? `Available ${fmtDateDots(r.availableDate)}` : 'On market'}</span>
-            <small>{touch ? ago(touch.at) : 'Live'}</small>
           </span>
         </span>
       </button>
+      <div className="argus-collection-actions">
+        <small title={touch ? new Date(touch.at).toLocaleString('en-GB') : 'Live listing'}>{touch ? ago(touch.at) : 'Live'}</small>
+        <span>
+          <button type="button" onClick={onOpen} aria-label={`Open ${r.ref}`} title="Open listing"><ChevronRight size={14} /></button>
+          <button type="button" onClick={onChat} aria-label={`Chat about ${r.ref}`} title="Owner chat"><MessageCircle size={13} /></button>
+          <button type="button" onClick={onBook} aria-label={`Book viewing for ${r.ref}`} title="Book viewing"><CalendarDays size={13} /></button>
+          <button type="button" onClick={onTag} aria-label={`Tag ${r.ref}`} title="Tag listing"><AtSign size={13} /></button>
+          <button type="button" className={confirmationFresh ? 'is-confirmed' : 'needs-confirmation'} onClick={onConfirm} disabled={busy} aria-label={`Confirm availability for ${r.ref}`} title={confirmationFresh ? 'Recently confirmed — refresh confirmation' : 'Confirm availability'}><CheckCircle2 size={14} /></button>
+        </span>
+      </div>
       <button type="button" className="argus-collection-star" onClick={event => { event.stopPropagation(); onStar() }} aria-label={`Favourite ${r.ref}`} aria-pressed={starStepOf(r) > 0}>
         <StarGlyph filled={starStepOf(r) > 0} size={17} color={starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : '#fff'} />
       </button>

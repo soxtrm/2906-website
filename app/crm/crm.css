@@ -330,6 +330,26 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
 @keyframes argus-settings-arrive{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
 @media(max-width:1100px){.argus-settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.argus-collection-order{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.argus-board-settings-button{flex:1;justify-content:center}.argus-board-settings{margin-top:0;padding:13px;border-radius:14px}.argus-settings-grid{grid-template-columns:1fr}.argus-settings-choice button{min-height:42px;padding-inline:4px}.argus-board-settings>footer{align-items:flex-start;gap:8px}.argus-collection-order{grid-template-columns:1fr}.argus-collection-board{gap:25px;margin-top:0}.argus-collection-intro{padding-inline:4px}.argus-property-row-controls{display:none}.argus-property-rail{gap:9px;margin-inline:-9px;padding-inline:9px;scroll-padding-inline:9px}.argus-collection-card{flex-basis:min(72vw,238px);border-radius:15px}.argus-collection-copy{padding:10px 11px 11px}.argus-property-row-heading b{font-size:15px}.argus-property-row-heading>i{width:33px;height:33px}.argus-collection-photo{aspect-ratio:1.5/1}}
+
+/* Collection rows are working inventory, not passive marketing cards. Keep
+   the image useful, then spend one compact footer row on the actions agents
+   repeat all day. This also lets a phone expose more of the next card. */
+.argus-collection-board{gap:25px}
+.argus-collection-card{flex-basis:232px;border-radius:15px}
+.argus-collection-photo{aspect-ratio:1.62/1}
+.argus-collection-copy{gap:5px;padding:9px 11px 7px}
+.argus-collection-title b{font-size:13px}
+.argus-collection-title strong{font-size:12px}
+.argus-collection-status-row>span{padding:4px 6px}
+.argus-collection-actions{display:flex;min-height:34px;padding:5px 7px 7px;align-items:center;justify-content:space-between;gap:5px;border-top:1px solid color-mix(in srgb,var(--crm-border) 72%,transparent)}
+.argus-collection-actions>small{overflow:hidden;max-width:46px;color:var(--crm-faint);font:700 7px var(--font-jetbrains);text-overflow:ellipsis;white-space:nowrap}
+.argus-collection-actions>span{display:flex;gap:3px}
+.argus-collection-actions button{display:grid;width:26px;height:26px;padding:0;place-items:center;border:1px solid var(--crm-border);border-radius:8px;background:var(--crm-raised);color:var(--crm-muted);cursor:pointer;transition:transform .16s ease,border-color .16s ease,color .16s ease,background .16s ease,box-shadow .16s ease}
+.argus-collection-actions button:hover{border-color:var(--crm-accent);color:var(--crm-accent);transform:translateY(-1px)}
+.argus-collection-actions button.is-confirmed{border-color:rgba(62,207,142,.48);background:rgba(62,207,142,.16);color:#69d8ae;box-shadow:0 0 14px rgba(62,207,142,.12)}
+.argus-collection-actions button.needs-confirmation{border-color:rgba(245,166,35,.48);background:rgba(245,166,35,.13);color:#f5bd62}
+.argus-collection-actions button:disabled{opacity:.48;cursor:wait;transform:none}
+@media(max-width:700px){.argus-collection-board{gap:21px}.argus-property-rail{gap:8px}.argus-collection-card{flex-basis:min(68vw,224px)}.argus-collection-photo{aspect-ratio:1.68/1}.argus-collection-copy{padding:8px 9px 6px}.argus-collection-actions{padding-inline:6px}.argus-collection-actions>small{max-width:38px}.argus-collection-actions button{width:25px;height:25px;border-radius:7px}}
 @media(prefers-reduced-motion:reduce){.argus-board-settings,.crm-mobile-island-workspace .crm-header-actions,.crm-mobile-island-workspace .crm-header-actions:after{animation:none}.argus-board-settings-button,.argus-settings-toggle i,.argus-settings-toggle i:after{transition:none}}
 
 .crm-booking-day-focus{border:1px solid rgba(202,145,20,.45);background:linear-gradient(125deg,rgba(255,244,194,.95),rgba(255,255,255,.92));box-shadow:0 0 22px rgba(232,185,49,.16)}
