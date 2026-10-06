@@ -3948,7 +3948,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         flexDirection: isMobile ? undefined : 'column',
         gridTemplateColumns: isMobile ? '116px minmax(0,1fr)' : undefined,
         alignItems: isMobile ? 'stretch' : undefined,
-        height: isMobile ? undefined : (compact ? 308 : 340),
+        height: isMobile ? undefined : (compact ? 326 : 358),
         minHeight: isMobile ? 166 : undefined,
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
@@ -4253,6 +4253,17 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             <RuleIcon state={r.petFriendly} label="Pets" path={PAW_PATH} />
           </div>
         )}
+
+        <div className="argus-card-visible-mini-tools" aria-label="Listing quick tools" style={{
+          display: 'flex', alignItems: 'center', gap: 9, marginTop: 'auto', minHeight: 25,
+          color: DTEXT_FAINT,
+        }}>
+          <PhotoDownload r={r} />
+          <button type="button" onClick={handleCopyLink} disabled={copyBusy} title="Copy listing link" aria-label="Copy listing link"><Copy size={13} /></button>
+          <button type="button" onClick={handlePriceEdit} title="Update price" aria-label="Update price"><Euro size={13} /></button>
+          {isAdmin && <button type="button" onClick={onAvDate} title="Correct availability and viewing dates" aria-label="Correct availability and viewing dates"><CalendarClock size={13} /></button>}
+          <small style={{ marginLeft: 'auto', font: `700 7.5px ${FM}`, color: DTEXT_FAINT, whiteSpace: 'nowrap' }}>REF {r.ref}</small>
+        </div>
 
         {/* ── description preview ──────────────────────────────────────────── */}
         {/* The download/copy/price/AV-date/Facebook tools that used to live
