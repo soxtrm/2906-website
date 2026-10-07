@@ -505,6 +505,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   account: Account; accent: typeof ACCENTS[0]; onChanged: () => void
   templates: Template[]; onTemplatesChanged: () => void
 }) {
+  const accountListMax = /argus\s*5|argus[_-]?5|nexuslink/i.test(`${account.sessionName} ${account.label}`) ? 15 : OUTREACH_LIST_MAX
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [plans, setPlans] = useState<Plan[] | null>(null)
   // Kev, 2026-09-11: defaults to TODAY, not TOMORROW — "ich hab kb für
@@ -600,7 +601,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // `count` total, never duplicating what's already there.
   async function generate(topUp = false, overrideCount?: number) {
     if (!activePlan) return
-    const n = Math.min(OUTREACH_LIST_MAX, overrideCount ?? count)
+    const n = Math.min(accountListMax, overrideCount ?? count)
     setBusy(true); setNote('')
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: n, topUp })
@@ -836,10 +837,10 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             Auto-setup
           </button>
           <button disabled={busy} onClick={savePastedList} style={btnGhost}>Save edits</button>
-          <button disabled={busy} onClick={() => generate(false)} title="Generates a fresh list of eligible owners — the exact same engine as the real !createlist WhatsApp command." style={{ ...btnGhost, flex: '1 1 auto' }}>+ Create List</button>
-          <input aria-label="Contacts per list" type="number" min={1} max={OUTREACH_LIST_MAX} value={count} onChange={e => setCount(Math.max(1, Math.min(OUTREACH_LIST_MAX, parseInt(e.target.value) || OUTREACH_STARTER_BATCH_MAX)))} style={inputSmall} />
-          <span style={{ fontSize: 9, color: FAINT }}>List max {OUTREACH_LIST_MAX}</span>
-          <button disabled={busy} onClick={() => generate(true)} title="Keeps everyone already in the queue and only adds as many NEW eligible owners as needed to reach the count above." style={btnGhost}>Top Up</button>
+          <button disabled={busy} onClick={() => generate(false)} title="Creates a fresh list of exactly the target size. Existing unsent entries are released back to the pool." style={{ ...btnGhost, flex: '1 1 auto' }}>{(s?.total || 0) > 0 ? `Replace with ${Math.min(count, accountListMax)}` : `+ Create ${Math.min(count, accountListMax)}`}</button>
+          <input aria-label="Target contacts in list" type="number" min={1} max={accountListMax} value={Math.min(count, accountListMax)} onChange={e => setCount(Math.max(1, Math.min(accountListMax, parseInt(e.target.value) || OUTREACH_STARTER_BATCH_MAX)))} style={inputSmall} />
+          <span style={{ fontSize: 9, color: FAINT }}>Target · max {accountListMax}</span>
+          <button disabled={busy || (s?.eligible || 0) >= Math.min(count, accountListMax)} onClick={() => generate(true)} title="Keeps the current queue and adds only enough new owners to reach the target." style={btnGhost}>Top up to {Math.min(count, accountListMax)}</button>
           <button disabled={busy} onClick={clearList} title="Removes everyone from this queue and releases their reservation." style={btnGhost}>Clear</button>
         </div>
       )}
