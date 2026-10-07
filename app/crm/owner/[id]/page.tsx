@@ -634,7 +634,7 @@ function InsightsPanel({ d, owner, onSaved, setMsg }: { d: any; owner: any; onSa
           <div style={HEAD}>Property & business preferences</div>
           {!operational.length && <EmptyRow text="Nothing extracted yet — pets, sharing, deposit and similar preferences appear here once the owner mentions them." />}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {operational.map((p: any) => <PreferencePill key={p.id} p={p} />)}
+            {operational.map((p: any) => <ScopeablePreference key={p.id} p={p} owner={owner} properties={d.properties || []} onSaved={onSaved} setMsg={setMsg} />)}
           </div>
           {byProperty.map((grp: any) => (
             <div key={grp.propertyId} style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${HAIRLINE}` }}>
@@ -659,6 +659,15 @@ function InsightsPanel({ d, owner, onSaved, setMsg }: { d: any; owner: any; onSa
             ))}
           </div>
         )}
+        {owner.complianceNotes && (
+          <div style={{ ...CARD, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <div style={{ ...HEAD, color: '#F87171' }}>Admin compliance record</div>
+            <div style={{ fontSize: 10.5, color: '#FDA4AF', marginBottom: 10, lineHeight: 1.5 }}>
+              Verbatim owner statements involving protected characteristics. Recorded for review only; never used for matching, filtering or owner messages.
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap', fontSize: 11.5, lineHeight: 1.55, color: '#FECACA' }}>{owner.complianceNotes}</div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -676,6 +685,30 @@ function PreferencePill({ p }: { p: any }) {
     <span title={p.is_explicit ? 'Stated explicitly' : `Inferred (${Math.round((p.confidence || 0) * 100)}% confidence, ${p.sample_count}x)`}
       style={{ fontSize: 11, fontWeight: 600, color: p.is_explicit ? '#15803D' : '#92400E', background: p.is_explicit ? '#DCFCE7' : '#FEF9C3', borderRadius: 99, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
       {p.field.replace(/_/g, ' ')}: {p.value}{!p.is_explicit && <span style={{ fontSize: 8.5, opacity: 0.7 }}>~</span>}
+    </span>
+  )
+}
+function ScopeablePreference({ p, owner, properties, onSaved, setMsg }: { p: any; owner: any; properties: any[]; onSaved: () => void; setMsg: (s: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  async function move(propertyId: number) {
+    setBusy(true)
+    try {
+      await crmJson(`owners/${owner.id}/preferences/${p.id}/scope`, 'POST', { propertyId })
+      setMsg(`Rule moved to #${properties.find(x => x.id === propertyId)?.ref || propertyId}`)
+      setOpen(false); onSaved()
+    } catch (e: any) { setMsg(e?.data?.error || e?.message || 'Could not change scope') }
+    finally { setBusy(false) }
+  }
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <button type="button" onClick={() => setOpen(v => !v)} disabled={busy} title="Click to assign this rule to one property/block"
+        style={{ border: 0, padding: 0, background: 'transparent', cursor: 'pointer', fontFamily: F }}><PreferencePill p={p} /></button>
+      {open && <span style={{ position: 'absolute', zIndex: 20, top: 'calc(100% + 6px)', left: 0, width: 230, background: '#111827', border: `1px solid ${DCARD_BORDER}`, borderRadius: 10, padding: 8, boxShadow: '0 18px 40px rgba(0,0,0,.45)' }}>
+        <span style={{ display: 'block', fontSize: 9, color: DTEXT_FAINT, padding: '3px 6px 7px', textTransform: 'uppercase', letterSpacing: '.08em' }}>Apply to property / block</span>
+        {properties.map(x => <button key={x.id} onClick={() => move(x.id)} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 0, borderRadius: 6, color: DTEXT_DIM, padding: '7px 6px', cursor: 'pointer', fontSize: 11, fontFamily: F }}>#{x.ref} · {x.location?.town || 'Property'}</button>)}
+        {!properties.length && <span style={{ display: 'block', color: DTEXT_FAINT, fontSize: 10, padding: 6 }}>No property available</span>}
+      </span>}
     </span>
   )
 }
