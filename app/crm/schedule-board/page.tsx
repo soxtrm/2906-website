@@ -2550,14 +2550,16 @@ function ago(iso: string): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
-// Photo badges have very little room. Keep the age readable at a glance and
-// deliberately continue in hours (24h, 48h, …) instead of switching to words.
+// Photo badges have very little room. Minutes and hours are useful while a
+// listing is fresh; from 48h onward days scan much faster on a phone.
 function compactAge(iso: string): string {
   const then = Date.parse(iso)
   if (!Number.isFinite(then)) return 'now'
   const mins = Math.max(0, Math.floor((Date.now() - then) / 60000))
   if (mins < 60) return `${Math.max(1, mins)}m`
-  return `${Math.floor(mins / 60)}h`
+  const hours = Math.floor(mins / 60)
+  if (hours < 48) return `${hours}h`
+  return `${Math.floor(hours / 24)}d`
 }
 
 // "13 Aug", or "13 Aug 25" once it is not this year — a bare "13 Aug" on a
@@ -3979,7 +3981,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
-          ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 50%', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
 
         {/* Kev's redesign brief (2026-08-22): a real scrim instead of relying on
@@ -4103,13 +4105,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </button>
         )}
 
-        {/* Image count, bottom right. */}
-        {r.imageCount > 0 && (
-          <span title={`${r.imageCount} photos`} style={{ position: 'absolute', bottom: 8, right: 8, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(0,0,0,0.62)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '4px 7px', border: '1px solid rgba(255,255,255,.28)', borderRadius: 999, backdropFilter: 'blur(8px)' }}>
-            <Camera size={11} aria-hidden="true" /> {r.imageCount}
-          </span>
-        )}
-
         {!isMobile && (
           <span title={`Reference ${r.ref}`} style={{
             position: 'absolute', bottom: 8, left: canSelect ? 42 : 8,
@@ -4129,9 +4124,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,.16)',
           }}>
             <strong>#{r.ref}</strong>
-            <small style={{ display: 'block', marginTop: 1, color: isFreshlyUpdated ? '#E8C96F' : 'rgba(255,255,255,.72)', fontSize: 7.5, fontWeight: 600 }}>
-              {latestTouch ? ago(latestTouch.at) : '—'}
-            </small>
           </span>
         )}
 
@@ -4145,20 +4137,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               style={{ display: 'none' }}
               onChange={e => { onAddPhotos(e.target.files); e.target.value = '' }}
             />
-            <button
-              onClick={e => { e.stopPropagation(); photoInputRef.current?.click() }}
-              disabled={photoUploadBusy}
-              title="Add photos to this listing"
-              style={{
-                position: 'absolute', bottom: 8, right: r.imageCount > 0 ? 44 : 8,
-                width: 26, height: 26, borderRadius: 999, padding: 0,
-                display: 'grid', placeItems: 'center',
-                background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.45)',
-                color: '#FFF', cursor: photoUploadBusy ? 'wait' : 'pointer', lineHeight: 0,
-                opacity: photoUploadBusy ? 0.6 : 1,
-              }}>
-              <Camera size={13} />
-            </button>
           </>
         )}
       </div>
@@ -4262,7 +4240,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           <button type="button" onClick={handleCopyLink} disabled={copyBusy} title="Copy listing link" aria-label="Copy listing link"><Copy size={13} /></button>
           <button type="button" onClick={handlePriceEdit} title="Update price" aria-label="Update price"><Euro size={13} /></button>
           {isAdmin && <button type="button" onClick={onAvDate} title="Correct availability and viewing dates" aria-label="Correct availability and viewing dates"><CalendarClock size={13} /></button>}
-          <small style={{ marginLeft: 'auto', font: `700 7.5px ${FM}`, color: DTEXT_FAINT, whiteSpace: 'nowrap' }}>REF {r.ref}</small>
         </div>
 
         {/* ── description preview ──────────────────────────────────────────── */}
@@ -4526,7 +4503,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             <div className="argus-card-mini-tools" aria-label="Listing quick tools">
               <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} onChanged={onChanged} />
               <PhotoDownload r={r} />
-              {(r.isMine || isAdmin) && <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoUploadBusy} title="Add photos"><Camera size={14} /><span>Add</span></button>}
+              {(r.isMine || isAdmin) && <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoUploadBusy} title="Add photos"><Camera size={14} /><span>{photoUploadBusy ? 'Adding…' : 'Photos'}</span></button>}
               <button type="button" onClick={handleCopyLink} disabled={copyBusy} title="Copy listing link"><Copy size={14} /><span>Link</span></button>
               <button type="button" onClick={handlePriceEdit} title="Update price"><Euro size={14} /><span>Price</span></button>
               {isAdmin && <button type="button" onClick={onAvDate} title="Correct availability and viewing dates"><CalendarClock size={14} /><span>Dates</span></button>}
