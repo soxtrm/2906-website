@@ -23,6 +23,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { AlertTriangle, CalendarDays, Copy, Link2, Loader2, RefreshCw, Trash2, X } from 'lucide-react'
+import ReactCountryFlag from 'react-country-flag'
+import countries from 'world-countries'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
 import {
@@ -39,6 +41,9 @@ const PRIMARY =
 const GHOST = 'px-3 py-2 rounded text-xs text-navy/50 hover:text-navy transition-colors'
 const SECTION = 'text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/40 mb-2'
 const YELLOW = '#E8B931'
+const NATIONALITIES = countries
+  .map(country => ({ code: country.cca2, name: country.name.common }))
+  .sort((a, b) => a.name.localeCompare(b.name))
 
 const TYPE_TONE: Record<string, string> = {
   video_viewing: 'bg-sky-50 text-sky-800 ring-sky-200',
@@ -64,7 +69,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
   const [pick, setPick] = useState<{ windowId: number; start: string } | null>(null)
   const [dur, setDur] = useState<10 | 20>(10)
   const [type, setType] = useState('first_view')
-  const [f, setF] = useState({ clientName: '', groupSize: '', notes: '', agentId: '', clientCountry: '', clientGroupType: '', clientJob: '' })
+  const [f, setF] = useState({ clientName: '', groupSize: '', notes: '', agentId: '', clientCountry: '', clientGroupType: '', clientJob: '', clientAge: '' })
   const [moving, setMoving] = useState<Booking | null>(null)
   const [showWindowForm, setShowWindowForm] = useState(false)
   const [wf, setWf] = useState({ date: '', from: '16:00', to: '17:30', fromDate: '', confirmation: 'start_only' as 'start_only' | 'full_window' })
@@ -128,6 +133,9 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
     setErr(null)
     if (!pick) return setErr('Pick a time slot.')
     if (!moving && !f.clientName.trim()) return setErr('Who is coming? Add the client name.')
+    if (!moving && !f.clientCountry) return setErr('Add the client nationality.')
+    if (!moving && !f.clientJob.trim()) return setErr('Add the client job.')
+    if (!moving && !f.clientAge.trim()) return setErr('Add the client age or age range.')
     setBusy(true)
     try {
       if (moving) {
@@ -140,10 +148,10 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
           clientName: f.clientName.trim(), groupSize: f.groupSize ? Number(f.groupSize) : undefined,
           notes: f.notes || undefined, agentId: f.agentId ? Number(f.agentId) : undefined,
           clientCountry: f.clientCountry.trim() || undefined, clientGroupType: f.clientGroupType || undefined,
-          clientJob: f.clientJob.trim() || undefined,
+          clientJob: f.clientJob.trim() || undefined, clientAge: f.clientAge.trim() || undefined,
         })
         onDone(d.message || 'Booked.')
-        setF({ clientName: '', groupSize: '', notes: '', agentId: '', clientCountry: '', clientGroupType: '', clientJob: '' })
+        setF({ clientName: '', groupSize: '', notes: '', agentId: '', clientCountry: '', clientGroupType: '', clientJob: '', clientAge: '' })
       }
       setPick(null)
       await load()
@@ -278,6 +286,18 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
 
           {v && tab === 'book' && (
             <div className="space-y-5">
+              <div className="grid grid-cols-3 gap-1 rounded-xl bg-off-white p-1" aria-label="Booking progress">
+                {[
+                  ['1', 'Day', !!visibleWindows.length],
+                  ['2', 'Time', !!pick],
+                  ['3', 'Client', !!pick && !!f.clientName],
+                ].map(([number, label, active]) => (
+                  <div key={String(number)} className={cn('rounded-lg px-2 py-2 text-center transition-colors', active ? 'bg-navy text-white shadow-sm' : 'text-navy/45')}>
+                    <span className="mr-1 text-[10px] font-bold">{number}</span>
+                    <span className="text-[11px] font-semibold">{label}</span>
+                  </div>
+                ))}
+              </div>
               {ownerConfirmedDay && visibleWindows[0] && (
                 <div className="crm-booking-day-focus rounded-lg px-4 py-3">
                   <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-800">Booking sequence activated</div>
@@ -425,7 +445,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                   </div>
                   {!moving && (
                     <>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <div className="col-span-2">
                           <label className={LABEL}>Client *</label>
                           <input className={FIELD} data-client-name value={f.clientName} onChange={e => setF(s => ({ ...s, clientName: e.target.value }))} placeholder="e.g. Maria & Tom" />
@@ -448,12 +468,22 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
                           </select>
                         </div>
                         <div>
-                          <label className={LABEL}>From (country)</label>
-                          <input className={FIELD} data-client-country value={f.clientCountry} onChange={e => setF(s => ({ ...s, clientCountry: e.target.value }))} placeholder="Italy" />
+                          <label className={LABEL}>Nationality *</label>
+                          <div className="relative">
+                            {f.clientCountry && <ReactCountryFlag countryCode={f.clientCountry} svg className="absolute left-3 top-1/2 -translate-y-1/2" />}
+                            <select className={cn(FIELD, 'appearance-none', f.clientCountry && 'pl-9')} data-client-country value={f.clientCountry} onChange={e => setF(s => ({ ...s, clientCountry: e.target.value }))}>
+                              <option value="">Choose</option>
+                              {NATIONALITIES.map(country => <option key={country.code} value={country.code}>{country.name}</option>)}
+                            </select>
+                          </div>
                         </div>
                         <div>
-                          <label className={LABEL}>Job</label>
+                          <label className={LABEL}>Job *</label>
                           <input className={FIELD} data-client-job value={f.clientJob} onChange={e => setF(s => ({ ...s, clientJob: e.target.value }))} placeholder="nurse" />
+                        </div>
+                        <div>
+                          <label className={LABEL}>Age *</label>
+                          <input className={FIELD} data-client-age value={f.clientAge} onChange={e => setF(s => ({ ...s, clientAge: e.target.value }))} placeholder="31 or 28–34" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">

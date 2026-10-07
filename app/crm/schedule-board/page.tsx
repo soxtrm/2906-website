@@ -467,6 +467,7 @@ function Board() {
   const [err, setErr] = useState<string | null>(null)
   const [focusRef, setFocusRef] = useState<string | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
+  const [detailIntent, setDetailIntent] = useState<'book' | 'media' | null>(null)
   const [booking, setBooking] = useState<Listing | null>(null)
   // Owner viewing REQUEST (no confirmed window yet) — the pre-2026-09-23 BookDialog.
   const [requesting, setRequesting] = useState<Listing | null>(null)
@@ -482,6 +483,10 @@ function Board() {
   const [swipeCreating, setSwipeCreating] = useState(false)
   const [swipeResult, setSwipeResult] = useState<{ url: string; count: number } | null>(null)
   const [swipeMultiResult, setSwipeMultiResult] = useState<{ ref: string; url?: string; error?: string }[] | null>(null)
+  const openBook = useCallback((r: Listing) => {
+    setDetailIntent('book')
+    setDetail(r.ref)
+  }, [])
   // Kev, 2026-09-10: "Collected" (existing behaviour, one deck link) vs
   // "Multiple" (one persistent single-property link per listing, so he can
   // send 5 separate links instead of one deck) — only ambiguous with 2+
@@ -746,7 +751,9 @@ function Board() {
     if (row) {
       deepLinkedRef.current = ref
       setFocusRef(ref)
-      if (action === 'book') setBooking(row)
+      if (action === 'book') openBook(row)
+      else if (action === 'media') { setDetailIntent('media'); setDetail(row.ref) }
+      else if (action === 'detail') { setDetailIntent(null); setDetail(row.ref) }
       else if (action === 'chat') setChatting(row)
       return
     }
@@ -755,11 +762,13 @@ function Board() {
       .then((d: Listing) => {
         setRows(rs => rs.some(r => r.ref === d.ref) ? rs : [d, ...rs])
         setFocusRef(ref)
-        if (action === 'book') setBooking(d)
+        if (action === 'book') openBook(d)
+        else if (action === 'media') { setDetailIntent('media'); setDetail(d.ref) }
+        else if (action === 'detail') { setDetailIntent(null); setDetail(d.ref) }
         else if (action === 'chat') setChatting(d)
       })
       .catch(() => { deepLinkedRef.current = null })
-  }, [rows, params])
+  }, [rows, params, openBook])
 
   // The rented tab's badge. Fetched separately so the count is visible while
   // the agent is on the board, same idea as the Favourites badge below.
@@ -1489,7 +1498,7 @@ function Board() {
       innerRef={el => { cardRefs.current[r.ref] = el }}
       onOpen={() => setDetail(r.ref)}
       onAct={act}
-      onBook={() => setBooking(r)}
+      onBook={() => openBook(r)}
       onAsk={() => setAsking(r)}
       onChat={() => setChatting(r)}
       onCreateGroup={() => createGroup(r)}
@@ -1847,7 +1856,7 @@ function Board() {
             onOpen={r => setDetail(r.ref)}
             onStar={toggleStar}
             onChat={r => setChatting(r)}
-            onBook={r => setBooking(r)}
+            onBook={openBook}
             onTag={r => tagOne(r)}
             onConfirm={checkIn}
             busyRef={busyRef}
@@ -1894,7 +1903,8 @@ function Board() {
       {detail && (
         <DetailModal
           refId={detail}
-          onClose={() => setDetail(null)}
+          intent={detailIntent}
+          onClose={() => { setDetail(null); setDetailIntent(null) }}
           onAct={act}
           // The modal used to offer one button — "Request availability" — while
           // the card behind it offered five. Opening a listing to read it made
@@ -1903,7 +1913,7 @@ function Board() {
           onTag={r => tagOne(r)}
           tagging={tagging}
           onStar={r => toggleStar(r)}
-          onBook={r => { setDetail(null); setBooking(r) }}
+          onBook={r => { setDetail(null); setDetailIntent(null); setBooking(r) }}
           onChanged={reload}
         />
       )}
@@ -1953,7 +1963,7 @@ function Board() {
             // second implementation. Book stays available unconditionally
             // (never contact-gated, same as the card); Create Group keeps
             // the card's own admin + canCreateGroup gate.
-            onBook={() => { setChatting(null); setBooking(chatting) }}
+            onBook={() => { setChatting(null); openBook(chatting) }}
             onCreateGroup={() => createGroup(chatting)}
             onClose={() => setChatting(null)}
           />
@@ -2008,7 +2018,7 @@ function Board() {
           onClose={() => setSwipePanelOpen(false)}
           isOnBoard={ref => rows.some(r => r.ref === ref)}
           onChat={ref => { const row = rows.find(r => r.ref === ref); if (row) { setSwipePanelOpen(false); setFocusRef(ref); setChatting(row) } }}
-          onBook={ref => { const row = rows.find(r => r.ref === ref); if (row) { setSwipePanelOpen(false); setFocusRef(ref); setBooking(row) } }}
+          onBook={ref => { const row = rows.find(r => r.ref === ref); if (row) { setSwipePanelOpen(false); setFocusRef(ref); openBook(row) } }}
         />
       )}
       {matchRef && (
@@ -4828,8 +4838,9 @@ function AgentInquiryModal({ propertyRef, agentName, onClose }: { propertyRef: s
 }
 
 // ── detail modal ────────────────────────────────────────────────────────────
-function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook, onChanged }: {
+function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, onBook, onChanged }: {
   refId: string
+  intent?: 'book' | 'media' | null
   onClose: () => void
   onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
   onTag: (r: Listing) => void
@@ -4851,6 +4862,7 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook, on
   // loaded with after the star is clicked.
   const [fav, setFav] = useState(false)
   const [hot, setHot] = useState(false)
+  const [mediaStatus, setMediaStatus] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -4901,6 +4913,14 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook, on
                 background: 'rgba(0,0,0,0.55)', color: '#FFF', width: 30, height: 30,
                 borderRadius: '50%', fontSize: 15, lineHeight: 1,
               }}>×</button>
+              {intent && (
+                <div style={{
+                  position: 'absolute', top: 12, left: 12, zIndex: 2,
+                  background: intent === 'book' ? '#E8B931' : '#1B2A4A', color: intent === 'book' ? '#142033' : '#FFF',
+                  borderRadius: 999, padding: '8px 13px', fontSize: 11, fontWeight: 900,
+                  letterSpacing: '.12em', textTransform: 'uppercase', boxShadow: '0 5px 18px rgba(0,0,0,.22)',
+                }}>{intent === 'book' ? 'Book this property' : 'Photos & description'}</div>
+              )}
               {d.images?.length > 1 && (
                 <>
                   {/* click-through arrows, not the small dots agents kept missing on
@@ -4981,6 +5001,28 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook, on
               {/* Same verdict the cards use, so the modal cannot offer a
                   button the card has greyed out. */}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {intent === 'media' && (
+                  <>
+                    <button
+                      onClick={async () => {
+                        setMediaStatus('Preparing photos…')
+                        await downloadPhotos(d, done => setMediaStatus(`${done}/${d.images?.length || 0} photos`))
+                        setMediaStatus('Photos downloaded')
+                      }}
+                      style={{ ...btn, background: NAVY, color: '#FFF', border: 'none', fontWeight: 800 }}>
+                      Download photos
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(d.description || '')
+                        setMediaStatus('Description copied')
+                      }}
+                      disabled={!d.description}
+                      style={{ ...btn, background: '#FFF', color: NAVY, border: `1px solid ${AB}`, fontWeight: 700 }}>
+                      Copy description
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => d.contact?.canAsk !== false && onAct('request-availability', d)}
                   disabled={d.contact?.canAsk === false}
@@ -5004,8 +5046,8 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook, on
                     message means the tag is drawn dead with the reason on it. */}
                 <button
                   onClick={() => onBook(d)}
-                  style={{ ...btn, background: '#FFF', color: NAVY, border: `1px solid ${AB}`, fontWeight: 700 }}>
-                  Book
+                  style={{ ...btn, background: intent === 'book' ? '#E8B931' : '#FFF', color: NAVY, border: `1px solid ${intent === 'book' ? '#C99D18' : AB}`, fontWeight: 850, boxShadow: intent === 'book' ? '0 5px 18px rgba(232,185,49,.28)' : 'none' }}>
+                  {intent === 'book' ? 'Book now' : 'Book'}
                 </button>
 
                 <ClassificationGear r={d} dark={false} isAdmin={isAdmin} onChanged={onChanged} />
@@ -5058,6 +5100,7 @@ function DetailModal({ refId, onClose, onAct, onTag, tagging, onStar, onBook, on
                   {hot ? 'Hot' : fav ? 'Saved' : 'Save'}
                 </button>
               </div>
+              {mediaStatus && <div style={{ fontSize: 11, color: '#7A6534', marginTop: 8, fontWeight: 700 }}>{mediaStatus}</div>}
               {d.contact?.canAsk === false && d.contact?.reason && (
                 <div style={{ fontSize: 11, color: '#B08968', marginTop: 8 }}>{d.contact.reason}</div>
               )}
