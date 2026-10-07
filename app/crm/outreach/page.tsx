@@ -273,7 +273,7 @@ function ArgusConsole() {
             <div style={{ fontSize: 15, fontWeight: 700, fontFamily: FM }}>{clock.time} <span style={{ fontSize: 10, color: MUTED, fontFamily: F }}>{clock.date}</span></div>
           </div>
           <div className="outreach-status-card wide">
-            <span>OPEN REVIEW</span><b>{dueReminders.rows.length + rechecks.tasks.length}</b><small>reminders and owner rechecks</small>
+            <RecentOutreachBars runs={summary?.recentRuns || []} />
           </div>
         </div>
       </section>
@@ -355,6 +355,16 @@ function ArgusConsole() {
       </>}
     </div></CrmShell>
   )
+}
+
+function RecentOutreachBars({ runs }: { runs: any[] }) {
+  const max = Math.max(1, ...runs.map(run => Number(run.n) || 0))
+  return <div style={{ width: '100%', minWidth: 190 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span style={{ fontSize: 9, color: FAINT, letterSpacing: '.08em' }}>LAST 3 OUTREACH</span><span style={{ fontSize: 9, color: MUTED }}>SENT</span></div>
+    {!runs.length ? <div style={{ fontSize: 11, color: FAINT, marginTop: 8 }}>No completed runs yet</div> : <div style={{ height: 48, display: 'grid', gridTemplateColumns: `repeat(${runs.length}, minmax(42px, 1fr))`, alignItems: 'end', gap: 8, marginTop: 4 }}>
+      {[...runs].reverse().map((run, index) => { const value=Number(run.n)||0; const sentAt=run.sent_at?new Date(run.sent_at):null; const label=sentAt?new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Malta',day:'2-digit',month:'short'}).format(sentAt):run.scheduled_date; return <div key={run.id||index} title={`${run.session_name} · ${label} · ${value} sent`} style={{height:'100%',display:'grid',gridTemplateRows:'1fr auto',gap:2,minWidth:0}}><div style={{alignSelf:'end',height:`${Math.max(8,Math.round(value/max*30))}px`,borderRadius:'4px 4px 2px 2px',background:`linear-gradient(180deg, ${accentFor(index).a}, ${accentFor(index).a}88)`,display:'flex',alignItems:'flex-start',justifyContent:'center',color:'#fff',fontSize:10,fontWeight:800,paddingTop:1}}>{value}</div><div style={{fontSize:8,color:FAINT,textAlign:'center',whiteSpace:'nowrap'}}>{label}</div></div> })}
+    </div>}
+  </div>
 }
 
 function DueReminderLane({ data }: { data: { rows: DueReminder[]; perAccount: any[] } }) {
