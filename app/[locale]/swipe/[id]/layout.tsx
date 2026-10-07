@@ -16,6 +16,10 @@ function plain(value: string | null | undefined, fallback: string) {
   return text || fallback
 }
 
+function headline(value: string) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+}
+
 export async function generateMetadata({ params }: {
   params: Promise<{ locale: string; id: string }>
 }): Promise<Metadata> {
@@ -33,7 +37,7 @@ export async function generateMetadata({ params }: {
     const property = properties[0]
     if (!property) throw new Error('empty preview')
 
-    const kind = plain(property.propertyType, 'Property')
+    const kind = headline(plain(property.propertyType, 'Property'))
     const town = plain(property.town, 'Malta')
     const ref = plain(property.ref, '')
     const propertyTitle = `${kind} in ${town}${ref ? ` - #${ref}` : ''}`
