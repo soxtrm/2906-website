@@ -128,6 +128,11 @@ html[data-crm-theme="dark"] .crm-content { background: radial-gradient(circle at
 .crm-bottom-nav { display: none; }
 .crm-mobile-island-brand { display: none; }
 .crm-mobile-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding-top: 12px; }
+.crm-mobile-menu-actions { display: flex; gap: 8px; margin-top: 12px; }
+.crm-mobile-menu-actions .crm-button { flex: 1; }
+.crm-mobile-logo { display: none; }
+.inventory-filterbar,.inventory-filter-controls,.inventory-filter-checks{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.inventory-mobile-filter-toggle{display:none}
 .crm-group-workspace { padding: 24px 28px; max-width: 1600px; margin: auto; }
 .crm-group-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
 .crm-group-tabs a { text-decoration: none; padding: 10px 16px; border: 1px solid var(--crm-border); border-radius: 999px; color: var(--crm-muted); font-weight: 600; font-size: 13px; }
@@ -240,15 +245,30 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
 .crm-group-card { line-height: 1.5; }
 @media (max-width: 760px) {
   .crm-sidebar { display: none; }
-  .crm-header { padding: 18px 16px; gap: 10px; }
-  .crm-header p { font-size: 12px; }
-  .crm-header-actions { gap: 5px; }
-  .crm-header-actions .crm-icon-button { width: 38px; height: 38px; min-height: 38px; }
-  .crm-filterbar { padding: 10px 16px; }
-  .crm-content { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-  .crm-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: var(--crm-surface); border-top: 1px solid var(--crm-border); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 100; }
-  .crm-bottom-nav :is(a,button) { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; background: none; border: none; padding: 8px 2px; color: var(--crm-muted); font-size: 10px; text-decoration: none; }
+  .crm-main { padding-top: calc(58px + env(safe-area-inset-top)); }
+  .crm-header { display: none; }
+  .crm-filterbar { position: relative; z-index: 40; padding: 9px 10px; }
+  .crm-content { padding-bottom: env(safe-area-inset-bottom); }
+  .crm-bottom-nav { position: fixed; top: 0; bottom: auto; left: 0; right: 0; display: flex; align-items: stretch; min-height: calc(58px + env(safe-area-inset-top)); background: color-mix(in srgb,var(--crm-surface) 94%,transparent); border-bottom: 1px solid var(--crm-border); border-top: 0; padding: env(safe-area-inset-top) 6px 0; z-index: 130; box-shadow: 0 8px 26px rgba(3,8,18,.14); backdrop-filter: blur(18px); }
+  .crm-bottom-nav :is(a,button) { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content:center; gap: 3px; background: none; border: none; padding: 6px 2px; color: var(--crm-muted); font-size: 9px; text-decoration: none; }
   .crm-bottom-nav [aria-current="page"] { color: var(--crm-accent); font-weight: 700; }
+  .crm-bottom-nav .crm-mobile-logo { display:grid; flex:0 0 48px; padding:5px; place-items:center; border-right:1px solid var(--crm-border); }
+  .crm-mobile-logo img { display:block; width:34px; height:28px; object-fit:contain; filter:brightness(0); }
+  html[data-crm-theme="dark"] .crm-mobile-logo img { filter:none; }
+  .crm-bottom-nav .crm-mobile-add>span { display:grid; width:24px; height:24px; place-items:center; border-radius:8px; background:var(--crm-action); color:var(--crm-inverse); font-size:20px; line-height:1; }
+  .crm-bottom-nav .crm-mobile-add small { font-size:9px; }
+  .inventory-filterbar{width:100%;display:flex;justify-content:space-between;gap:8px}
+  .inventory-filterbar>div[aria-label="Inventory sections"]{flex:1;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .inventory-filterbar>div[aria-label="Inventory sections"] button{padding-inline:5px!important}
+  .inventory-mobile-filter-toggle{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:6px;padding:0 12px;border:1px solid var(--crm-border);border-radius:8px;background:var(--crm-raised);color:var(--crm-text);font-size:11px;font-weight:750}
+  .inventory-mobile-filter-toggle span{display:grid;min-width:19px;height:19px;padding:0 4px;place-items:center;border-radius:999px;background:var(--crm-action);color:var(--crm-inverse);font-size:9px}
+  .inventory-filter-controls{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:2px}
+  .inventory-filter-controls>div:first-child{grid-column:1/-1;max-width:none;width:100%}
+  .inventory-filter-controls select{width:100%;min-width:0;min-height:42px!important}
+  .inventory-filter-checks{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--crm-border);border-radius:10px;overflow:hidden;background:var(--crm-raised)}
+  .inventory-filter-checks label{min-height:42px;padding:8px 10px;border-bottom:1px solid var(--crm-border);color:var(--crm-text)!important}
+  .inventory-filter-checks label:nth-child(odd){border-right:1px solid var(--crm-border)}
+  .inventory-filter-checks input{min-width:16px;width:16px;height:16px}
   .crm-group-workspace { padding: 18px 16px; }
   .crm-group-stats { gap: 7px; }
   .crm-group-stat { padding: 13px 11px; }
@@ -380,4 +400,13 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-booking-gold-live{animation:booking-flare 2.8s ease-in-out infinite}
   @keyframes booking-gold-pulse{0%,100%{filter:brightness(1);box-shadow:0 0 0 1px rgba(255,229,111,.35),0 0 11px rgba(232,185,49,.30)}50%{filter:brightness(1.08);box-shadow:0 0 0 2px rgba(255,229,111,.48),0 0 21px rgba(232,185,49,.52)}}
   @keyframes booking-flare{0%,100%{box-shadow:0 22px 65px rgba(22,29,44,.28),0 0 0 1px rgba(232,185,49,.18),-5px 0 27px rgba(255,142,24,.08)}50%{box-shadow:0 22px 65px rgba(22,29,44,.28),0 0 0 2px rgba(232,185,49,.27),6px -2px 35px rgba(255,142,24,.18)}}
+}
+
+/* Mobile ARGUS uses one quiet top rail. This intentionally supersedes the
+   former animated island variant used by the board. */
+@media(max-width:760px){
+  .crm-mobile-island-workspace .crm-main{position:relative;padding-top:calc(58px + env(safe-area-inset-top))}
+  .crm-mobile-island-workspace .crm-header-island{display:none!important}
+  .crm-mobile-island-workspace .crm-filterbar-island{position:relative!important;z-index:40!important;top:auto!important;left:auto!important;right:auto!important;display:flex!important;width:auto!important;height:auto!important;padding:9px 10px!important;border-bottom:1px solid var(--crm-border)!important;background:var(--crm-surface)!important}
+  .crm-mobile-island-workspace .crm-filterbar-island>div{position:relative!important;width:auto!important;max-width:100%!important}
 }

@@ -27,6 +27,7 @@ function Inventory() {
   const [ownerPanel, setOwnerPanel] = useState<number | null>(null)
   const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false, sublet: false, rental: '' })
   const [inventoryView, setInventoryView] = useState<'live' | 'drafts' | 'all'>('live')
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   // Kev, 2026-09-04: ~50 empty/ref-less listings went out again -- admins
   // need to clear bad inventory in bulk, not one property-detail-page at a
   // time. Reuses the SAME DELETE /properties/:id the single-property page
@@ -92,32 +93,38 @@ function Inventory() {
   const draftRows = rows.filter(p => !p.published)
   const visibleRows = inventoryView === 'live' ? liveRows : inventoryView === 'drafts' ? draftRows : rows
   const changeInventoryView = (next: 'live' | 'drafts' | 'all') => { setInventoryView(next); setSelected(new Set()) }
+  const activeFilterCount = [f.rental, f.town, f.beds, f.price, f.status, f.viewing, f.agent, f.only_mine, f.exclusive, f.sublet, f.only_favourites].filter(Boolean).length
+
+  const filterControls = (
+    <div className="inventory-filter-controls">
+      <RentalTabs value={f.rental} onChange={v => set('rental', v)} dark />
+      <select style={sel} value={f.town} onChange={e => set('town', e.target.value)}><option value="">Location</option>{locations.map(l => <option key={l} value={l}>{l}</option>)}</select>
+      <select style={sel} value={f.beds} onChange={e => set('beds', e.target.value)}><option value="">Bedrooms</option>{[1, 2, 3, 4, 5].map(b => <option key={b} value={b}>{b} bed</option>)}</select>
+      <select style={sel} value={f.price} onChange={e => set('price', e.target.value)}><option value="">Price</option><option value="-1000">≤ €1,000</option><option value="1000-2000">€1k–2k</option><option value="2000-3500">€2k–3.5k</option><option value="3500-">€3.5k+</option></select>
+      <select style={sel} value={f.status} onChange={e => set('status', e.target.value)}><option value="">Status</option><option value="available">Available</option><option value="soon_available">Soon</option><option value="rented">Rented</option><option value="reserved">Reserved</option></select>
+      <select style={sel} value={f.viewing} onChange={e => set('viewing', e.target.value)}><option value="">Viewing</option><option value="none">None</option><option value="requested">Requested</option><option value="scheduled">Scheduled</option><option value="done">Done</option></select>
+      <select style={sel} value={f.agent} onChange={e => set('agent', e.target.value)}><option value="">Agent</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name || a.username}</option>)}</select>
+      <div className="inventory-filter-checks">
+        <label style={chk}><input type="checkbox" checked={f.only_mine} onChange={e => set('only_mine', e.target.checked)} style={{ accentColor: A }} /> Only mine</label>
+        <label style={chk}><input type="checkbox" checked={f.exclusive} onChange={e => set('exclusive', e.target.checked)} style={{ accentColor: A }} /> Exclusive</label>
+        <label style={chk}><input type="checkbox" checked={f.sublet} onChange={e => set('sublet', e.target.checked)} style={{ accentColor: A }} /> Subletting</label>
+        <label style={chk}><input type="checkbox" checked={f.only_favourites} onChange={e => set('only_favourites', e.target.checked)} style={{ accentColor: A }} /> ♥ Favourites</label>
+      </div>
+    </div>
+  )
 
   const filterBar = (
-    <>
+    <div className="inventory-filterbar">
       <div style={{ display: 'inline-flex', padding: 3, gap: 3, borderRadius: 9, border: `1px solid ${DBORDER}`, background: DTRAY }} aria-label="Inventory sections">
         {([['live', 'Live', liveRows.length], ['drafts', 'Drafts', draftRows.length], ['all', 'All', rows.length]] as const).map(([key, label, count]) => {
           const active = inventoryView === key
           return <button key={key} type="button" aria-pressed={active} onClick={() => changeInventoryView(key)} style={{ border: 0, borderRadius: 6, padding: '5px 9px', background: active ? A : 'transparent', color: active ? '#151C2C' : DTEXT_DIM, fontFamily: F, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label} <span style={{ opacity: .72 }}>{count}</span></button>
         })}
       </div>
-      <RentalTabs value={f.rental} onChange={v => set('rental', v)} dark />
-      <select style={sel} value={f.town} onChange={e => set('town', e.target.value)}><option value="">Location</option>{locations.map(l => <option key={l} value={l}>{l}</option>)}</select>
-      <select style={sel} value={f.beds} onChange={e => set('beds', e.target.value)}><option value="">Bedrooms</option>{[1, 2, 3, 4, 5].map(b => <option key={b} value={b}>{b} bed</option>)}</select>
-      <select style={sel} value={f.price} onChange={e => set('price', e.target.value)}><option value="">Price</option><option value="-1000">≤ €1,000</option><option value="1000-2000">€1k–2k</option><option value="2000-3500">€2k–3.5k</option><option value="3500-">€3.5k+</option></select>
-      <select style={sel} value={f.status} onChange={e => set('status', e.target.value)}><option value="">Status</option><option value="available">Available</option><option value="soon_available">Soon</option><option value="rented">Rented</option><option value="reserved">Reserved</option></select>
-      {!isMobile && <select style={sel} value={f.viewing} onChange={e => set('viewing', e.target.value)}><option value="">Viewing</option><option value="none">None</option><option value="requested">Requested</option><option value="scheduled">Scheduled</option><option value="done">Done</option></select>}
-      {!isMobile && <select style={sel} value={f.agent} onChange={e => set('agent', e.target.value)}><option value="">Agent</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name || a.username}</option>)}</select>}
-      {!isMobile && (
-        <>
-          <label style={chk}><input type="checkbox" checked={f.only_mine} onChange={e => set('only_mine', e.target.checked)} style={{ accentColor: A }} /> Only mine</label>
-          <label style={chk}><input type="checkbox" checked={f.exclusive} onChange={e => set('exclusive', e.target.checked)} style={{ accentColor: A }} /> Exclusive</label>
-          <label style={chk}><input type="checkbox" checked={f.sublet} onChange={e => set('sublet', e.target.checked)} style={{ accentColor: A }} /> Subletting</label>
-          <label style={chk}><input type="checkbox" checked={f.only_favourites} onChange={e => set('only_favourites', e.target.checked)} style={{ accentColor: A }} /> ♥ Only favourites</label>
-        </>
-      )}
-      {isMobile && <label style={chk}><input type="checkbox" checked={f.only_favourites} onChange={e => set('only_favourites', e.target.checked)} style={{ accentColor: A }} /> ♥</label>}
-    </>
+      {isMobile
+        ? <><button className="inventory-mobile-filter-toggle" type="button" onClick={() => setMobileFiltersOpen(v => !v)} aria-expanded={mobileFiltersOpen}>Filters{activeFilterCount > 0 && <span>{activeFilterCount}</span>}</button>{mobileFiltersOpen && filterControls}</>
+        : filterControls}
+    </div>
   )
 
   return (

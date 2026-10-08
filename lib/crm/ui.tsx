@@ -516,12 +516,17 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       <main id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation">
-      {items.filter(i => !i.disabled).slice(0, 4).map(item => { const Icon = NAV_ICONS[item.key]; return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined}><Icon size={20} aria-hidden /><span>{item.label}</span></Link> })}
+      <Link className="crm-mobile-logo" href={crmPath('/', pathname)} aria-label="Argus dashboard"><img src="/argus-logo.png" alt="Argus" /></Link>
+      {items.filter(i => !i.disabled).slice(0, 3).map(item => { const Icon = NAV_ICONS[item.key]; return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined}><Icon size={19} aria-hidden /><span>{item.label}</span></Link> })}
+      {onAdd && <button className="crm-mobile-add" onClick={onAdd} aria-label={`Add from ${title}`}><span aria-hidden="true">+</span><small>Add</small></button>}
       <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation"><Menu size={20} aria-hidden /><span>More</span></button>
     </nav>
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="crm-text" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', borderRadius: 24, maxHeight: '85dvh', overflowY: 'auto' }}>
       <DialogTitle>Workspace</DialogTitle><nav className="crm-mobile-menu" aria-label="All navigation">{items.map(navItem)}</nav>
-      <button className="crm-button" onClick={logout}><LogOut size={16} />Sign out</button>
+      <div className="crm-mobile-menu-actions">
+        <button className="crm-button" onClick={() => toggleTheme(dark)}>{dark ? <Sun size={16} /> : <Moon size={16} />}{dark ? 'Light mode' : 'Dark mode'}</button>
+        <button className="crm-button" onClick={logout}><LogOut size={16} />Sign out</button>
+      </div>
     </DialogContent></Dialog>
   </div>
 }
