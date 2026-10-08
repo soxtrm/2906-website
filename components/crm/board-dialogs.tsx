@@ -448,10 +448,17 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
 // ════════════════════════════════════════════════════════════════════════════
 type ChatMessage = { id: number; direction: 'agent_to_owner' | 'owner_to_agent'; text: string; at: string; redacted?: boolean }
 type ChatEvent = { kind: 'av' | 'ask' | 'book'; at: string }
+type PropertyPresence = {
+  state: 'idle' | 'recent' | 'super_active'
+  agentName?: string
+  lastActivityAt?: string
+  ageSeconds?: number
+}
 type ChatState = {
   open: boolean; status?: string; ownerLabel?: string; persona?: string
   messages: ChatMessage[]; events: ChatEvent[]; otherActivity: ChatEvent[]
   privateDeviceChat?: boolean; preferenceRules?: string[]
+  presence?: PropertyPresence
   expiresHours?: number
 }
 type TimelineItem =
@@ -567,6 +574,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
   }
 
   const closed = state?.open === false && state?.messages && state.messages.length > 0
+  const chatBusy = state?.presence?.state === 'super_active'
 
   // Messages + this agent's own events, one chronological timeline. The
   // backend keeps them as two arrays (different tables, no shared shape) —
@@ -716,6 +724,13 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
           </div>
         )}
 
+        {chatBusy && (
+          <div className="mx-4 mt-3 shrink-0 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3.5 py-3 text-sm text-amber-50 sm:mx-5" role="status">
+            <div className="font-semibold">{state?.presence?.agentName || 'Another agent'} is actively chatting about this property.</div>
+            <p className="mt-1 text-xs leading-relaxed text-amber-50/75">Free-form chat unlocks after two quiet minutes. Ask and Book remain available.</p>
+          </div>
+        )}
+
         {/* ── timeline: messages + this agent's own av/ask/book events ─────────── */}
         <div
           ref={scrollRef}
@@ -786,11 +801,11 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
                         pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
           <input ref={imageInput} type="file" accept="image/*" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
           <input ref={fileInput} type="file" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
-          <button type="button" onClick={() => imageInput.current?.click()} disabled={closed || uploading} aria-label="Add images" title="Add images"
+          <button type="button" onClick={() => imageInput.current?.click()} disabled={closed || uploading || chatBusy} aria-label="Add images" title="Add images"
             className="w-10 h-10 rounded-full border border-white/10 bg-white/[0.05] text-white/60 flex items-center justify-center shrink-0 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-30">
             <ImagePlus className="w-4 h-4" />
           </button>
-          <button type="button" onClick={() => fileInput.current?.click()} disabled={closed || uploading} aria-label="Add files" title="Add files"
+          <button type="button" onClick={() => fileInput.current?.click()} disabled={closed || uploading || chatBusy} aria-label="Add files" title="Add files"
             className="w-10 h-10 rounded-full border border-white/10 bg-white/[0.05] text-white/60 flex items-center justify-center shrink-0 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-30">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
           </button>
@@ -799,15 +814,15 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
             rows={1}
-            disabled={closed}
-            placeholder={closed ? 'This conversation has closed' : 'Type a message — sent to the owner as-is…'}
+            disabled={closed || chatBusy}
+            placeholder={closed ? 'This conversation has closed' : chatBusy ? 'Another agent is chatting — Ask and Book still work' : 'Type a message — sent to the owner as-is…'}
             className="min-h-11 flex-1 resize-none rounded-2xl border border-white/15 bg-white/[0.07] px-4 py-3 text-base text-white
                        placeholder:text-white/55 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/40
                        disabled:opacity-40 max-h-24"
           />
           <button
             onClick={send}
-            disabled={!draft.trim() || sending || closed}
+            disabled={!draft.trim() || sending || closed || chatBusy}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gold text-navy
                        disabled:opacity-25 disabled:cursor-not-allowed hover:bg-gold-light transition-colors"
             aria-label="Send"

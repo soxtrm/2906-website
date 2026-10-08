@@ -698,7 +698,6 @@ function Board() {
 
   useEffect(() => {
     let alive = true
-    setLoading(true)
     const q = new URLSearchParams()
     if (f.beds.length) q.set('beds', f.beds.join(','))
     if (f.baths.length) q.set('baths', f.baths.join(','))
@@ -718,17 +717,25 @@ function Board() {
       : view === 'favourites'
       ? 'schedule-board/favourites'
       : `schedule-board/listings?${q.toString()}`
-    crmFetch(path)
-      .then(d => {
+    async function load(silent = false) {
+      if (!silent) setLoading(true)
+      try {
+        const d = await crmFetch(path)
         if (!alive) return
         // canonical localities from the backend FIRST, so the pin / filter-chip / label lookups
         // below (townKey, TOWNS[k], townLabel) resolve every listing the backend can resolve
         registerCanonicalLocalities(d.listings)
-        setRows(d.listings || []); setErr(null)
-      })
-      .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
-      .finally(() => { if (alive) setLoading(false) })
-    return () => { alive = false }
+        setRows(d.listings || [])
+        setErr(null)
+      } catch (e: any) {
+        if (alive && !silent) setErr(e?.message || 'Could not load listings')
+      } finally {
+        if (alive && !silent) setLoading(false)
+      }
+    }
+    load()
+    const timer = window.setInterval(() => load(true), 15_000)
+    return () => { alive = false; window.clearInterval(timer) }
   }, [f.beds, f.baths, f.min, f.max, f.type, sort, view, onlyConfirmed, avail, refreshTick])
 
   // Deep link from the Agent Workspace dashboard's per-listing action buttons:
@@ -3881,15 +3888,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const latestTouch = listingTouch(r)
   const isFreshlyUpdated = !!latestTouch && (Date.now() - Date.parse(latestTouch.at) < 48 * 3600_000)
 
-  // Cycle the photos of visible cards automatically. Off-screen cards and a
-  // background browser tab keep no interval alive; reduced-motion keeps the
-  // cover image. A short ref-based stagger avoids every card flipping at once.
+  // Cycle photos only on precise-pointer desktops. Touch devices keep the
+  // cover image stable: dozens of card timers and image decodes made mobile
+  // scrolling jumpy and consumed bandwidth without an explicit user action.
   const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
   const photoStageRef = useRef<HTMLDivElement>(null)
   const photoCount = (r.images || []).length
   useEffect(() => {
     const stage = photoStageRef.current
-    if (!stage || photoCount < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!stage || photoCount < 2 ||
+        !window.matchMedia('(hover: hover) and (pointer: fine)').matches ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setHoverPhotoIdx(0)
+      return
+    }
     let interval: ReturnType<typeof setInterval> | null = null
     let delay: ReturnType<typeof setTimeout> | null = null
     let visible = false
