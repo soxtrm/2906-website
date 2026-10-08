@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Zap, Users, MessageSquare, Clock3, ShieldCheck, Radio, Layers } from 'lucide-react'
 import './outreach-console.css'
 import { crmGet, crmJson } from '@/lib/crm/api'
+import { normalizeOutreachCountDraft } from '@/lib/crm/outreach-count'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 
 // ── ARGUS / NEON design tokens ───────────────────────────────────────────────
@@ -517,6 +518,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [msgOpen, setMsgOpen] = useState(true)
   const [msgDraft, setMsgDraft] = useState('')
   const [count, setCount] = useState(OUTREACH_STARTER_BATCH_MAX)
+  const [countDraft, setCountDraft] = useState(String(OUTREACH_STARTER_BATCH_MAX))
   const [armTime, setArmTime] = useState('14:15')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
@@ -549,6 +551,13 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   }, [plans, activeLabel])
 
   const activePlan = plans?.find(p => p.label === activeLabel) || null
+
+  function commitCountDraft() {
+    const validated = normalizeOutreachCountDraft(countDraft, count, accountListMax)
+    setCount(validated)
+    setCountDraft(String(validated))
+    return validated
+  }
 
   // Kev, 2026-09-11 (real bug: "sieht man die Liste aber nicht" — Create
   // List updated the STATS but never the textarea, because this effect only
@@ -601,7 +610,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // `count` total, never duplicating what's already there.
   async function generate(topUp = false, overrideCount?: number) {
     if (!activePlan) return
-    const n = Math.min(accountListMax, overrideCount ?? count)
+    const n = overrideCount == null ? commitCountDraft() : Math.min(accountListMax, overrideCount)
     setBusy(true); setNote('')
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: n, topUp })
@@ -639,6 +648,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     const seedText = msgDraft.trim() || activePlan.message_template || last?.text || ''
 
     setCount(seedCount)
+    setCountDraft(String(seedCount))
     if (seedText) setMsgDraft(seedText)
     setMsgOpen(true)
 
@@ -838,7 +848,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           </button>
           <button disabled={busy} onClick={savePastedList} style={btnGhost}>Save edits</button>
           <button disabled={busy} onClick={() => generate(false)} title="Creates a fresh list of exactly the target size. Existing unsent entries are released back to the pool." style={{ ...btnGhost, flex: '1 1 auto' }}>{(s?.total || 0) > 0 ? `Replace with ${Math.min(count, accountListMax)}` : `+ Create ${Math.min(count, accountListMax)}`}</button>
-          <input aria-label="Target contacts in list" type="number" min={1} max={accountListMax} value={Math.min(count, accountListMax)} onChange={e => setCount(Math.max(1, Math.min(accountListMax, parseInt(e.target.value) || OUTREACH_STARTER_BATCH_MAX)))} style={inputSmall} />
+          <input aria-label="Target contacts in list" type="text" inputMode="numeric" pattern="[0-9]*" value={countDraft} onChange={e => setCountDraft(e.target.value)} onBlur={commitCountDraft} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitCountDraft(); e.currentTarget.blur() } }} style={inputSmall} />
           <span style={{ fontSize: 9, color: FAINT }}>Target · max {accountListMax}</span>
           <button disabled={busy || (s?.eligible || 0) >= Math.min(count, accountListMax)} onClick={() => generate(true)} title="Keeps the current queue and adds only enough new owners to reach the target." style={btnGhost}>Top up to {Math.min(count, accountListMax)}</button>
           <button disabled={busy} onClick={clearList} title="Removes everyone from this queue and releases their reservation." style={btnGhost}>Clear</button>
