@@ -541,7 +541,10 @@ function Board() {
         ? { ...DEFAULT_BOARD_PREFERENCES, ...parsed, discoveryVersion: 2 as const, collectionVersion: 1 as const, discoveryKeys: migratedDiscoveryKeys, collectionOrder: migratedCollectionOrder }
         : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
       setBoardPreferences(next)
-      setMapOpen(next.mapVisible)
+      // Loading the Google map, its script and all markers alongside the long
+      // card list is the largest mobile startup cost. Keep a saved desktop
+      // preference, but require an explicit tap before mounting it on a phone.
+      setMapOpen(isMobile ? false : next.mapVisible)
       if (!params.get('view')) {
         setUpdatesMode(next.defaultWorkspace === 'updates')
         setCollectionsMode(next.defaultWorkspace === 'collections')
@@ -564,9 +567,10 @@ function Board() {
   }, [])
 
   const resetBoardPreferences = useCallback(() => {
-    setBoardPreferences(DEFAULT_BOARD_PREFERENCES)
-    setMapOpen(DEFAULT_BOARD_PREFERENCES.mapVisible)
-  }, [])
+    const next = { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
+    setBoardPreferences(next)
+    setMapOpen(next.mapVisible)
+  }, [isMobile])
 
   const showToast = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
     setToast({ kind, text })
@@ -1433,6 +1437,19 @@ function Board() {
       mineCount={mineCount}
       loading={loading}
       dark
+      mobileMeta={view === 'board' && !collectionsMode ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          {([['active', 'Active'], ['future', '🕓']] as const).map(([h, label]) => {
+            const on = horizon === h
+            return <button key={h} type="button" onClick={() => setHorizon(h)} aria-pressed={on} title={h === 'active' ? 'Active listings' : 'Available in more than 3 months'} style={{
+              border: `1px solid ${on ? DBORDER : 'transparent'}`, borderRadius: 999,
+              background: on ? (h === 'future' ? 'rgba(92,100,120,.28)' : GREEN_SOFT) : 'transparent',
+              color: on ? DTEXT_DIM : DTEXT_FAINT, minHeight: 28, padding: h === 'future' ? '3px 7px' : '3px 9px',
+              fontSize: 10, fontWeight: on ? 750 : 550, whiteSpace: 'nowrap',
+            }}>{label}{h === 'future' && futureCount > 0 && <span style={{ marginLeft: 3, fontFamily: FM }}>{futureCount}</span>}</button>
+          })}
+        </div>
+      ) : undefined}
       extra={
         <>
           {/* Only listings somebody has actually stood behind, with a timestamp
@@ -1623,7 +1640,7 @@ function Board() {
             a separate fetch, and only means anything on that tab. Defaults
             to Active so a listing 6 months out is never mixed into the
             normal board by accident. */}
-        {view === 'board' && !collectionsMode && (
+        {view === 'board' && !collectionsMode && !isMobile && (
           <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
             {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
               const on = horizon === h
@@ -3892,48 +3909,21 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // cover image stable: dozens of card timers and image decodes made mobile
   // scrolling jumpy and consumed bandwidth without an explicit user action.
   const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
-  const photoStageRef = useRef<HTMLDivElement>(null)
+  const photoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const photoCount = (r.images || []).length
-  useEffect(() => {
-    const stage = photoStageRef.current
-    if (!stage || photoCount < 2 ||
+  const stopPhotoHover = useCallback(() => {
+    if (photoTimerRef.current) clearInterval(photoTimerRef.current)
+    photoTimerRef.current = null
+    setHoverPhotoIdx(0)
+  }, [])
+  const startPhotoHover = useCallback(() => {
+    if (photoCount < 2 || photoTimerRef.current ||
         !window.matchMedia('(hover: hover) and (pointer: fine)').matches ||
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setHoverPhotoIdx(0)
-      return
-    }
-    let interval: ReturnType<typeof setInterval> | null = null
-    let delay: ReturnType<typeof setTimeout> | null = null
-    let visible = false
-    const stop = () => {
-      if (delay) clearTimeout(delay)
-      if (interval) clearInterval(interval)
-      delay = null
-      interval = null
-    }
-    const start = () => {
-      stop()
-      if (!visible || document.hidden) return
-      const stagger = 450 + [...String(r.ref)].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 1250
-      delay = setTimeout(() => {
-        setHoverPhotoIdx(index => (index + 1) % photoCount)
-        interval = setInterval(() => setHoverPhotoIdx(index => (index + 1) % photoCount), 3600)
-      }, stagger)
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting
-      if (visible) start()
-      else stop()
-    }, { threshold: 0.25 })
-    const onVisibility = () => document.hidden ? stop() : start()
-    observer.observe(stage)
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => {
-      stop()
-      observer.disconnect()
-      document.removeEventListener('visibilitychange', onVisibility)
-    }
-  }, [photoCount, r.ref])
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    setHoverPhotoIdx(index => (index + 1) % photoCount)
+    photoTimerRef.current = setInterval(() => setHoverPhotoIdx(index => (index + 1) % photoCount), 1800)
+  }, [photoCount])
+  useEffect(() => stopPhotoHover, [stopPhotoHover])
 
   // First four photos as thumbnails, "+N" for the rest — matches the count
   // badge on the photo (4 shown + N more = imageCount).
@@ -3947,6 +3937,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
       // The ref on the DOM node, so a test can assert "this listing's card shows
       // that icon" instead of matching on position in the grid.
       data-ref={r.ref}
+      onMouseEnter={startPhotoHover}
+      onMouseLeave={stopPhotoHover}
       style={{
         background: DCARD,
         borderRadius: isMobile ? 16 : 20,
@@ -3991,7 +3983,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           matter how many columns fit. `objectFit: cover` still crops rather
           than distorts, so nothing is squashed. */}
       <div
-        ref={photoStageRef}
         onClick={onOpen}
         style={{
           cursor: 'pointer', position: 'relative',
@@ -4003,7 +3994,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
-          ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 50%', display: 'block' }} />
+          ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`${townLabel(r.town)} property`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 50%', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
 
         {/* Kev's redesign brief (2026-08-22): a real scrim instead of relying on
@@ -4125,28 +4116,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
                 </svg>
               : <PlusGlyph color="#FFF" size={14} />}
           </button>
-        )}
-
-        {!isMobile && (
-          <span title={`Reference ${r.ref}`} style={{
-            position: 'absolute', bottom: 8, left: canSelect ? 42 : 8,
-            borderRadius: 999, padding: '4px 7px', background: 'rgba(7,12,22,.72)',
-            border: '1px solid rgba(255,255,255,.18)', color: '#fff',
-            fontFamily: FM, fontSize: 8, fontWeight: 750, letterSpacing: '.02em',
-            backdropFilter: 'blur(8px)',
-          }}>#{r.ref}</span>
-        )}
-
-        {isMobile && (
-          <span style={{
-            position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
-            maxWidth: 88, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            borderRadius: 999, padding: '3px 7px', background: 'rgba(7,12,22,.72)',
-            color: '#fff', fontFamily: FM, fontSize: 8.5, letterSpacing: '.03em',
-            backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,.16)',
-          }}>
-            <strong>#{r.ref}</strong>
-          </span>
         )}
 
         {/* Dashboard photo upload (Kev, 2026-09-02) — own listing or admin

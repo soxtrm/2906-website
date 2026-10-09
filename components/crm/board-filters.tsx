@@ -123,7 +123,7 @@ function Dropdown({ id, label, active, open, onToggle, children }: {
   )
 }
 
-export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark }: {
+export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, mobileMeta }: {
   value: BoardFilterValue
   onChange: (patch: Partial<BoardFilterValue>) => void
   onReset: () => void
@@ -136,6 +136,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
    * on the dark shell that's near-black navy, so it needs light text instead
    * of the public site's navy-on-white default or it reads as invisible. */
   dark?: boolean
+  /** Compact board controls rendered beside Filters on phones. */
+  mobileMeta?: React.ReactNode
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -210,29 +212,34 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       {/* Mobile: one toggle, exactly like the public listings page. */}
       {/* min-h-[38px]: below ~30px this is a miss on a phone, and this is the
           one control that gates every other filter. */}
-      <button
-        type="button"
-        onClick={() => setMobileOpen(o => !o)}
-        className={cn(
-          'board-filter-toggle lg:hidden flex items-center gap-2 text-sm font-medium min-h-[42px] transition-all duration-200',
-          compactMobile
-            ? 'w-auto rounded-full border border-white/15 bg-[#10182a]/95 px-3 shadow-[0_10px_30px_rgba(0,0,0,.42)] backdrop-blur-xl'
-            : 'w-full py-1',
-          dark ? 'text-[#EDEAE1]' : 'text-navy',
-        )}
-        aria-label={mobileOpen ? 'Close filters' : 'Open filters'}
-      >
-        <SlidersHorizontal className="w-4 h-4" />
-        <span className={cn(compactMobile && 'sr-only')}>Filters</span>
-        {activeCount > 0 && (
-          <span className="bg-gold text-navy text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
-            {activeCount}
-          </span>
-        )}
-        <span className={cn('ml-auto text-xs font-normal tabular-nums', compactMobile && 'hidden', dark ? 'text-[#EDEAE1]/40' : 'text-navy/40')}>
-          {loading ? '…' : `${count} listing${count === 1 ? '' : 's'}`}
-        </span>
-      </button>
+      <div className={cn(
+        'board-filter-mobile-row lg:hidden flex min-h-[42px] items-center gap-2 transition-all duration-200',
+        compactMobile && 'w-auto rounded-full border border-white/15 bg-[#10182a]/95 px-3 shadow-[0_10px_30px_rgba(0,0,0,.42)] backdrop-blur-xl',
+      )}>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(o => !o)}
+          className={cn(
+            'board-filter-toggle flex min-w-0 flex-1 items-center gap-2 py-1 text-sm font-medium',
+            dark ? 'text-[#EDEAE1]' : 'text-navy',
+          )}
+          aria-label={mobileOpen ? 'Close filters' : 'Open filters'}
+        >
+          <SlidersHorizontal className="w-4 h-4 shrink-0" />
+          <span className={cn(compactMobile && 'sr-only')}>Filters</span>
+          {activeCount > 0 && (
+            <span className="bg-gold text-navy text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
+              {activeCount}
+            </span>
+          )}
+          {!mobileMeta && (
+            <span className={cn('ml-auto text-xs font-normal tabular-nums', compactMobile && 'hidden', dark ? 'text-[#EDEAE1]/40' : 'text-navy/40')}>
+              {loading ? '…' : `${count} listing${count === 1 ? '' : 's'}`}
+            </span>
+          )}
+        </button>
+        {mobileMeta && !compactMobile && <div className="board-filter-mobile-meta">{mobileMeta}</div>}
+      </div>
 
       <div className={cn(
         'board-filter-panel flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-3 w-full',
