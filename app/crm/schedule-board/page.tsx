@@ -504,11 +504,10 @@ function Board() {
   const [agentRequestGroups, setAgentRequestGroups] = useState<AgentRequestGroup[]>([])
   const [agentRequestsLoading, setAgentRequestsLoading] = useState(false)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  // Collapsible: the map was permanently taking ~420px above the cards, and a
-  // plain scroll over it used to zoom instead of moving the page (fixed via
-  // gestureHandling below). Open by default so existing behaviour is
-  // unsurprising; agents who only use the town chips can now hide it.
-  const [mapOpen, setMapOpen] = useState(true)
+  // Start unmounted. The saved desktop preference is applied after mount;
+  // phones never start the Google script or marker work until the map button
+  // is explicitly tapped.
+  const [mapOpen, setMapOpen] = useState(false)
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
   const [updatesMode, setUpdatesMode] = useState(false)
@@ -525,6 +524,7 @@ function Board() {
 
   useEffect(() => {
     try {
+      const mobileNow = window.matchMedia('(max-width: 760px)').matches
       const saved = window.localStorage.getItem(BOARD_PREFERENCES_KEY)
       const parsed = saved ? JSON.parse(saved) : null
       const migratedDiscoveryKeys = parsed?.discoveryVersion === 2 && Array.isArray(parsed.discoveryKeys)
@@ -539,12 +539,12 @@ function Board() {
       ]
       const next = parsed
         ? { ...DEFAULT_BOARD_PREFERENCES, ...parsed, discoveryVersion: 2 as const, collectionVersion: 1 as const, discoveryKeys: migratedDiscoveryKeys, collectionOrder: migratedCollectionOrder }
-        : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
+        : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !mobileNow }
       setBoardPreferences(next)
       // Loading the Google map, its script and all markers alongside the long
       // card list is the largest mobile startup cost. Keep a saved desktop
       // preference, but require an explicit tap before mounting it on a phone.
-      setMapOpen(isMobile ? false : next.mapVisible)
+      setMapOpen(mobileNow ? false : next.mapVisible)
       if (!params.get('view')) {
         setUpdatesMode(next.defaultWorkspace === 'updates')
         setCollectionsMode(next.defaultWorkspace === 'collections')
@@ -1437,19 +1437,6 @@ function Board() {
       mineCount={mineCount}
       loading={loading}
       dark
-      mobileMeta={view === 'board' && !collectionsMode ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          {([['active', 'Active'], ['future', '🕓']] as const).map(([h, label]) => {
-            const on = horizon === h
-            return <button key={h} type="button" onClick={() => setHorizon(h)} aria-pressed={on} title={h === 'active' ? 'Active listings' : 'Available in more than 3 months'} style={{
-              border: `1px solid ${on ? DBORDER : 'transparent'}`, borderRadius: 999,
-              background: on ? (h === 'future' ? 'rgba(92,100,120,.28)' : GREEN_SOFT) : 'transparent',
-              color: on ? DTEXT_DIM : DTEXT_FAINT, minHeight: 28, padding: h === 'future' ? '3px 7px' : '3px 9px',
-              fontSize: 10, fontWeight: on ? 750 : 550, whiteSpace: 'nowrap',
-            }}>{label}{h === 'future' && futureCount > 0 && <span style={{ marginLeft: 3, fontFamily: FM }}>{futureCount}</span>}</button>
-          })}
-        </div>
-      ) : undefined}
       extra={
         <>
           {/* Only listings somebody has actually stood behind, with a timestamp
@@ -1472,6 +1459,7 @@ function Board() {
           {view === 'board' && (
             <div className="relative">
               <select
+                id="board-available-from"
                 value={avail}
                 onChange={e => setAvail(e.target.value)}
                 title="Filter by when the property becomes free"
@@ -1560,6 +1548,42 @@ function Board() {
     >
       <div style={{ padding: isMobile ? 9 : 22 }}>
         {err && <Notice text={err} />}
+
+        {!updatesMode && view === 'board' && !collectionsMode && isMobile && (
+          <section className="argus-mobile-top-deck" aria-label="Board shortcuts">
+            <div className="argus-mobile-village-rail" aria-label="Listing horizon and villages" onTouchMove={() => mapOpen && updateBoardPreference('mapVisible', false)}>
+              {([['active', 'Active'], ['future', '🕓 +3m']] as const).map(([key, label]) => (
+                <button className="is-horizon" key={key} type="button" aria-pressed={horizon === key} onClick={() => setHorizon(key)}>
+                  {label}{key === 'future' && futureCount > 0 ? <small>{futureCount}</small> : null}
+                </button>
+              ))}
+              {boardPreferences.showTownFilters && townOptions.map(t => {
+                  const on = f.towns.includes(t.key)
+                  return <button key={t.key} type="button" aria-pressed={on} onClick={() => toggleTown(t.key)}>
+                    {t.label}<small>{t.n}</small>
+                  </button>
+                })}
+            </div>
+            <div className="argus-mobile-discovery-row">
+              <button className="argus-mobile-map-button" type="button" aria-expanded={mapOpen} onClick={() => updateBoardPreference('mapVisible', !mapOpen)}>
+                <MapPinned size={18} aria-hidden /><span>{mapOpen ? 'Close map' : 'Map'}</span>
+              </button>
+              <div className="argus-mobile-discovery-rail" aria-label="Quick property collections" onTouchMove={() => mapOpen && updateBoardPreference('mapVisible', false)}>
+                {DISCOVERY_ITEMS.filter(item => boardPreferences.discoveryKeys.includes(item.key)).map(item => {
+                  const Icon = item.icon
+                  const on = discovery === item.key
+                  return <button key={item.key} type="button" aria-pressed={on} onClick={() => setDiscovery(current => current === item.key ? null : item.key)}>
+                    <Icon size={12} aria-hidden />{item.label}
+                  </button>
+                })}
+              </div>
+            </div>
+            {mapOpen && <div className="argus-mobile-map-stage"><MapPanel
+              items={visible} rect={rect} onRect={setRect} circ={circ} onCirc={setCirc}
+              onMarkerClick={onMarkerClick} selectedTowns={f.towns} isMobile
+            /></div>}
+          </section>
+        )}
 
         {/* Two primary workspaces, then compact utility views. Rented stays
             available for restoring a listing without competing with daily work. */}
@@ -1662,7 +1686,7 @@ function Board() {
           </div>
         )}
 
-        {view === 'board' && !collectionsMode && (
+        {view === 'board' && !collectionsMode && !isMobile && (
           <div aria-label="Quick property collections" style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', padding: '1px 1px 12px', marginBottom: 2, scrollbarWidth: 'none' }}>
             {DISCOVERY_ITEMS.filter(item => boardPreferences.discoveryKeys.includes(item.key)).map(item => {
               const Icon = item.icon
@@ -1832,7 +1856,7 @@ function Board() {
         </div>
 
         {/* villages */}
-        {boardPreferences.showTownFilters && townOptions.length > 0 && (
+        {!isMobile && boardPreferences.showTownFilters && townOptions.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 5 : 0, marginBottom: 14, scrollbarWidth: 'none' }}>
             {townOptions.map(t => {
               const on = f.towns.includes(t.key)
@@ -1851,7 +1875,7 @@ function Board() {
           </div>
         )}
 
-        <button
+        {!isMobile && <button
           onClick={() => updateBoardPreference('mapVisible', !mapOpen)}
           style={{
             ...chip, marginBottom: mapOpen ? 8 : 14, background: DCARD,
@@ -1859,9 +1883,9 @@ function Board() {
           }}
         >
           {mapOpen ? '▾ Hide map' : '▸ Show map'}
-        </button>
+        </button>}
 
-        {mapOpen && <MapPanel
+        {!isMobile && mapOpen && <MapPanel
           items={visible}
           rect={rect}
           onRect={setRect}
@@ -4071,27 +4095,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </span>
         )}
 
-        {/* Responsible agent stays on the photo. The age is grouped beneath
-            the reference instead of floating over the property image. */}
-        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {preferences.showAgentNames && r.listedBy.displayName && (
-            <>
-            {latestTouch && <span title={new Date(latestTouch.at).toLocaleString('en-GB')} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 2, padding: '3px 6px',
-              borderRadius: 999, background: 'rgba(7,12,22,.78)', border: '1px solid rgba(255,255,255,.2)',
-              color: '#fff', fontSize: 8, fontWeight: 800, backdropFilter: 'blur(8px)',
-            }}><Clock3 size={9} />{compactAge(latestTouch.at)}</span>}
-            <span style={{
-              background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
-              padding: '3px 7px', borderRadius: 999, whiteSpace: 'nowrap',
-              display: 'inline-flex', alignItems: 'center',
-            }}>
-              {r.listedBy.displayName}
-            </span>
-            </>
-          )}
-        </div>
-
         {/* Tag — batch pick, bottom-left. Same action as before
             (Board():toggleSelect); a "+" glyph now instead of the person icon,
             per the mockup — picking still turns it into a check. */}
@@ -4170,8 +4173,15 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             <RentalModeBadges modes={r.rentalModes} availableUntil={r.availableUntil} />
 
           </div>
-          <div style={{ fontFamily: FM, fontSize: isMobile ? 15 : 19, fontWeight: 500, color: DTEXT, letterSpacing: '-0.03em', flexShrink: 0, lineHeight: 1.1 }}>
-            {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
+          <div style={{ display: 'grid', justifyItems: 'end', gap: 3, flexShrink: 0 }}>
+            <div style={{ fontFamily: FM, fontSize: isMobile ? 15 : 19, fontWeight: 500, color: DTEXT, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+              {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
+            </div>
+            <div className="argus-card-price-meta">
+              <span>#{r.ref}</span>
+              {latestTouch && <span title={new Date(latestTouch.at).toLocaleString('en-GB')}><Clock3 size={8} />{compactAge(latestTouch.at)}</span>}
+              {preferences.showAgentNames && r.listedBy.displayName && <span style={{ color: r.listedBy.colorHex || 'var(--crm-accent)' }}>{r.listedBy.displayName}</span>}
+            </div>
           </div>
         </div>
 

@@ -477,6 +477,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
   const [moreOpen, setMoreOpen] = useState(false)
   const [islandOpen, setIslandOpen] = useState(false)
+  const [mobileNavCompact, setMobileNavCompact] = useState(false)
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
@@ -487,10 +488,10 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
       : <Link key={item.key} className="crm-nav-item" href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
   }
-  return <div className={`crm-workspace${mobileIsland ? ` crm-mobile-island-workspace${islandOpen ? ' island-open' : ''}` : ''}`}>
+  return <div className={`crm-workspace${mobileIsland ? ` crm-mobile-island-workspace${islandOpen ? ' island-open' : ''}` : ''}${mobileNavCompact ? ' crm-mobile-nav-compact' : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
     <aside className="crm-sidebar">
-      <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-logo-wide.png" alt="Argus" /><i aria-hidden="true" /></span></Link>
+      <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-wordmark-2026.webp" alt="Argus" /><i aria-hidden="true" /></span></Link>
       <nav aria-label="Main navigation">{items.map(navItem)}</nav>
       <div className="crm-account">
         <strong>{me?.name || me?.username} <small>· {roleLabel}</small></strong>
@@ -503,7 +504,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
         <div className="crm-header-actions">
           {mobileIsland && <>
             <button className="crm-mobile-island-brand" type="button" onClick={() => setIslandOpen(v => !v)} aria-expanded={islandOpen} aria-label={islandOpen ? 'Close Argus controls' : 'Open Argus controls'}>
-              <img src="/argus-logo.png" alt="" aria-hidden="true" />
+              <img src="/argus-wordmark-2026.webp" alt="" aria-hidden="true" />
             </button>
           </>}
           <a className="crm-icon-button crm-nexus" href="https://2906.estate/Link" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><svg width="20" height="20" viewBox="0 0 100 100" aria-hidden><path d="M3 3C26 22 38 33 50 33S74 22 97 3C78 26 67 38 67 50S78 74 97 97C74 78 62 67 50 67S26 78 3 97C22 74 33 62 33 50S22 26 3 3Z" fill="currentColor" /></svg></a>
@@ -513,10 +514,12 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       </header>
       {hasReveals && reveals.used >= 40 && <div className="crm-notice" role="status">{reveals.used >= reveals.limit ? 'Reveal limit reached. Contact admin to raise your limit.' : `You have used ${reveals.used} of ${reveals.limit} contact reveals today.`}</div>}
       {filterBar !== undefined && <div className={`crm-filterbar${mobileIsland ? ' crm-filterbar-island' : ''}`}>{filterBar}</div>}
-      <main id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
+      <main id="crm-content" tabIndex={-1} className="crm-content" onScroll={event => {
+        if (window.innerWidth <= 760) setMobileNavCompact(event.currentTarget.scrollTop > 110)
+      }}>{children}</main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation">
-      <Link className="crm-mobile-logo" href={crmPath('/', pathname)} aria-label="Argus dashboard"><img src="/argus-logo.png" alt="Argus" /></Link>
+      <button className="crm-bottom-nav-reveal" type="button" onClick={() => setMobileNavCompact(false)} aria-label="Expand navigation"><span aria-hidden="true" /></button>
       {items.filter(i => !i.disabled).slice(0, 3).map(item => { const Icon = NAV_ICONS[item.key]; return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined}><Icon size={19} aria-hidden /><span>{item.label}</span></Link> })}
       {onAdd && <button className="crm-mobile-add" onClick={onAdd} aria-label={`Add from ${title}`}><span aria-hidden="true">+</span><small>Add</small></button>}
       <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation"><Menu size={20} aria-hidden /><span>More</span></button>

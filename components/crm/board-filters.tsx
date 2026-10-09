@@ -13,7 +13,7 @@
 // inputs in inline styles — which is what made it read as bolted on.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, ChevronDown, Euro, Search, SlidersHorizontal, Snowflake, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -123,7 +123,7 @@ function Dropdown({ id, label, active, open, onToggle, children }: {
   )
 }
 
-export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, mobileMeta }: {
+export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark }: {
   value: BoardFilterValue
   onChange: (patch: Partial<BoardFilterValue>) => void
   onReset: () => void
@@ -136,35 +136,21 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
    * on the dark shell that's near-black navy, so it needs light text instead
    * of the public site's navy-on-white default or it reads as invisible. */
   dark?: boolean
-  /** Compact board controls rendered beside Filters on phones. */
-  mobileMeta?: React.ReactNode
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [compactMobile, setCompactMobile] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    let frame = 0
-    const update = (event?: Event) => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const targetTop = event?.target instanceof HTMLElement ? event.target.scrollTop : 0
-        const pageTop = Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop)
-        setCompactMobile(Math.max(targetTop, pageTop) > 230)
-      })
-    }
-    update()
-    window.addEventListener('scroll', update, { passive: true })
-    // CrmShell scrolls its content pane instead of the window. Capture scrolls
-    // from either surface so the compact island behaves the same everywhere.
-    document.addEventListener('scroll', update, { passive: true, capture: true })
-    return () => {
-      cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', update)
-      document.removeEventListener('scroll', update, true)
-    }
-  }, [])
+    if (searchOpen) window.requestAnimationFrame(() => searchRef.current?.focus())
+  }, [searchOpen])
+
+  useEffect(() => {
+    if (open !== 'from' || !mobileOpen) return
+    window.requestAnimationFrame(() => document.getElementById('board-available-from')?.focus())
+  }, [open, mobileOpen])
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
@@ -205,46 +191,48 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   })()
 
   return (
-    <div ref={ref} className={cn(
-      'w-full',
-      compactMobile && 'max-lg:fixed max-lg:top-[74px] max-lg:right-3 max-lg:z-[80] max-lg:w-auto',
-    )}>
-      {/* Mobile: one toggle, exactly like the public listings page. */}
-      {/* min-h-[38px]: below ~30px this is a miss on a phone, and this is the
-          one control that gates every other filter. */}
-      <div className={cn(
-        'board-filter-mobile-row lg:hidden flex min-h-[42px] items-center gap-2 transition-all duration-200',
-        compactMobile && 'w-auto rounded-full border border-white/15 bg-[#10182a]/95 px-3 shadow-[0_10px_30px_rgba(0,0,0,.42)] backdrop-blur-xl',
-      )}>
-        <button
-          type="button"
-          onClick={() => setMobileOpen(o => !o)}
-          className={cn(
-            'board-filter-toggle flex min-w-0 flex-1 items-center gap-2 py-1 text-sm font-medium',
-            dark ? 'text-[#EDEAE1]' : 'text-navy',
-          )}
-          aria-label={mobileOpen ? 'Close filters' : 'Open filters'}
-        >
-          <SlidersHorizontal className="w-4 h-4 shrink-0" />
-          <span className={cn(compactMobile && 'sr-only')}>Filters</span>
-          {activeCount > 0 && (
-            <span className="bg-gold text-navy text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
-              {activeCount}
-            </span>
-          )}
-          {!mobileMeta && (
-            <span className={cn('ml-auto text-xs font-normal tabular-nums', compactMobile && 'hidden', dark ? 'text-[#EDEAE1]/40' : 'text-navy/40')}>
-              {loading ? '…' : `${count} listing${count === 1 ? '' : 's'}`}
-            </span>
-          )}
-        </button>
-        {mobileMeta && !compactMobile && <div className="board-filter-mobile-meta">{mobileMeta}</div>}
+    <div ref={ref} className="w-full">
+      {/* Mobile: the wordmark expands into search while the filter island
+          contracts, keeping both actions reachable in the narrow header. */}
+      <div className={cn('argus-mobile-islands lg:hidden', searchOpen && 'is-search-open')}>
+        <div className="argus-search-island">
+          <button type="button" onClick={() => setSearchOpen(true)} aria-expanded={searchOpen} aria-label="Search the board">
+            {searchOpen ? <Search size={17} aria-hidden /> : <img src="/argus-wordmark-2026.webp" alt="ARGUS" />}
+          </button>
+          <input
+            ref={searchRef}
+            value={value.q}
+            onChange={e => onChange({ q: e.target.value })}
+            onKeyDown={e => { if (e.key === 'Escape') setSearchOpen(false) }}
+            placeholder="Reference, village, seafront…"
+            aria-label="Search reference, village or property feature"
+          />
+          {searchOpen && <button className="argus-search-close" type="button" onClick={() => { onChange({ q: '' }); setSearchOpen(false) }} aria-label="Close search"><X size={15} /></button>}
+        </div>
+
+        <div className="argus-filter-island" aria-label="Property filters">
+          {([
+            ['price', Euro, 'Price'], ['from', CalendarDays, 'From'], ['beds', BedDouble, 'Beds'],
+            ['baths', Bath, 'Baths'], ['type', Building2, 'Type'], ['rules', SlidersHorizontal, 'Extra'],
+            ['rental', Snowflake, 'Season'],
+          ] as const).map(([id, Icon, label]) => (
+            <button key={id} type="button" className={open === id ? 'is-active' : ''}
+              onClick={() => {
+                if (mobileOpen && open === id) { setOpen(null); setMobileOpen(false) }
+                else { setMobileOpen(true); setOpen(id) }
+              }}
+              aria-label={`${label} filter`} aria-pressed={open === id} title={label}>
+              <Icon size={18} aria-hidden /><small>{label}</small>
+            </button>
+          ))}
+        </div>
+        <span className="argus-mobile-result-count">{loading ? '…' : count}</span>
       </div>
 
       <div className={cn(
         'board-filter-panel flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-3 w-full',
         mobileOpen ? 'flex mt-3' : 'hidden lg:flex',
-        compactMobile && mobileOpen && 'max-lg:fixed max-lg:top-[124px] max-lg:left-3 max-lg:right-3 max-lg:w-auto max-lg:max-h-[68vh] max-lg:overflow-y-auto max-lg:rounded-2xl max-lg:border max-lg:border-white/10 max-lg:bg-[#10182a]/98 max-lg:p-3 max-lg:shadow-2xl max-lg:backdrop-blur-xl',
+        mobileOpen && 'max-lg:max-h-[62vh] max-lg:overflow-y-auto max-lg:rounded-2xl max-lg:border max-lg:border-white/10 max-lg:bg-[var(--crm-surface)] max-lg:p-3 max-lg:shadow-2xl',
       )}>
 
         {/* Search — ref, town or area. The board's own listings are local, so

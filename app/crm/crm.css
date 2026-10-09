@@ -69,7 +69,7 @@ html[data-crm-theme="dark"] .crm-sidebar { background: linear-gradient(180deg, #
 .crm-brand { display: flex; align-items: center; gap: 12px; padding: 24px; color: var(--crm-text); text-decoration: none; }
 .crm-brand-mark{position:relative;display:inline-flex;align-items:center;isolation:isolate}.crm-brand-mark:before,.crm-brand-mark:after{position:absolute;z-index:-1;inset:50% auto auto 13px;width:12px;height:12px;border:1px solid color-mix(in srgb,var(--crm-accent) 55%,transparent);border-radius:50%;content:"";transform:translate(-50%,-50%);opacity:0}.crm-brand-mark i{position:absolute;right:-9px;width:6px;height:6px;border-radius:50%;background:#35d6c4;box-shadow:0 0 0 3px color-mix(in srgb,#35d6c4 16%,transparent),0 0 12px #35d6c477}
 .crm-brand img { width: 102px; filter: brightness(0); }
-html[data-crm-theme="dark"] .crm-brand img { filter: none; }
+html[data-crm-theme="dark"] .crm-brand img { filter: invert(1) brightness(1.5); }
 .crm-brand small { font-size: 10px; color: var(--crm-muted); letter-spacing: .12em; }
 .crm-sidebar nav { flex: 1; overflow-y: auto; padding: 8px 12px; }
 .crm-nav-item { display: flex; align-items: center; width: 100%; gap: 12px; min-height: 42px; padding: 10px 13px; margin-bottom: 3px; border-radius: 12px; text-decoration: none; color: var(--crm-muted); font-size: 13px; font-weight: 500; border: 0; background: transparent; text-align: left; }
@@ -130,7 +130,6 @@ html[data-crm-theme="dark"] .crm-content { background: radial-gradient(circle at
 .crm-mobile-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding-top: 12px; }
 .crm-mobile-menu-actions { display: flex; gap: 8px; margin-top: 12px; }
 .crm-mobile-menu-actions .crm-button { flex: 1; }
-.crm-mobile-logo { display: none; }
 .inventory-filterbar,.inventory-filter-controls,.inventory-filter-checks{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .inventory-mobile-filter-toggle{display:none}
 .crm-group-workspace { padding: 24px 28px; max-width: 1600px; margin: auto; }
@@ -252,9 +251,6 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-bottom-nav { position: fixed; top: auto; bottom: 0; left: 0; right: 0; display: flex; align-items: stretch; min-height: calc(58px + env(safe-area-inset-bottom)); background: color-mix(in srgb,var(--crm-surface) 94%,transparent); border-bottom: 0; border-top: 1px solid var(--crm-border); padding: 0 6px env(safe-area-inset-bottom); z-index: 130; box-shadow: 0 -8px 26px rgba(3,8,18,.14); backdrop-filter: blur(18px); }
   .crm-bottom-nav :is(a,button) { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content:center; gap: 3px; background: none; border: none; padding: 6px 2px; color: var(--crm-muted); font-size: 9px; text-decoration: none; }
   .crm-bottom-nav [aria-current="page"] { color: var(--crm-accent); font-weight: 700; }
-  .crm-bottom-nav .crm-mobile-logo { display:grid; flex:0 0 48px; padding:5px; place-items:center; border-right:1px solid var(--crm-border); }
-  .crm-mobile-logo img { display:block; width:34px; height:28px; object-fit:contain; filter:brightness(0); }
-  html[data-crm-theme="dark"] .crm-mobile-logo img { filter:none; }
   .crm-bottom-nav .crm-mobile-add>span { display:grid; width:24px; height:24px; place-items:center; border-radius:8px; background:var(--crm-action); color:var(--crm-inverse); font-size:20px; line-height:1; }
   .crm-bottom-nav .crm-mobile-add small { font-size:9px; }
   .inventory-filterbar{width:100%;display:flex;justify-content:space-between;gap:8px}
@@ -409,4 +405,71 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-mobile-island-workspace .crm-header-island{display:none!important}
   .crm-mobile-island-workspace .crm-filterbar-island{position:relative!important;z-index:40!important;top:auto!important;left:auto!important;right:auto!important;display:flex!important;width:auto!important;height:auto!important;padding:9px 10px!important;border-bottom:1px solid var(--crm-border)!important;background:var(--crm-surface)!important}
   .crm-mobile-island-workspace .crm-filterbar-island>div{position:relative!important;width:auto!important;max-width:100%!important}
+}
+
+/* Schedule Board mobile islands. The controls use the same filter state as
+   desktop; only their spatial behaviour changes on the narrow canvas. */
+.crm-bottom-nav-reveal{display:none}
+.argus-card-price-meta{display:flex;max-width:190px;align-items:center;justify-content:flex-end;gap:5px;color:var(--crm-faint);font:700 7.5px var(--font-jetbrains);white-space:nowrap}
+.argus-card-price-meta>span{display:inline-flex;align-items:center;gap:2px}
+@media(max-width:760px){
+  .crm-mobile-island-workspace .crm-filterbar-island{padding:8px 9px!important;background:var(--crm-bg)!important;transition:opacity .18s ease,transform .24s cubic-bezier(.2,.8,.2,1),max-height .24s ease,padding .24s ease!important}
+  .crm-mobile-island-workspace .crm-filterbar-island>div{width:100%!important}
+  .argus-mobile-islands{position:relative;display:flex;min-height:48px;align-items:stretch;gap:7px;width:100%;transition:gap .3s cubic-bezier(.2,.8,.2,1)}
+  .argus-search-island,.argus-filter-island{border:1px solid var(--crm-border);background:var(--crm-surface);box-shadow:0 5px 18px rgba(16,35,74,.07)}
+  .argus-search-island{position:relative;display:flex;flex:0 0 88px;min-width:0;align-items:center;border-radius:999px;overflow:hidden;transition:flex-basis .34s cubic-bezier(.2,.9,.2,1),box-shadow .2s ease}
+  .argus-search-island>button:first-child{display:grid;min-width:86px;height:46px;padding:0 13px;place-items:center;border:0;background:transparent;color:var(--crm-text)}
+  .argus-search-island strong{font-size:15px;letter-spacing:.08em}
+  .argus-search-island img{display:block;width:62px;height:20px;object-fit:contain;filter:brightness(0)}
+  html[data-crm-theme="dark"] .argus-search-island img{filter:invert(1) brightness(1.5)}
+  .argus-search-island input{width:0;min-width:0!important;padding:0;border:0!important;background:transparent;color:var(--crm-text);font-size:13px;outline:0;opacity:0;transition:width .3s ease,opacity .18s ease}
+  .argus-search-close{display:grid!important;min-width:36px!important;width:36px;height:36px!important;padding:0!important;place-items:center;border:0!important;background:transparent!important;color:var(--crm-muted)!important}
+  .argus-mobile-islands.is-search-open .argus-search-island{flex:1 1 auto;box-shadow:0 8px 25px rgba(64,86,232,.12)}
+  .argus-mobile-islands.is-search-open .argus-search-island>button:first-child{min-width:38px;width:38px;padding:0}
+  .argus-mobile-islands.is-search-open .argus-search-island input{width:100%;opacity:1}
+  .argus-filter-island{display:flex;flex:1 1 auto;min-width:0;align-items:stretch;justify-content:space-evenly;border-radius:999px;overflow:hidden;transition:flex-basis .34s cubic-bezier(.2,.9,.2,1),opacity .2s ease}
+  .argus-filter-island button{display:grid!important;flex:1 1 0;min-width:35px!important;min-height:46px!important;padding:5px 2px!important;place-items:center;align-content:center;gap:2px;border:0!important;border-radius:0!important;background:transparent!important;color:var(--crm-muted)!important;box-shadow:none!important}
+  .argus-filter-island button small{font-size:6px;font-weight:750;line-height:1;text-transform:uppercase}
+  .argus-filter-island button.is-active{color:var(--crm-accent)!important;background:var(--crm-accent-soft)!important}
+  .argus-mobile-islands.is-search-open .argus-filter-island{flex:0 0 42px;overflow-x:auto;scrollbar-width:none}
+  .argus-mobile-islands.is-search-open .argus-filter-island button{display:none!important}
+  .argus-mobile-islands.is-search-open .argus-filter-island button.is-active,.argus-mobile-islands.is-search-open .argus-filter-island button:first-child{display:grid!important;min-width:40px!important}
+  .argus-mobile-result-count{position:absolute;right:-2px;top:-4px;display:grid;min-width:18px;height:18px;padding:0 4px;place-items:center;border:2px solid var(--crm-bg);border-radius:999px;background:var(--crm-action);color:#fff;font:800 7px var(--font-jetbrains)}
+  .board-filter-panel{position:relative!important;z-index:45;overflow:visible!important}
+  .board-filter-panel>div:first-child{display:none}
+  .board-filter-panel>div.relative{width:100%}
+  .board-filter-panel>div.relative>button{width:100%;justify-content:space-between;background:var(--crm-raised);color:var(--crm-text)}
+  .board-filter-panel>div.relative>div{position:relative!important;top:auto!important;left:auto!important;width:100%;margin-top:5px}
+
+  .argus-mobile-top-deck{display:grid;gap:6px;margin:-2px -2px 8px;transition:opacity .18s ease,transform .24s cubic-bezier(.2,.8,.2,1)}
+  .argus-mobile-village-rail,.argus-mobile-discovery-rail{display:flex;gap:5px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none;scroll-snap-type:x proximity}
+  .argus-mobile-village-rail::-webkit-scrollbar,.argus-mobile-discovery-rail::-webkit-scrollbar{display:none}
+  .argus-mobile-village-rail button{flex:0 0 auto;display:flex;min-height:24px;align-items:center;gap:3px;padding:3px 8px;border:1px solid var(--crm-border);border-radius:999px;background:#fff;color:#39445a;font-size:7px;scroll-snap-align:start}
+  .argus-mobile-village-rail button[aria-pressed=true]{border-color:var(--crm-accent);background:var(--crm-accent-soft);color:var(--crm-accent)}
+  .argus-mobile-village-rail button.is-horizon{font-weight:800}
+  .argus-mobile-village-rail small{font:700 6px var(--font-jetbrains);opacity:.58}
+  .argus-mobile-discovery-row{display:grid;grid-template-columns:38px minmax(0,1fr);gap:6px;align-items:center}
+  .argus-mobile-map-button{display:grid;min-width:38px!important;width:38px;height:34px;padding:0!important;place-items:center;border:1px solid var(--crm-border)!important;border-radius:10px!important;background:#fff!important;color:#4f5b70!important;box-shadow:none!important}
+  .argus-mobile-map-button span{font-size:0}
+  .argus-mobile-map-button[aria-expanded=true]{border-color:var(--crm-accent)!important;color:var(--crm-accent)!important}
+  .argus-mobile-discovery-rail button{flex:0 0 auto;display:inline-flex;min-height:25px!important;align-items:center;gap:4px;padding:4px 8px!important;border:1px solid #dce2ef!important;border-radius:999px!important;background:#fff!important;color:#465269!important;font-size:7px;font-weight:700;box-shadow:none!important;scroll-snap-align:start}
+  .argus-mobile-discovery-rail button[aria-pressed=true]{border-color:var(--crm-accent)!important;background:var(--crm-accent-soft)!important;color:var(--crm-accent)!important}
+  .argus-mobile-map-stage{margin-top:3px;overflow:hidden;border:1px solid var(--crm-border);border-radius:17px;background:var(--crm-surface);animation:argus-map-open .26s cubic-bezier(.2,.8,.2,1)}
+  @keyframes argus-map-open{from{opacity:0;transform:translateY(-8px) scaleY(.96)}to{opacity:1;transform:none}}
+
+  .argus-board-toolbar{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-inline:contain;margin-bottom:8px;padding-bottom:2px;scrollbar-width:none}
+  .argus-board-toolbar::-webkit-scrollbar{display:none}
+  .argus-view-switch{flex:0 0 218px;width:218px}
+  .argus-view-switch button{min-height:42px}
+  .argus-board-toolbar>div:nth-child(2),.argus-board-toolbar>.argus-board-settings-button,.argus-board-toolbar>a,.argus-board-toolbar>button{flex:0 0 auto}
+
+  .crm-bottom-nav{left:14px;right:14px;bottom:10px;min-height:58px;border:1px solid var(--crm-border);border-radius:999px;padding:0 8px max(0px,env(safe-area-inset-bottom));box-shadow:0 14px 40px rgba(7,18,35,.2);transition:left .3s cubic-bezier(.2,.9,.2,1),right .3s cubic-bezier(.2,.9,.2,1),width .3s cubic-bezier(.2,.9,.2,1),min-height .3s ease,transform .3s cubic-bezier(.2,.9,.2,1),opacity .2s ease}
+  .crm-bottom-nav-reveal{display:none!important}
+  .crm-mobile-nav-compact .crm-filterbar-island{max-height:0!important;padding-block:0!important;overflow:hidden;opacity:0;transform:translateY(-8px);pointer-events:none}
+  .crm-mobile-nav-compact .argus-mobile-top-deck,.crm-mobile-nav-compact .argus-board-toolbar{display:none}
+  .crm-mobile-nav-compact .crm-bottom-nav{left:50%;right:auto;width:72px;min-height:18px;bottom:14px;padding:0;transform:translateX(-50%);overflow:hidden}
+  .crm-mobile-nav-compact .crm-bottom-nav>*:not(.crm-bottom-nav-reveal){display:none!important}
+  .crm-mobile-nav-compact .crm-bottom-nav-reveal{display:grid!important;width:100%;height:18px;min-height:18px;padding:0;place-items:center;border:0;background:transparent}
+  .crm-bottom-nav-reveal span{display:block;width:30px;height:4px;border-radius:999px;background:var(--crm-muted);opacity:.7}
+  .argus-card-price-meta{max-width:145px;gap:4px;font-size:6.8px}
 }
