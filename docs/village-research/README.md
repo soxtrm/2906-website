@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Seven English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke and Mosta. The older `swieqi-preview.html` is retained
+Status: Eight English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta and Naxxar. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -31,4 +31,4 @@ Swieqi, Tal-Ibraġ, Madliena and Pembroke now cross-link directly between their 
 
 Mosta is published independently at https://www.2906.estate/link-marketplace/areas/mosta.html (commit `9608efa`, production HTTP 200 verified on 9 October 2026). Its sourced dossier is `mosta-research.md`; the edition separates the Rotunda-centred core from the wider everyday retail radius and does not claim a generic commute time.
 
-Naxxar is prepared as a separate release candidate at `/link-marketplace/areas/naxxar.html`. Its sourced dossier is `naxxar-research.md`; the edition keeps the Victory Square core distinct from the much larger council territory. Mobile/desktop, image, metadata and click-to-load map checks passed locally on 9 October 2026. Production status remains pending until the deployment is verified live.
+Naxxar is published independently at https://www.2906.estate/link-marketplace/areas/naxxar.html (commit `225972a`, production HTTP 200 verified on 9 October 2026). Its sourced dossier is `naxxar-research.md`; the edition keeps the Victory Square core distinct from the much larger council territory. Mobile/desktop, image, metadata and click-to-load map checks passed locally and in production.

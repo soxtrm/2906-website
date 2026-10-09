@@ -1,6 +1,6 @@
 # Naxxar edition — sourced research draft
 
-Status: release candidate verified locally. Public deployment is pending.
+Status: published at https://www.2906.estate/link-marketplace/areas/naxxar.html (commit `225972a`; production verified 9 October 2026).
 
 Verified: 9 October 2026 (Europe/Malta).
 
