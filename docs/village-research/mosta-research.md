@@ -1,6 +1,6 @@
 # Mosta edition — sourced research draft
 
-Status: release candidate. The page, canonical, sitemap and internal discovery link are prepared locally; publication is not claimed until build, deployment and live verification succeed.
+Status: published in English at https://www.2906.estate/link-marketplace/areas/mosta.html (commit `9608efa`, production HTTP 200 verified on 9 October 2026).
 
 Verified: 9 October 2026 (Europe/Malta).
 
@@ -43,7 +43,7 @@ Use a fast click-to-load 2D area map. It may orient the reader around the Rotund
 
 1. Verify map anchors and exact public entrances independently before adding pins.
 2. Recheck every release source immediately before publication; keep mutable hours and prices out of evergreen copy.
-3. Only after review: add canonical, sitemap and internal links, run the production build, deploy through the existing reversible path and verify the live URL.
+3. Preserve the canonical, sitemap entry, internal discovery link and visible image attribution in future deployments.
 
 ## Draft verification
 

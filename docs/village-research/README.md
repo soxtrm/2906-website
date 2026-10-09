@@ -1,6 +1,6 @@
-# Swieqi cluster editorial checkpoint
+# Malta village editions — editorial checkpoint
 
-Status: Swieqi, Tal-Ibraġ, Madliena and Pembroke are published as separate English neighbourhood editions. `swieqi-preview.html` remains an archival noindex draft and is not the public page.
+Status: Seven English editions are published: Sliema, St Julian's, Swieqi, Tal-Ibraġ, Madliena, Pembroke and Mosta. `swieqi-preview.html` remains an archival noindex draft and is not the public page.
 
 The live cluster includes the verified locality distinctions, licensed imagery or an explicitly abstract hero where no suitable locality image exists, operator-sourced everyday places, broad click-to-load OSM orientation maps, canonicals, discovery links and sitemap entries. The four editions cross-link without collapsing Pembroke into Swieqi or treating Tal-Ibraġ and Madliena as interchangeable.
 
@@ -18,3 +18,5 @@ Tal-Ibraġ is published at https://www.2906.estate/link-marketplace/areas/tal-ib
 Madliena is published at https://www.2906.estate/link-marketplace/areas/madliena.html (commit `c85a1c6`, production HTTP 200 verified on 4 October 2026). Its terrain-led evidence and explicit everyday-services gap remain recorded in `madliena-research.md`.
 
 Swieqi, Tal-Ibraġ, Madliena and Pembroke now cross-link directly between their editions (commit `f29aa36`, production HTTP 200 verified on 4 October 2026). No external backlink has been published for these editions.
+
+Mosta is published independently at https://www.2906.estate/link-marketplace/areas/mosta.html (commit `9608efa`, production HTTP 200 verified on 9 October 2026). Its sourced dossier is `mosta-research.md`; the edition separates the Rotunda-centred core from the wider everyday retail radius and does not claim a generic commute time.
