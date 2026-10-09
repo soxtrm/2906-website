@@ -154,7 +154,11 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(null)
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(null)
+        setMobileOpen(false)
+        setSearchOpen(false)
+      }
     }
     document.addEventListener('mousedown', away)
     return () => document.removeEventListener('mousedown', away)
@@ -192,8 +196,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
   return (
     <div ref={ref} className="w-full">
-      {/* Mobile: the wordmark expands into search while the filter island
-          contracts, keeping both actions reachable in the narrow header. */}
+      {/* Mobile: the wordmark opens a search surface over the filter island.
+          The row itself never reflows, so the board does not jump. */}
       <div className={cn('argus-mobile-islands lg:hidden', searchOpen && 'is-search-open')}>
         <div className="argus-search-island">
           <button type="button" onClick={() => setSearchOpen(true)} aria-expanded={searchOpen} aria-label="Search the board">
@@ -222,11 +226,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 else { setMobileOpen(true); setOpen(id) }
               }}
               aria-label={`${label} filter`} aria-pressed={open === id} title={label}>
-              <Icon size={18} aria-hidden /><small>{label}</small>
+              <Icon size={17} aria-hidden />
             </button>
           ))}
         </div>
-        <span className="argus-mobile-result-count">{loading ? '…' : count}</span>
       </div>
 
       <div className={cn(

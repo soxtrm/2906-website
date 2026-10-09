@@ -1551,37 +1551,14 @@ function Board() {
 
         {!updatesMode && view === 'board' && !collectionsMode && isMobile && (
           <section className="argus-mobile-top-deck" aria-label="Board shortcuts">
-            <div className="argus-mobile-village-rail" aria-label="Listing horizon and villages" onTouchMove={() => mapOpen && updateBoardPreference('mapVisible', false)}>
-              {([['active', 'Active'], ['future', '🕓 +3m']] as const).map(([key, label]) => (
-                <button className="is-horizon" key={key} type="button" aria-pressed={horizon === key} onClick={() => setHorizon(key)}>
-                  {label}{key === 'future' && futureCount > 0 ? <small>{futureCount}</small> : null}
-                </button>
-              ))}
-              {boardPreferences.showTownFilters && townOptions.map(t => {
+            {boardPreferences.showTownFilters && townOptions.length > 0 ? <div className="argus-mobile-village-rail" aria-label="Villages" onTouchMove={() => mapOpen && updateBoardPreference('mapVisible', false)}>
+              {townOptions.map(t => {
                   const on = f.towns.includes(t.key)
                   return <button key={t.key} type="button" aria-pressed={on} onClick={() => toggleTown(t.key)}>
                     {t.label}<small>{t.n}</small>
                   </button>
                 })}
-            </div>
-            <div className="argus-mobile-discovery-row">
-              <button className="argus-mobile-map-button" type="button" aria-expanded={mapOpen} onClick={() => updateBoardPreference('mapVisible', !mapOpen)}>
-                <MapPinned size={18} aria-hidden /><span>{mapOpen ? 'Close map' : 'Map'}</span>
-              </button>
-              <div className="argus-mobile-discovery-rail" aria-label="Quick property collections" onTouchMove={() => mapOpen && updateBoardPreference('mapVisible', false)}>
-                {DISCOVERY_ITEMS.filter(item => boardPreferences.discoveryKeys.includes(item.key)).map(item => {
-                  const Icon = item.icon
-                  const on = discovery === item.key
-                  return <button key={item.key} type="button" aria-pressed={on} onClick={() => setDiscovery(current => current === item.key ? null : item.key)}>
-                    <Icon size={12} aria-hidden />{item.label}
-                  </button>
-                })}
-              </div>
-            </div>
-            {mapOpen && <div className="argus-mobile-map-stage"><MapPanel
-              items={visible} rect={rect} onRect={setRect} circ={circ} onCirc={setCirc}
-              onMarkerClick={onMarkerClick} selectedTowns={f.towns} isMobile
-            /></div>}
+            </div> : null}
           </section>
         )}
 
@@ -1589,7 +1566,10 @@ function Board() {
             available for restoring a listing without competing with daily work. */}
         <div className="argus-board-toolbar">
           <div className="argus-view-switch" aria-label="Board view">
-            <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setCollectionsMode(false); setSelected(new Set()) }} aria-pressed={!updatesMode && !collectionsMode && view === 'board'}>
+            <button data-tab="board" onClick={() => {
+              setView('board'); setUpdatesMode(false); setCollectionsMode(false); setSelected(new Set())
+              if (isMobile && mapOpen) updateBoardPreference('mapVisible', false)
+            }} aria-pressed={!updatesMode && !collectionsMode && view === 'board' && (!isMobile || !mapOpen)}>
               <span className="argus-switch-icon"><LayoutGrid size={17} aria-hidden /></span>
               <span><b>Standard</b><small>Property overview</small></span>
             </button>
@@ -1603,7 +1583,17 @@ function Board() {
               <span><b>List</b><small>Updates by time</small></span>
               <em>{feedRows.length}</em>
             </button>
+            <button className="argus-mobile-view-map" data-tab="map" onClick={() => {
+              setView('board'); setUpdatesMode(false); setCollectionsMode(false); updateBoardPreference('mapVisible', !mapOpen)
+            }} aria-pressed={mapOpen} aria-label={mapOpen ? 'Close map' : 'Open map'} title={mapOpen ? 'Close map' : 'Map'}>
+              <span className="argus-switch-icon"><MapPinned size={17} aria-hidden /></span>
+              <span><b>Map</b><small>Property map</small></span>
+            </button>
           </div>
+          {isMobile && <div className="argus-mobile-primary-actions" aria-label="Board actions">
+            <button type="button" onClick={selectVisible} disabled={!visible.length} aria-label="Select listings for WaTag" title="WaTag"><AtSign size={17} aria-hidden /></button>
+            <button type="button" onClick={() => setSwipePanelOpen(true)} aria-label="Open Swipe Links" title="Swipe Links"><Link2 size={17} aria-hidden /></button>
+          </div>}
           <div style={{ display: 'flex', gap: 5, marginLeft: isMobile ? 0 : 'auto' }}>
             {([['favourites', 'Favourites', favCount], ['rented', 'Rented', rentedCount]] as const).map(([v, label, badge]) => {
               const on = !updatesMode && !collectionsMode && view === v
@@ -1637,6 +1627,11 @@ function Board() {
           }} style={{ ...chip, borderRadius: 8, borderColor: A, color: '#F4D58B', background: 'rgba(184,149,63,.10)', fontWeight: 700 }}><Sparkles size={13} style={{ display: 'inline', marginRight: 6 }} />SMART DATA</button>
           <ReachoutSwitch />
         </div>
+
+        {!updatesMode && view === 'board' && !collectionsMode && isMobile && mapOpen ? <div className="argus-mobile-map-stage"><MapPanel
+          items={visible} rect={rect} onRect={setRect} circ={circ} onCirc={setCirc}
+          onMarkerClick={onMarkerClick} selectedTowns={f.towns} isMobile
+        /></div> : null}
 
         {boardSettingsOpen && (
           <BoardSettingsPanel
@@ -1734,12 +1729,13 @@ function Board() {
             picked, so the board is not carrying a dead bar around all day, and
             it names the count in the button rather than beside it — the number
             is the thing you check before firing. */}
-        <div style={{
+        <div className={`argus-board-actions${selected.size > 0 ? ' has-selection' : ''}`} style={{
           display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
           marginBottom: 14,
         }}>
           <button
             data-watag-selectall
+            className="argus-watag-select"
             onClick={selectVisible}
             disabled={!visible.length}
             title={`Pick the first ${MAX_TAGS} listings in this search that can be tagged`}
@@ -1748,17 +1744,18 @@ function Board() {
               color: visible.length ? DTEXT_DIM : DTEXT_FAINT,
               cursor: visible.length ? 'pointer' : 'not-allowed',
             }}>
-            Select for WATag
+            <AtSign size={13} aria-hidden /><span>Select for WATag</span>
           </button>
 
           <button
+            className="argus-swipe-links"
             onClick={() => setSwipePanelOpen(true)}
             title="See every swipe link you've made and what customers liked"
             style={{
               ...chip, borderRadius: 8, background: DCARD, borderColor: DBORDER,
               color: DTEXT_DIM, display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>
-            <Link2 size={13} /> Swipe Links
+            <Link2 size={13} /><span>Swipe Links</span>
           </button>
 
           {/* Admin only: every open @Agenttag request, grouped by agent — the

@@ -477,7 +477,6 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
   const [moreOpen, setMoreOpen] = useState(false)
   const [islandOpen, setIslandOpen] = useState(false)
-  const [mobileNavCompact, setMobileNavCompact] = useState(false)
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
@@ -488,7 +487,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
       : <Link key={item.key} className="crm-nav-item" href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
   }
-  return <div className={`crm-workspace${mobileIsland ? ` crm-mobile-island-workspace${islandOpen ? ' island-open' : ''}` : ''}${mobileNavCompact ? ' crm-mobile-nav-compact' : ''}`}>
+  return <div className={`crm-workspace${mobileIsland ? ` crm-mobile-island-workspace${islandOpen ? ' island-open' : ''}` : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
     <aside className="crm-sidebar">
       <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-wordmark-2026.webp" alt="Argus" /><i aria-hidden="true" /></span></Link>
@@ -514,12 +513,9 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       </header>
       {hasReveals && reveals.used >= 40 && <div className="crm-notice" role="status">{reveals.used >= reveals.limit ? 'Reveal limit reached. Contact admin to raise your limit.' : `You have used ${reveals.used} of ${reveals.limit} contact reveals today.`}</div>}
       {filterBar !== undefined && <div className={`crm-filterbar${mobileIsland ? ' crm-filterbar-island' : ''}`}>{filterBar}</div>}
-      <main id="crm-content" tabIndex={-1} className="crm-content" onScroll={event => {
-        if (window.innerWidth <= 760) setMobileNavCompact(event.currentTarget.scrollTop > 110)
-      }}>{children}</main>
+      <main id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation">
-      <button className="crm-bottom-nav-reveal" type="button" onClick={() => setMobileNavCompact(false)} aria-label="Expand navigation"><span aria-hidden="true" /></button>
       {items.filter(i => !i.disabled).slice(0, 3).map(item => { const Icon = NAV_ICONS[item.key]; return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined}><Icon size={19} aria-hidden /><span>{item.label}</span></Link> })}
       {onAdd && <button className="crm-mobile-add" onClick={onAdd} aria-label={`Add from ${title}`}><span aria-hidden="true">+</span><small>Add</small></button>}
       <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation"><Menu size={20} aria-hidden /><span>More</span></button>
