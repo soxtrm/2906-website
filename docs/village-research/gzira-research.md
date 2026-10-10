@@ -1,6 +1,6 @@
 # Gzira village research
 
-Status: release candidate after final source recheck on 10 October 2026. Canonical, Open Graph, BreadcrumbList, navigation and sitemap are present; production verification remains pending.
+Status: published at https://www.2906.estate/link-marketplace/areas/gzira.html in commit `175bf9d`; production HTTP 200 verified on 10 October 2026.
 
 Last source review: 10 October 2026.
 
@@ -96,4 +96,8 @@ Tested locally on 10 October 2026 at 390 x 844 and 1440 x 1000:
 - the button hid after activation, a live status message appeared, and the page still had no horizontal overflow.
 
 Visual review passed for the mobile single-column flow and desktop grid. Evidence images are stored at `artifacts/gzira-preview-mobile.png` and `artifacts/gzira-preview-desktop.png`. This verifies the local preview only and is not evidence of a live release.
+
+## Publication verification
+
+Final sources were rechecked on 10 October 2026 before release. The production edition was then verified at 390 x 844 and 1440 x 1000: exactly one H1, self-canonical, three Open Graph fields, one BreadcrumbList and no noindex; no horizontal overflow; the 1800-pixel licensed hero decoded; zero initial map frames and exactly one visible OpenStreetMap frame after interaction. The marketplace index, neighbourhood sitemap and 414,728-byte image asset all returned the released Gzira entry successfully.
 
