@@ -486,12 +486,20 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
     if (!mobileImmersive || !scroller) return
     let frame = 0
     let lastTop = scroller.scrollTop
+    let direction: 'up' | 'down' | null = null
+    let directionStart = lastTop
     const update = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
         const nextTop = scroller.scrollTop
-        if (nextTop < 24 || nextTop < lastTop - 7) setNavigationCompact(false)
-        else if (nextTop > 86 && nextTop > lastTop + 7) setNavigationCompact(true)
+        const nextDirection = nextTop > lastTop ? 'down' : nextTop < lastTop ? 'up' : direction
+        if (nextDirection && nextDirection !== direction) {
+          direction = nextDirection
+          directionStart = lastTop
+        }
+        const travel = nextTop - directionStart
+        if (nextTop < 24 || travel < -12) setNavigationCompact(false)
+        else if (nextTop > 86 && travel > 22) setNavigationCompact(true)
         lastTop = nextTop
       })
     }
@@ -528,8 +536,8 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
       <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
-    <nav className="crm-bottom-nav" aria-label="Mobile navigation">
-      <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Expand mobile navigation"><span /></button>
+    <button type="button" className="crm-bottom-nav-edge" onClick={() => setNavigationCompact(false)} aria-label={navigationCompact ? 'Show mobile navigation' : 'Mobile navigation is open'}><span /></button>
+    <nav className="crm-bottom-nav" aria-label="Mobile navigation" aria-hidden={navigationCompact || undefined} inert={navigationCompact}>
       {items.filter(i => !i.disabled).slice(0, 4).map(item => {
         const Icon = NAV_ICONS[item.key]
         const current = active(item.href)

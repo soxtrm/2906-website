@@ -268,6 +268,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     (value.type ? 1 : 0) + (value.min || value.max ? 1 : 0) +
     (value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0) +
     (value.updated ? 1 : 0) + (value.rental ? 1 : 0)
+  const hasActiveIslandSelection = activeCount > 0 || smartBadgeCount > 0 || value.q.trim().length > 0
 
   const typeLabel = value.type
     ? (TYPES.find(t => t[0] === value.type)?.[1] || value.type)
@@ -476,7 +477,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           <span className="crm-island-label">Filters</span>
         </motion.div>
       </motion.div>
-      <button type="button" className="crm-board-islands-handle" onClick={() => setCompactMobile(false)} aria-label="Expand ARGUS tools"><span /></button>
+      {hasActiveIslandSelection && <button type="button" className="crm-board-islands-handle" onClick={() => setCompactMobile(false)} aria-label="Expand active ARGUS tools"><span /></button>}
 
       <AnimatePresence initial={false} mode="popLayout">
         {mobilePanel === 'smart' && (
