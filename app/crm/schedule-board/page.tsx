@@ -10,16 +10,15 @@
 // reduced server-side to `hasViewingLocation`, which is what enables the
 // "Request Viewing-Location" button.
 // ============================================================================
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { createPortal } from 'react-dom'
-import { useSearchParams } from 'next/navigation'
-import { ChevronDown, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, GripVertical, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, CalendarDays, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, CircleHelp, LayoutGrid, SlidersHorizontal, MapPinned, Rows3, RotateCcw, UserRound, MessageCircle, Zap, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, Gem, Crown, Droplets, Plus, CircleAlert } from 'lucide-react'
-import { AnimatePresence } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, UserRound, Plus } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup, LocationSelect } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
-import { RentalModePicker, RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
+import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
 import dynamic from 'next/dynamic'
@@ -41,6 +40,16 @@ const CARD = '#FFFDFA'
 const HOT = '#C7391A'
 // Booking engine (Kev, 2026-09-23): "dann leuchtet der Book Button gelb"
 const BOOK_YELLOW = '#E8B931'
+type DiscoveryKey = 'popular-new' | 'seafront' | 'beds-3' | 'beds-2' | 'beds-1' | 'apartments' | 'villas'
+const DISCOVERY_ITEMS: { key: DiscoveryKey; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { key: 'popular-new', label: 'Popular & New', icon: Sparkles },
+  { key: 'seafront', label: 'Seafronts', icon: Waves },
+  { key: 'beds-3', label: '3 Bedrooms', icon: BedDouble },
+  { key: 'beds-2', label: '2 Bedrooms', icon: BedDouble },
+  { key: 'beds-1', label: '1 Bedroom', icon: BedDouble },
+  { key: 'apartments', label: 'Apartments', icon: Building2 },
+  { key: 'villas', label: 'Villas', icon: House },
+]
 
 // ── dark redesign, Kev 2026-09-11 ────────────────────────────────────────────
 // "erstmal darkmode, sehr clean und übersichtlicher... es bleibt nur FAV
@@ -64,64 +73,9 @@ const HOT_GLOW = { border: `1px solid rgba(199,57,26,0.6)`, glow: '0 0 0 1px rgb
 // wins if one is set, but it would be inlined into a publicly downloadable
 // chunk — and this repo is public — so the served key is the better default.
 const BUNDLED_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''
+const RENTED_OWNER_INVENTORY_MESSAGE = `Hi, Hope you are well. I just wanted to check in if you may have anything available or upcoming for rent?
 
-type DiscoveryKey = 'popular-new' | 'seafront' | 'beds-3' | 'beds-2' | 'beds-1' | 'apartments' | 'villas' | 'luxury' | 'penthouses' | 'pool'
-const DISCOVERY_ITEMS: { key: DiscoveryKey; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
-  { key: 'popular-new', label: 'Popular & New', icon: Sparkles },
-  { key: 'seafront', label: 'Seafronts', icon: Waves },
-  { key: 'beds-3', label: '3 Bedrooms', icon: BedDouble },
-  { key: 'beds-2', label: '2 Bedrooms', icon: BedDouble },
-  { key: 'beds-1', label: '1 Bedroom', icon: BedDouble },
-  { key: 'apartments', label: 'Apartments', icon: Building2 },
-  { key: 'villas', label: 'Villas', icon: House },
-  { key: 'luxury', label: 'Luxury', icon: Gem },
-  { key: 'penthouses', label: 'Penthouses', icon: Crown },
-  { key: 'pool', label: 'Pool', icon: Droplets },
-]
-
-type CollectionKey = 'seafront' | 'beds-1' | 'beds-2' | 'beds-3' | 'luxury' | 'houses'
-const COLLECTION_ITEMS: { key: CollectionKey; label: string; eyebrow: string; icon: React.ComponentType<{ size?: number }> }[] = [
-  { key: 'seafront', label: 'Seafront', eyebrow: 'Waterfront living', icon: Waves },
-  { key: 'beds-1', label: '1 Bedroom', eyebrow: 'Simple & efficient', icon: BedDouble },
-  { key: 'beds-2', label: '2 Bedrooms', eyebrow: 'Most requested', icon: BedDouble },
-  { key: 'beds-3', label: '3 Bedrooms', eyebrow: 'Room to grow', icon: BedDouble },
-  { key: 'luxury', label: 'Luxury', eyebrow: 'Premium homes', icon: Gem },
-  { key: 'houses', label: 'Houses & Villas', eyebrow: 'Independent living', icon: House },
-]
-
-type BoardPreferences = {
-  discoveryVersion: 2
-  collectionVersion: 1
-  defaultWorkspace: 'board' | 'collections' | 'updates'
-  mapVisible: boolean
-  compactCards: boolean
-  showFeedGuide: boolean
-  showTownFilters: boolean
-  showBookingBadges: boolean
-  showAgentNames: boolean
-  showDescriptions: boolean
-  showBookingDetails: boolean
-  showQuickTools: boolean
-  discoveryKeys: DiscoveryKey[]
-  collectionOrder: CollectionKey[]
-}
-const DEFAULT_BOARD_PREFERENCES: BoardPreferences = {
-  discoveryVersion: 2,
-  collectionVersion: 1,
-  defaultWorkspace: 'board',
-  mapVisible: true,
-  compactCards: false,
-  showFeedGuide: true,
-  showTownFilters: true,
-  showBookingBadges: true,
-  showAgentNames: true,
-  showDescriptions: true,
-  showBookingDetails: true,
-  showQuickTools: true,
-  discoveryKeys: DISCOVERY_ITEMS.map(item => item.key),
-  collectionOrder: COLLECTION_ITEMS.map(item => item.key),
-}
-const BOARD_PREFERENCES_KEY = 'argus.schedule-board.preferences.v1'
+Sales and commercials are also interesting for me.`
 
 type Listing = {
   id: number; ref: string; town: string | null; subLocation: string | null
@@ -153,13 +107,9 @@ type Listing = {
   // Bumped by any edit (crm.js PATCH /properties/:id). Drives the "freshly
   // updated" glow + sort nudge, first 48h only — see Card()'s isFreshlyUpdated.
   updatedAt?: string | null
-  // Exact feed events supplied by the board backend. Price changes come from
-  // property_activities, so the € view never guesses from a generic edit.
-  latestPriceChangeAt?: string | null
-  latestPriceOld?: number | null
-  latestPriceNew?: number | null
-  latestUpdateAt?: string | null
-  latestUpdateType?: string | null
+  // Exact lifecycle timestamp set when availability moved to rented. This is
+  // deliberately separate from updatedAt, which also changes on price/text edits.
+  recentlyRentedAt?: string | null
   // When somebody last pressed "Available" on this card, and why it last moved.
   lastConfirmedAvailableAt: string | null
   statusChangeReason: string | null
@@ -240,10 +190,6 @@ type Listing = {
   // | 'sales') — 'aesthetics' is the site's existing Luxury collection. Reused
   // here as-is rather than inventing a parallel classification field.
   category?: string | null
-  // Normalized, non-sensitive category keys for the WhatsApp property groups
-  // this listing was actually published into. Group ids and names stay on the
-  // backend; the board only needs the stable classification keys.
-  categoryGroups?: string[]
   description?: string | null
   // Per-property state of the existing Facebook posting campaign
   // (services/facebookCampaign.js). Admin-only control; absent/undefined on a
@@ -294,14 +240,24 @@ type AgentRequestGroup = {
   requests: Array<{ id: number; ref: string; note: string | null; createdAt: string }>
 }
 
-type Filters = BoardFilterValue & { towns: string[] }
+type Filters = BoardFilterValue
 const EMPTY: Filters = {
   q: '', beds: [], baths: [], min: '', max: '', type: '', towns: [],
   pets: '', sharing: '', sublet: false, updated: '', rental: '',
 }
 
-// The board always follows the newest meaningful property activity. A single
-// order keeps the first screen dependable for every agent and every device.
+// Newest-first is the default because it is what the board is for: the listing
+// that just came in is the one being asked about. The backend owns the actual
+// ORDER BY (routes/crmScheduleBoard.js SORTS) — these are the options it
+// accepts, and the label the menu shows.
+const SORTS: Array<[string, string]> = [
+  ['newest', 'Newest first'],
+  ['oldest', 'Oldest first'],
+  ['stalest', 'Needs confirming'],
+  ['confirmed', 'Just confirmed'],
+  ['price_low', 'Price ↑'],
+  ['price_high', 'Price ↓'],
+]
 const DEFAULT_SORT = 'newest'
 
 type BoardView = 'board' | 'rented' | 'favourites'
@@ -390,9 +346,11 @@ export default function ScheduleBoardPage() {
 
 function Board() {
   const params = useSearchParams()
+  const router = useRouter()
   const isMobile = useIsMobile()
-  const { me } = useCrm()
+  const { me, theme } = useCrm()
   const isAdmin = me?.role === 'admin'
+  const isDark = theme === 'dark'
 
   // Filters initialise from the URL so a shared link restores the search.
   const [f, setF] = useState<Filters>(() => ({
@@ -417,9 +375,10 @@ function Board() {
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
   const [circ, setCirc] = useState<Circ | null>(() => parseCirc(params.get('circ')))
-  // One predictable board order: the latest real property activity first.
-  // Agents should never have to discover or repair a stale saved sort.
-  const sort = DEFAULT_SORT
+  const [sort, setSort] = useState<string>(() => {
+    const s = params.get('sort') || ''
+    return SORTS.some(([v]) => v === s) ? s : DEFAULT_SORT
+  })
   // 'board' = the active worklist (available + available_confirmed), which
   // ALSO now includes pending_check ("needs recheck") listings — they carry
   // a watermark badge and sort to the bottom (see the ORDER BY on the
@@ -435,6 +394,17 @@ function Board() {
   const [view, setView] = useState<BoardView>(
     params.get('view') === 'rented' ? 'rented'
       : params.get('view') === 'favourites' ? 'favourites' : 'board')
+  useEffect(() => {
+    const switchView = (event: Event) => {
+      const next = (event as CustomEvent<string>).detail
+      if (next !== 'board' && next !== 'rented' && next !== 'favourites') return
+      setView(next)
+      setUpdatesMode(false)
+      setSelected(new Set())
+    }
+    window.addEventListener('crm-board-view', switchView)
+    return () => window.removeEventListener('crm-board-view', switchView)
+  }, [])
   // Kev, 2026-09-15 (future inventory board, spec items 11-12): a filtered
   // VIEW over the same 'board' data, not a separate fetch or a duplicated
   // property — isFarFuture() below is the one place that decides "far
@@ -471,7 +441,7 @@ function Board() {
   const [booking, setBooking] = useState<Listing | null>(null)
   // Owner viewing REQUEST (no confirmed window yet) — the pre-2026-09-23 BookDialog.
   const [requesting, setRequesting] = useState<Listing | null>(null)
-  const [asking, setAsking] = useState<Listing | null>(null)
+  const [asking, setAsking] = useState<{ listing: Listing; intent: 'property' | 'owner-inventory' } | null>(null)
   const [chatting, setChatting] = useState<Listing | null>(null)
   const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
   // AV-date-confirm dialog (Kev, 2026-08-31) — the small calendar icon next
@@ -504,73 +474,47 @@ function Board() {
   const [agentRequestGroups, setAgentRequestGroups] = useState<AgentRequestGroup[]>([])
   const [agentRequestsLoading, setAgentRequestsLoading] = useState(false)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  // Start unmounted. The saved desktop preference is applied after mount;
-  // phones never start the Google script or marker work until the map button
-  // is explicitly tapped.
+  // Collapsible: the map was permanently taking ~420px above the cards, and a
+  // plain scroll over it used to zoom instead of moving the page (fixed via
+  // gestureHandling below). Open by default so existing behaviour is
+  // unsurprising; agents who only use the town chips can now hide it.
+  // The map is a deliberate tool, not part of the board's critical render.
+  // Keeping it closed until requested avoids downloading Google Maps while an
+  // agent only wants listings; the dynamic work begins when this becomes true.
   const [mapOpen, setMapOpen] = useState(false)
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
   const [updatesMode, setUpdatesMode] = useState(false)
-  const [collectionsMode, setCollectionsMode] = useState(false)
-  const [discovery, setDiscovery] = useState<DiscoveryKey | null>(null)
+  const [discovery, setDiscovery] = useState<DiscoveryKey[]>([])
+  const toggleDiscovery = useCallback((key: DiscoveryKey) => {
+    setDiscovery(current => current.includes(key)
+      ? current.filter(item => item !== key)
+      : [...current, key])
+  }, [])
   const [boardSettingsOpen, setBoardSettingsOpen] = useState(false)
-  const [boardPreferences, setBoardPreferences] = useState<BoardPreferences>(DEFAULT_BOARD_PREFERENCES)
-  const [boardPreferencesReady, setBoardPreferencesReady] = useState(false)
+  const [discoveryVisible, setDiscoveryVisible] = useState<Record<DiscoveryKey, boolean>>(() => {
+    const fallback = Object.fromEntries(DISCOVERY_ITEMS.map(item => [item.key, false])) as Record<DiscoveryKey, boolean>
+    if (typeof window === 'undefined') return fallback
+    try { return { ...fallback, ...JSON.parse(localStorage.getItem('crm.schedule-board.discovery.v2') || '{}') } }
+    catch { return fallback }
+  })
+  useEffect(() => {
+    localStorage.setItem('crm.schedule-board.discovery.v2', JSON.stringify(discoveryVisible))
+  }, [discoveryVisible])
+  useEffect(() => {
+    const toggleMap = () => setMapOpen(current => {
+      const next = !current
+      if (next) requestAnimationFrame(() => document.getElementById('schedule-board-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      return next
+    })
+    window.addEventListener('crm-board-map-toggle', toggleMap)
+    return () => window.removeEventListener('crm-board-map-toggle', toggleMap)
+  }, [])
   // The agent feed is deliberately fetched without the board's current
   // filters. It stays useful while an agent is looking at one town, a price
   // range or Favourites: recent team activity must not disappear just because
   // the grid underneath has been narrowed.
   const [feedRows, setFeedRows] = useState<Listing[]>([])
-
-  useEffect(() => {
-    try {
-      const mobileNow = window.matchMedia('(max-width: 760px)').matches
-      const saved = window.localStorage.getItem(BOARD_PREFERENCES_KEY)
-      const parsed = saved ? JSON.parse(saved) : null
-      const migratedDiscoveryKeys = parsed?.discoveryVersion === 2 && Array.isArray(parsed.discoveryKeys)
-        ? parsed.discoveryKeys
-        : [...new Set([...(Array.isArray(parsed?.discoveryKeys) ? parsed.discoveryKeys : DEFAULT_BOARD_PREFERENCES.discoveryKeys), 'luxury', 'penthouses', 'pool'])]
-      const savedCollectionOrder = Array.isArray(parsed?.collectionOrder)
-        ? parsed.collectionOrder.filter((key: unknown): key is CollectionKey => COLLECTION_ITEMS.some(item => item.key === key))
-        : []
-      const migratedCollectionOrder = [
-        ...savedCollectionOrder,
-        ...COLLECTION_ITEMS.map(item => item.key).filter(key => !savedCollectionOrder.includes(key)),
-      ]
-      const next = parsed
-        ? { ...DEFAULT_BOARD_PREFERENCES, ...parsed, discoveryVersion: 2 as const, collectionVersion: 1 as const, discoveryKeys: migratedDiscoveryKeys, collectionOrder: migratedCollectionOrder }
-        : { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !mobileNow }
-      setBoardPreferences(next)
-      // Loading the Google map, its script and all markers alongside the long
-      // card list is the largest mobile startup cost. Keep a saved desktop
-      // preference, but require an explicit tap before mounting it on a phone.
-      setMapOpen(mobileNow ? false : next.mapVisible)
-      if (!params.get('view')) {
-        setUpdatesMode(next.defaultWorkspace === 'updates')
-        setCollectionsMode(next.defaultWorkspace === 'collections')
-      }
-    } catch { /* a damaged local preference should never block the board */ }
-    setBoardPreferencesReady(true)
-  // Deliberately mount-only: later URL/filter changes must never overwrite a
-  // preference the agent just changed in this open board session.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (!boardPreferencesReady) return
-    window.localStorage.setItem(BOARD_PREFERENCES_KEY, JSON.stringify(boardPreferences))
-  }, [boardPreferences, boardPreferencesReady])
-
-  const updateBoardPreference = useCallback(<K extends keyof BoardPreferences>(key: K, value: BoardPreferences[K]) => {
-    setBoardPreferences(current => ({ ...current, [key]: value }))
-    if (key === 'mapVisible') setMapOpen(Boolean(value))
-  }, [])
-
-  const resetBoardPreferences = useCallback(() => {
-    const next = { ...DEFAULT_BOARD_PREFERENCES, mapVisible: !isMobile }
-    setBoardPreferences(next)
-    setMapOpen(next.mapVisible)
-  }, [isMobile])
 
   const showToast = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
     setToast({ kind, text })
@@ -615,6 +559,7 @@ function Board() {
   }, [])
 
   useEffect(() => {
+    if (!updatesMode) return
     let alive = true
     async function pollFeed() {
       try {
@@ -625,7 +570,7 @@ function Board() {
     pollFeed()
     const t = window.setInterval(pollFeed, 20_000)
     return () => { alive = false; window.clearInterval(t) }
-  }, [])
+  }, [updatesMode])
 
   // ── pending classification changes (Kev, 2026-09-17) ─────────────────────
   // "im dashboard als notification angezeigt die wir bestätigen müssen" —
@@ -702,10 +647,13 @@ function Board() {
 
   useEffect(() => {
     let alive = true
+    setLoading(true)
     const q = new URLSearchParams()
     if (f.beds.length) q.set('beds', f.beds.join(','))
     if (f.baths.length) q.set('baths', f.baths.join(','))
-    if (f.min) q.set('price_min', f.min)
+    // A maximum by itself is an explicit €0..max range. Sending the lower
+    // bound makes that contract unambiguous all the way through the API.
+    if (f.min || f.max) q.set('price_min', f.min || '0')
     if (f.max) q.set('price_max', f.max)
     if (f.type) q.set('type', f.type)
     q.set('sort', sort)
@@ -721,25 +669,17 @@ function Board() {
       : view === 'favourites'
       ? 'schedule-board/favourites'
       : `schedule-board/listings?${q.toString()}`
-    async function load(silent = false) {
-      if (!silent) setLoading(true)
-      try {
-        const d = await crmFetch(path)
+    crmFetch(path)
+      .then(d => {
         if (!alive) return
         // canonical localities from the backend FIRST, so the pin / filter-chip / label lookups
         // below (townKey, TOWNS[k], townLabel) resolve every listing the backend can resolve
         registerCanonicalLocalities(d.listings)
-        setRows(d.listings || [])
-        setErr(null)
-      } catch (e: any) {
-        if (alive && !silent) setErr(e?.message || 'Could not load listings')
-      } finally {
-        if (alive && !silent) setLoading(false)
-      }
-    }
-    load()
-    const timer = window.setInterval(() => load(true), 15_000)
-    return () => { alive = false; window.clearInterval(timer) }
+        setRows(d.listings || []); setErr(null)
+      })
+      .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
   }, [f.beds, f.baths, f.min, f.max, f.type, sort, view, onlyConfirmed, avail, refreshTick])
 
   // Deep link from the Agent Workspace dashboard's per-listing action buttons:
@@ -785,21 +725,27 @@ function Board() {
   // the agent is on the board, same idea as the Favourites badge below.
   useEffect(() => {
     let alive = true
-    crmFetch('schedule-board/listings?status=rented')
+    let timer = 0
+    const load = () => crmFetch('schedule-board/listings?status=rented')
       .then(d => { if (alive) setRentedCount((d.listings || []).length) })
       .catch(() => { if (alive) setRentedCount(0) })
-    return () => { alive = false }
-  }, [refreshTick])
+    if (view === 'rented') load()
+    else timer = window.setTimeout(load, 3500)
+    return () => { alive = false; window.clearTimeout(timer) }
+  }, [refreshTick, view])
 
   // Same idea for the Favourites badge: a booking that silently added a card to
   // a tab nobody is looking at is a card nobody finds again.
   useEffect(() => {
     let alive = true
-    crmFetch('schedule-board/favourites')
+    let timer = 0
+    const load = () => crmFetch('schedule-board/favourites')
       .then(d => { if (alive) setFavCount((d.listings || []).length) })
       .catch(() => { if (alive) setFavCount(0) })
-    return () => { alive = false }
-  }, [refreshTick])
+    if (view === 'favourites') load()
+    else timer = window.setTimeout(load, 4200)
+    return () => { alive = false; window.clearTimeout(timer) }
+  }, [refreshTick, view])
 
   // ── town index + positions ────────────────────────────────────────────────
   // Every listing gets a stable coordinate: town centre plus a deterministic
@@ -841,30 +787,34 @@ function Board() {
   }, [rows])
 
   // ── visible set: filters ∩ town selection ∩ drawn rectangle ───────────────
+  const deferredQuery = useDeferredValue(f.q)
   const visible = useMemo(() => {
     // Free text matches ref, town or sub-location. Applied here rather than in
     // SQL because the whole result set is already local — typing filters at
     // keystroke speed instead of a round trip per character.
-    const needle = f.q.trim().toLowerCase()
+    const needle = deferredQuery.trim().toLowerCase()
     return positioned.filter(r => {
       if (f.towns.length && !f.towns.includes(r.tkey)) return false
       if (needle) {
-        const hay = [r.ref, r.town, r.subLocation, r.type, r.description].filter(Boolean).join(' ').toLowerCase()
+        const hay = [r.ref, r.town, r.subLocation, r.type, r.description, r.listedBy?.displayName, r.contact?.reachesName].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(needle)) return false
       }
-      if (discovery) {
+      if (discovery.length) {
         const copy = [r.type, r.town, r.subLocation, r.description].filter(Boolean).join(' ').toLowerCase()
-        if (discovery === 'popular-new') {
+        if (discovery.includes('popular-new')) {
           const touched = Date.parse(r.updatedAt || r.createdAt || '')
           if (!r.isHotProperty && !r.isFavourite && (!Number.isFinite(touched) || Date.now() - touched > 10 * 86_400_000)) return false
         }
-        if (discovery === 'seafront' && !matchesCollection(r, 'seafront')) return false
-        if (discovery.startsWith('beds-') && r.beds !== Number(discovery.slice(-1))) return false
-        if (discovery === 'apartments' && !/apartment|penthouse|maisonette/.test(copy)) return false
-        if (discovery === 'villas' && !/villa/.test(copy)) return false
-        if (discovery === 'luxury' && !/luxury|luxurious|designer|high[- ]end|premium|prestigious|upmarket/.test(copy)) return false
-        if (discovery === 'penthouses' && !/penthouse/.test(copy)) return false
-        if (discovery === 'pool' && !/pool|swimming/.test(copy)) return false
+        if (discovery.includes('seafront') && !/(sea\s*front|seafront|waterfront|frontline)/i.test(copy)) return false
+        const selectedBeds = discovery.filter(key => key.startsWith('beds-')).map(key => Number(key.slice(-1)))
+        if (selectedBeds.length && (r.beds == null || !selectedBeds.includes(r.beds))) return false
+        const selectedTypes = discovery.filter(key => key === 'apartments' || key === 'villas')
+        if (selectedTypes.length) {
+          const typeMatch = selectedTypes.some(key => key === 'apartments'
+            ? /apartment|penthouse|maisonette/.test(copy)
+            : /villa/.test(copy))
+          if (!typeMatch) return false
+        }
       }
       // ── tenancy rules ─────────────────────────────────────────────────────
       // Three states, so match EXACTLY: 'yes' keeps only true, 'no' keeps only
@@ -912,8 +862,36 @@ function Board() {
         if (horizon === 'future' && !farFuture) return false
       }
       return true
-    }).sort((a, b) => Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01'))
-  }, [positioned, f.towns, f.q, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon, discovery])
+    })
+  }, [positioned, f.towns, deferredQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon, discovery])
+
+  // Mount the board in small, scroll-driven batches. A normal inventory can
+  // contain hundreds of cards; constructing every card (and every hook/ref)
+  // before the first one is usable is wasted work on a phone. Filters, map
+  // markers and counts still use the complete `visible` set.
+  const pageSize = isMobile ? 28 : 72
+  const [renderLimit, setRenderLimit] = useState(72)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    setRenderLimit(pageSize)
+  }, [pageSize, view, horizon, discovery, f.towns, deferredQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ])
+  useEffect(() => {
+    const target = loadMoreRef.current
+    if (!target || renderLimit >= visible.length) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setRenderLimit(limit => Math.min(visible.length, limit + pageSize))
+      }
+    }, { rootMargin: '700px 0px' })
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [pageSize, renderLimit, visible.length])
+  useEffect(() => {
+    if (!focusRef) return
+    const index = visible.findIndex(row => row.ref === focusRef)
+    if (index >= renderLimit) setRenderLimit(index + 1)
+  }, [focusRef, renderLimit, visible])
+  const renderedVisible = useMemo(() => visible.slice(0, renderLimit), [visible, renderLimit])
 
   const mineCount = visible.filter(r => r.isMine).length
   // Count for the +3 Months tab badge — always computed off the 'active'
@@ -926,7 +904,7 @@ function Board() {
   function toggleTown(k: string) {
     setF(s => ({ ...s, towns: s.towns.includes(k) ? s.towns.filter(x => x !== k) : [...s.towns, k] }))
   }
-  function reset() { setF(EMPTY); setRect(null); setCirc(null); setDiscovery(null) }
+  function reset() { setF(EMPTY); setRect(null); setCirc(null); setDiscovery([]) }
 
   const onMarkerClick = useCallback((ref: string) => {
     setFocusRef(ref)
@@ -1436,9 +1414,66 @@ function Board() {
       count={visible.length}
       mineCount={mineCount}
       loading={loading}
-      dark
+      dark={isDark}
+      townOptions={townOptions}
+      smartBadgeCount={discovery.length}
+      smartTools={<div className="crm-mobile-smart-body">
+        <div className="crm-mobile-smart-copy"><strong>Combine what matters</strong><span>Pick several. Bedroom and property-type choices are matched as alternatives.</span></div>
+        <div className="crm-mobile-smart-grid" aria-label="Smart property filters">
+          {DISCOVERY_ITEMS.map(item => {
+            const Icon = item.icon
+            const on = discovery.includes(item.key)
+            return <button key={item.key} type="button" aria-pressed={on} onClick={() => toggleDiscovery(item.key)}><Icon /><span>{item.label}</span>{on && <Check aria-hidden />}</button>
+          })}
+        </div>
+        <div className="crm-mobile-smart-divider"><span>Workspace</span></div>
+        <div className="crm-mobile-quick-grid">
+          <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }}><LayoutGrid /><span>Standard</span></button>
+          <button type="button" onClick={() => router.push('/crm/inventory')}><List /><span>Rows</span></button>
+          <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()) }}><House /><span>Rented</span></button>
+          <button type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={() => { setView('favourites'); setUpdatesMode(false); setSelected(new Set()) }}><Star /><span>Favourites</span></button>
+          <button type="button" aria-pressed={mapOpen} onClick={() => setMapOpen(current => !current)}><MapIcon /><span>Map</span></button>
+          <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
+          <button type="button" aria-pressed={updatesMode} onClick={() => setUpdatesMode(true)}><Clock3 /><span>Recent</span></button>
+          <button type="button" disabled={!visible.length} onClick={selectVisible}><AtSign /><span>Tags</span></button>
+          <button type="button" onClick={() => setSwipePanelOpen(true)}><Link2 /><span>Swipe Links</span></button>
+          {isAdmin && <button type="button" onClick={openAgentRequests}><MessageCircle /><span>Requests</span></button>}
+          <button type="button" onClick={() => router.push('/crm/agent-profile')}><UserRound /><span>Profile</span></button>
+          <button type="button" onClick={() => setBoardSettingsOpen(true)}><MoreHorizontal /><span>More</span></button>
+        </div>
+      </div>}
       extra={
         <>
+          {/* Sort. Newest-first is the default and the reason the board reads
+              top-left-first: the listing that just arrived is the one being
+              asked about. The backend does the ordering.
+              Kev, 2026-08-22: was its own bg-off-white/no-shadow className,
+              copy-pasted separately from board-filters.tsx's TRIGGER — so
+              when TRIGGER got the raised-pill shadow treatment, these three
+              controls silently fell behind and stood out as "the ones that
+              still look like plain HTML". Now the same shell, and the native
+              select arrow (which read as a different design system on its
+              own) is hidden behind the same ChevronDown every other trigger
+              uses. */}
+          <div className="relative">
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              disabled={view === 'favourites'}
+              title={view === 'favourites'
+                ? 'Favourites are ordered by when you saved them, newest first'
+                : view === 'rented'
+                ? 'Order the rented list'
+                : 'Order the board'}
+              className="appearance-none pl-3 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded
+                         text-sm text-navy/70 hover:text-navy transition-all
+                         focus:outline-none focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
+            >
+              {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <ChevronDown className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-navy/40 pointer-events-none" />
+          </div>
+
           {/* Only listings somebody has actually stood behind, with a timestamp
               to prove it. */}
           {view === 'board' && (
@@ -1459,7 +1494,6 @@ function Board() {
           {view === 'board' && (
             <div className="relative">
               <select
-                id="board-available-from"
                 value={avail}
                 onChange={e => setAvail(e.target.value)}
                 title="Filter by when the property becomes free"
@@ -1502,152 +1536,76 @@ function Board() {
     />
   )
 
-  const renderPropertyCard = (r: Listing) => (
-    <Card
-      key={r.ref}
-      r={r}
-      focused={focusRef === r.ref}
-      innerRef={el => { cardRefs.current[r.ref] = el }}
-      onOpen={() => setDetail(r.ref)}
-      onAct={act}
-      onBook={() => openBook(r)}
-      onAsk={() => setAsking(r)}
-      onChat={() => setChatting(r)}
-      onCreateGroup={() => createGroup(r)}
-      onCheckIn={() => checkIn(r)}
-      onStatus={action => setStatusing({ r, action })}
-      onOptOut={next => optOut(r, next)}
-      busy={busyRef === r.ref}
-      selected={selected.has(r.ref)}
-      onSelect={() => toggleSelect(r.ref)}
-      onTag={() => tagOne(r)}
-      tagging={tagging}
-      onStar={() => toggleStar(r)}
-      onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
-      onReport={() => reportListing(r)}
-      onFbQueue={() => toggleFbQueue(r)}
-      fbQueueBusy={fbBusyRef === r.ref}
-      onMatch={() => setMatchRef(r.ref)}
-      onAvDate={() => setAvDateEditing(r)}
-      onAddPhotos={files => addPhotos(r, files)}
-      photoUploadBusy={photoBusyRef === r.ref}
-      onDelete={() => deleteOneListing(r)}
-      onChanged={reload}
-      compact={boardPreferences.compactCards}
-      preferences={boardPreferences}
-    />
-  )
-
   return (
     <CrmShell
       title="Schedule Board"
       subtitle={me ? 'Availability and viewing locations across the whole team' : undefined}
       filterBar={filterBar}
-      dark
-      mobileIsland
+      dark={isDark}
+      mobileImmersive
     >
-      <div style={{ padding: isMobile ? 9 : 22 }}>
+      <div style={{ padding: isMobile ? 14 : 18 }}>
         {err && <Notice text={err} />}
-
-        {!updatesMode && view === 'board' && !collectionsMode && isMobile && (
-          <section className="argus-mobile-top-deck" aria-label="Board shortcuts">
-            {boardPreferences.showTownFilters && townOptions.length > 0 ? <div className="argus-mobile-village-rail" aria-label="Villages" onTouchMove={() => mapOpen && updateBoardPreference('mapVisible', false)}>
-              {townOptions.map(t => {
-                  const on = f.towns.includes(t.key)
-                  return <button key={t.key} type="button" aria-pressed={on} onClick={() => toggleTown(t.key)}>
-                    {t.label}<small>{t.n}</small>
-                  </button>
-                })}
-            </div> : null}
-          </section>
-        )}
 
         {/* Two primary workspaces, then compact utility views. Rented stays
             available for restoring a listing without competing with daily work. */}
-        <div className="argus-board-toolbar">
-          <div className="argus-view-switch" aria-label="Board view">
-            <button data-tab="board" onClick={() => {
-              setView('board'); setUpdatesMode(false); setCollectionsMode(false); setSelected(new Set())
-              if (isMobile && mapOpen) updateBoardPreference('mapVisible', false)
-            }} aria-pressed={!updatesMode && !collectionsMode && view === 'board' && (!isMobile || !mapOpen)}>
-              <span className="argus-switch-icon"><LayoutGrid size={17} aria-hidden /></span>
-              <span><b>Standard</b><small>Property overview</small></span>
-            </button>
-            <button data-tab="collections" onClick={() => { setView('board'); setUpdatesMode(false); setCollectionsMode(true); setDiscovery(null); setSelected(new Set()) }} aria-pressed={collectionsMode}>
-              <span className="argus-switch-icon"><Rows3 size={17} aria-hidden /></span>
-              <span><b>Rows</b><small>Swipe collections</small></span>
-              <em>{visible.length}</em>
-            </button>
-            <button data-tab="updates" onClick={() => { setUpdatesMode(true); setCollectionsMode(false) }} aria-pressed={updatesMode}>
-              <span className="argus-switch-icon"><Clock3 size={17} aria-hidden /></span>
-              <span><b>List</b><small>Updates by time</small></span>
-              <em>{feedRows.length}</em>
-            </button>
-            <button className="argus-mobile-view-map" data-tab="map" onClick={() => {
-              setView('board'); setUpdatesMode(false); setCollectionsMode(false); updateBoardPreference('mapVisible', !mapOpen)
-            }} aria-pressed={mapOpen} aria-label={mapOpen ? 'Close map' : 'Open map'} title={mapOpen ? 'Close map' : 'Map'}>
-              <span className="argus-switch-icon"><MapPinned size={17} aria-hidden /></span>
-              <span><b>Map</b><small>Property map</small></span>
-            </button>
-          </div>
-          {isMobile && <div className="argus-mobile-primary-actions" aria-label="Board actions">
-            <button type="button" onClick={selectVisible} disabled={!visible.length} aria-label="Select listings for WaTag" title="WaTag"><AtSign size={17} aria-hidden /></button>
-            <button type="button" onClick={() => setSwipePanelOpen(true)} aria-label="Open Swipe Links" title="Swipe Links"><Link2 size={17} aria-hidden /></button>
-          </div>}
+        {!isMobile && <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }} style={{
+            ...chip, borderRadius: 8, background: !updatesMode && view === 'board' ? A : DCARD,
+            borderColor: !updatesMode && view === 'board' ? A : DBORDER,
+            color: !updatesMode && view === 'board' ? '#151C2C' : DTEXT_DIM,
+            fontWeight: !updatesMode && view === 'board' ? 800 : 600,
+            boxShadow: !updatesMode && view === 'board' ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
+          }} aria-label="Active board" title="Active board">{isMobile ? <LayoutGrid size={16} /> : 'Active Board'}</button>
+          <button data-tab="updates" onClick={() => setUpdatesMode(true)} style={{
+            ...chip, borderRadius: 8,
+            background: updatesMode ? A : DCARD,
+            borderColor: updatesMode ? A : DBORDER,
+            color: updatesMode ? '#151C2C' : DTEXT_DIM,
+            fontWeight: updatesMode ? 800 : 600,
+            boxShadow: updatesMode ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
+          }}>
+            {isMobile ? <Clock3 size={16} /> : 'Update List'}
+            {!!feedRows.length && <span style={{ marginLeft: isMobile ? 2 : 6, fontFamily: FM, fontSize: 9, opacity: .72 }}>{feedRows.length}</span>}
+          </button>
           <div style={{ display: 'flex', gap: 5, marginLeft: isMobile ? 0 : 'auto' }}>
             {([['favourites', 'Favourites', favCount], ['rented', 'Rented', rentedCount]] as const).map(([v, label, badge]) => {
-              const on = !updatesMode && !collectionsMode && view === v
-              return <button key={v} data-tab={v} onClick={() => { setView(v); setUpdatesMode(false); setCollectionsMode(false); setSelected(new Set()) }} style={{
+              const on = !updatesMode && view === v
+              return <button key={v} data-tab={v} aria-label={label} title={label} onClick={() => { setView(v); setUpdatesMode(false); setSelected(new Set()) }} style={{
                 ...chip, borderRadius: 999, padding: '6px 9px', fontSize: 10,
                 background: on ? 'rgba(184,149,63,.17)' : 'transparent',
                 borderColor: on ? A : DBORDER, color: on ? A : DTEXT_FAINT, fontWeight: 700,
-              }}>{label}<span style={{ marginLeft: 5, fontFamily: FM, opacity: .76 }}>{badge}</span></button>
+              }}>{isMobile ? (v === 'favourites' ? <Star size={15} /> : <House size={15} />) : label}{badge > 0 && <span style={{ marginLeft: 5, fontFamily: FM, opacity: .76 }}>{badge}</span>}</button>
             })}
           </div>
-          <button
-            type="button"
-            className="argus-board-settings-button"
-            aria-expanded={boardSettingsOpen}
-            aria-controls="argus-board-settings"
-            onClick={() => setBoardSettingsOpen(open => !open)}
-          >
-            <SlidersHorizontal size={14} aria-hidden />
-            Board settings
-          </button>
+          {!isMobile && <button type="button" onClick={() => setMapOpen(current => !current)} aria-expanded={mapOpen} aria-controls="schedule-board-map" style={{ ...chip, minHeight: 34, borderRadius: 10, borderColor: mapOpen ? 'var(--crm-accent)' : DBORDER, color: mapOpen ? '#151C2C' : DTEXT, background: mapOpen ? 'var(--crm-accent)' : DCARD, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 7 }}><MapIcon size={15} />Map</button>}
           {/* The owner-reachout switch. Sits here rather than in a settings page
               because this is where you notice the robot's work, and it is where
               Kev asked for it (2026-08-16). Admin only, and read-only for
               everybody else — an agent still benefits from seeing whether the
               robot is chasing owners before deciding to chase one himself. */}
-          <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)} style={{ ...chip, borderRadius: 8, borderColor: A, color: 'var(--crm-accent)', background: DCARD, fontWeight: 700 }}><Settings size={13} style={{ display: 'inline', marginRight: 6 }} />OPEN TO CHECK</button>
-          <a href="/nexus-map" style={{ ...chip, borderRadius: 8, borderColor: '#64B9D7', color: '#BDEBFA', background: '#183044', fontWeight: 700, textDecoration: 'none' }}><Link2 size={13} style={{ display: 'inline', marginRight: 6 }} />NEXUS MAP</a>
-          <button type="button" onClick={() => {
-            setIntelligenceOpen(true)
-            window.requestAnimationFrame(() => document.getElementById('argus-smart-data')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-          }} style={{ ...chip, borderRadius: 8, borderColor: A, color: '#F4D58B', background: 'rgba(184,149,63,.10)', fontWeight: 700 }}><Sparkles size={13} style={{ display: 'inline', marginRight: 6 }} />SMART DATA</button>
-          <ReachoutSwitch />
-        </div>
-
-        {!updatesMode && view === 'board' && !collectionsMode && isMobile && mapOpen ? <div className="argus-mobile-map-stage"><MapPanel
-          items={visible} rect={rect} onRect={setRect} circ={circ} onCirc={setCirc}
-          onMarkerClick={onMarkerClick} selectedTowns={f.towns} isMobile
-        /></div> : null}
-
-        {boardSettingsOpen && (
-          <BoardSettingsPanel
-            preferences={boardPreferences}
-            onChange={updateBoardPreference}
-            onReset={resetBoardPreferences}
-            onClose={() => setBoardSettingsOpen(false)}
-          />
-        )}
+          <details className="board-tools-menu">
+            <summary aria-label="More board tools" title="More board tools" style={{ ...chip, width: 36, height: 34, padding: 0, borderRadius: 10, borderColor: DBORDER, color: DTEXT_DIM, background: DCARD, display: 'grid', placeItems: 'center' }}><MoreHorizontal size={17} /></summary>
+            <div className="board-tools-popover">
+              <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)}><Settings size={15} />Open to check</button>
+              <button onClick={() => setBoardSettingsOpen(true)}><SlidersHorizontal size={15} />Collection shortcuts</button>
+              <a href="/nexus-map"><Link2 size={15} />Nexus Map</a>
+              <button onClick={() => { setIntelligenceOpen(true); requestAnimationFrame(() => document.getElementById('board-intelligence-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }}><MapIcon size={15} />Smart map &amp; traffic</button>
+              <ReachoutSwitch />
+            </div>
+          </details>
+        </div>}
 
         {updatesMode && (
           <AgentFeed
             rows={feedRows}
             mobile={isMobile}
-            showGuide={boardPreferences.showFeedGuide}
-            renderCard={renderPropertyCard}
+            onOpen={r => setDetail(r.ref)}
+            onChat={r => setChatting(r)}
+            onBook={openBook}
+            onTag={r => tagOne(r)}
+            onConfirm={checkIn}
+            busyRef={busyRef}
           />
         )}
 
@@ -1659,8 +1617,8 @@ function Board() {
             a separate fetch, and only means anything on that tab. Defaults
             to Active so a listing 6 months out is never mixed into the
             normal board by accident. */}
-        {view === 'board' && !collectionsMode && !isMobile && (
-          <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
+        {view === 'board' && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: isMobile ? 14 : 8, alignItems: 'center' }}>
             {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
               const on = horizon === h
               return (
@@ -1681,17 +1639,17 @@ function Board() {
           </div>
         )}
 
-        {view === 'board' && !collectionsMode && !isMobile && (
-          <div aria-label="Quick property collections" style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', padding: '1px 1px 12px', marginBottom: 2, scrollbarWidth: 'none' }}>
-            {DISCOVERY_ITEMS.filter(item => boardPreferences.discoveryKeys.includes(item.key)).map(item => {
+        {view === 'board' && (isMobile ? discovery.length > 0 : DISCOVERY_ITEMS.some(item => discoveryVisible[item.key])) && (
+          <div aria-label="Quick property collections and board tools" style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', padding: '1px 1px 12px', marginBottom: 2, scrollbarWidth: 'none' }}>
+            {DISCOVERY_ITEMS.filter(item => isMobile ? discovery.includes(item.key) : discoveryVisible[item.key]).map(item => {
               const Icon = item.icon
-              const on = discovery === item.key
-              return <button key={item.key} type="button" aria-pressed={on} onClick={() => setDiscovery(current => current === item.key ? null : item.key)} style={{
-                border: `1px solid ${on ? 'rgba(236,166,67,.75)' : DBORDER}`,
-                background: on ? 'linear-gradient(135deg,rgba(236,166,67,.24),rgba(232,185,49,.10))' : 'rgba(20,29,47,.88)',
-                color: on ? '#FFD18A' : DTEXT_DIM, borderRadius: 999, padding: '9px 13px', minHeight: 40,
+              const on = discovery.includes(item.key)
+              return <button key={item.key} type="button" aria-pressed={on} onClick={() => toggleDiscovery(item.key)} style={{
+                border: `1px solid ${on ? 'var(--crm-accent)' : DBORDER}`,
+                background: on ? 'var(--crm-accent-soft)' : 'var(--crm-surface)',
+                color: on ? 'var(--crm-accent)' : DTEXT_DIM, borderRadius: 999, padding: '9px 13px', minHeight: 40,
                 display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap', cursor: 'pointer',
-                fontSize: 11.5, fontWeight: 750, boxShadow: on ? '0 7px 20px rgba(226,139,35,.16)' : 'none',
+                fontSize: 11.5, fontWeight: 750, boxShadow: on ? '0 7px 20px color-mix(in srgb, var(--crm-accent) 14%, transparent)' : '0 2px 8px rgba(15,23,42,.05)',
                 transform: on ? 'translateY(-1px)' : 'none', transition: 'transform .18s, box-shadow .18s, border-color .18s',
               }}><Icon size={14} />{item.label}</button>
             })}
@@ -1723,19 +1681,17 @@ function Board() {
           </div>
         )}
 
-        {!collectionsMode && <>
         {/* ── WATag toolbar ──────────────────────────────────────────────────
             The multi-select half of WATag. It appears only once something is
             picked, so the board is not carrying a dead bar around all day, and
             it names the count in the button rather than beside it — the number
             is the thing you check before firing. */}
-        <div className={`argus-board-actions${selected.size > 0 ? ' has-selection' : ''}`} style={{
-          display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-          marginBottom: 14,
+        {(!isMobile || selected.size > 0) && <div style={{
+          display: 'flex', gap: 8, alignItems: 'center', flexWrap: selected.size > 0 ? 'wrap' : 'nowrap', overflowX: selected.size > 0 ? 'visible' : 'auto',
+          marginBottom: isMobile ? 14 : 8,
         }}>
           <button
             data-watag-selectall
-            className="argus-watag-select"
             onClick={selectVisible}
             disabled={!visible.length}
             title={`Pick the first ${MAX_TAGS} listings in this search that can be tagged`}
@@ -1744,18 +1700,17 @@ function Board() {
               color: visible.length ? DTEXT_DIM : DTEXT_FAINT,
               cursor: visible.length ? 'pointer' : 'not-allowed',
             }}>
-            <AtSign size={13} aria-hidden /><span>Select for WATag</span>
+            {isMobile ? <AtSign size={15} /> : 'Select for WATag'}
           </button>
 
           <button
-            className="argus-swipe-links"
             onClick={() => setSwipePanelOpen(true)}
             title="See every swipe link you've made and what customers liked"
             style={{
               ...chip, borderRadius: 8, background: DCARD, borderColor: DBORDER,
               color: DTEXT_DIM, display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>
-            <Link2 size={13} /><span>Swipe Links</span>
+              <Link2 size={13} />{!isMobile && ' Swipe Links'}
           </button>
 
           {/* Admin only: every open @Agenttag request, grouped by agent — the
@@ -1769,7 +1724,7 @@ function Board() {
                 ...chip, borderRadius: 8, background: DCARD, borderColor: DBORDER,
                 color: DTEXT_DIM, display: 'inline-flex', alignItems: 'center', gap: 6,
               }}>
-              @Agenttag Requests
+              {isMobile ? <MessageCircle size={15} /> : '@Agenttag Requests'}
             </button>
           )}
 
@@ -1850,84 +1805,98 @@ function Board() {
               </span>
             </>
           )}
-        </div>
+        </div>}
 
         {/* villages */}
-        {!isMobile && boardPreferences.showTownFilters && townOptions.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 5 : 0, marginBottom: 14, scrollbarWidth: 'none' }}>
+        {townOptions.length > 0 && (
+          <div className="crm-city-rail" aria-label="Filter by city">
             {townOptions.map(t => {
               const on = f.towns.includes(t.key)
               return (
-                <button key={t.key} onClick={() => toggleTown(t.key)} style={{
-                  ...chip,
-                  background: on ? AD : DCARD,
-                  borderColor: on ? AB : DBORDER,
-                  color: on ? A : DTEXT_DIM,
-                  fontWeight: on ? 700 : 500,
-                }}>
-                  {t.label} <span style={{ fontFamily: FM, fontSize: 10, opacity: 0.6 }}>{t.n}</span>
+                <button key={t.key} type="button" className="crm-city-chip" aria-pressed={on} onClick={() => toggleTown(t.key)}>
+                  <span>{t.label}</span><small>{t.n}</small>
                 </button>
               )
             })}
           </div>
         )}
 
-        {!isMobile && <button
-          onClick={() => updateBoardPreference('mapVisible', !mapOpen)}
-          style={{
-            ...chip, marginBottom: mapOpen ? 8 : 14, background: DCARD,
-            borderColor: DBORDER, color: DTEXT_DIM, fontWeight: 600,
-          }}
-        >
-          {mapOpen ? '▾ Hide map' : '▸ Show map'}
-        </button>}
-
-        {!isMobile && mapOpen && <MapPanel
-          items={visible}
-          rect={rect}
-          onRect={setRect}
-          circ={circ}
-          onCirc={setCirc}
-          onMarkerClick={onMarkerClick}
-          selectedTowns={f.towns}
-          isMobile={isMobile}
-        />}
-        </>}
-
-        {collectionsMode && view === 'board' && (
-          <AirbnbCollectionRows
-            rows={visible}
-            order={boardPreferences.collectionOrder}
-            onOpen={r => setDetail(r.ref)}
-            onStar={toggleStar}
-            onChat={r => setChatting(r)}
-            onBook={openBook}
-            onTag={r => tagOne(r)}
-            onConfirm={checkIn}
-            busyRef={busyRef}
-            onChanged={reload}
-          />
-        )}
+        <AnimatePresence initial={false}>
+          {mapOpen && <motion.div
+            id="schedule-board-map"
+            initial={{ opacity: 0, scaleX: .985, scaleY: .96, y: -8 }}
+            animate={{ opacity: 1, scaleX: 1, scaleY: 1, y: 0 }}
+            exit={{ opacity: 0, scaleX: .988, scaleY: .96, y: -7 }}
+            transition={{ type: 'spring', stiffness: 390, damping: 37, mass: .76 }}
+            style={{ transformOrigin: 'top center' }}
+          ><MapPanel
+            items={visible}
+            rect={rect}
+            onRect={setRect}
+            circ={circ}
+            onCirc={setCirc}
+            onMarkerClick={onMarkerClick}
+            selectedTowns={f.towns}
+            isMobile={isMobile}
+          /></motion.div>}
+        </AnimatePresence>
 
         {/* cards */}
         {/* Gap 14→20 (Kev's redesign brief, 2026-08-22) — more editorial
             breathing room between cards, less packed-admin-table. */}
-        {!collectionsMode && <div style={{
-          display: 'grid', gap: isMobile ? 10 : boardPreferences.compactCards ? 12 : 20, marginTop: boardPreferences.compactCards ? 12 : 20,
-          // Cards size to their own content. Grid's default `stretch` created
-          // the large empty middle area whenever one listing in a row had
-          // more metadata than its neighbours.
-          alignItems: 'start',
+        <div style={{
+          display: 'grid', gap: isMobile ? 10 : 20, marginTop: isMobile ? 10 : 12,
           // Kev, 2026-08-22: 268 was too narrow — the action row could not fit
           // its buttons and the on/off-market pair got clipped off the right
           // edge of the card. Wider minimum = one fewer card per row, and the
           // buttons have room to sit on one line instead of overflowing.
           // Kev, 2026-09-11: tried two smaller cards per row on mobile, but it
           // made the board unreadable — reverted to one full-width card per row.
-          gridTemplateColumns: isMobile ? '1fr' : `repeat(auto-fill,minmax(${boardPreferences.compactCards ? 320 : 340}px,1fr))`,
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(560px,1fr))',
         }}>
-          {visible.map(renderPropertyCard)}
-        </div>}
+          {renderedVisible.map(r => (
+            <Card
+              key={r.ref}
+              r={r}
+              mobile={isMobile}
+              focused={focusRef === r.ref}
+              innerRef={el => { cardRefs.current[r.ref] = el }}
+              onOpen={() => setDetail(r.ref)}
+              onAct={act}
+              onBook={() => openBook(r)}
+              onAsk={() => setAsking({ listing: r, intent: 'property' })}
+              onAskPortfolio={() => setAsking({ listing: r, intent: 'owner-inventory' })}
+              onChat={() => setChatting(r)}
+              onCreateGroup={() => createGroup(r)}
+              onCheckIn={() => checkIn(r)}
+              onStatus={action => setStatusing({ r, action })}
+              onOptOut={next => optOut(r, next)}
+              busy={busyRef === r.ref}
+              selected={selected.has(r.ref)}
+              onSelect={() => toggleSelect(r.ref)}
+              onTag={() => tagOne(r)}
+              tagging={tagging}
+              onStar={() => toggleStar(r)}
+              onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
+              onReport={() => reportListing(r)}
+              onFbQueue={() => toggleFbQueue(r)}
+              fbQueueBusy={fbBusyRef === r.ref}
+              onMatch={() => setMatchRef(r.ref)}
+              onAvDate={() => setAvDateEditing(r)}
+              onAddPhotos={(files) => addPhotos(r, files)}
+              photoUploadBusy={photoBusyRef === r.ref}
+              onDelete={() => deleteOneListing(r)}
+              onChanged={reload}
+            />
+          ))}
+        </div>
+        <div ref={loadMoreRef} style={{ minHeight: renderedVisible.length < visible.length ? 44 : 0, display: 'grid', placeItems: 'center', marginTop: 8 }}>
+          {renderedVisible.length < visible.length && (
+            <button type="button" onClick={() => setRenderLimit(limit => Math.min(visible.length, limit + pageSize))} style={{ ...chip, color: DTEXT_FAINT, borderColor: DBORDER, background: DCARD }}>
+              Show more · {visible.length - renderedVisible.length}
+            </button>
+          )}
+        </div>
 
         {!loading && !visible.length && !err && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: '#BBB', fontSize: 13 }}>
@@ -1941,10 +1910,37 @@ function Board() {
         </>}
       </div>
 
-      <details id="argus-smart-data" open={intelligenceOpen} style={{ margin: '12px 24px 30px', border: '1px solid #314452', borderRadius: 16, background: '#101a25', color: '#e8f4f4', overflow: 'hidden', scrollMarginTop: 18 }} onToggle={event=>setIntelligenceOpen(event.currentTarget.open)}>
-        <summary style={{ padding: '20px 24px', cursor: 'pointer', fontSize: 17, fontWeight: 750 }}>2906 Smart Data · Locations &amp; Traffic <span style={{fontSize:11,color:'#92b3bf',marginLeft:12}}>Nexus property intelligence workspace</span></summary>
+      {!updatesMode && intelligenceOpen && <details id="board-intelligence-map" open style={{ margin: '12px 24px 30px', border: '1px solid #314452', borderRadius: 16, background: '#101a25', color: '#e8f4f4', overflow: 'hidden' }} onToggle={event=>{ if (!event.currentTarget.open) setIntelligenceOpen(false) }}>
+        <summary style={{ padding: '20px 24px', cursor: 'pointer', fontSize: 17, fontWeight: 750 }}>Smart Map · Locations &amp; Traffic <span style={{fontSize:11,color:'#92b3bf',marginLeft:12}}>Open map workspace</span></summary>
         {intelligenceOpen && <BoardIntelligenceMap />}
-      </details>
+      </details>}
+      {boardSettingsOpen && (
+        <div role="dialog" aria-modal="true" aria-label="Board settings" onClick={() => setBoardSettingsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 190, background: 'rgba(2,6,15,.68)', backdropFilter: 'blur(5px)', display: 'grid', placeItems: isMobile ? 'end stretch' : 'center' }}>
+          <div onClick={event => event.stopPropagation()} style={{ width: isMobile ? '100%' : 430, maxHeight: '82vh', overflowY: 'auto', borderRadius: isMobile ? '22px 22px 0 0' : 22, border: `1px solid ${DBORDER}`, background: 'linear-gradient(160deg,#151e31,#0d1423)', boxShadow: '0 24px 70px rgba(0,0,0,.55)', padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div><div style={{ color: A, fontSize: 9, fontWeight: 850, letterSpacing: '.16em' }}>YOUR BOARD</div><h2 style={{ color: DTEXT, fontSize: 21, margin: '4px 0 0' }}>Board menu</h2></div>
+              <button type="button" onClick={() => setBoardSettingsOpen(false)} aria-label="Close settings" style={{ width: 40, height: 40, borderRadius: 12, border: `1px solid ${DBORDER}`, color: DTEXT_DIM, background: DCARD, display: 'grid', placeItems: 'center' }}><X size={17} /></button>
+            </div>
+            <p style={{ color: DTEXT_FAINT, fontSize: 12, lineHeight: 1.5, margin: '12px 0 14px' }}>Open the specialist tools here. Collection shortcuts are optional and stay on this device.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              <button type="button" onClick={() => { setBoardSettingsOpen(false); setOpenToCheck(true) }} style={{ ...chip, minHeight: 44, justifyContent: 'flex-start', borderRadius: 12, borderColor: DBORDER, color: DTEXT, background: DTRAY, display: 'flex', alignItems: 'center', gap: 8 }}><Settings size={15} />Open to check</button>
+              <a href="/nexus-map" style={{ ...chip, minHeight: 44, justifyContent: 'flex-start', borderRadius: 12, borderColor: DBORDER, color: DTEXT, background: DTRAY, display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}><Link2 size={15} />Nexus Map</a>
+              <button type="button" onClick={() => { setBoardSettingsOpen(false); setIntelligenceOpen(true); requestAnimationFrame(() => document.getElementById('board-intelligence-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }} style={{ ...chip, minHeight: 44, justifyContent: 'flex-start', borderRadius: 12, borderColor: DBORDER, color: DTEXT, background: DTRAY, display: 'flex', alignItems: 'center', gap: 8 }}><MapIcon size={15} />Smart map</button>
+              <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 12, border: `1px solid ${DBORDER}`, background: DTRAY }}><ReachoutSwitch /></div>
+            </div>
+            <div style={{ color: DTEXT_FAINT, fontSize: 9, fontWeight: 850, letterSpacing: '.14em', marginBottom: 8 }}>OPTIONAL COLLECTIONS</div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {DISCOVERY_ITEMS.map(item => { const Icon = item.icon; const enabled = discoveryVisible[item.key]; return (
+                <button key={item.key} type="button" onClick={() => setDiscoveryVisible(current => ({ ...current, [item.key]: !current[item.key] }))} aria-pressed={enabled} style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', padding: '11px 12px', borderRadius: 13, border: `1px solid ${enabled ? 'rgba(184,149,63,.42)' : DBORDER}`, background: enabled ? 'rgba(184,149,63,.09)' : DTRAY, color: enabled ? DTEXT : DTEXT_FAINT, cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 10, display: 'grid', placeItems: 'center', background: enabled ? 'rgba(184,149,63,.16)' : DCARD, color: enabled ? A : DTEXT_FAINT }}><Icon size={15} /></span>
+                  <strong style={{ flex: 1, fontSize: 12.5 }}>{item.label}</strong>
+                  <span style={{ width: 38, height: 22, padding: 2, borderRadius: 999, background: enabled ? '#2F8E68' : '#313a4b', display: 'flex', justifyContent: enabled ? 'flex-end' : 'flex-start', transition: 'all .18s' }}><span style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 2px 7px rgba(0,0,0,.3)' }} /></span>
+                </button>
+              )})}
+            </div>
+          </div>
+        </div>
+      )}
       {detail && (
         <DetailModal
           refId={detail}
@@ -1959,7 +1955,6 @@ function Board() {
           tagging={tagging}
           onStar={r => toggleStar(r)}
           onBook={r => { setDetail(null); setDetailIntent(null); setBooking(r) }}
-          onChanged={reload}
         />
       )}
 
@@ -1987,9 +1982,12 @@ function Board() {
         {asking && (
           <AskDialog
             key="ask"
-            refId={asking.ref}
-            town={asking.town}
-            contact={asking.contact}
+            refId={asking.listing.ref}
+            town={asking.listing.town}
+            contact={asking.listing.contact}
+            intent={asking.intent}
+            initialNote={asking.intent === 'owner-inventory' ? RENTED_OWNER_INVENTORY_MESSAGE : undefined}
+            title={asking.intent === 'owner-inventory' ? 'Ask about new inventory' : undefined}
             onClose={() => setAsking(null)}
             // A sent question spends one of the day's two slots, so the cards
             // have to be refetched or the counter lies until the next reload.
@@ -2142,7 +2140,9 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
     s.async = true
     // Places powers the internal Nexus amenities/workplace suggestion editor.
     // No `libraries=drawing`: DrawingManager is gone since 3.65.
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}&libraries=places`
+    // This compact board map only needs the core Maps API. Loading Places here
+    // made a simple property-pin view pay for the much larger editor library.
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}`
     s.onload = () => setReady(true)
     s.onerror = () => setLoadErr('load-failed')
     document.head.appendChild(s)
@@ -2399,11 +2399,13 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
   // Was 420/260 — the map ate almost a full screen of scroll before the
   // cards even started. Still tall enough to draw a usable area with the
   // circle/box tool; the "Hide map" toggle above covers the rest.
-  const height = isMobile ? 220 : 320
+  const mapSize: React.CSSProperties = isMobile
+    ? { aspectRatio: '16 / 9' }
+    : { height: 320 }
 
   if (loadErr === 'no-key') {
     return (
-      <div style={{ ...mapBox, height, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 20 }}>
+      <div style={{ ...mapBox, ...mapSize, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 20 }}>
         <div>
           <div style={{ fontFamily: F, fontWeight: 700, color: 'var(--crm-accent)', fontSize: 14 }}>Map temporarily unavailable</div>
           <div style={{ fontSize: 12, marginTop: 6, maxWidth: 420, lineHeight: 1.5, color: 'var(--crm-muted)' }}>
@@ -2416,14 +2418,14 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
 
   return (
     <div style={{ position: 'relative' }}>
-      <div ref={divRef} style={{ ...mapBox, height }} />
+      <div ref={divRef} style={{ ...mapBox, ...mapSize }} />
       {!ready && !loadErr && (
-        <div style={{ ...mapBox, height, position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#BBB', fontSize: 12 }}>
+        <div style={{ ...mapBox, ...mapSize, position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#BBB', fontSize: 12 }}>
           loading map…
         </div>
       )}
       {loadErr === 'load-failed' && (
-        <div style={{ ...mapBox, height, position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#B91C1C', fontSize: 12, textAlign: 'center', padding: 16 }}>
+        <div style={{ ...mapBox, ...mapSize, position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#B91C1C', fontSize: 12, textAlign: 'center', padding: 16 }}>
           Google Maps failed to load. Check the API key restrictions and that Maps JavaScript API is enabled.
         </div>
       )}
@@ -2603,18 +2605,6 @@ function ago(iso: string): string {
   const days = Math.floor(hrs / 24)
   if (days < 30) return `${days}d ago`
   return `${Math.floor(days / 30)}mo ago`
-}
-
-// Photo badges have very little room. Minutes and hours are useful while a
-// listing is fresh; from 48h onward days scan much faster on a phone.
-function compactAge(iso: string): string {
-  const then = Date.parse(iso)
-  if (!Number.isFinite(then)) return 'now'
-  const mins = Math.max(0, Math.floor((Date.now() - then) / 60000))
-  if (mins < 60) return `${Math.max(1, mins)}m`
-  const hours = Math.floor(mins / 60)
-  if (hours < 48) return `${hours}h`
-  return `${Math.floor(hours / 24)}d`
 }
 
 // "13 Aug", or "13 Aug 25" once it is not this year — a bare "13 Aug" on a
@@ -2830,187 +2820,91 @@ async function downloadPhotos(r: Listing, onProgress: (done: number) => void) {
   }
 }
 
-// The card gear is the listing editor. Owner identity and contact data are
-// intentionally absent: this surface edits the property record only.
-function ClassificationGear({ r, dark, isAdmin, onChanged }: {
-  r: Listing; dark: boolean; isAdmin: boolean; onChanged: () => void
-}) {
+// The button itself. Its own tiny component so the download state belongs to one
+// card and a click cannot bubble up into "open the listing".
+// Kev, 2026-09-17 ("settings rad bei die ...., Winterlet unso, nur Admins
+// können es direkt ändern"): a small classification control living next to
+// the "..." Tools button. Admins apply immediately via the ordinary
+// property PATCH; a non-admin's change comes back with `pendingChange` set
+// instead of being applied — the backend decides, this component just
+// reflects whichever happened.
+function ClassificationGear({ r, dark, isAdmin }: { r: Listing; dark: boolean; isAdmin: boolean }) {
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [value, setValue] = useState<string>(r.leaseType || 'long_let')
+  const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
-  const [form, setForm] = useState<any>(null)
-  const [images, setImages] = useState<any[]>([])
-  const uploadRef = useRef<HTMLInputElement>(null)
+  const choices = [
+    ['long_let', 'Long-let'],
+    ['winter_let', 'Winter-let'],
+    ['short_let', 'Short-let'],
+    ['flexible', 'Flexible'],
+  ] as const
 
-  const set = (key: string, value: any) => setForm((current: any) => ({ ...current, [key]: value }))
-  const date = (value: any, withTime = false) => value ? String(value).slice(0, withTime ? 16 : 10) : ''
-  const triState = (value: string) => value === 'true' ? true : value === 'false' ? false : null
-
-  const load = useCallback(async () => {
-    setLoading(true); setNote(null)
+  async function apply() {
+    if (value === (r.leaseType || 'long_let')) { setOpen(false); return }
+    setBusy(true)
     try {
-      const response = await crmFetch(`properties/${r.id}`)
-      const p = response.property
-      setImages(Array.isArray(p.images) ? p.images : [])
-      setForm({
-        property_type: p.type || '', town: p.location?.town || '', street: p.location?.street || '', apt: p.location?.apt || '',
-        bedrooms: p.beds ?? '', bathrooms: p.baths ?? '', size_sqm: p.sizeSqm ?? '',
-        longlet_price: p.prices?.longlet ?? '', sale_price: p.prices?.sale ?? '', shortlet: !!p.prices?.shortlet,
-        available_status: p.availableStatus || 'available', available_date: date(p.availableDate), available_until: date(p.availableUntil),
-        viewing_status: p.viewingStatus || 'none', viewing_date: date(p.viewingDate, true), viewing_notes: p.viewingNotes || '',
-        description: p.description || '', internal_notes: p.internalNotes || '', rental_modes: p.rentalModes || ['long_let'],
-        has_balcony: p.hasBalcony === true ? 'true' : p.hasBalcony === false ? 'false' : '', balcony_size: p.balconySize || '',
-        has_study_room: p.hasStudyRoom === true ? 'true' : p.hasStudyRoom === false ? 'false' : '',
-        parking_available: p.parkingAvailable === true ? 'true' : p.parkingAvailable === false ? 'false' : '',
-        is_exclusive: !!p.exclusive, exclusive_until: date(p.exclusiveUntil), published: !!p.published,
-      })
-    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Listing could not be loaded.') }
-    finally { setLoading(false) }
-  }, [r.id])
-
-  useEffect(() => { if (open) load() }, [open, load])
-  useEffect(() => {
-    if (!open) return
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
-    window.addEventListener('keydown', close)
-    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', close) }
-  }, [open])
-
-  async function save() {
-    if (!form || saving) return
-    setSaving(true); setNote(null)
-    try {
-      const payload = {
-        property_type: form.property_type, town: form.town, street: form.street, apt: form.apt,
-        bedrooms: form.bedrooms, bathrooms: form.bathrooms, size_sqm: form.size_sqm,
-        longlet_price: form.longlet_price, sale_price: form.sale_price, shortlet: !!form.shortlet,
-        available_status: form.available_status, available_date: form.available_date || null,
-        available_until: form.available_until || null, viewing_status: form.viewing_status,
-        viewing_date: form.viewing_date || null, viewing_notes: form.viewing_notes,
-        description: form.description, internal_notes: form.internal_notes, rental_modes: form.rental_modes,
-        has_balcony: triState(form.has_balcony), balcony_size: form.balcony_size || null,
-        has_study_room: triState(form.has_study_room), parking_available: triState(form.parking_available),
-        is_exclusive: !!form.is_exclusive, exclusive_until: form.exclusive_until || null, published: !!form.published,
-      }
-      const response = await crmJson(`properties/${r.id}`, 'PATCH', payload)
-      setNote(response?.pendingChange ? 'Changes sent for admin approval.' : 'Listing saved. The board is updating now.')
-      onChanged()
-    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Could not save this listing.') }
-    finally { setSaving(false) }
+      const d = await crmJson(`properties/${r.id}`, 'PATCH', { lease_type: value })
+      setNote(d?.pendingChange ? 'Queued for admin approval' : 'Updated')
+      setTimeout(() => { setOpen(false); setNote(null) }, 1400)
+    } catch (e: any) {
+      setNote(e?.data?.error || e?.message || 'Failed')
+    } finally { setBusy(false) }
   }
 
-  async function upload(files: FileList | null) {
-    if (!files?.length || uploading) return
-    const body = new FormData()
-    Array.from(files).forEach(file => body.append('images', file))
-    setUploading(true); setNote(null)
-    try {
-      const response = await crmFetch(`schedule-board/listings/${encodeURIComponent(r.ref)}/images`, { method: 'POST', body })
-      setImages(response.images || [])
-      setNote(`${response.added} photo${response.added === 1 ? '' : 's'} added.`)
-      onChanged()
-    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Photos could not be uploaded.') }
-    finally { setUploading(false) }
-  }
-
-  const editor = open && typeof document !== 'undefined' ? createPortal(
-    <div className="argus-listing-editor-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false) }}>
-      <section className="argus-listing-editor" role="dialog" aria-modal="true" aria-label={`Edit listing ${r.ref}`}>
-        <header>
-          <div className="argus-listing-editor-title">
-            <span><Settings size={19} /></span>
-            <div><small>PROPERTY SETTINGS</small><h2>Edit #{r.ref}</h2></div>
+  return (
+    <div
+      data-classification-gear
+      style={{ position: 'relative' }}
+      onMouseDown={event => event.stopPropagation()}
+      onClick={event => event.stopPropagation()}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(v => !v)}
+        title="Change lease type"
+        style={{ ...trayMoreBtn(dark), width: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Settings size={15} />
+      </button>
+      {open && (
+        <div data-classification-panel style={{
+          position: 'relative', zIndex: 40, marginTop: 8,
+          background: dark ? '#141B29' : '#fff', border: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : '#E5E1D8'}`,
+          borderRadius: 10, padding: 10, width: 216, boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+        }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: dark ? '#8B93A6' : '#8A8578', marginBottom: 6 }}>
+            {isAdmin ? 'Lease type' : 'Propose lease type'}
           </div>
-          <button type="button" className="argus-listing-editor-close" onClick={() => setOpen(false)} aria-label="Close editor"><XGlyph size={18} /></button>
-        </header>
-
-        {loading && <div className="argus-listing-editor-loading">Loading the complete listing…</div>}
-        {!loading && form && <div className="argus-listing-editor-body">
-          <div className="argus-listing-editor-lock"><ShieldAlert size={15} /><span><b>Owner details are protected.</b> This editor changes the listing only; owner identity and contact details stay untouched.</span></div>
-
-          <EditorSection title="Photos" subtitle={`${images.length} saved · add new images without leaving the board`}>
-            <div className="argus-listing-editor-gallery">
-              {images.slice(0, 5).map((image: any, index: number) => <img key={index} src={image.thumbnail || image.url || image} alt="" />)}
-              <button type="button" onClick={() => uploadRef.current?.click()} disabled={uploading}><Camera size={17} /><span>{uploading ? 'Uploading…' : 'Add photos'}</span></button>
-              <input ref={uploadRef} hidden type="file" accept="image/*" multiple onChange={event => { upload(event.target.files); event.target.value = '' }} />
-            </div>
-          </EditorSection>
-
-          <EditorSection title="Property" subtitle="The facts shown on cards, links and the public listing">
-            <div className="argus-listing-editor-grid">
-              <EditorField label="Property type"><input value={form.property_type} onChange={e => set('property_type', e.target.value)} /></EditorField>
-              <EditorField label="Town / locality"><LocationSelect value={form.town} onChange={value => set('town', value)} /></EditorField>
-              <EditorField label="Street"><input value={form.street} onChange={e => set('street', e.target.value)} /></EditorField>
-              <EditorField label="Apartment / unit"><input value={form.apt} onChange={e => set('apt', e.target.value)} /></EditorField>
-              <EditorField label="Bedrooms"><input type="number" min="0" value={form.bedrooms} onChange={e => set('bedrooms', e.target.value)} /></EditorField>
-              <EditorField label="Bathrooms"><input type="number" min="0" value={form.bathrooms} onChange={e => set('bathrooms', e.target.value)} /></EditorField>
-              <EditorField label="Size m²"><input type="number" min="0" value={form.size_sqm} onChange={e => set('size_sqm', e.target.value)} /></EditorField>
-            </div>
-          </EditorSection>
-
-          <EditorSection title="Market & availability" subtitle="Price, status, dates and rental modes">
-            <div className="argus-listing-editor-grid">
-              <EditorField label="Long-let € / month"><input type="number" min="0" value={form.longlet_price} onChange={e => set('longlet_price', e.target.value)} /></EditorField>
-              <EditorField label="Sale price €"><input type="number" min="0" value={form.sale_price} onChange={e => set('sale_price', e.target.value)} /></EditorField>
-              <EditorField label="Availability"><select value={form.available_status} onChange={e => set('available_status', e.target.value)}><option value="available">Available</option><option value="available_confirmed">Available confirmed</option><option value="soon_available">Available soon</option><option value="reserved">Reserved</option><option value="rented">Rented</option></select></EditorField>
-              <EditorField label="Available from"><input type="date" value={form.available_date} onChange={e => set('available_date', e.target.value)} /></EditorField>
-              <EditorField label="Available until"><input type="date" value={form.available_until} onChange={e => set('available_until', e.target.value)} /></EditorField>
-              <EditorField label="Viewing status"><select value={form.viewing_status} onChange={e => set('viewing_status', e.target.value)}><option value="none">None</option><option value="requested">Requested</option><option value="scheduled">Scheduled</option><option value="done">Done</option></select></EditorField>
-              <EditorField label="Viewing date & time"><input type="datetime-local" value={form.viewing_date} onChange={e => set('viewing_date', e.target.value)} /></EditorField>
-            </div>
-            <div className="argus-listing-editor-modes"><label>Rental modes</label><RentalModePicker value={form.rental_modes || []} onChange={modes => set('rental_modes', modes)} />{!isAdmin && <small>Classification changes may require admin approval.</small>}</div>
-          </EditorSection>
-
-          <EditorSection title="Description & notes" subtitle="Public copy and private operational context">
-            <div className="argus-listing-editor-stack">
-              <EditorField label="Public description"><textarea rows={5} value={form.description} onChange={e => set('description', e.target.value)} /></EditorField>
-              <EditorField label="Viewing notes"><textarea rows={3} value={form.viewing_notes} onChange={e => set('viewing_notes', e.target.value)} /></EditorField>
-              <EditorField label="Internal notes · private"><textarea className="is-private" rows={3} value={form.internal_notes} onChange={e => set('internal_notes', e.target.value)} /></EditorField>
-            </div>
-          </EditorSection>
-
-          <EditorSection title="Verified amenities" subtitle="Unknown remains unknown; the system never guesses">
-            <div className="argus-listing-editor-grid">
-              <EditorField label="Balcony / terrace"><select value={form.has_balcony} onChange={e => set('has_balcony', e.target.value)}><option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option></select></EditorField>
-              {form.has_balcony === 'true' && <EditorField label="Balcony size"><select value={form.balcony_size} onChange={e => set('balcony_size', e.target.value)}><option value="">Unspecified</option><option value="small">Small</option><option value="large">Large</option></select></EditorField>}
-              <EditorField label="Study / office room"><select value={form.has_study_room} onChange={e => set('has_study_room', e.target.value)}><option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option></select></EditorField>
-              <EditorField label="Parking"><select value={form.parking_available} onChange={e => set('parking_available', e.target.value)}><option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option></select></EditorField>
-            </div>
-          </EditorSection>
-
-          <EditorSection title="Publishing" subtitle="Control how the property appears in the live inventory">
-            <div className="argus-listing-editor-checks">
-              <label><input type="checkbox" checked={form.published} onChange={e => set('published', e.target.checked)} /><span><b>Published</b><small>Show as a live listing</small></span></label>
-              <label><input type="checkbox" checked={form.shortlet} onChange={e => set('shortlet', e.target.checked)} /><span><b>Short-let</b><small>Also available short term</small></span></label>
-              <label><input type="checkbox" checked={form.is_exclusive} onChange={e => set('is_exclusive', e.target.checked)} /><span><b>Exclusive</b><small>Mark as agency exclusive</small></span></label>
-              {form.is_exclusive && <EditorField label="Exclusive until"><input type="date" value={form.exclusive_until} onChange={e => set('exclusive_until', e.target.value)} /></EditorField>}
-            </div>
-          </EditorSection>
-        </div>}
-
-        <footer>
-          <div aria-live="polite">{note || 'All listing fields can be edited here. Owner details remain protected.'}</div>
-          <span><button type="button" className="secondary" onClick={() => setOpen(false)}>Cancel</button><button type="button" className="primary" disabled={!form || saving || loading} onClick={save}>{saving ? 'Saving…' : isAdmin ? 'Save listing' : 'Save / submit changes'}</button></span>
-        </footer>
-      </section>
-    </div>, document.body) : null
-
-  return <>
-    <button type="button" onClick={() => setOpen(true)} title="Edit complete listing" aria-label={`Edit complete listing ${r.ref}`} style={{ ...trayMoreBtn(dark), width: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Settings size={15} /></button>
-    {editor}
-  </>
-}
-
-function EditorSection({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
-  return <section className="argus-listing-editor-section"><header><h3>{title}</h3><p>{subtitle}</p></header>{children}</section>
-}
-
-function EditorField({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="argus-listing-editor-field"><span>{label}</span>{children}</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+            {choices.map(([key, label]) => {
+              const selected = value === key
+              return <button
+                key={key}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => { setValue(key); setNote(null) }}
+                style={{
+                  minHeight: 36, borderRadius: 8, padding: '6px 7px', cursor: 'pointer',
+                  border: `1px solid ${selected ? A : dark ? 'rgba(255,255,255,0.12)' : '#E5E1D8'}`,
+                  background: selected ? AD : dark ? '#0F1521' : '#F6F4EF',
+                  color: selected ? A : dark ? '#EDEAE1' : '#222',
+                  fontSize: 11, fontWeight: selected ? 800 : 600,
+                  boxShadow: selected ? `0 0 0 1px ${AB}` : 'none',
+                }}
+              >{label}</button>
+            })}
+          </div>
+          {note
+            ? <div style={{ fontSize: 11, color: dark ? '#EDEAE1' : '#222' }}>{note}</div>
+            : <button type="button" onClick={apply} disabled={busy} style={{
+                width: '100%', background: A, color: '#151C2C', border: 'none', borderRadius: 7,
+                padding: '6px 0', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+              }}>{busy ? '…' : isAdmin ? 'Apply' : 'Propose'}</button>}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function PhotoDownload({ r }: { r: Listing }) {
@@ -3164,443 +3058,153 @@ function ReachoutSwitch() {
   )
 }
 
-function hasDirectSeafrontClaim(text: string): boolean {
-  return text.split(/(?<=[.;!?])\s+|\n+/).some(clause => {
-    const match = /\bsea\s*-?front\b/i.exec(clause)
-    if (!match) return false
-    const before = clause.slice(Math.max(0, match.index - 55), match.index)
-    return !/(?:close|near|nearby|next)\s+(?:to\s+)?(?:the\s+)?$|(?:easy|direct|private|convenient)?\s*access\s+to\s+(?:the\s+)?$|(?:walk(?:ing)?|minutes?|mins?|metres?|meters?|km|steps?)\b[^.;!?]{0,24}$|(?:from|off|opposite|behind|towards?|view|views|glimpse)\s+(?:of\s+|the\s+)?$/i.test(before)
-  })
-}
-
-function matchesCollection(r: Listing, key: CollectionKey): boolean {
-  const copy = [r.type, r.town, r.subLocation, r.description].filter(Boolean).join(' ').toLowerCase()
-  // Seafront is literal evidence only. A historic group post, sea view,
-  // waterfront wording, "frontline" or proximity to the promenade must not
-  // keep a listing in this row. The publishing classifier applies the same
-  // rule and separately rejects phrases such as "access to the seafront".
-  // The publishing group is the authoritative classification: these are the
-  // listings agents deliberately placed in the direct Seafront group. Text is
-  // only a fallback for older listings without normalized group metadata.
-  const isInSeafrontGroup = r.categoryGroups?.some(group => group.trim().toLowerCase().replace(/[\s_-]+/g, '') === 'seafront') ?? false
-  const isDirectSeafront = isInSeafrontGroup || hasDirectSeafrontClaim(copy)
-  if (key === 'seafront') return isDirectSeafront
-  // Collections are exclusive: a listing only leaves its bedroom row when
-  // the listing copy explicitly claims seafront. Sea views, nearby coast and
-  // promenade access stay in the relevant bedroom collection.
-  if (key.startsWith('beds-')) return !isDirectSeafront && r.beds === Number(key.slice(-1))
-  if (key === 'luxury') return r.category === 'aesthetics' || /luxury|luxurious|designer|high[- ]end|premium|prestigious|upmarket/i.test(copy)
-  return /house|villa|townhouse|farmhouse|bungalow/i.test(copy)
-}
-
-function collectionSort(a: Listing, b: Listing): number {
-  const at = listingTouch(a)?.at || a.latestUpdateAt || '1970-01-01'
-  const bt = listingTouch(b)?.at || b.latestUpdateAt || '1970-01-01'
-  return Date.parse(bt) - Date.parse(at) || b.ref.localeCompare(a.ref)
-}
-
-function AirbnbCollectionRows({ rows, order, onOpen, onStar, onChat, onBook, onTag, onConfirm, busyRef, onChanged }: {
-  rows: Listing[]
-  order: CollectionKey[]
-  onOpen: (r: Listing) => void
-  onStar: (r: Listing) => void
-  onChat: (r: Listing) => void
-  onBook: (r: Listing) => void
-  onTag: (r: Listing) => void
-  onConfirm: (r: Listing) => void
-  busyRef: string | null
-  onChanged: () => void
-}) {
-  // Seafront is the first, fixed collection. Older saved preferences could
-  // append this newer key at the bottom, which made it look missing.
-  const normalized: CollectionKey[] = ['seafront', ...order.filter(key => key !== 'seafront'), ...COLLECTION_ITEMS.map(item => item.key).filter(key => key !== 'seafront' && !order.includes(key))]
-  return (
-    <section className="argus-collection-board" aria-label="Swipeable property collections">
-      <header className="argus-collection-intro">
-        <span><Sparkles size={14} />CURATED LIVE INVENTORY</span>
-        <h2>Find the right property faster.</h2>
-        <p>Swipe each row. Every home is ordered by its freshest upload, edit or availability confirmation.</p>
-      </header>
-      {normalized.map(key => {
-        const item = COLLECTION_ITEMS.find(candidate => candidate.key === key)
-        if (!item) return null
-        const matches = rows.filter(row => matchesCollection(row, key)).sort(collectionSort)
-        return <CollectionRow key={key} item={item} rows={matches} onOpen={onOpen} onStar={onStar} onChat={onChat} onBook={onBook} onTag={onTag} onConfirm={onConfirm} busyRef={busyRef} onChanged={onChanged} />
-      })}
-    </section>
-  )
-}
-
-function CollectionRow({ item, rows, onOpen, onStar, onChat, onBook, onTag, onConfirm, busyRef, onChanged }: {
-  item: (typeof COLLECTION_ITEMS)[number]
-  rows: Listing[]
-  onOpen: (r: Listing) => void
-  onStar: (r: Listing) => void
-  onChat: (r: Listing) => void
-  onBook: (r: Listing) => void
-  onTag: (r: Listing) => void
-  onConfirm: (r: Listing) => void
-  busyRef: string | null
-  onChanged: () => void
-}) {
-  const rail = useRef<HTMLDivElement | null>(null)
-  const Icon = item.icon
-  const scroll = (direction: -1 | 1) => rail.current?.scrollBy({ left: direction * Math.max(260, rail.current.clientWidth * .78), behavior: 'smooth' })
-  return (
-    <section className="argus-property-row" aria-labelledby={`collection-${item.key}`}>
-      <header>
-        <span className="argus-property-row-heading">
-          <i><Icon size={16} /></i>
-          <span><small>{item.eyebrow}</small><b id={`collection-${item.key}`}>{item.label}</b></span>
-          <em>{rows.length}</em>
-        </span>
-        <span className="argus-property-row-controls">
-          <button type="button" onClick={() => scroll(-1)} aria-label={`Scroll ${item.label} left`}><ChevronLeft size={16} /></button>
-          <button type="button" onClick={() => scroll(1)} aria-label={`Scroll ${item.label} right`}><ChevronRight size={16} /></button>
-        </span>
-      </header>
-      {rows.length ? (
-        <div ref={rail} className="argus-property-rail">
-          {rows.map(row => <CollectionCard key={row.ref} r={row} onOpen={() => onOpen(row)} onStar={() => onStar(row)} onChat={() => onChat(row)} onBook={() => onBook(row)} onTag={() => onTag(row)} onConfirm={() => onConfirm(row)} busy={busyRef === row.ref} onChanged={onChanged} />)}
-        </div>
-      ) : <div className="argus-collection-empty">No matching properties in the current filters.</div>}
-    </section>
-  )
-}
-
-function CollectionCard({ r, onOpen, onStar, onChat, onBook, onTag, onConfirm, busy, onChanged }: { r: Listing; onOpen: () => void; onStar: () => void; onChat: () => void; onBook: () => void; onTag: () => void; onConfirm: () => void; busy: boolean; onChanged: () => void }) {
-  const { me, theme } = useCrm()
-  const [hovered, setHovered] = useState(false)
-  const [photo, setPhoto] = useState(0)
-  const images = r.images || []
-  useEffect(() => {
-    if (!hovered || images.length < 2) return
-    const timer = window.setInterval(() => setPhoto(current => (current + 1) % images.length), 2000)
-    return () => window.clearInterval(timer)
-  }, [hovered, images.length])
-  useEffect(() => setPhoto(0), [r.ref])
-  const touch = listingTouch(r)
-  const available = r.availability?.kind === 'now' || r.availableStatus === 'available_confirmed'
-  const confirmationFresh = freshness(r.lastConfirmedAvailableAt).tier === 'fresh'
-  const price = r.price ?? r.salePrice
-  return (
-    <article className="argus-collection-card" onMouseEnter={() => setHovered(true)} onMouseLeave={() => { setHovered(false); setPhoto(0) }}>
-      <button type="button" className="argus-collection-card-open" onClick={onOpen} aria-label={`Open ${r.town || 'property'} ${r.ref}`}>
-        <span className="argus-collection-photo">
-          {images[photo] ? <img src={images[photo]} alt="" /> : <span className="argus-collection-photo-empty"><Camera size={22} />No photo</span>}
-          <span className="argus-collection-ref">#{r.ref}</span>
-          {images.length > 0 && <span className="argus-collection-photo-count"><Camera size={10} aria-hidden="true" /> {photo + 1}/{images.length}</span>}
-          {(r.listedBy.displayName || touch) && <span className="argus-collection-agent">
-            {r.listedBy.displayName && <b>{r.listedBy.displayName}</b>}
-            {touch && <small title={new Date(touch.at).toLocaleString('en-GB')}><Clock3 size={9} />{compactAge(touch.at)}</small>}
-          </span>}
-        </span>
-        <span className="argus-collection-copy">
-          <span className="argus-collection-title"><b>{r.town || 'Malta'}</b><strong>{price != null ? `€${Number(price).toLocaleString('en-GB')}` : 'Price on request'}</strong></span>
-          <span className="argus-collection-meta">{[r.beds != null ? `${r.beds} bed` : null, r.baths != null ? `${r.baths} bath` : null, r.type].filter(Boolean).join(' · ') || 'Property'}</span>
-          {(available || r.availableDate) && <span className="argus-collection-status-row">
-            <span className={available ? 'is-available' : 'is-dated'}>{available ? 'Available now' : `Available ${fmtDateDots(r.availableDate)}`}</span>
-          </span>}
-        </span>
-      </button>
-      <div className="argus-collection-actions">
-        <span>
-          <button type="button" onClick={onOpen} aria-label={`Open ${r.ref}`} title="Open listing"><ChevronRight size={14} /></button>
-          <button type="button" onClick={onChat} aria-label={`Chat about ${r.ref}`} title="Owner chat"><MessageCircle size={13} /></button>
-          <button type="button" onClick={onBook} aria-label={`Book viewing for ${r.ref}`} title="Book viewing"><CalendarDays size={13} /></button>
-          <button type="button" onClick={onTag} aria-label={`Tag ${r.ref}`} title="Tag listing"><AtSign size={13} /></button>
-          <button type="button" className={confirmationFresh ? 'is-confirmed' : 'needs-confirmation'} onClick={onConfirm} disabled={busy} aria-label={`Confirm availability for ${r.ref}`} title={confirmationFresh ? 'Recently confirmed — refresh confirmation' : 'Confirm availability'}><CheckCircle2 size={14} /></button>
-        </span>
-      </div>
-      <button type="button" className="argus-collection-star" onClick={event => { event.stopPropagation(); onStar() }} aria-label={`Favourite ${r.ref}`} aria-pressed={starStepOf(r) > 0}>
-        <StarGlyph filled={starStepOf(r) > 0} size={17} color={starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : '#fff'} />
-      </button>
-      <span className="argus-collection-gear" onClick={event => event.stopPropagation()}>
-        <ClassificationGear r={r} dark={theme === 'dark'} isAdmin={me?.role === 'admin'} onChanged={onChanged} />
-      </span>
-    </article>
-  )
-}
-
-function CollectionOrderEditor({ order, onChange }: { order: CollectionKey[]; onChange: (order: CollectionKey[]) => void }) {
-  const [dragged, setDragged] = useState<CollectionKey | null>(null)
-  const normalized = [...order, ...COLLECTION_ITEMS.map(item => item.key).filter(key => !order.includes(key))]
-  const move = (key: CollectionKey, direction: -1 | 1) => {
-    const index = normalized.indexOf(key)
-    const nextIndex = index + direction
-    if (index < 0 || nextIndex < 0 || nextIndex >= normalized.length) return
-    const next = [...normalized]
-    ;[next[index], next[nextIndex]] = [next[nextIndex], next[index]]
-    onChange(next)
-  }
-  const drop = (target: CollectionKey) => {
-    if (!dragged || dragged === target) return setDragged(null)
-    const next = normalized.filter(key => key !== dragged)
-    next.splice(next.indexOf(target), 0, dragged)
-    onChange(next)
-    setDragged(null)
-  }
-  return (
-    <div className="argus-collection-order">
-      {normalized.map((key, index) => {
-        const item = COLLECTION_ITEMS.find(candidate => candidate.key === key)!
-        const Icon = item.icon
-        return <div key={key} draggable onDragStart={() => setDragged(key)} onDragEnd={() => setDragged(null)} onDragOver={event => event.preventDefault()} onDrop={() => drop(key)} className={dragged === key ? 'is-dragging' : ''}>
-          <GripVertical size={14} aria-hidden /><Icon size={14} /><b>{item.label}</b>
-          <button type="button" onClick={() => move(key, -1)} disabled={index === 0} aria-label={`Move ${item.label} up`}><ArrowUp size={13} /></button>
-          <button type="button" onClick={() => move(key, 1)} disabled={index === normalized.length - 1} aria-label={`Move ${item.label} down`}><ArrowDown size={13} /></button>
-        </div>
-      })}
-    </div>
-  )
-}
-
-function BoardSettingsPanel({ preferences, onChange, onReset, onClose }: {
-  preferences: BoardPreferences
-  onChange: <K extends keyof BoardPreferences>(key: K, value: BoardPreferences[K]) => void
-  onReset: () => void
-  onClose: () => void
-}) {
-  return (
-    <section id="argus-board-settings" className="argus-board-settings" aria-label="Board settings">
-      <header>
-        <span className="argus-settings-heading">
-          <span><SlidersHorizontal size={17} aria-hidden /></span>
-          <span><b>Board settings</b><small>Saved on this device</small></span>
-        </span>
-        <button type="button" className="argus-settings-close" onClick={onClose} aria-label="Close board settings"><XGlyph size={16} /></button>
-      </header>
-      <div className="argus-settings-grid">
-        <fieldset>
-          <legend>Start in</legend>
-          <div className="argus-settings-choice three">
-            <button type="button" aria-pressed={preferences.defaultWorkspace === 'board'} onClick={() => onChange('defaultWorkspace', 'board')}><LayoutGrid size={15} />Standard</button>
-            <button type="button" aria-pressed={preferences.defaultWorkspace === 'collections'} onClick={() => onChange('defaultWorkspace', 'collections')}><Rows3 size={15} />Rows</button>
-            <button type="button" aria-pressed={preferences.defaultWorkspace === 'updates'} onClick={() => onChange('defaultWorkspace', 'updates')}><Rows3 size={15} />List</button>
-          </div>
-          <small>The workspace opened first on your next visit.</small>
-        </fieldset>
-        <fieldset>
-          <legend>Property cards</legend>
-          <div className="argus-settings-choice">
-            <button type="button" aria-pressed={!preferences.compactCards} onClick={() => onChange('compactCards', false)}><LayoutGrid size={15} />Comfortable</button>
-            <button type="button" aria-pressed={preferences.compactCards} onClick={() => onChange('compactCards', true)}><Rows3 size={15} />Compact</button>
-          </div>
-          <small>Compact fits more properties into the same screen.</small>
-        </fieldset>
-        <fieldset>
-          <legend>Board order</legend>
-          <div style={{ minHeight: 42, border: `1px solid ${DBORDER}`, borderRadius: 10, padding: '0 12px', background: DTRAY, color: DTEXT, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Clock3 size={15} color={A} />Latest updates first
-          </div>
-          <small>New uploads, edits and confirmed availability automatically move to the top.</small>
-        </fieldset>
-        <fieldset>
-          <legend>Swipe shortcuts</legend>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {DISCOVERY_ITEMS.map(item => {
-              const enabled = preferences.discoveryKeys.includes(item.key)
-              const Icon = item.icon
-              return <button key={item.key} type="button" aria-pressed={enabled} onClick={() => onChange('discoveryKeys', enabled ? preferences.discoveryKeys.filter(key => key !== item.key) : [...preferences.discoveryKeys, item.key])} style={{ border: `1px solid ${enabled ? A : DBORDER}`, borderRadius: 999, background: enabled ? 'rgba(184,149,63,.12)' : DTRAY, color: enabled ? A : DTEXT_FAINT, padding: '7px 9px', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, cursor: 'pointer' }}><Icon size={12} />{item.label}</button>
-            })}
-          </div>
-          <small>Choose the quick filter chips shown above the standard board.</small>
-        </fieldset>
-        <fieldset className="argus-collection-order-fieldset">
-          <legend>Swipe row order</legend>
-          <CollectionOrderEditor order={preferences.collectionOrder} onChange={order => onChange('collectionOrder', order)} />
-          <small>Drag rows into position or use the arrows. The order is saved on this device.</small>
-        </fieldset>
-        <SettingsToggle
-          icon={<MapPinned size={16} />}
-          title="Open map automatically"
-          description="Show the Malta map when the board opens."
-          checked={preferences.mapVisible}
-          onChange={value => onChange('mapVisible', value)}
-        />
-        <SettingsToggle
-          icon={<CircleHelp size={16} />}
-          title="List guide"
-          description="Show extra context above the chronological list."
-          checked={preferences.showFeedGuide}
-          onChange={value => onChange('showFeedGuide', value)}
-        />
-        <SettingsToggle icon={<MapPinned size={16} />} title="Town shortcuts" description="Show the quick town filter row above the cards." checked={preferences.showTownFilters} onChange={value => onChange('showTownFilters', value)} />
-        <SettingsToggle icon={<CalendarDays size={16} />} title="Booking signals" description="Show viewing-ready and appointment labels on cards." checked={preferences.showBookingBadges} onChange={value => onChange('showBookingBadges', value)} />
-        <SettingsToggle icon={<UserRound size={16} />} title="Agent names" description="Show the responsible agent on every listing." checked={preferences.showAgentNames} onChange={value => onChange('showAgentNames', value)} />
-        <SettingsToggle icon={<MessageCircle size={16} />} title="Descriptions" description="Keep property descriptions visible inside cards." checked={preferences.showDescriptions} onChange={value => onChange('showDescriptions', value)} />
-        <SettingsToggle icon={<Clock3 size={16} />} title="Booking details" description="Show the next viewing date and booking context." checked={preferences.showBookingDetails} onChange={value => onChange('showBookingDetails', value)} />
-        <SettingsToggle icon={<Zap size={16} />} title="Quick tools" description="Keep the main card action row visible." checked={preferences.showQuickTools} onChange={value => onChange('showQuickTools', value)} />
-      </div>
-      <footer>
-        <button type="button" onClick={onReset}><RotateCcw size={13} />Reset defaults</button>
-        <span>Changes apply immediately.</span>
-      </footer>
-    </section>
-  )
-}
-
-function SettingsToggle({ icon, title, description, checked, onChange }: {
-  icon: React.ReactNode
-  title: string
-  description: string
-  checked: boolean
-  onChange: (value: boolean) => void
-}) {
-  return (
-    <label className="argus-settings-toggle">
-      <span className="argus-settings-toggle-icon">{icon}</span>
-      <span><b>{title}</b><small>{description}</small></span>
-      <input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
-      <i aria-hidden="true" />
-    </label>
-  )
-}
-
-type FeedFilter = 'all' | 'price' | 'new' | 'updated'
-type FeedEvent = {
-  kind: Exclude<FeedFilter, 'all'>
-  at: string
-  label: string
-  shortLabel: string
-  detail: string | null
-  icon: React.ReactNode
-  color: string
-  border: string
-  background: string
-  halo: string
-}
-
-function validFeedDate(value: string | null | undefined): value is string {
-  return !!value && Number.isFinite(Date.parse(value))
-}
-
-function feedEvent(r: Listing, filter: FeedFilter): FeedEvent | null {
-  const money = (value: number | null | undefined) => value == null ? null : `€${Number(value).toLocaleString('en-GB')}`
-  const price: FeedEvent | null = validFeedDate(r.latestPriceChangeAt) ? {
-    kind: 'price', at: r.latestPriceChangeAt, label: 'Price changed', shortLabel: '€ PRICE',
-    detail: money(r.latestPriceOld) && money(r.latestPriceNew) ? `${money(r.latestPriceOld)} → ${money(r.latestPriceNew)}` : money(r.latestPriceNew),
-    icon: <Euro size={11} />, color: '#F5C96B', border: 'rgba(245,201,107,.38)',
-    background: 'rgba(245,201,107,.11)', halo: 'rgba(245,201,107,.28)',
-  } : null
-  const uploaded: FeedEvent | null = validFeedDate(r.createdAt) ? {
-    kind: 'new', at: r.createdAt, label: 'New upload', shortLabel: '+ NEW', detail: null,
-    icon: <Plus size={11} />, color: '#69D8AE', border: 'rgba(105,216,174,.38)',
-    background: 'rgba(105,216,174,.1)', halo: 'rgba(105,216,174,.26)',
-  } : null
-  const updated: FeedEvent | null = validFeedDate(r.latestUpdateAt) ? {
-    kind: 'updated', at: r.latestUpdateAt, label: 'Updated', shortLabel: '! UPDATE',
-    detail: humanUpdateType(r.latestUpdateType), icon: <CircleAlert size={11} />, color: '#8FB7FF',
-    border: 'rgba(143,183,255,.38)', background: 'rgba(143,183,255,.1)', halo: 'rgba(143,183,255,.26)',
-  } : null
-  if (filter === 'price') return price
-  if (filter === 'new') return uploaded
-  if (filter === 'updated') return updated
-  return [price, uploaded, updated]
-    .filter((event): event is FeedEvent => !!event)
-    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0] || null
-}
-
-function humanUpdateType(value: string | null | undefined): string | null {
-  if (!value) return null
-  if (/photo/i.test(value)) return 'Photos changed'
-  if (/available|availability|check_in|returned|reactivated/i.test(value)) return 'Availability changed'
-  if (/rented|archive|check_out/i.test(value)) return 'Status changed'
-  if (/date|upcoming/i.test(value)) return 'Date changed'
-  if (/spec|bedroom|location/i.test(value)) return 'Property details changed'
-  return 'Property details changed'
-}
-
-function AgentFeed({ rows, mobile, showGuide, renderCard }: {
+function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, busyRef }: {
   rows: Listing[]
   mobile: boolean
-  showGuide: boolean
-  renderCard: (r: Listing) => React.ReactNode
+  onOpen: (r: Listing) => void
+  onChat: (r: Listing) => void
+  onBook: (r: Listing) => void
+  onTag: (r: Listing) => void
+  onConfirm: (r: Listing) => void
+  busyRef: string | null
 }) {
-  const [filter, setFilter] = useState<FeedFilter>('all')
+  const [filter, setFilter] = useState<'all' | 'progress' | 'confirmed' | 'new'>('all')
   const feed = useMemo(() => {
     const unique = new Map<string, Listing>()
     for (const row of rows) if (!unique.has(row.ref)) unique.set(row.ref, row)
     return [...unique.values()]
-      .filter(r => !!feedEvent(r, filter))
-      .sort((a, b) => Date.parse(feedEvent(b, filter)?.at || '1970-01-01') - Date.parse(feedEvent(a, filter)?.at || '1970-01-01'))
-      .slice(0, 100)
+      .filter(r => filter === 'all'
+        || (filter === 'progress' && (r.availableStatus === 'pending_check' || r.bookingsPossible))
+        || (filter === 'confirmed' && !!r.lastConfirmedAvailableAt)
+        || (filter === 'new' && !!r.createdAt && Date.now() - Date.parse(r.createdAt) < 7 * 86400_000))
+      .sort((a, b) => Date.parse(listingTouch(b)?.at || '1970-01-01') - Date.parse(listingTouch(a)?.at || '1970-01-01'))
+      .slice(0, 80)
   }, [rows, filter])
+
+  const progressCount = useMemo(() => rows.filter(r => r.availableStatus === 'pending_check' || r.bookingsPossible).length, [rows])
+  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
   let previousDay = ''
   return (
-    <section aria-label="Property update list" style={{ maxWidth: 900, margin: '0 auto 32px' }}>
-      {showGuide && <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '2px 0 12px', padding: mobile ? '10px 11px' : '12px 15px', border: `1px solid ${DBORDER}`, borderRadius: 14, background: 'linear-gradient(135deg, rgba(24,48,68,.72), rgba(16,26,37,.94))' }}>
-        <span style={{ minWidth: 0 }}>
-          <b style={{ display: 'block', color: DTEXT, fontSize: 13 }}>Update list</b>
-          <small style={{ display: 'block', color: DTEXT_FAINT, marginTop: 2 }}>Same property cards, ordered by their latest activity.</small>
-        </span>
-        <Clock3 size={18} color={A} style={{ flex: '0 0 auto' }} />
-      </header>}
-      <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
-        {([
-          ['all', 'All', <Rows3 size={13} key="all" />],
-          ['price', 'Price changes', <Euro size={13} key="price" />],
-          ['new', 'New uploads', <Plus size={13} key="new" />],
-          ['updated', 'Updated', <CircleAlert size={13} key="updated" />],
-        ] as const).map(([value, label, icon]) => (
-          <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} style={{
-            border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
-            background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
-            padding: '8px 12px', minHeight: 36, fontSize: 10.5, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-          }}>{icon}{label}</button>
-        ))}
-      </nav>
-      <div style={{ position: 'relative' }}>
-        <span aria-hidden="true" style={{ position: 'absolute', left: mobile ? 42 : 76, top: 23, bottom: 10, width: 1, background: `linear-gradient(${A}, ${DBORDER} 18%, ${DBORDER})` }} />
-        {feed.map(r => {
-          const event = feedEvent(r, filter)
-          const date = event ? new Date(event.at) : null
-          const day = date ? date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Earlier'
-          const showDay = day !== previousDay
-          previousDay = day
-          return <div key={r.ref}>
-            {showDay && <div style={{ display: 'grid', gridTemplateColumns: mobile ? '52px minmax(0,1fr)' : '92px minmax(0,1fr)', alignItems: 'center', margin: '5px 0 8px' }}>
-              <span />
-              <strong style={{ color: A, fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase' }}>{day}</strong>
-            </div>}
-            <div style={{ display: 'grid', gridTemplateColumns: mobile ? '52px minmax(0,1fr)' : '92px minmax(0,1fr)', alignItems: 'start', marginBottom: mobile ? 10 : 14 }}>
-              <div style={{ position: 'relative', padding: mobile ? '10px 10px 0 0' : '12px 20px 0 0', textAlign: 'right', color: DTEXT_FAINT }}>
-                <b style={{ display: 'block', color: DTEXT_DIM, fontFamily: FM, fontSize: mobile ? 9 : 11 }}>{date ? date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}</b>
-                {!mobile && <small style={{ display: 'block', fontSize: 8, marginTop: 3 }}>{event?.shortLabel || 'Update'}</small>}
-                <i aria-hidden="true" style={{ position: 'absolute', right: mobile ? 5 : 13, top: mobile ? 13 : 16, width: 9, height: 9, borderRadius: '50%', background: event?.color || A, border: `2px solid ${DCARD}`, boxShadow: `0 0 0 2px ${event?.halo || 'rgba(184,149,63,.22)'}` }} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                {event && <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 3px 6px', minWidth: 0 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${event.border}`, borderRadius: 999, background: event.background, color: event.color, padding: '4px 8px', fontSize: 9.5, fontWeight: 800, letterSpacing: '.04em', whiteSpace: 'nowrap' }}>
-                    {event.icon}{event.label}
-                  </span>
-                  <span title={date?.toLocaleString('en-GB')} style={{ color: DTEXT_FAINT, fontSize: 9.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {ago(event.at)}{event.detail ? ` · ${event.detail}` : ''}
-                  </span>
-                </div>}
-                {renderCard(r)}
-              </div>
+    <section aria-label="Property updates" style={{ maxWidth: 1120, margin: '0 auto 32px' }}>
+      <header style={{ padding: mobile ? '8px 2px 12px' : '10px 4px 16px' }}>
+        <span style={{ color: A, fontSize: 10, letterSpacing: '.16em', fontWeight: 850 }}>DAILY PROPERTY INBOX</span>
+        <h2 style={{ color: DTEXT, fontSize: mobile ? 23 : 30, margin: '4px 0 3px' }}>Today, at one glance</h2>
+        <p style={{ color: DTEXT_DIM, fontSize: 12, margin: 0 }}>Scroll through the days like a chat. Newest property activity stays at the top.</p>
+      </header>
+      <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'minmax(0,1.35fr) minmax(0,1fr)', gap: 9, marginBottom: 12 }}>
+        <div style={{ border: `1px solid rgba(199,57,26,.45)`, borderRadius: 13, padding: '11px 13px', background: 'rgba(199,57,26,.07)', color: DTEXT }}>
+          <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+            <CircleHelp size={17} color="#E06A4D" style={{ flex: '0 0 auto', marginTop: 1 }} />
+            <div>
+              <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>Ready to progress · {progressCount} listings</strong>
+              <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 11, lineHeight: 1.45, marginTop: 3 }}>
+                “New listing” and “Updated” tell you what changed. “Viewing ready” means booking can start; “Check availability” means an owner reply still needs a quick review.
+              </span>
             </div>
           </div>
+        </div>
+        <div style={{ border: `1px solid rgba(100,185,215,.35)`, borderRadius: 13, padding: '10px 12px', background: 'rgba(24,48,68,.72)', color: DTEXT }}>
+          <strong style={{ display: 'block', fontSize: 10, letterSpacing: '.12em', color: '#BDEBFA' }}>MALTA MOVING NOW</strong>
+          <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 10, lineHeight: 1.4, margin: '3px 0 8px' }}>Bus GPS and road traffic are separate sources.</span>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+            <a href="https://www.publictransport.com.mt/real-time/" target="_blank" rel="noreferrer" style={{ ...feedTransportLink, color: '#BDEBFA' }}><BusFront size={13} /> Tallinja live buses ↗</a>
+            <a href="/nexus-map" style={{ ...feedTransportLink, color: '#E8D9AD' }}><CarFront size={13} /> Malta road traffic</a>
+          </div>
+        </div>
+      </div>
+      <nav aria-label="Update filters" style={{ display: 'flex', gap: 7, paddingBottom: 14, overflowX: 'auto' }}>
+        {([['all', 'All updates'], ['progress', 'Ready to progress'], ['confirmed', 'Confirmed'], ['new', 'New listings']] as const).map(([value, label]) => (
+          <button key={value} type="button" onClick={() => setFilter(value)} style={{
+            border: `1px solid ${filter === value ? A : DBORDER}`, borderRadius: 999,
+            background: filter === value ? A : DCARD, color: filter === value ? '#151C2C' : DTEXT_DIM,
+            padding: '8px 13px', fontSize: 11, fontWeight: 750, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}>{label}</button>
+        ))}
+      </nav>
+      <div style={{ border: `1px solid ${DBORDER}`, borderRadius: 15, overflowY: 'auto', overflowX: 'hidden', background: DCARD, maxHeight: mobile ? '68vh' : 'min(720px, calc(100vh - 300px))', scrollbarColor: `${A} ${DTRAY}` }}>
+        {feed.map(r => {
+          const touch = listingTouch(r)
+          const day = touch ? new Date(touch.at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Older updates'
+          const dayLabel = day === today ? `TODAY · ${day}` : day
+          const showDay = day !== previousDay
+          previousDay = day
+          const needsAction = r.availableStatus === 'pending_check'
+          const bookable = !!r.bookingsPossible
+          const createdTime = r.createdAt ? Date.parse(r.createdAt) : NaN
+          const isNewListing = Number.isFinite(createdTime) && Date.now() - createdTime < 7 * 86400_000
+          const eventLabel = isNewListing ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
+          const eventColor = eventLabel === 'NEW LISTING' ? '#4D7CE0' : eventLabel === 'CONFIRMED' ? '#2F8E68' : '#96772C'
+          const progressLabel = needsAction ? 'CHECK AVAILABILITY' : bookable ? 'VIEWING READY' : null
+          const market = !['rented', 'archived', 'not_available'].includes(r.availableStatus || '')
+          const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE NOW'
+            : r.availability?.kind === 'date' ? `FREE ${r.availability.label}` : 'DATE UNCLEAR'
+          return <div key={r.ref}>
+            {showDay && <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '9px 14px', background: 'linear-gradient(180deg, var(--crm-surface) 60%, transparent)', color: DTEXT_FAINT }}><span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 999, padding: '5px 11px', boxShadow: '0 3px 12px rgba(0,0,0,.18)', fontSize: 9, fontWeight: 850, letterSpacing: '.08em', textTransform: 'uppercase' }}>{dayLabel}</span></div>}
+            <article style={{
+              display: 'grid', gridTemplateColumns: mobile ? '1fr' : '202px minmax(0,1fr) auto',
+              gap: mobile ? 10 : 14, alignItems: 'center', padding: mobile ? 10 : '12px 14px',
+              borderBottom: `1px solid ${DBORDER}`, background: needsAction ? 'rgba(199,57,26,.045)' : bookable ? 'rgba(232,185,49,.045)' : 'transparent',
+            }}>
+              <div aria-label={`Three photos of #${r.ref}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 5, width: mobile ? '100%' : 202 }}>
+                {[0, 1, 2].map(index => <button key={index} type="button" onClick={() => onOpen(r)} style={{ height: mobile ? 72 : 64, minWidth: 0, padding: 0, border: 0, borderRadius: 9, overflow: 'hidden', background: DTRAY, cursor: 'pointer' }}>
+                  {r.images?.[index] ? <img src={r.images[index]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', color: DTEXT_FAINT }}>⌂</span>}
+                </button>)}
+              </div>
+              <button type="button" onClick={() => onOpen(r)} style={{ minWidth: 0, padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: DTEXT }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                  <b style={{ fontSize: 10, padding: '3px 7px', borderRadius: 999, color: '#FFF', background: eventColor }}>{eventLabel}</b>
+                  {progressLabel && <b style={{ fontSize: 9, padding: '3px 7px', borderRadius: 999, color: needsAction ? '#F4B09E' : BOOK_YELLOW, border: `1px solid ${needsAction ? 'rgba(224,106,77,.42)' : 'rgba(232,185,49,.42)'}`, background: needsAction ? 'rgba(199,57,26,.11)' : 'rgba(232,185,49,.10)' }}>{progressLabel}</b>}
+                  <strong style={{ fontFamily: FM, fontSize: 12 }}>#{r.ref}</strong>
+                  <small style={{ color: DTEXT_FAINT, marginLeft: 'auto' }}>{touch ? ago(touch.at) : '—'}</small>
+                </span>
+                <strong style={{ display: 'block', marginTop: 6, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.town || 'Malta'} · {r.type || 'Property'}{r.price ? ` · €${r.price.toLocaleString('en-GB')}` : ''}</strong>
+                <span style={{ display: 'flex', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
+                  <em style={feedPill(market ? 'rgba(77,124,224,.14)' : 'rgba(120,125,135,.16)', market ? '#78A0F1' : DTEXT_FAINT)}>{market ? 'ON MARKET' : 'OFF MARKET'}</em>
+                  <em style={feedPill(r.availability?.kind === 'now' ? 'rgba(47,142,104,.17)' : 'rgba(150,119,44,.15)', r.availability?.kind === 'now' ? '#58B88F' : '#C2A75E')}>{availabilityText}</em>
+                  {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let')) && <em style={feedPill('rgba(126,200,227,.15)', '#7EC8E3')}>WINTER</em>}
+                </span>
+              </button>
+              <div style={{ gridColumn: mobile ? '1 / -1' : undefined, display: 'flex', gap: 6, justifyContent: mobile ? 'stretch' : 'flex-end' }}>
+                <FeedAction label="Open" onClick={() => onOpen(r)} />
+                <FeedAction label="Chat" onClick={() => onChat(r)} />
+                <FeedAction label="Book" accent={bookable} onClick={() => onBook(r)} />
+                <FeedAction label="@ Tag" icon={<AtSign size={11} />} onClick={() => onTag(r)} />
+                {needsAction && <FeedAction label={busyRef === r.ref ? '…' : 'Confirm'} disabled={!!busyRef} onClick={() => onConfirm(r)} />}
+              </div>
+            </article>
+          </div>
         })}
-        {!feed.length && <p style={{ color: DTEXT_FAINT, fontSize: 12, padding: 28, textAlign: 'center' }}>No updates match this view.</p>}
+        {!feed.length && <p style={{ color: DTEXT_FAINT, fontSize: 12, padding: 24, textAlign: 'center' }}>Nothing in this update view yet.</p>}
       </div>
     </section>
   )
 }
+const feedTransportLink = { display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${DBORDER}`, borderRadius: 8, background: DTRAY, padding: '7px 9px', fontSize: 10, fontWeight: 750, textDecoration: 'none' }
+function feedPill(background: string, color: string) {
+  return { background, color, borderRadius: 999, padding: '2px 6px', fontSize: 8, fontStyle: 'normal', fontWeight: 800, letterSpacing: '0.06em' }
+}
 
-function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
+function FeedAction({ label, onClick, icon, accent = false, disabled = false }: { label: string; onClick: () => void; icon?: React.ReactNode; accent?: boolean; disabled?: boolean }) {
+  return <button type="button" onClick={onClick} disabled={disabled} style={{
+    border: 0, borderRight: `1px solid ${DBORDER}`, background: accent ? 'rgba(232,185,49,.16)' : DTRAY,
+    color: accent ? BOOK_YELLOW : DTEXT_DIM, padding: '8px 7px', fontSize: 9, fontWeight: 750, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 2,
+    cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? .55 : 1,
+  }}>{icon}{label}</button>
+}
+
+function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, onAsk, onAskPortfolio, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
                 selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
-                onAddPhotos, photoUploadBusy, onDelete, onChanged, compact, preferences }: {
+                onAddPhotos, photoUploadBusy, onDelete, onChanged }: {
   r: Listing
+  mobile: boolean
   focused: boolean
   innerRef: (el: HTMLDivElement | null) => void
   onOpen: () => void
   onAct: (kind: 'request-availability' | 'request-location', r: Listing) => void
   onBook: () => void
   onAsk: () => void
+  onAskPortfolio: () => void
   onChat: () => void
   // Phase 2 — only ever really actionable on the Favourites tab (that is
   // where r.viewing carries real data, see routes/crmScheduleBoard.js
@@ -3646,15 +3250,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // Admin-only — the card hides the control for everyone else.
   onDelete: () => void
   onChanged: () => void
-  compact: boolean
-  preferences: BoardPreferences
 }) {
   // Role decides which of the rarer controls this card even offers. Read from
   // context rather than passed down: every card wants the same answer, and
   // threading it through the list would be one more prop to forget.
   const { me, theme } = useCrm()
   const isAdmin = me?.role === 'admin'
-  const isMobile = useIsMobile()
   // Kev, 2026-09-16 ("lightmode button... buttons still dark-style"): this
   // board opted into dark by design (2026-09-11) before the theme toggle
   // existed, so its own action-button styles never read the viewer's
@@ -3821,7 +3422,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const status = isFarFuture(r) ? { c: '#5C6478', t: `🕓 future${fmtDateDots(r.availableDate) ? ` · ${fmtDateDots(r.availableDate)}` : ''}${daysUntilAvailable(r.availableDate) != null ? ` · ${daysUntilAvailable(r.availableDate)}d away` : ''}` }
     : confirmed ? { c: GREEN, t: 'confirmed available' }
     : r.availableStatus === 'available' ? { c: GREEN, t: 'available' }
-    : r.availableStatus === 'rented' ? { c: '#B91C1C', t: 'rented' }
+    : r.availableStatus === 'rented' ? {
+        c: '#B91C1C',
+        t: fmtDateDots(r.recentlyRentedAt)
+          ? `rented since ${fmtDateDots(r.recentlyRentedAt)}`
+          : 'rented · date not recorded',
+      }
     // Kev, 2026-09-14 (spec item 1): occupied until a known future date —
     // its own state, not lumped into "needs a recheck" (that reads as an AI
     // being unsure) or "not available" (that reads as a dead end).
@@ -3915,8 +3521,8 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   // exact precedence (Hot beats a personal Favourite), so the frame reads
   // the same signal the star glyph does rather than re-deriving it.
   const step = starStepOf(r)
-  // HOT is an explicit editorial signal. A bookable property keeps its own
-  // neutral badge and must not inherit the red HOT treatment.
+  // Booking engine (Kev, 2026-09-23): an owner-confirmed viewing time puts the
+  // listing in the red top-properties frame, same as Hot.
   const frame = step === 2 ? HOT_GLOW : step === 1 ? FAV_GLOW : null
   // Kev, 2026-09-04: "freshly updated" glow, first 48h — same fact
   // (routes/crmScheduleBoard.js's updatedAt, bumped by crm.js's PATCH
@@ -3926,25 +3532,35 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   const latestTouch = listingTouch(r)
   const isFreshlyUpdated = !!latestTouch && (Date.now() - Date.parse(latestTouch.at) < 48 * 3600_000)
 
-  // Cycle photos only on precise-pointer desktops. Touch devices keep the
-  // cover image stable: dozens of card timers and image decodes made mobile
-  // scrolling jumpy and consumed bandwidth without an explicit user action.
+  // Photos change only while the pointer moves across the image. The previous
+  // implementation created an IntersectionObserver, timeout and interval for
+  // every visible card; on a phone that kept React updating cards the user was
+  // not touching and made the board feel permanently busy.
   const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
-  const photoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const swipeStartX = useRef<number | null>(null)
+  const didSwipePhoto = useRef(false)
   const photoCount = (r.images || []).length
-  const stopPhotoHover = useCallback(() => {
-    if (photoTimerRef.current) clearInterval(photoTimerRef.current)
-    photoTimerRef.current = null
-    setHoverPhotoIdx(0)
-  }, [])
-  const startPhotoHover = useCallback(() => {
-    if (photoCount < 2 || photoTimerRef.current ||
-        !window.matchMedia('(hover: hover) and (pointer: fine)').matches ||
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    setHoverPhotoIdx(index => (index + 1) % photoCount)
-    photoTimerRef.current = setInterval(() => setHoverPhotoIdx(index => (index + 1) % photoCount), 1800)
-  }, [photoCount])
-  useEffect(() => stopPhotoHover, [stopPhotoHover])
+  const previewPhotoAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || photoCount < 2) return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const progress = Math.max(0, Math.min(.999, (event.clientX - bounds.left) / bounds.width))
+    const next = Math.floor(progress * photoCount)
+    setHoverPhotoIdx(current => current === next ? current : next)
+  }
+  const startPhotoSwipe = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' || photoCount < 2) return
+    swipeStartX.current = event.clientX
+    didSwipePhoto.current = false
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+  const finishPhotoSwipe = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (swipeStartX.current == null || photoCount < 2) return
+    const delta = event.clientX - swipeStartX.current
+    swipeStartX.current = null
+    if (Math.abs(delta) < 34) return
+    didSwipePhoto.current = true
+    setHoverPhotoIdx(index => delta < 0 ? (index + 1) % photoCount : (index - 1 + photoCount) % photoCount)
+  }
 
   // First four photos as thumbnails, "+N" for the rest — matches the count
   // badge on the photo (4 shown + N more = imageCount).
@@ -3954,12 +3570,10 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
   return (
     <div
       ref={innerRef}
-      className="transition-transform duration-200 hover:-translate-y-1 active:scale-[0.995]"
+      className="crm-listing-card transition-transform duration-200 hover:-translate-y-1 active:scale-[0.995]"
       // The ref on the DOM node, so a test can assert "this listing's card shows
       // that icon" instead of matching on position in the grid.
       data-ref={r.ref}
-      onMouseEnter={startPhotoHover}
-      onMouseLeave={stopPhotoHover}
       style={{
         background: DCARD,
         borderRadius: isMobile ? 16 : 20,
@@ -3981,12 +3595,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         border: focused ? `2px solid ${A}` : (frame?.border || `1px solid ${DCARD_BORDER}`),
         boxShadow: focused ? '0 6px 16px rgba(212,137,26,0.28)' : (frame?.glow || '0 1px 3px rgba(0,0,0,0.35)'),
         transition: 'box-shadow 0.18s, border-color 0.18s',
-        display: isMobile ? 'grid' : 'flex',
-        flexDirection: isMobile ? undefined : 'column',
-        gridTemplateColumns: isMobile ? '116px minmax(0,1fr)' : undefined,
-        alignItems: isMobile ? 'stretch' : undefined,
-        height: isMobile ? undefined : (compact ? 326 : 358),
-        minHeight: isMobile ? 166 : undefined,
+        display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : undefined,
+        gridTemplateColumns: isMobile ? undefined : 'minmax(190px, 38%) minmax(0, 1fr)',
+        gridTemplateRows: isMobile ? undefined : 'minmax(0, 1fr) auto auto',
+        contentVisibility: menuOpen ? 'visible' : 'auto',
+        containIntrinsicSize: isMobile ? '560px' : '340px',
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
         // the card past its own column and clip against the next one. 0 makes
@@ -4004,18 +3617,16 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           matter how many columns fit. `objectFit: cover` still crops rather
           than distorts, so nothing is squashed. */}
       <div
-        onClick={onOpen}
-        style={{
-          cursor: 'pointer', position: 'relative',
-          height: isMobile ? '100%' : (compact ? 148 : 164),
-          minHeight: isMobile ? 142 : undefined,
-          gridColumn: isMobile ? 1 : undefined,
-          gridRow: isMobile ? 1 : undefined,
-          flexShrink: 0, background: '#111', transition: 'height 180ms ease',
-        }}
+        onClick={() => { if (didSwipePhoto.current) { didSwipePhoto.current = false; return }; onOpen() }}
+        onPointerMove={previewPhotoAtPointer}
+        onPointerLeave={() => setHoverPhotoIdx(0)}
+        onPointerDown={startPhotoSwipe}
+        onPointerUp={finishPhotoSwipe}
+        onPointerCancel={() => { swipeStartX.current = null }}
+        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? 138 : '100%', minHeight: isMobile ? undefined : 300, flexShrink: 0, background: '#111', gridColumn: isMobile ? undefined : 1, gridRow: isMobile ? undefined : '1 / 4', touchAction: 'pan-y' }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
-          ? <img src={r.images[hoverPhotoIdx] || r.images[0]} alt={`${townLabel(r.town)} property`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 50%', display: 'block' }} />
+          ? <motion.img key={r.images[hoverPhotoIdx] || r.images[0]} src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" decoding="async" initial={{ opacity: .35, scale: 1.018 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .18, ease: [0.22, 1, 0.36, 1] }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
 
         {/* Kev's redesign brief (2026-08-22): a real scrim instead of relying on
@@ -4029,43 +3640,12 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             'rgba(0,0,0,0) 72%, rgba(0,0,0,0.42) 100%)',
         }} />
 
-        {/* The star. Top-left corner, Kev's call (2026-08-16). Three steps
-            (migration 031): outline = normal, gold = your Favourite, red = Hot
-            Property (global, admin-set — see Board():toggleStar). */}
-        <button
-          data-favourite={r.ref}
-          data-star-step={starStepOf(r)}
-          aria-pressed={starStepOf(r) > 0}
-          onClick={e => { e.stopPropagation(); onStar() }}
-          title={
-            starStepOf(r) === 2
-              ? (isAdmin
-                  ? 'HOT property — visible to everyone. Click to clear.'
-                  : 'HOT property — set by an admin, visible to everyone.')
-              : starStepOf(r) === 1
-                ? (isAdmin
-                    ? 'On your Favourites — click to make it Hot for everyone.'
-                    : 'On your Favourites — click to remove. The viewing, if any, stays.')
-                : 'Save to your Favourites'
-          }
-          style={{
-            position: 'absolute', top: 9, left: 9,
-            width: 26, height: 26, padding: 0, background: 'none', border: 'none',
-            display: 'grid', placeItems: 'center', lineHeight: 0, cursor: 'pointer',
-            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))',
-          }}>
-          <StarGlyph
-            filled={starStepOf(r) > 0}
-            color={starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : '#FFF'}
-            size={17}
-          />
-        </button>
         {r.isHotProperty && (
-          <span style={{ position: 'absolute', top: 10, left: 44, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+          <span style={{ position: 'absolute', top: 10, left: 10, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Hot
           </span>
         )}
-        {preferences.showBookingBadges && r.bookingsPossible && (
+        {r.bookingsPossible && (
           <span data-bookings-possible={r.ref}
             title={r.viewingWindow ? 'Owner confirmed a viewing time — book a slot' : 'Owner confirmed a viewings-from date — request a time'}
             style={{ position: 'absolute', top: 40, left: 10, background: BOOK_YELLOW, color: '#151C2C', fontSize: 9, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5, boxShadow: '0 1px 4px rgba(0,0,0,0.35)' }}>
@@ -4073,8 +3653,19 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </span>
         )}
         {r.isMine && !r.isHotProperty && (
-          <span style={{ position: 'absolute', top: 10, left: 44, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+          <span style={{ position: 'absolute', top: 10, left: 10, background: GREEN, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
             Yours
+          </span>
+        )}
+        {/* ARGUS V3 (Kev, 2026-09-16): visible on mobile too (unlike the
+            Viewable-row snowflake below, which is desktop-only) — a
+            winter/short-let card needs to read as "special/time-limited" at
+            a glance everywhere, not just on desktop. */}
+        {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
+          <span
+            title="Time-limited — winter/short-let, excluded from normal !match search"
+            style={{ position: 'absolute', top: 10, right: 10, background: '#1B3A4B', color: '#7EC8E3', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
+            ❄️ {r.leaseType === 'winter_let' ? 'Winter' : 'Short'}
           </span>
         )}
         {/* Kev, 2026-09-10: the "needs recheck" tab is gone — pending_check
@@ -4091,6 +3682,19 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             Needs recheck
           </span>
         )}
+
+        {/* Responsible agent stays on the image. The update age now sits below
+            the reference at the foot of the card, where it reads as metadata. */}
+        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          {r.listedBy.displayName && (
+            <span style={{
+              background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
+              padding: '2px 7px', borderRadius: 999, whiteSpace: 'nowrap',
+            }}>
+              {r.listedBy.displayName}
+            </span>
+          )}
+        </div>
 
         {/* Tag — batch pick, bottom-left. Same action as before
             (Board():toggleSelect); a "+" glyph now instead of the person icon,
@@ -4118,6 +3722,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </button>
         )}
 
+        {/* Image count, bottom right. */}
+        {r.imageCount > 0 && (
+          <span style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '3px 7px', borderRadius: 999 }}>
+            {r.imageCount}
+          </span>
+        )}
+
         {/* Dashboard photo upload (Kev, 2026-09-02) — own listing or admin
             only, same rule the backend route enforces; hidden rather than
             shown-disabled so a click can never 403. */}
@@ -4128,6 +3739,20 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               style={{ display: 'none' }}
               onChange={e => { onAddPhotos(e.target.files); e.target.value = '' }}
             />
+            <button
+              onClick={e => { e.stopPropagation(); photoInputRef.current?.click() }}
+              disabled={photoUploadBusy}
+              title="Add photos to this listing"
+              style={{
+                position: 'absolute', bottom: 8, right: r.imageCount > 0 ? 44 : 8,
+                width: 26, height: 26, borderRadius: 999, padding: 0,
+                display: 'grid', placeItems: 'center',
+                background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.45)',
+                color: '#FFF', cursor: photoUploadBusy ? 'wait' : 'pointer', lineHeight: 0,
+                opacity: photoUploadBusy ? 0.6 : 1,
+              }}>
+              <Camera size={13} />
+            </button>
           </>
         )}
       </div>
@@ -4140,12 +3765,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           Available and the tray below it read as dead space — bottom
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
-      <div style={{
-        padding: isMobile ? '8px 9px 6px' : compact ? '8px 11px 3px' : '10px 12px 3px',
-        display: 'flex', flexDirection: 'column', minWidth: 0,
-        flex: isMobile ? undefined : '1 1 0', overflow: 'hidden',
-        gridColumn: isMobile ? 2 : undefined, gridRow: isMobile ? 1 : undefined,
-      }}>
+      <div style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gridColumn: isMobile ? undefined : 2, gridRow: isMobile ? undefined : 1 }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
@@ -4170,14 +3790,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             <RentalModeBadges modes={r.rentalModes} availableUntil={r.availableUntil} />
 
           </div>
-          <div style={{ display: 'grid', justifyItems: 'end', gap: 3, flexShrink: 0 }}>
-            <div style={{ fontFamily: FM, fontSize: isMobile ? 15 : 19, fontWeight: 500, color: DTEXT, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+          <div style={{ display: 'grid', justifyItems: 'end', flexShrink: 0, lineHeight: 1.1 }}>
+            <div style={{ fontFamily: FM, fontSize: isMobile ? 15 : 19, fontWeight: 500, color: DTEXT, letterSpacing: '-0.03em' }}>
               {r.price ? `€${r.price.toLocaleString()}` : r.salePrice ? `€${r.salePrice.toLocaleString()}` : '—'}
-            </div>
-            <div className="argus-card-price-meta">
-              <span>#{r.ref}</span>
-              {latestTouch && <span title={new Date(latestTouch.at).toLocaleString('en-GB')}><Clock3 size={8} />{compactAge(latestTouch.at)}</span>}
-              {preferences.showAgentNames && r.listedBy.displayName && <span style={{ color: r.listedBy.colorHex || 'var(--crm-accent)' }}>{r.listedBy.displayName}</span>}
             </div>
           </div>
         </div>
@@ -4192,7 +3807,9 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               .filter(Boolean).join(' - ')}
           </span>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            {(offMarket || r.availableStatus === 'not_available') && <div style={{ fontSize: 9, color: '#E29B9B', letterSpacing: '0.07em', fontWeight: 850 }}>OFF MARKET</div>}
+            <div style={{ fontSize: 9, color: offMarket ? '#E29B9B' : '#58C894', letterSpacing: '0.07em', fontWeight: 850 }}>
+              {offMarket || r.availableStatus === 'not_available' ? 'OFF MARKET' : 'ON MARKET'}
+            </div>
             <div style={{ fontSize: 10.5, color: r.availability?.kind === 'soon' ? DTEXT_DIM : '#FFB14A', fontFamily: FM, fontWeight: 750, marginTop: 3, textShadow: r.availability?.kind === 'soon' ? 'none' : '0 0 13px rgba(255,145,36,.55)' }}>
               {r.availability?.kind === 'now' ? 'Available now'
                 : r.availability?.kind === 'date' ? `Free ${fmtDateDots(r.availability.date)}`
@@ -4205,7 +3822,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         </div>
 
-        {!!r.units && r.units.total > 1 && !isMobile && (
+        {!!r.units && r.units.total > 1 && (
           <div data-unit-stock={r.ref} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
             marginTop: 6, padding: '4px 7px', borderRadius: 7,
@@ -4219,7 +3836,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
 
         {/* The street, where we have one. Number never shown, and only on your
             own listing — see streetWithoutNumber() on the server. */}
-        {r.streetName && <div style={{ fontSize: isMobile ? 9.5 : 11, color: 'var(--crm-accent)', opacity: 0.85, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.streetName}</div>}
+        {r.streetName && <div style={{ fontSize: 11, color: 'var(--crm-accent)', opacity: 0.85, marginTop: 3 }}>{r.streetName}</div>}
 
         {/* Sharing / pets, whenever the listing actually says. Nothing is
             drawn when it does not — see RuleIcon. */}
@@ -4230,22 +3847,58 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           </div>
         )}
 
-        <div className="argus-card-visible-mini-tools" aria-label="Listing quick tools" style={{
-          display: 'flex', alignItems: 'center', gap: 9, marginTop: 'auto', minHeight: 25,
-          color: DTEXT_FAINT,
-        }}>
-          <PhotoDownload r={r} />
-          <button type="button" onClick={handleCopyLink} disabled={copyBusy} title="Copy listing link" aria-label="Copy listing link"><Copy size={13} /></button>
-          <button type="button" onClick={handlePriceEdit} title="Update price" aria-label="Update price"><Euro size={13} /></button>
-          {isAdmin && <button type="button" onClick={onAvDate} title="Correct availability and viewing dates" aria-label="Correct availability and viewing dates"><CalendarClock size={13} /></button>}
-        </div>
-
         {/* ── description preview ──────────────────────────────────────────── */}
+        {r.description && !isMobile && (
+          <div onClick={onOpen} title="Click to read the full listing" style={{ marginTop: 9, cursor: 'pointer' }}>
+            <p style={{
+              fontSize: 11.5, color: DTEXT_DIM, lineHeight: 1.5, margin: 0,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {r.description}
+            </p>
+            <span style={{ fontSize: 11.5, color: DTEXT_FAINT, letterSpacing: '0.08em' }}>···</span>
+          </div>
+        )}
+
+        {/* Viewable date — desktop only; the ~170px mobile column has no room
+            for a second stat row alongside Still Available/Confirmed, which
+            now live at the bottom of the body, right above the tray. */}
+        {!isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
+              {/* Kev, 2026-09-08 (real bug, live on #2906-9193): this read
+                  r.availableDate — the SAME field the "Available" column
+                  above already shows — so editing Viewing date/time
+                  separately on the property page never visibly changed
+                  anything here; both columns always mirrored the Available
+                  date. Now reads the actual viewing_date field. */}
+              <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
+                {r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'}
+              </div>
+              {/* ARGUS V3 (Kev, 2026-09-16): "mache bei allen properties die
+                  zeitlich begrenzt sind auf shortlets und winterperiod so ein
+                  schneeflocke icon unter viewable" — winter/short-let stock
+                  gets a snowflake right under Viewable so it reads as
+                  time-limited at a glance, distinct from a normal long-let. */}
+              {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
+                <div style={{ fontSize: 10, color: '#7EC8E3', marginTop: 3, whiteSpace: 'nowrap' }} title="Time-limited — winter/short-let, excluded from normal !match search">
+                  ❄️ {r.leaseType === 'winter_let' ? 'Winter let' : 'Short let'}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* The download/copy/price/AV-date/Facebook tools that used to live
             in a row here moved into the "..." menu below (Kev, 2026-09-11) —
             see menuSection "Tools". */}
 
         {/* Why it last moved — the review queue is unusable without it. */}
+        {r.statusChangeReason && (
+          <div style={{ fontSize: 9.5, color: '#D3A876', marginTop: 8, lineHeight: 1.35 }}>{r.statusChangeReason}</div>
+        )}
+
         {/* ── Still Available + Confirmed ──────────────────────────────────
             Kev, 2026-09-11 (5th pass): "der fucking available button einfach
             unten anheften wie rechts" — being the last child in a flex:1
@@ -4258,18 +3911,59 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             slack itself, so the button sits flush against the tray on
             EVERY card regardless of how much is above it, not just the ones
             that happened to be tall enough already. */}
-        <div style={{ marginTop: isMobile ? 4 : 6, paddingTop: 0 }}>
+        <div style={{ marginTop: 'auto', paddingTop: 12 }}>
         {/* Kev, 2026-09-16 ("die minicions vlt über das still available
             anheften, da ist ja garnix"): moved up from the tray below — this
             row above the button had nothing in it, and that's a better home
             for these than buried under Chat/Book/Tag. Facebook stays behind
             "..." exactly where it was; only download/copy/price/AV-date
             moved again. */}
-        {rowMsg && <span style={{ display: 'block', marginBottom: 4, fontSize: 9, color: 'var(--crm-accent)' }}>{rowMsg}</span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
+          <PhotoDownload r={r} />
+          <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
+            <Copy size={14} />
+          </button>
+          <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
+            <Euro size={14} />
+          </button>
+          {isAdmin && (
+            <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
+              <CalendarClock size={14} />
+            </button>
+          )}
+          {rowMsg && <span style={{ fontSize: 10.5, color: 'var(--crm-accent)', marginLeft: 2 }}>{rowMsg}</span>}
+          <div
+            title={latestTouch ? `${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}` : `Reference ${r.ref}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto', color: isFreshlyUpdated ? A : DTEXT_FAINT, fontFamily: FM, fontSize: 8.5, whiteSpace: 'nowrap' }}
+          >
+            <span>#{r.ref}</span><span aria-hidden style={{ opacity: .45 }}>·</span><span>{latestTouch ? ago(latestTouch.at) : '—'}</span>
+          </div>
+        </div>
         {/* Kev, 2026-09-14 (spec item 1): an owner-confirmed future date means
             "still available?" is the wrong question to even offer — no button,
             just the fact and when we'll check again. */}
-        {isUpcoming ? (
+        {r.availableStatus === 'rented' ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => c.canQuestion && onAskPortfolio()}
+              disabled={!c.canQuestion}
+              title={c.questionReason || 'Ask this owner about new and upcoming inventory'}
+              style={{
+                ...stillAvailableBtn(dark),
+                opacity: c.canQuestion ? 1 : 0.45,
+                cursor: c.canQuestion ? 'pointer' : 'not-allowed',
+              }}>
+              <CircleHelp size={14} />
+              Anything available?
+            </button>
+            <div style={{ textAlign: 'right', flexShrink: 0, width: 78 }}>
+              <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Rented since</div>
+              <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
+                {fmtDateDots(r.recentlyRentedAt) || 'Not recorded'}
+              </div>
+            </div>
+          </div>
+        ) : isUpcoming ? (
           <div data-future-lock={r.ref} style={{ display: 'grid', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#9D8BFF' }}>
@@ -4289,7 +3983,33 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
               </button>
             )}
           </div>
-        ) : null}
+        ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => c.canAsk && askStillAvailable(false)}
+            disabled={!c.canAsk || avBusy}
+            title={c.reason || fresh.label}
+            style={{
+              ...stillAvailableBtn(dark),
+              opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
+              cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
+            }}>
+            {fresh.tier === 'fresh' ? <CheckCircle2 size={14} /> : <CircleHelp size={14} />}
+            {avBusy ? 'Checking…' : 'Still available?'}
+          </button>
+          {/* Kev, screenshot: "ich hab kb dass sich das verschiebt" — this
+              column used to size itself to whatever "Confirmed" said
+              ("Never" vs "10d ago" vs "3h ago"), so the flex:1 button next
+              to it landed at a different width on every card. Fixed width
+              here instead, so the button's right edge never moves. */}
+          <div style={{ textAlign: 'right', flexShrink: 0, width: 62 }}>
+            <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Confirmed</div>
+            <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : 'Never'}
+            </div>
+          </div>
+        </div>
+        )}
 
         {futureOverride && (
           <div data-future-override={r.ref} style={{
@@ -4316,13 +4036,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             "nothing visible happens" was the actual complaint, and a toast that
             is gone in two seconds does not fix that. Stays until the next click
             or the next reload picks up a real status change. */}
-        {!isUpcoming && avOutcome && (
+        {!isUpcoming && r.availableStatus !== 'rented' && avOutcome && (
           <div style={{ fontSize: 10, marginTop: 5, color: avOutcome.tone === 'ok' ? 'rgb(47,111,87)' : '#B91C1C' }}>
             {avOutcome.tone === 'ok' ? '✓ ' : '⚠ '}{avOutcome.text}
           </div>
         )}
 
-        {isAdmin && !isUpcoming && !c.canAsk && !isMobile && (
+        {isAdmin && !isUpcoming && !c.canAsk && (
           <div data-contact-block-reason={r.ref} style={{
             marginTop: 7, padding: '8px 9px', borderRadius: 9,
             border: '1px solid rgba(226,155,155,.24)', background: 'rgba(185,28,28,.07)',
@@ -4417,10 +4137,11 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           are already click-to-open. Every onClick/disabled condition below
           is the SAME one the previous three-row layout used; only where it
           lives changed. */}
-      {preferences.showBookingDetails && !!r.bookings?.length && !isMobile && (
+      {!!r.bookings?.length && (
         <div data-card-bookings={r.ref} style={{
           padding: '7px 12px', borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
           background: dark ? DCARD : CARD, display: 'flex', flexDirection: 'column', gap: 3,
+          gridColumn: isMobile ? undefined : 2, gridRow: isMobile ? undefined : 2,
         }}>
           {r.bookings.slice(0, 2).map(b => (
             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: dark ? DTEXT_DIM : LTEXT_DIM, minWidth: 0 }}>
@@ -4435,29 +4156,32 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
           )}
         </div>
       )}
-      {preferences.showQuickTools && <div style={{
+      <div style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: isMobile ? '5px 7px' : '6px 9px', position: 'relative', marginTop: 'auto', flexShrink: 0,
-        gridColumn: isMobile ? '1 / -1' : undefined,
+        padding: '9px 11px', position: 'relative', gridColumn: isMobile ? undefined : 2, gridRow: isMobile ? undefined : 3,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
             to live here moved up above the Still Available button — see the
             block right before `isUpcoming` above. Facebook stays inside "..."
             exactly where it already is (still under menuSection "Tools"). */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-          {!isUpcoming && <button
-            onClick={() => c.canAsk && askStillAvailable(false)}
-            disabled={!c.canAsk || avBusy}
-            title={`${c.reason || fresh.label}${r.lastConfirmedAvailableAt ? ` · confirmed ${ago(r.lastConfirmedAvailableAt)}` : ''}`}
-            style={{
-              ...stillAvailableBtn(dark), flex: '1 1 auto', minWidth: 0,
-              minHeight: 32, padding: '6px 8px', fontSize: 9.5, gap: 4, boxShadow: 'none',
-              opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
-              cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
-            }}>
-            {fresh.tier === 'fresh' ? <CheckCircle2 size={13} /> : <CircleHelp size={13} />}
-            {avBusy ? 'Checking…' : 'Still available?'}
-          </button>}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+          <button
+            data-favourite={r.ref}
+            data-star-step={starStepOf(r)}
+            aria-pressed={starStepOf(r) > 0}
+            onClick={onStar}
+            title={
+              starStepOf(r) === 2
+                ? (isAdmin ? 'HOT property — click to clear' : 'HOT property')
+                : starStepOf(r) === 1
+                  ? (isAdmin ? 'Favourite — click to make Hot' : 'Remove from Favourites')
+                  : 'Save to Favourites'
+            }
+            style={{ ...trayPrimaryBtn(dark), color: starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : (dark ? DTEXT_DIM : LTEXT_DIM) }}
+          >
+            <StarGlyph filled={starStepOf(r) > 0} color={starStepOf(r) === 2 ? HOT : A} size={16} />
+          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
             aria-label={r.lastChatAt ? `Owner chat, last active ${ago(r.lastChatAt)}` : 'Owner chat'}
             title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}
@@ -4493,18 +4217,13 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             style={{ ...trayMoreBtn(dark), background: menuOpen ? A : trayMoreBtn(dark).background, color: menuOpen ? '#151C2C' : (dark ? DTEXT_DIM : LTEXT_DIM), borderColor: menuOpen ? A : (dark ? DBORDER : LBORDER) }}>
             <MoreHorizontal size={16} />
           </button>
+          </div>
         </div>
 
         {menuOpen && (
           <div style={menuPanel(dark)}>
-            <div style={menuSection(dark)}>Quick tools</div>
-            <div className="argus-card-mini-tools" aria-label="Listing quick tools">
-              <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} onChanged={onChanged} />
-              <PhotoDownload r={r} />
-              {(r.isMine || isAdmin) && <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoUploadBusy} title="Add photos"><Camera size={14} /><span>{photoUploadBusy ? 'Adding…' : 'Photos'}</span></button>}
-              <button type="button" onClick={handleCopyLink} disabled={copyBusy} title="Copy listing link"><Copy size={14} /><span>Link</span></button>
-              <button type="button" onClick={handlePriceEdit} title="Update price"><Euro size={14} /><span>Price</span></button>
-              {isAdmin && <button type="button" onClick={onAvDate} title="Correct availability and viewing dates"><CalendarClock size={14} /><span>Dates</span></button>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 2px 4px' }}>
+              <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} />
             </div>
             {/* Kev, 2026-09-11: "sieht zu unübersichtlich aus" — a tall list
                 of full-width text rows read as clutter next to the Tools
@@ -4647,7 +4366,7 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
             )}
           </div>
         )}
-      </div>}
+      </div>
       {inquiryOpen && (
         <AgentInquiryModal
           propertyRef={r.ref}
@@ -4689,28 +4408,6 @@ function Card({ r, focused, innerRef, onOpen, onAct, onBook, onAsk, onChat, onCr
         </div>
       )}
 
-      {/* ── reference bar ─────────────────────────────────────────────────── */}
-      {/* The one authoritative reference (r.ref), straight from the listing —
-          nothing here is a second reference, just a readable restatement of
-          beds/baths/town that already exist on the card above. Centered
-          (Kev's redesign brief, 2026-08-22) rather than left-aligned — this
-          reads as the card's closing stamp, not one more left-aligned row. */}
-      <div style={{
-        background: DTRAY, color: DTEXT_DIM, fontFamily: FM, fontSize: 10.5,
-        letterSpacing: '0.04em', padding: '5px 11px', display: 'none', alignItems: 'center',
-        justifyContent: 'space-between', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden',
-        gridColumn: isMobile ? '1 / -1' : undefined,
-      }}>
-        <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.15 }}>
-          <strong style={{ color: DTEXT, fontWeight: 700 }}>REFERENCE {r.ref}</strong>
-          <small title={latestTouch ? `${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}` : 'No update recorded'} style={{ marginTop: 1, color: isFreshlyUpdated ? A : DTEXT_FAINT, fontSize: 8.5, fontWeight: 600, letterSpacing: 0 }}>
-            {latestTouch ? ago(latestTouch.at) : '—'}
-          </small>
-        </span>
-        <span>
-          {[r.beds != null ? `${r.beds}B` : '', r.baths != null ? `${r.baths}B` : ''].join('')} {townLabel(r.town)?.toUpperCase()}
-        </span>
-      </div>
     </div>
   )
 }
@@ -4826,7 +4523,7 @@ function AgentInquiryModal({ propertyRef, agentName, onClose }: { propertyRef: s
 }
 
 // ── detail modal ────────────────────────────────────────────────────────────
-function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, onBook, onChanged }: {
+function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, onBook }: {
   refId: string
   intent?: 'book' | 'media' | null
   onClose: () => void
@@ -4838,7 +4535,6 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
   // which the modal never touches) and mirrors the result back locally.
   onStar: (r: Listing) => Promise<void>
   onBook: (r: Listing) => void
-  onChanged: () => void
 }) {
   const { me } = useCrm()
   const isAdmin = me?.role === 'admin'
@@ -4943,11 +4639,11 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
                 <div>
                   <div style={{ fontFamily: FM, fontSize: 12, color: A }}>#{d.ref}</div>
-                  <h2 style={{ margin: '3px 0 0', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#172033' }}>
+                  <h2 style={{ margin: '3px 0 0', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>
                     {townLabel(d.town)}
                   </h2>
                 </div>
-                <div style={{ fontFamily: FM, fontSize: 19, fontWeight: 700, color: '#172033' }}>
+                <div style={{ fontFamily: FM, fontSize: 19, fontWeight: 500 }}>
                   {d.price ? `€${d.price.toLocaleString()}` : d.salePrice ? `€${d.salePrice.toLocaleString()}` : '—'}
                 </div>
               </div>
@@ -5037,8 +4733,6 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
                   style={{ ...btn, background: intent === 'book' ? '#E8B931' : '#FFF', color: NAVY, border: `1px solid ${intent === 'book' ? '#C99D18' : AB}`, fontWeight: 850, boxShadow: intent === 'book' ? '0 5px 18px rgba(232,185,49,.28)' : 'none' }}>
                   {intent === 'book' ? 'Book now' : 'Book'}
                 </button>
-
-                <ClassificationGear r={d} dark={false} isAdmin={isAdmin} onChanged={onChanged} />
 
                 {(() => {
                   const off = lockedStatus(d.availableStatus)
@@ -5403,11 +5097,10 @@ const trayPrimaryBtn = (dark: boolean): React.CSSProperties => ({
 // small dot next to the label (see the JSX) is the only thing that still
 // varies with `fresh`.
 const stillAvailableBtn = (dark: boolean): React.CSSProperties => ({
-  padding: '9px 13px', borderRadius: 999, fontSize: 11, fontFamily: F,
-  fontWeight: 750, letterSpacing: '.015em', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 38,
-  border: '1px solid rgba(103,211,158,.5)',
-  background: dark ? 'linear-gradient(135deg,#173F34,#235C49)' : 'linear-gradient(135deg,#DDF4E9,#C8EADB)', color: dark ? '#D9F9E9' : '#174C3A',
-  boxShadow: dark ? 'inset 0 1px 0 rgba(255,255,255,.09),0 7px 18px rgba(3,18,13,.24)' : 'inset 0 1px 0 rgba(255,255,255,.75),0 6px 15px rgba(28,93,67,.12)',
+  padding: '8px 12px', borderRadius: 10, fontSize: 11.5, fontFamily: F,
+  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 34,
+  border: '1px solid rgba(47,111,87,0.4)',
+  background: dark ? '#1B2333' : '#EAF5F0', color: 'var(--crm-success)',
   flex: '1 1 0', minWidth: 0, textAlign: 'center',
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
 })

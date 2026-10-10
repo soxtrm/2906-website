@@ -1,7 +1,7 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, BrainCircuit, LogOut } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Star } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -203,7 +203,7 @@ export const useCrm = () => {
 
 const THEME_STORAGE_KEY = 'crm_theme_pref'
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory', 'bookings', 'learning']
+const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory', 'bookings']
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -396,7 +396,6 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // array every non-board agent's login resolves to, and this one really is
   // Kevin-only, not "every agent, like Clientgroups".
   { key: 'outreach',  icon: '🛰', label: 'Outreach',  href: '/outreach', adminOnly: true },
-  { key: 'learning', icon: '⌁', label: 'Learning', href: '/learning', adminOnly: true },
   // Kev, 2026-09-15: cross-agent Board-chat monitor — admin-only, same
   // rule as Outreach above (FULL_NAV membership alone would show it to
   // every non-board agent; adminOnly is the actual gate the filter below
@@ -465,10 +464,10 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS = { dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, learning: BrainCircuit }
+const NAV_ICONS = { dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database }
 
-export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: darkDefault, mobileIsland = false }:
-  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileIsland?: boolean }) {
+export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: darkDefault, mobileImmersive }:
+  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileImmersive?: boolean }) {
   const pathname = usePathname() || '/'
   const { me, reveals, nav, logout, theme, toggleTheme } = useCrm()
   const dark = theme != null ? theme === 'dark' : !!darkDefault
@@ -476,21 +475,40 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
   const [moreOpen, setMoreOpen] = useState(false)
-  const [islandOpen, setIslandOpen] = useState(false)
+  const [navigationCompact, setNavigationCompact] = useState(false)
+  const contentRef = useRef<HTMLElement>(null)
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
-  useEffect(() => { setMoreOpen(false); setIslandOpen(false) }, [pathname])
+  useEffect(() => { setMoreOpen(false) }, [pathname])
+  useEffect(() => {
+    const scroller = contentRef.current
+    if (!mobileImmersive || !scroller) return
+    let frame = 0
+    let lastTop = scroller.scrollTop
+    const update = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const nextTop = scroller.scrollTop
+        if (nextTop < 24 || nextTop < lastTop - 7) setNavigationCompact(false)
+        else if (nextTop > 86 && nextTop > lastTop + 7) setNavigationCompact(true)
+        lastTop = nextTop
+      })
+    }
+    update()
+    scroller.addEventListener('scroll', update, { passive: true })
+    return () => { cancelAnimationFrame(frame); scroller.removeEventListener('scroll', update) }
+  }, [mobileImmersive])
   const navItem = (item: typeof NAV[number]) => {
     const Icon = NAV_ICONS[item.key]
     return item.disabled
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
       : <Link key={item.key} className="crm-nav-item" href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
   }
-  return <div className={`crm-workspace${mobileIsland ? ` crm-mobile-island-workspace${islandOpen ? ' island-open' : ''}` : ''}`}>
+  return <div className={`crm-workspace${mobileImmersive ? ' crm-mobile-immersive' : ''}${navigationCompact ? ' crm-navigation-compact' : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
     <aside className="crm-sidebar">
-      <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><span className="crm-brand-mark"><img src="/argus-wordmark-2026.webp" alt="Argus" /><i aria-hidden="true" /></span></Link>
+      <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><img src="/argus-logo-wide.png" alt="Argus" /><small>2906</small></Link>
       <nav aria-label="Main navigation">{items.map(navItem)}</nav>
       <div className="crm-account">
         <strong>{me?.name || me?.username} <small>· {roleLabel}</small></strong>
@@ -499,33 +517,44 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       </div>
     </aside>
     <div className="crm-main">
-      <header className={`crm-header${mobileIsland ? ' crm-header-island' : ''}`}><div className="crm-header-copy"><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
+      <header className="crm-header"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
         <div className="crm-header-actions">
-          {mobileIsland && <>
-            <button className="crm-mobile-island-brand" type="button" onClick={() => setIslandOpen(v => !v)} aria-expanded={islandOpen} aria-label={islandOpen ? 'Close Argus controls' : 'Open Argus controls'}>
-              <img src="/argus-wordmark-2026.webp" alt="" aria-hidden="true" />
-            </button>
-          </>}
           <a className="crm-icon-button crm-nexus" href="https://2906.estate/Link" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><svg width="20" height="20" viewBox="0 0 100 100" aria-hidden><path d="M3 3C26 22 38 33 50 33S74 22 97 3C78 26 67 38 67 50S78 74 97 97C74 78 62 67 50 67S26 78 3 97C22 74 33 62 33 50S22 26 3 3Z" fill="currentColor" /></svg></a>
           <button className="crm-icon-button" onClick={() => toggleTheme(dark)} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Light mode' : 'Dark mode'}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
           {onAdd && <button onClick={onAdd} className="crm-button primary">+ Add</button>}
         </div>
       </header>
       {hasReveals && reveals.used >= 40 && <div className="crm-notice" role="status">{reveals.used >= reveals.limit ? 'Reveal limit reached. Contact admin to raise your limit.' : `You have used ${reveals.used} of ${reveals.limit} contact reveals today.`}</div>}
-      {filterBar !== undefined && <div className={`crm-filterbar${mobileIsland ? ' crm-filterbar-island' : ''}`}>{filterBar}</div>}
-      <main id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
+      {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
+      <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation">
-      {items.filter(i => !i.disabled).slice(0, 3).map(item => { const Icon = NAV_ICONS[item.key]; return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined}><Icon size={19} aria-hidden /><span>{item.label}</span></Link> })}
-      {onAdd && <button className="crm-mobile-add" onClick={onAdd} aria-label={`Add from ${title}`}><span aria-hidden="true">+</span><small>Add</small></button>}
+      <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Expand mobile navigation"><span /></button>
+      {items.filter(i => !i.disabled).slice(0, 4).map(item => {
+        const Icon = NAV_ICONS[item.key]
+        const current = active(item.href)
+        const primaryMap = item.key === 'board' && current
+        if (primaryMap) return <button
+          key={item.key}
+          type="button"
+          className="crm-bottom-nav-primary"
+          aria-current="page"
+          aria-label="Open or close map"
+          onClick={() => window.dispatchEvent(new CustomEvent('crm-board-map-toggle'))}
+        ><Icon size={20} aria-hidden /><span>Map</span></button>
+        return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={current ? 'page' : undefined}><Icon size={20} aria-hidden /><span>{item.label}</span></Link>
+      })}
+      {active('/schedule-board') && <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent('crm-board-view', { detail: 'favourites' }))}
+        aria-label="Favourites"
+        title="Favourites"
+      ><Star size={19} aria-hidden /><span>Favourites</span></button>}
       <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation"><Menu size={20} aria-hidden /><span>More</span></button>
     </nav>
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="crm-text" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', borderRadius: 24, maxHeight: '85dvh', overflowY: 'auto' }}>
       <DialogTitle>Workspace</DialogTitle><nav className="crm-mobile-menu" aria-label="All navigation">{items.map(navItem)}</nav>
-      <div className="crm-mobile-menu-actions">
-        <button className="crm-button" onClick={() => toggleTheme(dark)}>{dark ? <Sun size={16} /> : <Moon size={16} />}{dark ? 'Light mode' : 'Dark mode'}</button>
-        <button className="crm-button" onClick={logout}><LogOut size={16} />Sign out</button>
-      </div>
+      <button className="crm-button" onClick={logout}><LogOut size={16} />Sign out</button>
     </DialogContent></Dialog>
   </div>
 }
