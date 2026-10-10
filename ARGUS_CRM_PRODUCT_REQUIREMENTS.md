@@ -21,6 +21,9 @@ This file records Kevin's current product direction so later edits do not remove
 
 ### Smartfilters
 
+- The daily action cloud prioritises **Map**, **Rows**, and **Profile** in both its top icons and the first row of its open menu. Combination tools follow below because they matter after the primary workspace is chosen.
+- Like Filters, the action cloud first expands in place; an individual action is chosen only after that deliberate expansion. Switching to another cloud first closes the current surface, and the following tap opens the new one.
+- Opening Map closes the cloud panel, inserts the map into the document flow without covering useful controls, and animates it in clearly from the left.
 - Smartfilters are individually selectable and support multiple simultaneous choices.
 - Selecting one option must not close the panel.
 - Bedrooms and property types selected within the same family are alternatives (OR); different filter families combine (AND).

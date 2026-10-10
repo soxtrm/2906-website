@@ -13,7 +13,7 @@
 // inputs in inline styles — which is what made it read as bolted on.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { AtSign, Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Star, X } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, List, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, UserRound, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -193,6 +193,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'smart' | 'filters' | null>(null)
+  const [smartPickerOpen, setSmartPickerOpen] = useState(false)
   const [filterPickerOpen, setFilterPickerOpen] = useState(false)
   const [islandFocus, setIslandFocus] = useState<string | null>(null)
   const [compactMobile, setCompactMobile] = useState(false)
@@ -248,7 +249,9 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(null)
         setMobilePanel(null)
+        setSmartPickerOpen(false)
         setFilterPickerOpen(false)
+        setSearchOpen(false)
       }
     }
     document.addEventListener('mousedown', away)
@@ -289,25 +292,65 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     towns: value.towns.includes(key) ? value.towns.filter(item => item !== key) : [...value.towns, key],
   })
 
-  const openIslandFeature = (panel: 'smart' | 'filters', target: string) => {
-    setSearchOpen(false)
+  const closeIslandSurfaces = () => {
     setOpen(null)
-    if (panel === 'filters' && !filterPickerOpen) {
+    setMobilePanel(null)
+    setSmartPickerOpen(false)
+    setFilterPickerOpen(false)
+    setIslandFocus(null)
+    setSearchOpen(false)
+  }
+
+  const openIslandFeature = (panel: 'smart' | 'filters', target: string) => {
+    setOpen(null)
+    const otherSurfaceOpen = panel === 'smart'
+      ? searchOpen || mobilePanel === 'filters' || filterPickerOpen
+      : searchOpen || mobilePanel === 'smart' || smartPickerOpen
+    if (otherSurfaceOpen) {
+      closeIslandSurfaces()
+      return
+    }
+    setSearchOpen(false)
+    if (panel === 'smart' && !smartPickerOpen && mobilePanel !== 'smart') {
+      setMobilePanel(null)
+      setIslandFocus(null)
+      setSmartPickerOpen(true)
+      return
+    }
+    if (panel === 'filters' && !filterPickerOpen && mobilePanel !== 'filters') {
       setMobilePanel(null)
       setIslandFocus(null)
       setFilterPickerOpen(true)
       return
     }
-    if (panel === 'smart') setFilterPickerOpen(false)
+    setSmartPickerOpen(panel === 'smart')
+    setFilterPickerOpen(panel === 'filters')
     setIslandFocus(target)
     setMobilePanel(panel)
   }
 
-  const primeFilterIsland = () => {
+  const primeSmartIsland = () => {
+    if (searchOpen || mobilePanel === 'filters' || filterPickerOpen) {
+      closeIslandSurfaces()
+      return
+    }
     setSearchOpen(false)
     setOpen(null)
     setMobilePanel(null)
     setIslandFocus(null)
+    setSmartPickerOpen(true)
+  }
+
+  const primeFilterIsland = () => {
+    if (searchOpen || mobilePanel === 'smart' || smartPickerOpen) {
+      closeIslandSurfaces()
+      return
+    }
+    setSearchOpen(false)
+    setOpen(null)
+    setMobilePanel(null)
+    setIslandFocus(null)
+    setSmartPickerOpen(false)
     setFilterPickerOpen(true)
     if (window.matchMedia('(max-width: 760px)').matches) {
       window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
@@ -315,6 +358,16 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       }))
     }
   }
+
+  useEffect(() => {
+    const closeForWorkspace = () => {
+      setMobilePanel(null)
+      setSmartPickerOpen(false)
+      setIslandFocus(null)
+    }
+    window.addEventListener('crm-board-tool-picked', closeForWorkspace)
+    return () => window.removeEventListener('crm-board-tool-picked', closeForWorkspace)
+  }, [])
 
   useEffect(() => {
     if (!mobilePanel || !islandFocus) return
@@ -330,7 +383,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   return (
     <div ref={ref} className={cn('w-full', compactMobile && 'crm-board-filter-collapsed')}>
       <motion.div
-        data-panel={searchOpen ? 'search' : mobilePanel || (filterPickerOpen ? 'filter-picker' : 'default')}
+        data-panel={searchOpen ? 'search' : mobilePanel || (smartPickerOpen ? 'smart-picker' : filterPickerOpen ? 'filter-picker' : 'default')}
         className="crm-board-islands"
       >
         <motion.div className={cn('crm-argus-orbit flex min-w-0 items-center rounded-[18px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-1.5', searchOpen && 'is-searching')}>
@@ -342,18 +395,18 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 <button type="button" onClick={() => value.q ? onChange({ q: '' }) : setSearchOpen(false)} aria-label={value.q ? 'Clear search' : 'Close search'} className="absolute right-1 grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-[var(--crm-muted)]"><X className="h-4 w-4" /></button>
               </motion.form>
             ) : (
-              <motion.button key="search-trigger" layout type="button" onClick={() => { setOpen(null); setMobilePanel(null); setFilterPickerOpen(false); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }}>
+              <motion.button key="search-trigger" layout type="button" onClick={() => { if (mobilePanel || smartPickerOpen || filterPickerOpen) { closeIslandSurfaces(); return }; setOpen(null); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }}>
                 <span className="crm-argus-logo-window"><img src="/argus-logo-kevin.png" alt="ARGUS" style={{ filter: dark ? 'invert(1) brightness(1.18)' : 'none' }} />{value.q && <i className="crm-search-active-dot" aria-hidden />}</span>
               </motion.button>
             )}
           </AnimatePresence>
         </motion.div>
 
-        <motion.div role="group" aria-label={`Smart filters${smartBadgeCount ? `, ${smartBadgeCount} active` : ''}`} className={cn('crm-nav-island crm-smart-island', mobilePanel === 'smart' && 'is-active')}>
+        <motion.div role="group" aria-label={`Daily tools and smart filters${smartBadgeCount ? `, ${smartBadgeCount} active` : ''}`} className={cn('crm-nav-island crm-smart-island', (mobilePanel === 'smart' || smartPickerOpen) && 'is-active')} onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeSmartIsland() }}>
           <span className="crm-island-icons crm-smart-icons">
-            <button type="button" className="crm-island-feature" aria-label="Open smart property collections" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-collections'} onClick={() => openIslandFeature('smart', 'crm-smart-collections')}><MapPin aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open favourites" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-favourites'} onClick={() => openIslandFeature('smart', 'crm-smart-favourites')}><Star aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open tags and requests" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-tags'} onClick={() => openIslandFeature('smart', 'crm-smart-tags')}><AtSign aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open map workspace" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-map'} onClick={() => openIslandFeature('smart', 'crm-smart-map')}><MapIcon aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open rows workspace" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-rows'} onClick={() => openIslandFeature('smart', 'crm-smart-rows')}><List aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open profile workspace" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-profile'} onClick={() => openIslandFeature('smart', 'crm-smart-profile')}><UserRound aria-hidden /></button>
           </span>
           <span className="crm-island-label">Smartfilters</span>
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}
@@ -383,7 +436,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       <AnimatePresence initial={false} mode="popLayout">
         {mobilePanel === 'smart' && (
           <motion.section id="crm-mobile-smart-panel" key="smart-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-smart-panel" style={{ transformOrigin: 'top 42%' }} onMouseDown={event => event.stopPropagation()}>
-            <header><div><span>SMART CLOUD</span><strong>Smart filters</strong></div><div className="crm-mobile-panel-head-actions">{smartBadgeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset smart filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={() => setMobilePanel(null)} aria-label="Close smart filters"><X /></button></div></header>
+            <header><div><span>ACTION CLOUD</span><strong>Daily tools</strong></div><div className="crm-mobile-panel-head-actions">{smartBadgeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset smart filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={() => setMobilePanel(null)} aria-label="Close daily tools"><X /></button></div></header>
             <div>{smartTools}</div>
           </motion.section>
         )}

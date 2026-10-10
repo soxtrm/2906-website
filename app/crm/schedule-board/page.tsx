@@ -511,6 +511,13 @@ function Board() {
     window.addEventListener('crm-board-map-toggle', toggleMap)
     return () => window.removeEventListener('crm-board-map-toggle', toggleMap)
   }, [])
+  const revealMapWorkspace = useCallback(() => {
+    setMapOpen(true)
+    window.dispatchEvent(new CustomEvent('crm-board-tool-picked'))
+    window.setTimeout(() => {
+      document.getElementById('schedule-board-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 90)
+  }, [])
   // The agent feed is deliberately fetched without the board's current
   // filters. It stays useful while an agent is looking at one town, a price
   // range or Favourites: recent team activity must not disappear just because
@@ -1419,7 +1426,13 @@ function Board() {
       townOptions={townOptions}
       smartBadgeCount={discovery.length}
       smartTools={<div className="crm-mobile-smart-body">
-        <div className="crm-mobile-smart-copy"><strong>Combine what matters</strong><span>Pick several. Bedroom and property-type choices are matched as alternatives.</span></div>
+        <div className="crm-mobile-smart-copy"><strong>Everyday workspace</strong><span>Map, rows and profile stay first. Combined property tools follow when you need them.</span></div>
+        <div className="crm-mobile-quick-priority" aria-label="Primary workspace tools">
+          <button id="crm-smart-map" type="button" aria-pressed={mapOpen} onClick={revealMapWorkspace}><MapIcon /><span>Map</span></button>
+          <button id="crm-smart-rows" type="button" onClick={() => router.push('/crm/inventory')}><List /><span>Rows</span></button>
+          <button id="crm-smart-profile" type="button" onClick={() => router.push('/crm/agent-profile')}><UserRound /><span>Profile</span></button>
+        </div>
+        <div className="crm-mobile-smart-divider"><span>Smart combinations</span></div>
         <div id="crm-smart-collections" className="crm-mobile-smart-grid" aria-label="Smart property filters">
           {DISCOVERY_ITEMS.map(item => {
             const Icon = item.icon
@@ -1427,19 +1440,16 @@ function Board() {
             return <button key={item.key} type="button" aria-pressed={on} onClick={() => toggleDiscovery(item.key)}><Icon /><span>{item.label}</span>{on && <Check aria-hidden />}</button>
           })}
         </div>
-        <div className="crm-mobile-smart-divider"><span>Workspace</span></div>
+        <div className="crm-mobile-smart-divider"><span>More tools</span></div>
         <div className="crm-mobile-quick-grid">
           <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }}><LayoutGrid /><span>Standard</span></button>
-          <button type="button" onClick={() => router.push('/crm/inventory')}><List /><span>Rows</span></button>
           <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()) }}><House /><span>Rented</span></button>
           <button id="crm-smart-favourites" type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={() => { setView('favourites'); setUpdatesMode(false); setSelected(new Set()) }}><Star /><span>Favourites</span></button>
-          <button type="button" aria-pressed={mapOpen} onClick={() => setMapOpen(current => !current)}><MapIcon /><span>Map</span></button>
           <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
           <button type="button" aria-pressed={updatesMode} onClick={() => setUpdatesMode(true)}><Clock3 /><span>Recent</span></button>
           <button id="crm-smart-tags" type="button" disabled={!visible.length} onClick={selectVisible}><AtSign /><span>Tags</span></button>
           <button type="button" onClick={() => setSwipePanelOpen(true)}><Link2 /><span>Swipe Links</span></button>
           {isAdmin && <button type="button" onClick={openAgentRequests}><MessageCircle /><span>Requests</span></button>}
-          <button type="button" onClick={() => router.push('/crm/agent-profile')}><UserRound /><span>Profile</span></button>
           <button type="button" onClick={() => setBoardSettingsOpen(true)}><MoreHorizontal /><span>More</span></button>
         </div>
       </div>}
@@ -1833,11 +1843,11 @@ function Board() {
         <AnimatePresence initial={false}>
           {mapOpen && <motion.div
             id="schedule-board-map"
-            initial={{ opacity: 0, scaleX: .985, scaleY: .96, y: -8 }}
-            animate={{ opacity: 1, scaleX: 1, scaleY: 1, y: 0 }}
-            exit={{ opacity: 0, scaleX: .988, scaleY: .96, y: -7 }}
-            transition={{ type: 'spring', stiffness: 390, damping: 37, mass: .76 }}
-            style={{ transformOrigin: 'top center' }}
+            initial={{ opacity: 0, scale: .985, x: isMobile ? -42 : -24 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: .988, x: isMobile ? -28 : -16 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 34, mass: .72 }}
+            style={{ transformOrigin: 'left center' }}
           ><MapPanel
             items={visible}
             rect={rect}
