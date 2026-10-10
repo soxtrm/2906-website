@@ -555,15 +555,41 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
 
   async function sendAttachments(files: FileList | null) {
     if (!files?.length || uploading || closed) return
+    const selectedFiles = Array.from(files)
     setUploading(true)
     setErr(null)
     try {
-      const form = new FormData()
-      Array.from(files).slice(0, 5).forEach(file => form.append('files', file))
-      if (draft.trim()) form.append('caption', draft.trim())
-      await crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/relay/attachments`, { method: 'POST', body: form })
-      setDraft('')
-      await load()
+      const caption = draft.trim()
+      const failed: string[] = []
+      let sent = 0
+
+      // Send every selected file as its own request. The relay endpoint accepts
+      // at most five files per multipart request; the old slice(0, 5) silently
+      // discarded everything after the fifth image. One-at-a-time keeps the
+      // original order, avoids a long batch timing out in the Next proxy and
+      // lets us verify that the backend accepted each individual upload.
+      for (const file of selectedFiles) {
+        const form = new FormData()
+        form.append('files', file)
+        if (sent === 0 && caption) form.append('caption', caption)
+        try {
+          const result = await crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/relay/attachments`, { method: 'POST', body: form })
+          if (!Array.isArray(result?.files) || result.files.length !== 1) throw new Error('The server did not confirm this file.')
+          sent += 1
+        } catch {
+          failed.push(file.name)
+        }
+      }
+
+      if (sent > 0) {
+        setDraft('')
+        await load()
+      }
+      if (failed.length) {
+        const shown = failed.slice(0, 3).join(', ')
+        const more = failed.length > 3 ? ` and ${failed.length - 3} more` : ''
+        setErr(`${sent} of ${selectedFiles.length} files sent. Not sent: ${shown}${more}.`)
+      }
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not send the attachment.')
     } finally {
