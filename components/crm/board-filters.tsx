@@ -476,10 +476,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
         <motion.div role="group" aria-label={`Daily tools and smart filters${smartBadgeCount ? `, ${smartBadgeCount} active` : ''}`} className={cn('crm-nav-island crm-smart-island', (mobilePanel === 'smart' || smartPickerOpen) && 'is-active')} onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeSmartIsland() }}>
           <span className="crm-island-icons crm-smart-icons">
-            <button type="button" className="crm-island-feature" aria-label={mapActive ? 'Close map workspace' : 'Open map workspace'} aria-pressed={mapActive} data-active={mapActive} onClick={openMapWorkspace}><MapIcon aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open daily tools" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart'} onClick={openSmartMenu}><List aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open profile workspace" onClick={() => openDirectSmartWorkspace(onProfileOpen)}><UserRound aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label={favouritesActive ? 'Close favourites workspace' : 'Open favourites workspace'} aria-pressed={favouritesActive} data-active={favouritesActive} onClick={() => openDirectSmartWorkspace(onFavouritesOpen)}><Star aria-hidden /></button>
+            <button type="button" className="crm-island-feature" data-label="Map" aria-label={mapActive ? 'Close map workspace' : 'Open map workspace'} aria-pressed={mapActive} data-active={mapActive} onClick={openMapWorkspace}><MapIcon aria-hidden /></button>
+            <button type="button" className="crm-island-feature" data-label="Tools" aria-label="Open daily tools" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart'} onClick={openSmartMenu}><List aria-hidden /></button>
+            <button type="button" className="crm-island-feature" data-label="Profile" aria-label="Open profile workspace" onClick={() => openDirectSmartWorkspace(onProfileOpen)}><UserRound aria-hidden /></button>
+            <button type="button" className="crm-island-feature" data-label="Favourites" aria-label={favouritesActive ? 'Close favourites workspace' : 'Open favourites workspace'} aria-pressed={favouritesActive} data-active={favouritesActive} onClick={() => openDirectSmartWorkspace(onFavouritesOpen)}><Star aria-hidden /></button>
           </span>
           <span className="crm-island-label">Smartfilters</span>
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}

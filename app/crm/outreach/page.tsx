@@ -39,6 +39,7 @@ type Account = {
   sessionStatus?: string; operationalStatus?: 'ready' | 'offline' | 'restricted'
   restrictionDetectedAt?: string | null; restrictionUntil?: string | null; restrictionReason?: string | null
   restrictionsThisWeek?: number
+  outreachAutoBaseCount?: number | null; outreachAutoMessage?: string
   recentRuns?: { id: number; status: string; total_contacts: number; sent_count: number; skip_count: number; started_at: string | null; completed_at: string | null; updated_at: string | null; volume_percent_snapshot: number | null }[]
   planningDays?: {day: string; label: string; status: string; armed: boolean; scheduledAt: string | null; count: number}[]
 }
@@ -50,7 +51,7 @@ type Entry = {
 }
 type Plan = {
   id: number; account_id: number; session_name: string; scheduled_date: string
-  scheduled_at: string | null; status: string; armed: boolean; message_template: string | null
+  scheduled_at: string | null; status: string; source?: string | null; armed: boolean; message_template: string | null
   label: 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS' | string
   stats: { total: number; eligible: number; hot: number; cold: number; skip: number; sent: number }
   entries?: Entry[]
@@ -85,11 +86,7 @@ function maltaHM(d: Date) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
 }
 
-// Keep one minute of headroom below the 15-minute daily account staggering.
-// The time picker works in whole minutes while sends retain seconds, so an
-// exact 24h15 suggestion could otherwise miss eligibility by a few seconds.
-const OUTREACH_COOLDOWN_MS = (24 * 60 + 14) * 60_000
-const OUTREACH_DEFAULT_COUNT = 10
+const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
 const OUTREACH_LIST_MAX = 45
 function isArgusManager(account: Account) {
   return /argus\s*1|argus[_-]?1/i.test(`${account.label} ${account.sessionName}`)
@@ -114,7 +111,7 @@ function cooldownState(account: Account) {
   const readyAt = new Date(new Date(account.lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS)
   const ready = readyAt.getTime() <= Date.now()
   const moment = `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(readyAt)} · ${maltaHM(readyAt)}`
-  return { ready, label: ready ? 'Ready after 24h 14m check' : `Protected until ${moment}` }
+  return { ready, label: ready ? 'Ready after 24h 15m check' : `Protected until ${moment}` }
 }
 
 // Kev, 2026-09-11: "checkt wann der letzte !outreach gemacht wurde und
@@ -125,7 +122,7 @@ function cooldownState(account: Account) {
 // (+20min, spec point 19) when there's no real send history at all yet.
 function suggestTime(plans: Plan[] | null, label: string, lastOutreachAt: string | null): string {
   if (lastOutreachAt) {
-    return maltaHM(new Date(new Date(lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS))
+    return maltaHM(new Date(new Date(lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS + 60_000))
   }
   const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS']
   const idx = order.indexOf(label)
@@ -140,10 +137,9 @@ function suggestTime(plans: Plan[] | null, label: string, lastOutreachAt: string
 // Kev, 2026-09-12: "die Presettings übernimmt (textwise und anzahl)... die
 // letzte Nachricht die im Vortag gesettet wurde... dann ist es beim nächsten
 // mal das was beim letzten mal war, das ist ja auch JE account unterschiedlich."
-// No backend field for this (CLAUDE.md: never touch backend from here) —
-// localStorage, keyed per account, is the whole store. Written every time a
-// list is actually generated (AUTO or the manual Create List button), so
-// "last time" means exactly that regardless of which path set it.
+// The backend is now the durable source for AUTO defaults. localStorage stays
+// as a compatibility fallback for accounts prepared before those fields were
+// deployed and for a browser that briefly reloads before the account refresh.
 function lastUsedKey(accountId: number) { return `outreach_last_used_${accountId}` }
 function loadLastUsed(accountId: number): { text: string; count: number } | null {
   try {
@@ -255,7 +251,7 @@ function ArgusConsole() {
           <p>One control layer for outreach identities, protected timing and reviewed owner contact.</p>
           <div className="outreach-hero-signals" aria-label="System principles">
             <span><ShieldCheck size={13} /> Reviewed sends</span>
-            <span><Clock3 size={13} /> 24h 14m protection</span>
+            <span><Clock3 size={13} /> 24h 15m protection</span>
             <span><Layers size={13} /> Separate identities</span>
           </div>
         </div>
@@ -322,7 +318,7 @@ function ArgusConsole() {
         </section>
 
         {selectedAccount && <div className="outreach-active-console">
-          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Drafts prepare automatically 2h before the 24h 14m window. Send remains reviewed and runs the final owner checks.</small></div>
+          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Drafts prepare automatically 2h before the 24h 15m window. Send remains reviewed and runs the final owner checks.</small></div>
           <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
         </div>
         }
@@ -523,8 +519,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [queueText, setQueueText] = useState('')
   const [msgOpen, setMsgOpen] = useState(true)
   const [msgDraft, setMsgDraft] = useState('')
-  const [count, setCount] = useState(OUTREACH_DEFAULT_COUNT)
-  const [countDraft, setCountDraft] = useState(String(OUTREACH_DEFAULT_COUNT))
+  const initialCount = account.outreachAutoBaseCount || defaultSeedCount(account)
+  const [count, setCount] = useState(initialCount)
+  const [countDraft, setCountDraft] = useState(String(initialCount))
   const [armTime, setArmTime] = useState('14:15')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
@@ -579,7 +576,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
   useEffect(() => {
     if (!activePlan) return
-    setMsgDraft(activePlan.message_template || '')
+    setMsgDraft(activePlan.message_template || account.outreachAutoMessage || '')
     // Kev, 2026-09-11 (real bug: "die Zeit hängt am ersten" — editing
     // TOMORROW's time then switching tabs kept showing that same value on
     // TODAY/IN 2 DAYS) — armTime is ONE shared field for the whole console,
@@ -641,38 +638,31 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     await refresh()
   }
 
-  // Kev, 2026-09-12: one click for the non-custom day. Reuses this account's
-  // last-used text+count (or a sane first-time default), regenerates the
-  // list and saves the message — then, when there's an earlier day-tab in
-  // this 3-day window, nudges the arm time to +15min after it ("zeit +15min
-  // zum vortag automatisch"). Everything it touches stays a normal editable
-  // field afterward (message box left open) — AUTO never arms anything.
+  // One account-level action fills every untouched day. Random count/time
+  // values are generated and persisted by the backend once, while contacts
+  // remain previews until ARM performs the final recheck and lock.
   async function autoRun() {
-    if (!activePlan || busy || activePlan.armed || ['running', 'completed'].includes(activePlan.status)) return
+    if (!plans?.length || busy) return
     const last = loadLastUsed(account.id)
     const seedCount = commitCountDraft()
-    const seedText = msgDraft.trim() || activePlan.message_template || last?.text || ''
+    const seedText = msgDraft.trim() || account.outreachAutoMessage || activePlan?.message_template || last?.text || ''
 
     setCount(seedCount)
     setCountDraft(String(seedCount))
     if (seedText) setMsgDraft(seedText)
     setMsgOpen(true)
 
-    const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'] as const
-    const idx = order.indexOf(activeLabel)
-    if (idx > 0 && plans) {
-      const prev = plans.find(p => p.label === order[idx - 1])
-      if (prev?.scheduled_at) setArmTime(maltaHM(new Date(new Date(prev.scheduled_at).getTime() + 15 * 60_000)))
-    }
-
     setBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: seedCount, topUp: false })
-      if (seedText) await crmJson(`outreach/plans/${activePlan.id}/message`, 'POST', { text: seedText })
-      await crmJson(`outreach/plans/${activePlan.id}/save`, 'POST', {})
-      await refresh(activePlan.id)
+      const r = await crmJson(`outreach/accounts/${account.id}/auto-prepare`, 'POST', { baseCount: seedCount, message: seedText })
+      setPlans(r.rollingPlans)
+      await onChanged()
       saveLastUsed(account.id, { text: seedText, count: seedCount })
-      setNote(`Auto: ${r.added} added${seedText ? ' · message set' : ' · no message yet — write one below'}.`)
+      const prepared = (r.plans || []).filter((plan: any) => plan.status === 'prepared')
+      const preserved = (r.plans || []).filter((plan: any) => plan.status === 'preserved')
+      const blocked = (r.plans || []).filter((plan: any) => plan.status === 'blocked')
+      const contacts = prepared.reduce((sum: number, plan: any) => sum + Number(plan.preparedCount || 0), 0)
+      setNote(`Auto prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${contacts} previews · ${preserved.length} preserved${blocked.length ? ` · ${blocked.length} blocked by time/safety` : ''}.`)
     } catch (e: any) {
       setNote(e?.message || 'Auto failed')
     } finally { setBusy(false) }
@@ -709,7 +699,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/arm`, 'POST', { time: armTime })
       if (r.ok === false) {
-        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', account_24h14_cooldown: 'This account is still inside its 24h 14m protection window.', account_restricted: 'This account is restricted and held from outreach.', queue_lock_conflict: 'Some contacts were taken by another armed queue. Regenerate before arming.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
+        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', account_24h15_cooldown: 'This account is still inside its 24h 15m protection window.', account_restricted: 'This account is restricted and held from outreach.', queue_lock_conflict: 'Some contacts were taken by another armed queue. Regenerate before arming.', insufficient_eligible_contacts: 'The pool no longer has enough eligible contacts. The plan remains unarmed.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
         setNote(reasons[r.reason] || r.reason)
       } else { setNote(`Armed for ${armTime}.`) }
       await refresh()
@@ -758,7 +748,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <span className="queue-eyebrow"><Radio size={13} /> OUTREACH / WORKSPACE</span>
         <h2>Prepare. Review. Connect.</h2>
         <p>One account. One queue. Every step in view.</p>
-        <button className="queue-autosetup" disabled={busy || account.operationalStatus === 'restricted' || !activePlan || activePlan.armed || ['running','completed'].includes(activePlan.status)} onClick={autoRun}><Zap size={17} />{busy ? 'Preparing…' : `Prepare ${count}`}<span>Exact draft · no lock</span></button>
+        <button className="queue-autosetup" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={autoRun}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>{count} ±3 contacts · 16–22 min · no lock</span></button>
       </div>
       <div className="queue-progress" aria-label="Queue preparation progress">
         {[{icon: Users, label: 'Contacts', value: `${s?.eligible || 0} eligible`, done: Boolean(s?.eligible)}, {icon: MessageSquare, label: 'Message', value: activePlan?.message_template ? 'Saved' : 'Needs text', done: Boolean(activePlan?.message_template)}, {icon: Clock3, label: 'Window', value: armTime + ' · Malta', done: Boolean(activePlan?.scheduled_at)}, {icon: ShieldCheck, label: 'Release', value: activePlan?.armed ? 'Armed' : 'Review first', done: Boolean(activePlan?.armed)}].map((step, i) => <div key={step.label} className={step.done ? 'is-done' : ''}><step.icon size={17} /><span><small>0{i + 1} / {step.label}</small><b>{step.value}</b></span></div>)}
@@ -777,7 +767,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             {account.operationalStatus === 'restricted' ? 'RESTRICTED' : account.connected ? 'CONNECTED' : 'DISCONNECTED'}
           </div>
           {/* Real last-send time from outreach_log; the next window observes
-              the shared 24h14 account cooldown. */}
+              the shared 24h15 account cooldown. */}
           <div style={{ fontSize: 9.5, color: FAINT, textAlign: 'right' }}>
             Last outreach: {account.lastOutreachAt
               ? `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} · ${maltaHM(new Date(account.lastOutreachAt))}`
@@ -818,7 +808,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             }}>
               <span>{dayLabelText(label)}</span>
-              <span style={{ fontSize: 8, opacity: 0.8 }}>{p?.status === 'completed' ? '✓ DONE' : p?.armed ? '✓ ARMED' : p?.status === 'ready' ? '● READY' : p?.status === 'running' ? '▶ RUNNING' : '○ DRAFT'}</span>
+              <span style={{ fontSize: 8, opacity: 0.8 }}>{p?.status === 'completed' ? '✓ DONE' : p?.armed ? '✓ ARMED' : p?.status === 'ready' ? '● READY' : p?.status === 'running' ? '▶ RUNNING' : p?.source?.startsWith('auto_blocked:') ? '⊘ BLOCKED' : '○ DRAFT'}</span>
             </button>
           )
         })}
@@ -862,7 +852,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
-            disabled={busy || account.operationalStatus === 'restricted' || !activePlan || activePlan.armed || activePlan.status === 'running'} onClick={autoRun}
+            disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={autoRun}
             title="Prepare the exact target count as an editable draft. Contacts stay in the shared pool until ARM."
             style={{ ...btnPrimary(accent), flex: '0 0 auto', paddingLeft: 16, paddingRight: 16 }}>
             Auto-setup
@@ -917,7 +907,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       )}
 
       </section>
-      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 14m account cooldown. Owner checks run again before sending.</p>
+      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 15m account cooldown. Auto uses a saved 16–22 minute daily drift. Owner checks run again before sending.</p>
       {/* schedule / arm */}
       {!isCompleted && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>

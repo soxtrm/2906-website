@@ -19,8 +19,8 @@
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
 import {
-  AlertTriangle, Calendar, Clock, EyeOff, HelpCircle, Home, ImagePlus,
-  Loader2, MessageCircle, Paperclip, Send, Sparkles, Users, X,
+  AlertTriangle, Calendar, Clock, EyeOff, FileText, HelpCircle, Home, ImagePlus,
+  Images, Loader2, MessageCircle, Plus, Send, Sparkles, Users, X,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
@@ -511,8 +511,11 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
   const imageInput = useRef<HTMLInputElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const attachmentMenu = useRef<HTMLDivElement>(null)
+  const composerInput = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
   const reduceMotion = useReducedMotion()
@@ -539,6 +542,29 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
     if (stickToBottom.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [timelineLength])
 
+  useEffect(() => {
+    const input = composerInput.current
+    if (!input) return
+    input.style.height = 'auto'
+    input.style.height = `${Math.min(input.scrollHeight, 120)}px`
+  }, [draft])
+
+  useEffect(() => {
+    if (!attachmentMenuOpen) return
+    function closeOnOutside(event: PointerEvent) {
+      if (!attachmentMenu.current?.contains(event.target as Node)) setAttachmentMenuOpen(false)
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setAttachmentMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [attachmentMenuOpen])
+
   async function send() {
     const text = draft.trim()
     if (!text || sending) return
@@ -555,6 +581,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
 
   async function sendAttachments(files: FileList | null) {
     if (!files?.length || uploading || closed) return
+    setAttachmentMenuOpen(false)
     const selectedFiles = Array.from(files)
     setUploading(true)
     setErr(null)
@@ -623,7 +650,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
       <motion.div
         {...rise}
         className="crm-chat-dialog fixed z-[200] shadow-2xl flex flex-col overflow-hidden
-                   inset-x-0 bottom-0 rounded-t-2xl h-[88vh]
+                   inset-x-0 bottom-0 rounded-t-2xl h-[88dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.75rem)]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
                    sm:w-[440px] sm:h-[680px] sm:rounded-2xl sm:max-h-[88vh]"
         style={{ background: 'linear-gradient(180deg, #0C1120 0%, #10162A 55%, #0C1120 100%)' }}
@@ -823,38 +850,64 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
         </div>
 
         {/* ── composer ───────────────────────────────────────────────────────── */}
-        <div className="px-3.5 py-3.5 border-t border-white/[0.06] shrink-0 flex items-end gap-2 relative z-10
-                        pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
+        <div className="px-3.5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-white/[0.06] shrink-0 relative z-10">
           <input ref={imageInput} type="file" accept="image/*" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
           <input ref={fileInput} type="file" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
-          <button type="button" onClick={() => imageInput.current?.click()} disabled={closed || uploading || chatBusy} aria-label="Add images" title="Add images"
-            className="w-10 h-10 rounded-full border border-white/10 bg-white/[0.05] text-white/60 flex items-center justify-center shrink-0 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-30">
-            <ImagePlus className="w-4 h-4" />
-          </button>
-          <button type="button" onClick={() => fileInput.current?.click()} disabled={closed || uploading || chatBusy} aria-label="Add files" title="Add files"
-            className="w-10 h-10 rounded-full border border-white/10 bg-white/[0.05] text-white/60 flex items-center justify-center shrink-0 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white active:scale-95 transition-all disabled:opacity-30">
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-          </button>
-          <textarea
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-            rows={1}
-            disabled={closed || chatBusy}
-            placeholder={closed ? 'This conversation has closed' : chatBusy ? 'Another agent is chatting — Ask and Book still work' : 'Type a message — sent to the owner as-is…'}
-            className="min-h-11 flex-1 resize-none rounded-2xl border border-white/15 bg-white/[0.07] px-4 py-3 text-base text-white
-                       placeholder:text-white/55 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/40
-                       disabled:opacity-40 max-h-24"
-          />
-          <button
-            onClick={send}
-            disabled={!draft.trim() || sending || closed || chatBusy}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gold text-navy
-                       disabled:opacity-25 disabled:cursor-not-allowed hover:bg-gold-light transition-colors"
-            aria-label="Send"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </button>
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+            <textarea
+              ref={composerInput}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+              rows={1}
+              disabled={closed || chatBusy}
+              placeholder={closed ? 'Conversation closed' : chatBusy ? 'Another agent is chatting' : 'Message owner…'}
+              className="col-span-2 min-h-14 max-h-[120px] w-full resize-none overflow-y-auto rounded-2xl border border-white/15 bg-white/[0.07]
+                         px-4 py-3 text-base leading-6 text-white placeholder:text-white/55 focus:border-gold/50 focus:outline-none focus:ring-2
+                         focus:ring-gold/40 disabled:opacity-40 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:min-h-11 sm:py-2.5"
+            />
+            <div ref={attachmentMenu} className="relative col-start-1 row-start-2 sm:row-start-1">
+              <button type="button" onClick={() => setAttachmentMenuOpen(open => !open)} disabled={closed || uploading || chatBusy}
+                aria-label="Add attachment" aria-expanded={attachmentMenuOpen}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white/70
+                           transition-[transform,background-color,color] duration-200 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white
+                           active:scale-95 disabled:opacity-30 sm:h-11 sm:w-11">
+                {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className={cn('h-5 w-5 transition-transform duration-200', attachmentMenuOpen && 'rotate-45')} />}
+              </button>
+              <AnimatePresence>
+                {attachmentMenuOpen && (
+                  <motion.div
+                    initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute bottom-[calc(100%+0.6rem)] left-0 z-20 w-44 overflow-hidden rounded-2xl border border-white/15
+                               bg-[#171e31]/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                  >
+                    <button type="button" onClick={() => { setAttachmentMenuOpen(false); imageInput.current?.click() }}
+                      className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-white/85 transition-colors hover:bg-white/10">
+                      <Images className="h-4 w-4 text-gold-light" /> Photos
+                    </button>
+                    <button type="button" onClick={() => { setAttachmentMenuOpen(false); fileInput.current?.click() }}
+                      className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-white/85 transition-colors hover:bg-white/10">
+                      <FileText className="h-4 w-4 text-gold-light" /> Files
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <button
+              onClick={send}
+              disabled={!draft.trim() || sending || closed || chatBusy}
+              className="col-start-2 row-start-2 flex h-12 min-w-28 items-center justify-center justify-self-end gap-2 rounded-full bg-gold px-5
+                         font-semibold text-navy transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-gold-light
+                         active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-25 sm:col-start-3 sm:row-start-1 sm:h-11 sm:min-w-11 sm:px-0"
+              aria-label="Send"
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <span className="sm:hidden">Send</span>
+            </button>
+          </div>
         </div>
       </motion.div>
     </>

@@ -42,12 +42,115 @@ const MALTA_TZ = 'Europe/Malta'
 // comfortably outlives a WAHA restart/QR-rescan cycle.
 const MAX_RETRY_ATTEMPTS = 20
 const RETRY_DELAY_MS = 3 * 60_000
+// The account safety window is enforced by the backend from the real last
+// send. UI suggestions never weaken this boundary.
 const OUTREACH_ACCOUNT_INTERVAL_MS = (24 * 60 + 15) * 60_000
+const AUTO_DAILY_MINUTES_MIN = 16
+const AUTO_DAILY_MINUTES_MAX = 22
 const AUTO_PREP_LEAD_MS = 2 * 60 * 60_000
 const AUTO_PREP_GRACE_MS = 15 * 60_000
+const OUTREACH_PLAN_MAX = 45
+const NEXUSLINK_PLAN_MAX = 15
+const DEFAULT_RESTRICTION_HOURS = 40
+const HEALTHY_SESSION_STATES = new Set(['WORKING', 'CONNECTED'])
+const RESTRICTED_SESSION_STATES = new Set(['FAILED', 'SCAN_QR_CODE', 'STOPPED'])
+
+function planLimit(sessionName, label = '') {
+  return /argus\s*5|argus[_-]?5|nexuslink/i.test(`${sessionName || ''} ${label || ''}`) ? NEXUSLINK_PLAN_MAX : OUTREACH_PLAN_MAX
+}
+
+// BullMQ reserves ':' inside custom job ids. Legacy plan keys contain ISO
+// timestamps, so every derived retry/cooldown id is normalized at the queue
+// boundary as well as new arm keys below.
+const safeJobId = value => String(value).replace(/:/g, '-')
+
+function starterBatchCount(value) {
+  return Math.max(1, Math.min(OUTREACH_PLAN_MAX, Math.round(Number(value) || 10)))
+}
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function addMinutesToMaltaTime(time, minutes) {
+  const [hour, minute] = String(time || '14:15').split(':').map(Number)
+  const total = ((hour * 60 + minute + minutes) % 1440 + 1440) % 1440
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
 
 function isSystemManagerSession(sessionName, label = '') {
   return /argus\s*1|argus[_-]?1/i.test(`${sessionName || ''} ${label || ''}`)
+}
+
+async function recordAccountEvent(accountId, eventType, { sessionStatus = null, reason = null, restrictedUntil = null, actor = 'system' } = {}) {
+  await db.query(
+    `INSERT INTO outreach_account_events
+       (account_id, event_type, session_status, reason, restricted_until, actor)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    [accountId, eventType, sessionStatus, reason, restrictedUntil, actor]
+  ).catch(err => log.warn('outreachPlanner: account event write failed', { accountId, eventType, err: err.message }))
+}
+
+async function holdArmedPlansForAccount(accountId, reason) {
+  const plans = (await db.query(
+    `SELECT id, status, job_id FROM outreach_plans WHERE account_id=$1 AND armed=TRUE`,
+    [accountId]
+  )).rows
+  for (const plan of plans) {
+    if (plan.job_id) {
+      try { const job = await QUEUES['outreach-plan'].getJob(plan.job_id); if (job) await job.remove() }
+      catch (err) { log.debug('outreachPlanner: restriction job removal failed', { planId: plan.id, err: err.message }) }
+    }
+    await releaseReservationsForPlan(plan.id, reason)
+    await db.query(`UPDATE outreach_plans SET status='saved', armed=FALSE, job_id=NULL, updated_at=NOW() WHERE id=$1`, [plan.id])
+    await logTransition(plan.id, plan.status, 'saved', reason, 'system')
+  }
+}
+
+async function setAccountRestriction(accountId, { restricted = true, hours = DEFAULT_RESTRICTION_HOURS, reason = 'manual_restriction', sessionStatus = null, actor = 'admin' } = {}) {
+  const before = (await db.query(`SELECT * FROM whatsapp_accounts WHERE id=$1`, [accountId])).rows[0]
+  if (!before) throw new Error(`account ${accountId} not found`)
+  if (restricted) {
+    const safeHours = Math.max(24, Math.min(168, Math.round(Number(hours) || DEFAULT_RESTRICTION_HOURS)))
+    const until = new Date(Date.now() + safeHours * 60 * 60_000)
+    const changed = before.operational_status !== 'restricted'
+    const result = (await db.query(
+      `UPDATE whatsapp_accounts
+          SET operational_status='restricted',
+              restriction_detected_at=CASE WHEN operational_status='restricted' THEN restriction_detected_at ELSE NOW() END,
+              restriction_until=CASE WHEN operational_status='restricted' AND restriction_until > NOW() THEN restriction_until ELSE $2 END,
+              restriction_reason=$3,
+              last_session_status=COALESCE($4,last_session_status),
+              last_session_check_at=NOW()
+        WHERE id=$1 RETURNING *`,
+      [accountId, until.toISOString(), reason, sessionStatus]
+    )).rows[0]
+    if (changed) await recordAccountEvent(accountId, 'restricted', { sessionStatus, reason, restrictedUntil: result.restriction_until, actor })
+    await holdArmedPlansForAccount(accountId, `account_restricted:${reason}`)
+    return result
+  }
+  const result = (await db.query(
+    `UPDATE whatsapp_accounts
+        SET operational_status='ready', restriction_detected_at=NULL,
+            restriction_until=NULL, restriction_reason=NULL,
+            last_session_status=COALESCE($2,last_session_status), last_session_check_at=NOW()
+      WHERE id=$1 RETURNING *`, [accountId, sessionStatus]
+  )).rows[0]
+  if (before.operational_status === 'restricted') await recordAccountEvent(accountId, 'restriction_cleared', { sessionStatus, reason, actor })
+  return result
+}
+
+async function syncAccountHealth(account, sessionStatus) {
+  const status = String(sessionStatus || 'UNKNOWN').toUpperCase()
+  await db.query(`UPDATE whatsapp_accounts SET last_session_status=$2,last_session_check_at=NOW() WHERE id=$1`, [account.id, status])
+  if (account.is_active && account.outreach_enabled && !isSystemManagerSession(account.session_name, account.label) && RESTRICTED_SESSION_STATES.has(status)) {
+    if (account.operational_status !== 'restricted') {
+      return setAccountRestriction(account.id, { restricted: true, reason: `session_${status.toLowerCase()}`, sessionStatus: status, actor: 'health_check' })
+    }
+  } else if (HEALTHY_SESSION_STATES.has(status) && account.operational_status === 'restricted' && account.restriction_until && new Date(account.restriction_until) <= new Date()) {
+    return setAccountRestriction(account.id, { restricted: false, reason: 'cooldown_elapsed_and_session_healthy', sessionStatus: status, actor: 'health_check' })
+  }
+  return { ...account, last_session_status: status }
 }
 
 async function accountCooldown(sessionName, at = new Date()) {
@@ -132,6 +235,8 @@ function dayLabelFor(scheduledDateStr, todayStr) {
   if (scheduledDateStr === todayStr) return 'TODAY'
   if (scheduledDateStr === addDaysStr(todayStr, 1)) return 'TOMORROW'
   if (scheduledDateStr === addDaysStr(todayStr, 2)) return 'IN_2_DAYS'
+  if (scheduledDateStr === addDaysStr(todayStr, 3)) return 'IN_3_DAYS'
+  if (scheduledDateStr === addDaysStr(todayStr, 4)) return 'IN_4_DAYS'
   return scheduledDateStr < todayStr ? 'PAST' : 'FUTURE'
 }
 
@@ -141,7 +246,10 @@ function normPhone(p) { return cooldownNormalizePhone(p) }
 async function listAccounts() {
   const r = await db.query(
     `SELECT id, session_name, phone, label, is_active, outreach_enabled, account_persona,
-            outreach_volume_percent, outreach_volume_until, pool
+            outreach_volume_percent, outreach_volume_until, pool, operational_status,
+            restriction_detected_at, restriction_until, restriction_reason,
+            last_session_status, last_session_check_at,
+            outreach_auto_base_count, outreach_auto_message
        FROM whatsapp_accounts ORDER BY priority, id`)
   // Kev, 2026-09-11: "Last Outreach" reads the REAL send history
   // (outreach_log), not just this planner's own plans — a manual !outreach
@@ -153,28 +261,78 @@ async function listAccounts() {
   const lastSent = await db.query(
     `SELECT account_used, MAX(sent_at) AS last_sent FROM outreach_log GROUP BY account_used`)
   const lastSentMap = new Map(lastSent.rows.map(row => [row.account_used, row.last_sent]))
+  const lastRuns = await db.query(`
+    SELECT DISTINCT ON (session_name)
+           session_name, id, status, total_contacts, sent_count, skip_count,
+           started_at, completed_at, updated_at
+      FROM outreach_batches
+     ORDER BY session_name, COALESCE(completed_at, updated_at, started_at) DESC, id DESC`)
+  const lastRunMap = new Map(lastRuns.rows.map(row => [row.session_name, row]))
+  const recentRuns = await db.query(`
+    SELECT * FROM (
+      SELECT session_name, id, status, total_contacts, sent_count, skip_count,
+             started_at, completed_at, updated_at, volume_percent_snapshot,
+             ROW_NUMBER() OVER (PARTITION BY session_name ORDER BY COALESCE(completed_at,updated_at,started_at) DESC,id DESC) AS rn
+        FROM outreach_batches
+       WHERE status IN ('completed','cancelled','running')
+    ) ranked WHERE rn <= 5 ORDER BY session_name, rn`)
+  const recentRunMap = new Map()
+  for (const run of recentRuns.rows) {
+    const rows = recentRunMap.get(run.session_name) || []
+    rows.push(run)
+    recentRunMap.set(run.session_name, rows)
+  }
+  const restrictionCounts = await db.query(`
+    SELECT account_id, COUNT(*)::int AS count
+      FROM outreach_account_events
+     WHERE event_type='restricted'
+       AND created_at >= date_trunc('week', NOW() AT TIME ZONE 'Europe/Malta') AT TIME ZONE 'Europe/Malta'
+     GROUP BY account_id`)
+  const restrictionCountMap = new Map(restrictionCounts.rows.map(row => [row.account_id, Number(row.count)]))
 
+  const today = maltaTodayStr()
+  const horizon = await db.query(`SELECT account_id, scheduled_date::text AS day, status, armed, scheduled_at, target_count FROM outreach_plans WHERE scheduled_date >= $1::date AND scheduled_date <= $2::date ORDER BY scheduled_date`, [today, addDaysStr(today, 4)])
   const accounts = []
-  for (const acc of r.rows) {
+  for (const stored of r.rows) {
+    let acc = stored
     let connected = false
+    let sessionStatus = 'UNKNOWN'
     try {
       const status = await waha.getSessionStatus(acc.session_name)
-      connected = status?.status === 'WORKING' || status?.status === 'CONNECTED'
+      sessionStatus = String(status?.status || 'UNKNOWN').toUpperCase()
+      connected = HEALTHY_SESSION_STATES.has(sessionStatus)
+      acc = await syncAccountHealth(acc, sessionStatus)
     } catch (e) {
       log.debug('outreachPlanner: session status check failed', { session: acc.session_name, err: e.message })
     }
+    const restricted = acc.operational_status === 'restricted'
     accounts.push({
       id: acc.id, sessionName: acc.session_name, phone: acc.phone,
       label: acc.label || acc.session_name, connected,
       active: acc.is_active,
+      planningDays: Array.from({ length: 5 }, (_, offset) => {
+        const day = addDaysStr(today, offset)
+        const plan = horizon.rows.find(p => p.account_id === acc.id && p.day === day)
+        return { day, label: dayLabelFor(day, today), status: plan?.status || 'empty', armed: plan?.armed === true, scheduledAt: plan?.scheduled_at || null, count: plan?.target_count || 0 }
+      }),
       outreachEnabled: acc.outreach_enabled,
       lastOutreachAt: lastSentMap.get(acc.session_name) || null,
+      lastRun: lastRunMap.get(acc.session_name) || null,
+      recentRuns: recentRunMap.get(acc.session_name) || [],
       pool: acc.pool || 'top',
       outreachVolumePercent: acc.outreach_volume_until && new Date(acc.outreach_volume_until) <= new Date()
         ? 100
         : Number(acc.outreach_volume_percent || 100),
       outreachVolumeUntil: acc.outreach_volume_until || null,
-      outreachEligible: acc.is_active && acc.outreach_enabled && !isSystemManagerSession(acc.session_name, acc.label),
+      sessionStatus,
+      operationalStatus: restricted ? 'restricted' : (connected ? 'ready' : 'offline'),
+      restrictionDetectedAt: acc.restriction_detected_at || null,
+      restrictionUntil: acc.restriction_until || null,
+      restrictionReason: acc.restriction_reason || null,
+      restrictionsThisWeek: restrictionCountMap.get(acc.id) || 0,
+      outreachAutoBaseCount: acc.outreach_auto_base_count == null ? null : Number(acc.outreach_auto_base_count),
+      outreachAutoMessage: acc.outreach_auto_message || '',
+      outreachEligible: acc.is_active && acc.outreach_enabled && connected && !restricted && !isSystemManagerSession(acc.session_name, acc.label),
     })
   }
   return accounts
@@ -226,7 +384,7 @@ async function getPlanWithEntries(planId) {
 // computed fresh against Malta's current date every call.
 async function listRollingPlans(accountId, createdBy) {
   const today = maltaTodayStr()
-  const dates = [today, addDaysStr(today, 1), addDaysStr(today, 2)]
+  const dates = Array.from({ length: 5 }, (_, day) => addDaysStr(today, day))
   const out = []
   for (const d of dates) {
     const plan = await ensurePlan(accountId, d, createdBy)
@@ -334,9 +492,9 @@ async function prepareDueAccountPlans(now = new Date()) {
       continue
     }
 
-    const count = Math.max(5, Math.min(80, Number(compatible.target_count) || 30))
+    const count = starterBatchCount(compatible.target_count)
     try {
-      const generated = await generateList(plan.id, count)
+      const generated = await generateList(plan.id, count, { actor: 'auto-prep' })
       if (!generated.added) {
         skipped.push({ session: account.session_name, planId: plan.id, reason: 'no_eligible_contacts' })
         continue
@@ -357,6 +515,118 @@ async function prepareDueAccountPlans(now = new Date()) {
   return { prepared, skipped }
 }
 
+// Prepare every untouched day in the five-day deck for one account. This is
+// intentionally a preview operation: it neither writes reservations nor
+// advances pool_cursors. Generated times/counts live on the plans, so reloads
+// show the exact same preparation instead of rolling fresh random values.
+async function autoPrepareAccount(accountId, { baseCount = null, message = null, actor = 'admin', now = new Date() } = {}) {
+  const account = (await db.query(`SELECT * FROM whatsapp_accounts WHERE id=$1 AND is_active=TRUE AND outreach_enabled=TRUE`, [accountId])).rows[0]
+  if (!account) throw new Error(`account ${accountId} not found`)
+  if (isSystemManagerSession(account.session_name, account.label)) {
+    const err = new Error('system manager account cannot run outreach')
+    err.code = 'system_manager_not_outreach'
+    throw err
+  }
+  if (account.operational_status === 'restricted' && (!account.restriction_until || new Date(account.restriction_until) > now)) {
+    const err = new Error('account is restricted')
+    err.code = 'account_restricted'
+    throw err
+  }
+
+  const latest = (await db.query(
+    `SELECT message_template, target_count
+       FROM outreach_plans
+      WHERE account_id=$1
+        AND (NULLIF(BTRIM(message_template),'') IS NOT NULL OR COALESCE(target_count,0)>0)
+      ORDER BY updated_at DESC, id DESC LIMIT 1`, [accountId]
+  )).rows[0] || {}
+  const suppliedCount = Number(baseCount)
+  const requestedBase = Number.isFinite(suppliedCount) && suppliedCount > 0
+    ? suppliedCount
+    : (account.outreach_auto_base_count || latest.target_count || starterBatchCount(null))
+  const limit = planLimit(account.session_name, account.label)
+  const resolvedBase = Math.max(1, Math.min(limit, Math.round(requestedBase)))
+  const suppliedMessage = message == null ? '' : String(message).trim()
+  const resolvedMessage = suppliedMessage || String(account.outreach_auto_message || latest.message_template || '').trim()
+
+  await db.query(
+    `UPDATE whatsapp_accounts
+        SET outreach_auto_base_count=$2, outreach_auto_message=$3
+      WHERE id=$1`,
+    [accountId, resolvedBase, resolvedMessage]
+  )
+
+  const plans = await listRollingPlans(accountId, actor)
+  const cooldown = await accountCooldown(account.session_name, now)
+  let anchor = cooldown.lastSentAt
+  let previewCursor = null
+  const excludedPhones = new Set()
+  const results = []
+
+  for (const plan of plans) {
+    const full = await getPlanWithEntries(plan.id)
+    const untouched = !plan.armed
+      && !['ready', 'running', 'completed', 'cancelled'].includes(plan.status)
+      && plan.stats.total === 0
+      && !String(plan.message_template || '').trim()
+      && !plan.scheduled_at
+
+    if (!untouched) {
+      for (const entry of full?.entries || []) {
+        const phone = normPhone(entry.normalized_phone)
+        if (phone) excludedPhones.add(phone)
+      }
+      if (plan.scheduled_at) anchor = new Date(plan.scheduled_at)
+      results.push({ planId: plan.id, label: plan.label, status: 'preserved', scheduledAt: plan.scheduled_at, targetCount: plan.stats.eligible, preparedCount: 0 })
+      continue
+    }
+
+    const spreadMinutes = randomInt(AUTO_DAILY_MINUTES_MIN, AUTO_DAILY_MINUTES_MAX)
+    const time = anchor ? addMinutesToMaltaTime(maltaTimeLabel(anchor), spreadMinutes) : '14:15'
+    const scheduledAt = maltaLocalToUTC(plan.scheduled_date, time)
+    if (scheduledAt <= now || (cooldown.nextEligibleAt && scheduledAt < cooldown.nextEligibleAt)) {
+      const reason = scheduledAt <= now ? 'time_in_past' : 'account_24h15_cooldown'
+      await db.query(
+        `UPDATE outreach_plans
+            SET scheduled_at=$2, source=$3, status='draft', armed=FALSE, updated_at=NOW()
+          WHERE id=$1`, [plan.id, scheduledAt.toISOString(), `auto_blocked:${reason}`]
+      )
+      results.push({ planId: plan.id, label: plan.label, status: 'blocked', reason, scheduledAt: scheduledAt.toISOString(), targetCount: 0, preparedCount: 0 })
+      continue
+    }
+
+    const target = Math.max(1, Math.min(limit, resolvedBase + randomInt(-3, 3)))
+    try {
+      const generated = await generateList(plan.id, target, {
+        actor: 'auto-prepare', topUp: false, previewCursor, excludedPhones,
+      })
+      previewCursor = generated.previewCursor
+      for (const phone of generated.addedPhones || []) excludedPhones.add(phone)
+      if (resolvedMessage) await setMessageTemplate(plan.id, resolvedMessage)
+      await db.query(
+        `UPDATE outreach_plans
+            SET scheduled_at=$2, status='saved', source='auto_prepared', armed=FALSE, updated_at=NOW()
+          WHERE id=$1`, [plan.id, scheduledAt.toISOString()]
+      )
+      anchor = scheduledAt
+      results.push({
+        planId: plan.id, label: plan.label, status: 'prepared', scheduledAt: scheduledAt.toISOString(),
+        targetCount: target, preparedCount: generated.resultEligible, spreadMinutes,
+      })
+    } catch (err) {
+      await clearEntries(plan.id).catch(() => {})
+      log.warn('outreachPlanner: account auto preparation failed', { accountId, planId: plan.id, err: err.message })
+      results.push({ planId: plan.id, label: plan.label, status: 'failed', reason: err.code || err.message, scheduledAt: null, targetCount: target, preparedCount: 0 })
+    }
+  }
+
+  return {
+    ok: true, accountId, baseCount: resolvedBase, message: resolvedMessage,
+    intervalMinutes: { min: AUTO_DAILY_MINUTES_MIN, max: AUTO_DAILY_MINUTES_MAX },
+    plans: results, rollingPlans: await listRollingPlans(accountId, actor),
+  }
+}
+
 // ── Reservation (spec point 14/35) ──────────────────────────────────────────
 // Atomic by construction: the partial unique index on outreach_reservations
 // (normalized_phone WHERE released_at IS NULL) means a second attempt to
@@ -374,7 +644,9 @@ async function tryReserve(ownerId, phone, planId, entryId) {
       const existing = await db.query(
         `SELECT r.plan_id, p.session_name, p.scheduled_date
            FROM outreach_reservations r JOIN outreach_plans p ON p.id = r.plan_id
-          WHERE r.normalized_phone = $1 AND r.released_at IS NULL LIMIT 1`, [phone])
+          WHERE r.released_at IS NULL
+            AND (r.normalized_phone = $1 OR ($2::bigint IS NOT NULL AND r.owner_id = $2::bigint))
+          LIMIT 1`, [phone, ownerId || null])
       const row = existing.rows[0]
       return {
         ok: false,
@@ -442,12 +714,8 @@ async function addEntriesFromPaste(planId, rawText, createdBy) {
     const oc = ocRes.rows[0] || { id: null, name: parsed.name || null, status: null, do_not_contact: false }
     const check = await classifyAndCheck(oc, accountId)
 
-    let eligibility = check.eligibility_status
-    let skipReason = check.skip_reason
-    if (eligibility === 'eligible') {
-      const reserved = await tryReserve(oc.id, phone, planId, null)
-      if (!reserved.ok) { eligibility = 'skip'; skipReason = reserved.reason }
-    }
+    const eligibility = check.eligibility_status
+    const skipReason = check.skip_reason
 
     const ins = await db.query(
       `INSERT INTO outreach_plan_entries
@@ -455,10 +723,6 @@ async function addEntriesFromPaste(planId, rawText, createdBy) {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       [planId, oc.id, phone, parsed.name || oc.name || null, check.classification, eligibility, skipReason, pos])
 
-    if (eligibility === 'eligible') {
-      await db.query(`UPDATE outreach_reservations SET entry_id = $1 WHERE plan_id = $2 AND normalized_phone = $3 AND released_at IS NULL`,
-        [ins.rows[0].id, planId, phone])
-    }
     added.push(ins.rows[0])
   }
 
@@ -469,36 +733,52 @@ async function addEntriesFromPaste(planId, rawText, createdBy) {
 }
 
 // ── Generate list (spec point 10/26/27) ─────────────────────────────────────
-// Reuses buildPoolBatch() verbatim (the SAME engine !createlist calls) for
-// candidate selection, then applies the reservation layer buildPoolBatch
-// itself does not have. Over-fetches to absorb reservation conflicts.
-async function generateList(planId, requestedCount, { topUp = false } = {}) {
-  const plan = await db.query(`SELECT * FROM outreach_plans WHERE id = $1`, [planId])
+// Draft generation is a preview: it neither advances the shared pool cursor
+// nor reserves contacts. ARM is the single commit point for both operations.
+async function generateList(planId, requestedCount, {
+  actor = 'admin', topUp = false, previewCursor: initialPreviewCursor = null, excludedPhones = [],
+} = {}) {
+  const plan = await db.query(`SELECT p.*, a.label AS account_label FROM outreach_plans p LEFT JOIN whatsapp_accounts a ON a.id=p.account_id WHERE p.id = $1`, [planId])
   if (!plan.rows.length) throw new Error('plan not found')
+  if (plan.rows[0].armed || ['ready','running','completed','cancelled'].includes(plan.rows[0].status)) {
+    const err = new Error('plan is not editable')
+    err.code = 'plan_not_editable'
+    throw err
+  }
   const { account_id: accountId, session_name: sessionName } = plan.rows[0]
+  const limit = planLimit(sessionName, plan.rows[0].account_label)
+  const target = Math.max(1, Math.min(limit, Math.round(Number(requestedCount) || 1)))
+
+  if (!topUp) {
+    await releaseReservationsForPlan(planId, 'draft_regenerated')
+    await db.query(`DELETE FROM outreach_plan_entries WHERE plan_id=$1`, [planId])
+  }
 
   const existing = await db.query(`SELECT normalized_phone FROM outreach_plan_entries WHERE plan_id = $1`, [planId])
-  const seen = new Set(existing.rows.map(r => r.normalized_phone))
-  const currentEligible = topUp
-    ? (await db.query(`SELECT COUNT(*)::int AS n FROM outreach_plan_entries WHERE plan_id = $1 AND eligibility_status = 'eligible'`, [planId])).rows[0].n
-    : 0
-  const need = topUp ? Math.max(0, requestedCount - currentEligible) : requestedCount
-  if (need === 0) return { added: 0, need: 0 }
-
-  const maxPos = await db.query(`SELECT COALESCE(MAX(position), 0) AS m FROM outreach_plan_entries WHERE plan_id = $1`, [planId])
+  const seen = new Set([
+    ...existing.rows.map(r => r.normalized_phone),
+    ...Array.from(excludedPhones || []).map(normPhone).filter(Boolean),
+  ])
+  const currentEligible = (await db.query(
+    `SELECT COUNT(*)::int AS n FROM outreach_plan_entries WHERE plan_id = $1 AND eligibility_status = 'eligible'`, [planId]
+  )).rows[0].n
+  const need = Math.max(0, target - currentEligible)
+  const maxPos = await db.query(`SELECT COALESCE(MAX(position), 0)::int AS m FROM outreach_plan_entries WHERE plan_id = $1`, [planId])
   let pos = maxPos.rows[0].m
-
-  // Over-fetch — reservation conflicts and same-paste duplicates both eat
-  // into the buffer, same reasoning listBuilder.js's own buildPoolBatch
-  // already uses internally for ITS buffer (candidates vs requestedCount).
   let remainingNeed = need
   let addedCount = 0
   let batchAttempts = 0
+  let previewCursor = initialPreviewCursor
+  const addedPhones = []
   while (remainingNeed > 0 && batchAttempts < 4) {
     batchAttempts++
-    const batchSize = remainingNeed * 2 + 10
-    const result = await buildPoolBatch(sessionName, batchSize)
+    const batchSize = Math.max(remainingNeed * 2, remainingNeed)
+    const result = await buildPoolBatch(sessionName, batchSize, {
+      advanceCursor: false,
+      ...(previewCursor == null ? {} : { cursorOverride: previewCursor }),
+    })
     if (!result.list.length) break
+    previewCursor = result.cursor_advanced_to
 
     for (const c of result.list) {
       if (remainingNeed <= 0) break
@@ -509,14 +789,8 @@ async function generateList(planId, requestedCount, { topUp = false } = {}) {
       const ocRes = await db.query(`SELECT id, name, status, do_not_contact FROM owner_contacts WHERE id = $1`, [c.id])
       const oc = ocRes.rows[0] || { id: c.id, name: c.name, status: null, do_not_contact: false }
       const check = await classifyAndCheck(oc, accountId)
-      let eligibility = check.eligibility_status
-      let skipReason = check.skip_reason
-      let reservedEntryLink = null
-      if (eligibility === 'eligible') {
-        const reserved = await tryReserve(oc.id, phone, planId, null)
-        if (!reserved.ok) { eligibility = 'skip'; skipReason = reserved.reason }
-        else reservedEntryLink = true
-      }
+      const eligibility = check.eligibility_status
+      const skipReason = check.skip_reason
 
       pos++
       const ins = await db.query(
@@ -524,10 +798,9 @@ async function generateList(planId, requestedCount, { topUp = false } = {}) {
            (plan_id, owner_id, normalized_phone, display_name, classification, eligibility_status, skip_reason, position)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
         [planId, oc.id, phone, oc.name || c.name || null, check.classification, eligibility, skipReason, pos])
+      addedPhones.push(phone)
 
-      if (reservedEntryLink) {
-        await db.query(`UPDATE outreach_reservations SET entry_id = $1 WHERE plan_id = $2 AND normalized_phone = $3 AND released_at IS NULL`,
-          [ins.rows[0].id, planId, phone])
+      if (eligibility === 'eligible') {
         addedCount++
         remainingNeed--
       }
@@ -535,10 +808,18 @@ async function generateList(planId, requestedCount, { topUp = false } = {}) {
     if (result.list.length < batchSize) break // pool exhausted for this pass
   }
 
+  const resultEligible = currentEligible + addedCount
   await db.query(
-    `UPDATE outreach_plans SET source = $2, target_count = COALESCE(target_count, 0) + $3, updated_at = NOW() WHERE id = $1`,
-    [planId, topUp ? 'mixed' : 'generated', addedCount])
-  return { added: addedCount, need }
+    `UPDATE outreach_plans SET source = $2, target_count = $3, updated_at = NOW() WHERE id = $1`,
+    [planId, topUp && currentEligible > 0 ? 'mixed' : 'generated', resultEligible])
+  await logTransition(
+    planId,
+    plan.rows[0].status,
+    plan.rows[0].status,
+    `${topUp ? 'queue_top_up' : 'queue_exact'}:requested_${target}:added_${addedCount}:before_${currentEligible}:after_${resultEligible}`,
+    actor
+  )
+  return { added: addedCount, need, requestedTotal: target, currentEligible, resultEligible, max: limit, topUp, previewCursor, addedPhones }
 }
 
 async function removeEntry(entryId) {
@@ -552,8 +833,88 @@ async function clearEntries(planId) {
 }
 
 async function regenerate(planId, requestedCount) {
-  await clearEntries(planId)
-  return generateList(planId, requestedCount)
+  return generateList(planId, requestedCount, { topUp: false })
+}
+
+async function lockPlanEntries(planId) {
+  await releaseReservationsForPlan(planId, 'relock_before_arm')
+  const entries = (await db.query(
+    `SELECT id, owner_id, normalized_phone FROM outreach_plan_entries
+      WHERE plan_id=$1 AND eligibility_status='eligible' AND send_status='pending'
+      ORDER BY position ASC NULLS LAST, id ASC`, [planId]
+  )).rows
+  const conflicts = []
+  for (const entry of entries) {
+    const reserved = await tryReserve(entry.owner_id, entry.normalized_phone, planId, entry.id)
+    if (!reserved.ok) conflicts.push({ entryId: entry.id, reason: reserved.reason })
+  }
+  if (conflicts.length) {
+    await releaseReservationsForPlan(planId, 'arm_lock_conflict')
+    return { ok: false, reason: 'queue_lock_conflict', conflicts: conflicts.length, conflictEntryIds: conflicts.map(c => c.entryId) }
+  }
+  return { ok: true, locked: entries.length }
+}
+
+async function recheckAndLockPlanEntries(planId, accountId, targetCount) {
+  const target = Math.max(1, Number(targetCount) || 1)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const rows = (await db.query(
+      `SELECT e.id, e.owner_id, e.normalized_phone, o.name, o.status, o.do_not_contact
+         FROM outreach_plan_entries e
+         LEFT JOIN owner_contacts o ON o.id=e.owner_id
+        WHERE e.plan_id=$1 AND e.eligibility_status='eligible' AND e.send_status='pending'
+        ORDER BY e.position ASC NULLS LAST, e.id ASC`, [planId]
+    )).rows
+    for (const row of rows) {
+      const check = await classifyAndCheck({ id: row.owner_id, name: row.name, status: row.status, do_not_contact: row.do_not_contact }, accountId)
+      if (check.eligibility_status !== 'eligible') {
+        await db.query(
+          `UPDATE outreach_plan_entries SET eligibility_status='skip',skip_reason=$2 WHERE id=$1`,
+          [row.id, check.skip_reason || 'ineligible_at_arm']
+        )
+      }
+    }
+
+    let eligible = Number((await db.query(
+      `SELECT COUNT(*)::int AS n FROM outreach_plan_entries WHERE plan_id=$1 AND eligibility_status='eligible' AND send_status='pending'`, [planId]
+    )).rows[0].n)
+    if (eligible < target) {
+      await generateList(planId, target, { actor: 'arm-recheck', topUp: true })
+      eligible = Number((await db.query(
+        `SELECT COUNT(*)::int AS n FROM outreach_plan_entries WHERE plan_id=$1 AND eligibility_status='eligible' AND send_status='pending'`, [planId]
+      )).rows[0].n)
+    }
+    if (eligible < target) {
+      await releaseReservationsForPlan(planId, 'arm_insufficient_contacts')
+      return { ok: false, reason: 'insufficient_eligible_contacts', requested: target, eligible }
+    }
+
+    const lock = await lockPlanEntries(planId)
+    if (lock.ok) return lock
+    if (lock.conflictEntryIds?.length) {
+      await db.query(
+        `UPDATE outreach_plan_entries
+            SET eligibility_status='skip',skip_reason='reserved_elsewhere_at_arm'
+          WHERE id=ANY($1::bigint[])`, [lock.conflictEntryIds]
+      )
+    }
+  }
+  await releaseReservationsForPlan(planId, 'arm_lock_conflict')
+  return { ok: false, reason: 'queue_lock_conflict' }
+}
+
+async function commitPoolCursorForPlan(planId) {
+  const r = await db.query(
+    `SELECT a.pool, MIN(e.owner_id)::bigint AS min_id, MAX(e.owner_id)::bigint AS max_id
+       FROM outreach_plans p
+       JOIN whatsapp_accounts a ON a.id=p.account_id
+       JOIN outreach_plan_entries e ON e.plan_id=p.id AND e.eligibility_status='eligible'
+      WHERE p.id=$1 AND e.owner_id IS NOT NULL GROUP BY a.pool`, [planId]
+  )
+  if (!r.rows.length) return
+  const row = r.rows[0]
+  const cursor = row.pool === 'bottom' ? row.min_id : row.max_id
+  if (cursor != null) await db.query(`UPDATE pool_cursors SET cursor_id=$1,updated_at=NOW() WHERE pool=$2`, [cursor, row.pool])
 }
 
 // ── Save / Arm / Pause / Cancel (spec point 15/16/17) ───────────────────────
@@ -566,7 +927,7 @@ async function armPlan(planId, { time } = {}) {
   const plan = await db.query(`SELECT * FROM outreach_plans WHERE id = $1`, [planId])
   if (!plan.rows.length) throw new Error('plan not found')
   const p = plan.rows[0]
-  const account = await db.query(`SELECT label FROM whatsapp_accounts WHERE id = $1`, [p.account_id])
+  const account = await db.query(`SELECT * FROM whatsapp_accounts WHERE id = $1`, [p.account_id])
   if (isSystemManagerSession(p.session_name, account.rows[0]?.label)) {
     return { ok: false, reason: 'system_manager_not_outreach' }
   }
@@ -577,6 +938,25 @@ async function armPlan(planId, { time } = {}) {
     `SELECT COUNT(*)::int AS n FROM outreach_plan_entries WHERE plan_id = $1 AND eligibility_status = 'eligible'`, [planId]
   )).rows[0].n
   if (eligibleCount === 0) return { ok: false, reason: 'no_eligible_entries' }
+  const accountLimit = planLimit(p.session_name, account.rows[0]?.label)
+  if (eligibleCount > accountLimit) {
+    return { ok: false, reason: 'starter_batch_limit', max: accountLimit, eligibleCount }
+  }
+  let sessionStatus = 'UNKNOWN'
+  try {
+    const status = await waha.getSessionStatus(p.session_name)
+    sessionStatus = String(status?.status || 'UNKNOWN').toUpperCase()
+  } catch (err) {
+    log.debug('outreachPlanner: arm session health check failed', { planId, session: p.session_name, err: err.message })
+  }
+  const accountRow = account.rows[0]
+  if (RESTRICTED_SESSION_STATES.has(sessionStatus)) {
+    const restricted = await setAccountRestriction(p.account_id, { restricted: true, reason: `session_${sessionStatus.toLowerCase()}`, sessionStatus, actor: 'arm_health_check' })
+    return { ok: false, reason: 'account_restricted', restrictionUntil: restricted.restriction_until }
+  }
+  if (accountRow?.operational_status === 'restricted' && (!accountRow.restriction_until || new Date(accountRow.restriction_until) > new Date())) {
+    return { ok: false, reason: 'account_restricted', restrictionUntil: accountRow.restriction_until }
+  }
 
   const timeStr = time || (p.scheduled_at ? maltaTimeLabel(new Date(p.scheduled_at)) : '09:00')
   const scheduledAt = maltaLocalToUTC(p.scheduled_date, timeStr)
@@ -587,7 +967,7 @@ async function armPlan(planId, { time } = {}) {
     return { ok: false, reason: 'account_24h15_cooldown', nextEligibleAt: cooldown.nextEligibleAt.toISOString() }
   }
 
-  const idempotencyKey = `outreach-plan-${planId}-${scheduledAt.toISOString()}`
+  const idempotencyKey = safeJobId(`outreach-plan-${planId}-${scheduledAt.toISOString()}`)
 
   // Cancel any previously-armed job for this plan first (re-arming after an
   // edit must never leave two jobs ticking for the same plan).
@@ -596,7 +976,16 @@ async function armPlan(planId, { time } = {}) {
     catch (e) { log.debug('outreachPlanner: old job removal failed (likely already gone)', { err: e.message }) }
   }
 
-  const job = await addJob('outreach-plan', { planId }, { delay: Math.max(0, delayMs), jobId: idempotencyKey })
+  const lock = await recheckAndLockPlanEntries(planId, p.account_id, p.target_count || eligibleCount)
+  if (!lock.ok) return lock
+
+  let job
+  try {
+    job = await addJob('outreach-plan', { planId }, { delay: Math.max(0, delayMs), jobId: idempotencyKey })
+  } catch (err) {
+    await releaseReservationsForPlan(planId, 'arm_job_create_failed')
+    throw err
+  }
 
   await db.query(
     `UPDATE outreach_plans
@@ -604,6 +993,7 @@ async function armPlan(planId, { time } = {}) {
       WHERE id = $1`,
     [planId, scheduledAt.toISOString(), String(job.id), idempotencyKey])
   await logTransition(planId, p.status, 'ready', 'armed_by_user', 'admin', { job_id: String(job.id) })
+  await commitPoolCursorForPlan(planId)
   return { ok: true, scheduledAt: scheduledAt.toISOString() }
 }
 
@@ -613,6 +1003,7 @@ async function pausePlan(planId) {
     try { const job = await QUEUES['outreach-plan'].getJob(plan.rows[0].job_id); if (job) await job.remove() }
     catch (e) { log.debug('outreachPlanner: pause job removal failed', { err: e.message }) }
   }
+  await releaseReservationsForPlan(planId, 'paused_by_user')
   await db.query(`UPDATE outreach_plans SET status = 'saved', armed = FALSE, job_id = NULL, updated_at = NOW() WHERE id = $1`, [planId])
   await logTransition(planId, plan.rows[0]?.status, 'saved', 'paused_by_user', 'admin')
 }
@@ -639,7 +1030,7 @@ async function blockAndRetry(planId, plan, reason) {
     await logTransition(planId, plan.status, 'failed', `${reason}_max_retries_exhausted(${MAX_RETRY_ATTEMPTS})`, 'system')
     return
   }
-  const jobId = `${plan.idempotency_key || 'outreach-plan-' + planId}-retry-${attempt}`
+  const jobId = safeJobId(`${plan.idempotency_key || 'outreach-plan-' + planId}-retry-${attempt}`)
   const job = await addJob('outreach-plan', { planId }, { delay: RETRY_DELAY_MS, jobId })
   await db.query(
     `UPDATE outreach_plans SET status = 'blocked_session', armed = TRUE, job_id = $2, retry_attempt = $3, updated_at = NOW() WHERE id = $1`,
@@ -665,16 +1056,22 @@ async function runScheduledPlan(planId) {
     return
   }
 
-  const account = await db.query(`SELECT label FROM whatsapp_accounts WHERE id = $1`, [plan.account_id])
+  const account = await db.query(`SELECT * FROM whatsapp_accounts WHERE id = $1`, [plan.account_id])
   if (isSystemManagerSession(plan.session_name, account.rows[0]?.label)) {
+    await releaseReservationsForPlan(planId, 'system_manager_not_outreach')
     await db.query(`UPDATE outreach_plans SET status = 'failed', armed = FALSE, updated_at = NOW() WHERE id = $1`, [planId])
     await logTransition(planId, plan.status, 'failed', 'system_manager_not_outreach', 'system')
+    return
+  }
+  const accountRow = account.rows[0]
+  if (accountRow?.operational_status === 'restricted' && (!accountRow.restriction_until || new Date(accountRow.restriction_until) > new Date())) {
+    await holdArmedPlansForAccount(plan.account_id, 'account_restricted')
     return
   }
   const accountGate = await accountCooldown(plan.session_name)
   if (!accountGate.allowed) {
     const delay = Math.max(60_000, accountGate.nextEligibleAt.getTime() - Date.now())
-    const jobId = `${plan.idempotency_key || 'outreach-plan-' + planId}-account-cooldown-${accountGate.nextEligibleAt.toISOString()}`
+    const jobId = safeJobId(`${plan.idempotency_key || 'outreach-plan-' + planId}-account-cooldown-${accountGate.nextEligibleAt.toISOString()}`)
     const job = await addJob('outreach-plan', { planId }, { delay, jobId })
     await db.query(`UPDATE outreach_plans SET status='ready', armed=TRUE, scheduled_at=$2, job_id=$3, updated_at=NOW() WHERE id=$1`, [planId, accountGate.nextEligibleAt.toISOString(), String(job.id)])
     await logTransition(planId, plan.status, 'ready', 'account_24h15_cooldown', 'system', { job_id: String(job.id) })
@@ -698,14 +1095,22 @@ async function runScheduledPlan(planId) {
   // kevthirdd connected. `default` (or any specific account) now has ZERO
   // privileged role anywhere in this function.
   let sessionHealthy = false
+  let sessionStatus = 'UNKNOWN'
   try {
     const status = await waha.getSessionStatus(plan.session_name)
-    sessionHealthy = status?.status === 'WORKING' || status?.status === 'CONNECTED'
+    sessionStatus = String(status?.status || 'UNKNOWN').toUpperCase()
+    sessionHealthy = HEALTHY_SESSION_STATES.has(sessionStatus)
   } catch (e) {
     log.debug('outreachPlanner: session health check threw, treating as unhealthy', { planId, session: plan.session_name, err: e.message })
   }
   if (!sessionHealthy) {
-    return blockAndRetry(planId, plan, `session_${plan.session_name}_not_working`)
+    await setAccountRestriction(plan.account_id, {
+      restricted: true,
+      reason: `session_${sessionStatus.toLowerCase()}`,
+      sessionStatus,
+      actor: 'scheduled_health_check',
+    })
+    return
   }
 
   await logTransition(planId, plan.status, 'running', 'send_starting', 'system', { job_id: plan.job_id })
@@ -715,7 +1120,18 @@ async function runScheduledPlan(planId) {
     `SELECT * FROM outreach_plan_entries WHERE plan_id = $1 AND eligibility_status = 'eligible' AND send_status = 'pending'`,
     [planId])).rows
 
+  // Recheck the ceiling at execution time as well. A plan may have been
+  // armed before this guard existed, or edited through another client.
+  const limit = planLimit(plan.session_name, account.rows[0]?.label)
+  if (entries.length > limit) {
+    await releaseReservationsForPlan(planId, 'plan_limit_exceeded')
+    await db.query(`UPDATE outreach_plans SET status = 'saved', armed = FALSE, job_id = NULL, updated_at = NOW() WHERE id = $1`, [planId])
+    await logTransition(planId, plan.status, 'saved', `starter_batch_limit_${entries.length}_over_${limit}`, 'system')
+    return
+  }
+
   if (!entries.length) {
+    await releaseReservationsForPlan(planId, 'no_pending_entries')
     await db.query(`UPDATE outreach_plans SET status = 'completed', armed = FALSE, executed_at = NOW(), updated_at = NOW() WHERE id = $1`, [planId])
     await logTransition(planId, 'running', 'completed', 'no_pending_entries', 'system')
     return
@@ -746,6 +1162,7 @@ async function runScheduledPlan(planId) {
   }
 
   if (!stillEligible.length) {
+    await releaseReservationsForPlan(planId, 'all_entries_skipped_final_check')
     await db.query(`UPDATE outreach_plans SET status = 'completed', armed = FALSE, executed_at = NOW(), updated_at = NOW() WHERE id = $1`, [planId])
     await logTransition(planId, 'running', 'completed', 'all_entries_skipped_final_check', 'system')
     return
@@ -956,28 +1373,47 @@ async function checkDuplicatesGlobal() {
 async function todayContactedSummary() {
   const today = maltaTodayStr()
   const r = await db.query(`
-    SELECT session_name, COUNT(*)::int AS n
-      FROM outreach_plan_entries e
-      JOIN outreach_plans p ON p.id = e.plan_id
-     WHERE p.scheduled_date = $1 AND e.send_status = 'sent'
-     GROUP BY session_name
+    SELECT account_used AS session_name, COUNT(*)::int AS n
+      FROM outreach_log
+     WHERE (sent_at AT TIME ZONE 'Europe/Malta')::date = $1::date
+     GROUP BY account_used
+     ORDER BY n DESC, account_used
   `, [today])
   const uniqueRes = await db.query(`
-    SELECT COUNT(DISTINCT e.normalized_phone)::int AS unique_owners, COUNT(*)::int AS total_sends
-      FROM outreach_plan_entries e
-      JOIN outreach_plans p ON p.id = e.plan_id
-     WHERE p.scheduled_date = $1 AND e.send_status = 'sent'
+    SELECT COUNT(DISTINCT regexp_replace(phone, '[^0-9]', '', 'g'))::int AS unique_owners,
+           COUNT(*)::int AS total_sends
+      FROM outreach_log
+     WHERE (sent_at AT TIME ZONE 'Europe/Malta')::date = $1::date
   `, [today])
-  return { perAccount: r.rows, ...uniqueRes.rows[0] }
+  // Batch checkpoints cover manual and planned outreach and expose skips,
+  // which is the operational signal the account tiles and run bars need.
+  const recent = await db.query(`
+    SELECT id, session_name, sent_count::int AS n,
+           total_contacts::int AS attempted, skip_count::int AS skipped,
+           status, started_at, completed_at, COALESCE(completed_at, updated_at, started_at) AS sent_at
+      FROM outreach_batches
+     WHERE status IN ('completed','cancelled','running')
+     ORDER BY COALESCE(completed_at, updated_at, started_at) DESC NULLS LAST, id DESC
+     LIMIT 3`)
+  const activity = await db.query(`
+    SELECT t.id, t.created_at, t.actor, t.from_state, t.to_state, t.reason,
+           p.session_name, p.scheduled_date
+      FROM outreach_plan_transitions t
+      JOIN outreach_plans p ON p.id=t.plan_id
+     ORDER BY t.created_at DESC, t.id DESC
+     LIMIT 20`)
+  return { perAccount: r.rows, ...uniqueRes.rows[0], recentRuns: recent.rows, activity: activity.rows }
 }
 
 module.exports = {
   maltaTodayStr, addDaysStr, maltaLocalToUTC, maltaTimeLabel, dayLabelFor,
-  autoPreparationWindow, prepareDueAccountPlans,
+  autoPreparationWindow, prepareDueAccountPlans, autoPrepareAccount,
   listAccounts, setAccountVolume, ensurePlan, getPlanWithEntries, listRollingPlans, computeStats,
   setMessageTemplate, addEntriesFromPaste, generateList, removeEntry, clearEntries, regenerate,
   saveDraft, armPlan, pausePlan, cancelPlan, runScheduledPlan,
+  setAccountRestriction,
   reconcileOverdueArmedPlans, reconcilePlanFromBatch,
   checkDuplicatesGlobal, todayContactedSummary,
   listMessageTemplates, saveMessageTemplate, deleteMessageTemplate,
+  OUTREACH_PLAN_MAX, starterBatchCount,
 }

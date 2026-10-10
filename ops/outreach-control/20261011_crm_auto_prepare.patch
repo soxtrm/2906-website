@@ -1,0 +1,33 @@
+diff --git a/routes/crm.js b/routes/crm.js
+index 4831b76..81f1ccd 100644
+--- a/routes/crm.js
++++ b/routes/crm.js
+@@ -494,6 +494,28 @@ router.post('/outreach/accounts/:accountId/restriction', auth, adminOnly, async
+   }
+ })
+ 
++router.post('/outreach/accounts/:accountId/auto-prepare', auth, adminOnly, async (req, res) => {
++  try {
++    const accountId = Number.parseInt(req.params.accountId, 10)
++    if (!accountId) return res.status(400).json({ error: 'valid accountId required' })
++    const baseCount = req.body?.baseCount == null ? null : Number(req.body.baseCount)
++    if (baseCount != null && (!Number.isFinite(baseCount) || baseCount < 1 || baseCount > 45)) {
++      return res.status(400).json({ error: 'baseCount must be between 1 and 45' })
++    }
++    const message = req.body?.message == null ? null : String(req.body.message).slice(0, 2000)
++    const result = await outreachPlanner.autoPrepareAccount(accountId, {
++      baseCount,
++      message,
++      actor: req.agent?.username || 'admin',
++    })
++    res.json(result)
++  } catch (err) {
++    log.error('crm/outreach/account-auto-prepare error', err)
++    const status = ['account_restricted', 'system_manager_not_outreach'].includes(err.code) ? 409 : 500
++    res.status(status).json({ error: err.message || 'Failed to auto-prepare account', code: err.code || null })
++  }
++})
++
+ router.get('/outreach/due-reminders', auth, adminOnly, async (req, res) => {
+   try {
+     const rows = (await db.query(

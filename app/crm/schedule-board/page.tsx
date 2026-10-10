@@ -3705,7 +3705,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
       data-ref={r.ref}
       style={{
         background: DCARD,
-        borderRadius: isMobile ? 16 : 20,
+        borderRadius: isMobile ? 16 : 14,
         // Kev, 2026-09-12: the "..." popover (menuPanel below) is an
         // absolutely-positioned child of this card — with the card clipping
         // its own overflow and no stacking order of its own, the next card
@@ -3728,7 +3728,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         gridTemplateColumns: isMobile ? '116px minmax(0, 1fr)' : 'minmax(190px, 38%) minmax(0, 1fr)',
         gridTemplateRows: 'minmax(0, 1fr) auto auto',
         contentVisibility: menuOpen ? 'visible' : 'auto',
-        containIntrinsicSize: isMobile ? '260px' : '340px',
+        containIntrinsicSize: isMobile ? '260px' : '290px',
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
         // the card past its own column and clip against the next one. 0 makes
@@ -3752,7 +3752,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
         onPointerCancel={() => { swipeStartX.current = null }}
-        style={{ cursor: 'pointer', position: 'relative', height: '100%', minHeight: isMobile ? 142 : 248, flexShrink: 0, background: '#111', gridColumn: 1, gridRow: isMobile ? 1 : '1 / 4', touchAction: 'pan-y' }}
+        style={{ cursor: 'pointer', position: 'relative', height: '100%', minHeight: isMobile ? 142 : 230, flexShrink: 0, background: '#111', gridColumn: 1, gridRow: isMobile ? 1 : '1 / 4', touchAction: 'pan-y' }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
           ? <motion.img key={r.images[hoverPhotoIdx] || r.images[0]} src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" decoding="async" initial={{ opacity: .35, scale: 1.018 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .18, ease: [0.22, 1, 0.36, 1] }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
