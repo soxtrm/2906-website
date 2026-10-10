@@ -485,6 +485,8 @@ function Board() {
   // Keeping it closed until requested avoids downloading Google Maps while an
   // agent only wants listings; the dynamic work begins when this becomes true.
   const [mapOpen, setMapOpen] = useState(false)
+  const [mapCollapsed, setMapCollapsed] = useState(false)
+  const mapMotionStartedAtRef = useRef(0)
   const [intelligenceOpen,setIntelligenceOpen]=useState(false)
   const [openToCheck, setOpenToCheck] = useState(false)
   const [updatesMode, setUpdatesMode] = useState(false)
@@ -504,22 +506,51 @@ function Board() {
   useEffect(() => {
     localStorage.setItem('crm.schedule-board.discovery.v2', JSON.stringify(discoveryVisible))
   }, [discoveryVisible])
-  useEffect(() => {
-    const toggleMap = () => setMapOpen(current => {
-      const next = !current
-      if (next) requestAnimationFrame(() => document.getElementById('schedule-board-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-      return next
-    })
-    window.addEventListener('crm-board-map-toggle', toggleMap)
-    return () => window.removeEventListener('crm-board-map-toggle', toggleMap)
-  }, [])
   const revealMapWorkspace = useCallback(() => {
+    mapMotionStartedAtRef.current = performance.now()
     setMapOpen(true)
+    setMapCollapsed(false)
     window.dispatchEvent(new CustomEvent('crm-board-tool-picked'))
     window.setTimeout(() => {
       document.getElementById('schedule-board-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      window.setTimeout(() => window.dispatchEvent(new Event('resize')), 420)
     }, 90)
   }, [])
+  const toggleMapWorkspace = useCallback(() => {
+    if (mapOpen) {
+      setMapOpen(false)
+      setMapCollapsed(false)
+      window.dispatchEvent(new CustomEvent('crm-board-tool-picked'))
+      return
+    }
+    revealMapWorkspace()
+  }, [mapOpen, revealMapWorkspace])
+  useEffect(() => {
+    const toggleMap = () => toggleMapWorkspace()
+    window.addEventListener('crm-board-map-toggle', toggleMap)
+    return () => window.removeEventListener('crm-board-map-toggle', toggleMap)
+  }, [toggleMapWorkspace])
+  useEffect(() => {
+    if (!mapOpen || mapCollapsed) return
+    const scroller = document.querySelector<HTMLElement>('.crm-main .crm-content')
+    if (!scroller) return
+    let frame = 0
+    let lastTop = scroller.scrollTop
+    const onScroll = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const nextTop = scroller.scrollTop
+        const openingSettled = performance.now() - mapMotionStartedAtRef.current > 720
+        if (openingSettled && nextTop > 112 && nextTop > lastTop + 6) setMapCollapsed(true)
+        lastTop = nextTop
+      })
+    }
+    scroller.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      scroller.removeEventListener('scroll', onScroll)
+    }
+  }, [mapCollapsed, mapOpen])
   // The agent feed is deliberately fetched without the board's current
   // filters. It stays useful while an agent is looking at one town, a price
   // range or Favourites: recent team activity must not disappear just because
@@ -1466,11 +1497,15 @@ function Board() {
       dark={isDark}
       townOptions={townOptions}
       smartBadgeCount={discovery.length}
-      onMapOpen={revealMapWorkspace}
+      mapActive={mapOpen}
+      favouritesActive={!updatesMode && view === 'favourites'}
+      onMapToggle={toggleMapWorkspace}
+      onProfileOpen={() => router.push('/crm/agent-profile')}
+      onFavouritesOpen={() => { setView('favourites'); setUpdatesMode(false); setSelected(new Set()); window.dispatchEvent(new CustomEvent('crm-board-tool-picked')) }}
       smartTools={<div className="crm-mobile-smart-body">
         <div className="crm-mobile-smart-copy"><strong>Everyday workspace</strong><span>Map, rows and profile stay first. Combined property tools follow when you need them.</span></div>
         <div className="crm-mobile-quick-priority" aria-label="Primary workspace tools">
-          <button id="crm-smart-map" type="button" aria-pressed={mapOpen} onClick={revealMapWorkspace}><MapIcon /><span>Map</span></button>
+          <button id="crm-smart-map" type="button" aria-pressed={mapOpen} onClick={toggleMapWorkspace}><MapIcon /><span>Map</span></button>
           <button id="crm-smart-rows" type="button" onClick={() => router.push('/crm/inventory')}><List /><span>Rows</span></button>
           <button id="crm-smart-profile" type="button" onClick={() => router.push('/crm/agent-profile')}><UserRound /><span>Profile</span></button>
         </div>
@@ -1631,7 +1666,7 @@ function Board() {
               }}>{isMobile ? (v === 'favourites' ? <Star size={15} /> : <House size={15} />) : label}{badge > 0 && <span style={{ marginLeft: 5, fontFamily: FM, opacity: .76 }}>{badge}</span>}</button>
             })}
           </div>
-          {!isMobile && <button type="button" onClick={() => setMapOpen(current => !current)} aria-expanded={mapOpen} aria-controls="schedule-board-map" style={{ ...chip, minHeight: 34, borderRadius: 10, borderColor: mapOpen ? 'var(--crm-accent)' : DBORDER, color: mapOpen ? '#151C2C' : DTEXT, background: mapOpen ? 'var(--crm-accent)' : DCARD, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 7 }}><MapIcon size={15} />Map</button>}
+          {!isMobile && <button type="button" onClick={toggleMapWorkspace} aria-expanded={mapOpen && !mapCollapsed} aria-controls="schedule-board-map" style={{ ...chip, minHeight: 34, borderRadius: 10, borderColor: mapOpen ? 'var(--crm-accent)' : DBORDER, color: mapOpen ? '#151C2C' : DTEXT, background: mapOpen ? 'var(--crm-accent)' : DCARD, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 7 }}><MapIcon size={15} />Map</button>}
           {/* The owner-reachout switch. Sits here rather than in a settings page
               because this is where you notice the robot's work, and it is where
               Kev asked for it (2026-08-16). Admin only, and read-only for
@@ -1883,23 +1918,47 @@ function Board() {
         )}
 
         <AnimatePresence initial={false}>
-          {mapOpen && <motion.div
+          {mapOpen && <motion.section
             id="schedule-board-map"
+            className={`crm-board-map-shell${mapCollapsed ? ' is-collapsed' : ''}`}
             initial={{ opacity: 0, scale: .985, x: isMobile ? -42 : -24 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: .988, x: isMobile ? -28 : -16 }}
             transition={{ type: 'spring', stiffness: 360, damping: 34, mass: .72 }}
             style={{ transformOrigin: 'left center' }}
-          ><MapPanel
-            items={visible}
-            rect={rect}
-            onRect={setRect}
-            circ={circ}
-            onCirc={setCirc}
-            onMarkerClick={onMarkerClick}
-            selectedTowns={f.towns}
-            isMobile={isMobile}
-          /></motion.div>}
+          >
+            <AnimatePresence initial={false}>
+              {mapCollapsed && <motion.button
+                key="map-reveal-handle"
+                type="button"
+                className="crm-board-map-reveal"
+                aria-label="Show map again"
+                initial={{ opacity: 0, y: -9, scaleX: .68 }}
+                animate={{ opacity: 1, y: 0, scaleX: 1 }}
+                exit={{ opacity: 0, y: -8, scaleX: .72 }}
+                transition={{ type: 'spring', stiffness: 390, damping: 30, mass: .62 }}
+                onClick={revealMapWorkspace}
+              ><span /></motion.button>}
+            </AnimatePresence>
+            <motion.div
+              className="crm-board-map-viewport"
+              initial={false}
+              animate={{ gridTemplateRows: mapCollapsed ? '0fr' : '1fr', opacity: mapCollapsed ? 0 : 1 }}
+              transition={{ duration: .38, ease: [.16, 1, .3, 1] }}
+              aria-hidden={mapCollapsed}
+            >
+              <div className="crm-board-map-clip"><MapPanel
+                items={visible}
+                rect={rect}
+                onRect={setRect}
+                circ={circ}
+                onCirc={setCirc}
+                onMarkerClick={onMarkerClick}
+                selectedTowns={f.towns}
+                isMobile={isMobile}
+              /></div>
+            </motion.div>
+          </motion.section>}
         </AnimatePresence>
 
         {/* cards */}
