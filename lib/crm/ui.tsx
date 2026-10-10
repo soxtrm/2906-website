@@ -477,6 +477,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   const [moreOpen, setMoreOpen] = useState(false)
   const [navigationCompact, setNavigationCompact] = useState(false)
   const contentRef = useRef<HTMLElement>(null)
+  const bottomNavRef = useRef<HTMLElement>(null)
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
@@ -499,6 +500,26 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
     scroller.addEventListener('scroll', update, { passive: true })
     return () => { cancelAnimationFrame(frame); scroller.removeEventListener('scroll', update) }
   }, [mobileImmersive])
+  useEffect(() => {
+    const nav = bottomNavRef.current
+    const viewport = window.visualViewport
+    if (!nav) return
+    const placeAtVisibleBottom = () => {
+      const visualBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight
+      nav.style.setProperty('--crm-visual-bottom-shift', `${Math.round(visualBottom - window.innerHeight)}px`)
+    }
+    placeAtVisibleBottom()
+    window.addEventListener('resize', placeAtVisibleBottom, { passive: true })
+    window.addEventListener('orientationchange', placeAtVisibleBottom, { passive: true })
+    viewport?.addEventListener('resize', placeAtVisibleBottom, { passive: true })
+    viewport?.addEventListener('scroll', placeAtVisibleBottom, { passive: true })
+    return () => {
+      window.removeEventListener('resize', placeAtVisibleBottom)
+      window.removeEventListener('orientationchange', placeAtVisibleBottom)
+      viewport?.removeEventListener('resize', placeAtVisibleBottom)
+      viewport?.removeEventListener('scroll', placeAtVisibleBottom)
+    }
+  }, [])
   const navItem = (item: typeof NAV[number]) => {
     const Icon = NAV_ICONS[item.key]
     return item.disabled
@@ -528,7 +549,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
       <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
-    <nav className="crm-bottom-nav" aria-label="Mobile navigation">
+    <nav ref={bottomNavRef} className="crm-bottom-nav" aria-label="Mobile navigation">
       <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Expand mobile navigation"><span /></button>
       {items.filter(i => !i.disabled).slice(0, 4).map(item => {
         const Icon = NAV_ICONS[item.key]

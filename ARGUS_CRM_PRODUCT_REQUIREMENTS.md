@@ -47,6 +47,7 @@ This file records Kevin's current product direction so later edits do not remove
 - On mobile the ARGUS logo cloud stays smaller than the two feature clouds. Opening Filters gives it the same dominant width as opening Smartfilters and compresses/shifts Smartfilters on the same track.
 - Do not add a redundant Show map control when Map is already available in the top/workspace navigation.
 - The bottom navigation sits lower, is deep and rounded, and highlights the current destination clearly. **Map** is written out and visually prominent because it is heavily used.
+- The bottom navigation follows the phone's live visual viewport and safe area, staying directly above the device controls across different screen sizes and changing browser chrome instead of floating over the listings.
 - Keep useful existing actions and icons. Reorganising the UI must not silently remove working functions.
 
 ### Listings

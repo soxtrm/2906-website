@@ -224,7 +224,7 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
     box-shadow: 0 19px 52px rgba(3,8,20,.27),0 3px 10px rgba(3,8,20,.09),inset 0 1px 0 rgba(255,255,255,.04);
     backdrop-filter: blur(22px) saturate(1.25);
     -webkit-backdrop-filter: blur(22px) saturate(1.25);
-    transform: translate3d(-50%,0,0);
+    transform: translate3d(-50%,var(--crm-visual-bottom-shift,0px),0);
     transition: width .42s cubic-bezier(.18,.88,.2,1),height .42s cubic-bezier(.18,.88,.2,1),bottom .42s cubic-bezier(.18,.88,.2,1),border-radius .42s cubic-bezier(.18,.88,.2,1),box-shadow .28s ease;
   }
   .crm-bottom-nav-handle{display:none!important}
