@@ -516,7 +516,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   return <div className={`crm-workspace${mobileImmersive ? ' crm-mobile-immersive' : ''}${navigationCompact ? ' crm-navigation-compact' : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
     <aside className="crm-sidebar">
-      <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><img src="/argus-logo-wide.png" alt="Argus" /><small>2906</small></Link>
+      <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><img src="/argus-logo-wide.png" alt="Argus" /><b className="crm-brand-word" aria-hidden>ARGUS</b><small>2906</small></Link>
       <nav aria-label="Main navigation">{items.map(navItem)}</nav>
       <div className="crm-account">
         <strong>{me?.name || me?.username} <small>· {roleLabel}</small></strong>

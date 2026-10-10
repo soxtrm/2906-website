@@ -25,6 +25,8 @@ html[data-crm-theme="dark"] .crm-root {
 .crm-sidebar { width: 218px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--crm-surface); border-right: 1px solid var(--crm-border); }
 .crm-brand { display: flex; align-items: center; gap: 12px; padding: 24px; color: var(--crm-text); text-decoration: none; }
 .crm-brand img { width: 102px; filter: brightness(0); }
+.crm-brand-word { display: none; }
+.crm-board-desktop-rail { display: none; }
 html[data-crm-theme="dark"] .crm-brand img { filter: none; }
 .crm-brand small { font-size: 10px; color: var(--crm-muted); letter-spacing: .12em; }
 .crm-sidebar nav { flex: 1; overflow-y: auto; padding: 8px 12px; }
@@ -284,23 +286,31 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
 /* Schedule Board desktop uses the same three-cloud system as mobile. The
    extra width increases information density instead of inflating the cards. */
 @media (min-width:761px){
-  .crm-mobile-immersive .crm-sidebar{width:190px}
-  .crm-mobile-immersive .crm-brand{height:58px;padding:13px 19px}
-  .crm-mobile-immersive .crm-sidebar nav{padding-inline:9px}
+  .crm-workspace.crm-mobile-immersive{display:grid;grid-template-columns:160px minmax(0,1320px);justify-content:center;gap:18px;background:var(--crm-bg)}
+  .crm-mobile-immersive .crm-main{grid-column:2;min-width:0}
+  .crm-mobile-immersive .crm-sidebar{grid-column:1;width:auto;height:100dvh;padding-top:58px;background:transparent;border-right:0}
+  .crm-mobile-immersive .crm-brand{position:fixed;left:32px;top:0;z-index:49;width:auto;height:58px;padding:0;gap:0}
+  .crm-mobile-immersive .crm-brand img,.crm-mobile-immersive .crm-brand small{display:none}
+  .crm-mobile-immersive .crm-brand-word{display:block;color:var(--crm-text);font:900 24px/1 Georgia,"Times New Roman",serif;letter-spacing:.035em}
+  .crm-mobile-immersive .crm-sidebar nav{padding:62px 6px 10px}
   .crm-mobile-immersive .crm-nav-item{min-height:38px;padding:8px 11px;font-size:12px}
-  .crm-mobile-immersive .crm-account{padding:13px 16px}
-  .crm-mobile-immersive .crm-header{position:absolute;top:0;right:0;z-index:45;min-height:58px;padding:8px 16px;background:transparent;border:0;pointer-events:none}
+  .crm-mobile-immersive .crm-account{padding:13px 7px;border-top:0}
+  .crm-mobile-immersive .crm-header{position:fixed;inset:0 0 auto;z-index:45;width:100%;min-height:58px;padding:8px 14px;background:color-mix(in srgb,var(--crm-surface) 98%,var(--crm-bg));border:0;border-bottom:1px solid var(--crm-border);box-shadow:0 5px 18px rgba(8,20,42,.05);pointer-events:none}
   .crm-mobile-immersive .crm-header-copy{display:none}
   .crm-mobile-immersive .crm-header-kicker{grid-column:1/-1;color:var(--crm-accent);font:800 8px var(--font-jetbrains);letter-spacing:.16em}
   .crm-mobile-immersive .crm-header h1{font-size:23px}
   .crm-mobile-immersive .crm-header p{margin:0;font-size:11px}
   .crm-mobile-immersive .crm-header-actions{gap:6px;pointer-events:auto}
   .crm-mobile-immersive .crm-icon-button{width:38px;height:38px;min-height:38px;border-radius:13px;background:var(--crm-raised);color:var(--crm-muted)}
-  .crm-mobile-immersive .crm-filterbar{display:block;min-height:58px;padding:5px 112px 5px 12px;background:color-mix(in srgb,var(--crm-surface) 97%,var(--crm-bg));box-shadow:0 5px 20px rgba(6,16,35,.05)}
+  .crm-mobile-immersive .crm-filterbar{display:block;height:58px;min-height:58px;padding:5px 0;background:transparent;border:0;box-shadow:none;z-index:46}
   .crm-mobile-immersive .crm-filterbar>div{width:100%;max-width:none}
   .crm-board-islands{display:flex;align-items:center;gap:7px;width:100%;height:48px}
   .crm-board-islands-handle{display:none}
   .crm-argus-orbit,.crm-nav-island{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;height:44px;min-width:0;padding:5px!important;border:1px solid var(--crm-border)!important;border-radius:17px!important;background:linear-gradient(145deg,color-mix(in srgb,var(--crm-surface) 97%,white 3%),var(--crm-surface));color:var(--crm-muted);box-shadow:0 6px 18px rgba(4,10,24,.06),inset 0 1px 0 rgba(255,255,255,.045);overflow:visible;will-change:flex-basis;transition:flex-basis .55s cubic-bezier(.16,1,.3,1),max-width .55s cubic-bezier(.16,1,.3,1),color .24s ease,border-color .24s ease,transform .4s cubic-bezier(.16,1,.3,1),box-shadow .3s ease}
+  .crm-mobile-immersive .crm-argus-orbit,.crm-mobile-immersive .crm-smart-island{display:none}
+  .crm-mobile-immersive .crm-filter-island{flex:0 0 auto;height:48px;padding:0!important;border:0!important;border-radius:0!important;background:transparent;box-shadow:none}
+  .crm-mobile-immersive .crm-filter-icons{width:auto;overflow:visible}
+  .crm-mobile-immersive .crm-filter-island .crm-island-label{display:none}
   .crm-nav-island{height:40px;border-radius:15px!important}
   .crm-argus-orbit{flex:0 0 126px;max-width:420px}.crm-smart-island{flex:0 0 188px}.crm-filter-island{flex:0 0 330px}
   .crm-argus-orbit::before{content:"";position:absolute;inset:-1px;z-index:-1;border-radius:22px;padding:1px;background:conic-gradient(from var(--argus-angle,0deg),transparent 0 13%,#55d8d0 22%,#7c88ff 35%,#d9a15d 49%,transparent 61% 83%,#55d8d0 93%,transparent);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.72;filter:drop-shadow(0 0 7px rgba(88,215,209,.2))}
@@ -325,7 +335,34 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-price-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.crm-price-fields label{display:grid;gap:5px}.crm-price-fields label>span{color:var(--crm-faint);font-size:9px;font-weight:700}.crm-price-fields input{width:100%;min-width:0!important;height:42px;padding:0 11px;border:1px solid var(--crm-border)!important;border-radius:12px;background:var(--crm-raised);color:var(--crm-text)}.crm-room-sections{gap:10px}.crm-room-sections>div{border-color:var(--crm-border);background:var(--crm-raised)}
   .crm-tenancy-grid{display:grid;gap:8px}.crm-tenancy-grid>div{display:grid;grid-template-columns:minmax(70px,1fr) 1.1fr 1.1fr;gap:6px;align-items:center}.crm-tenancy-grid strong{font-size:10px}.crm-tenancy-grid button,.crm-sublet-choice{min-height:36px;padding:6px;border:1px solid var(--crm-border);border-radius:10px;background:var(--crm-raised);color:var(--crm-muted);font-size:9px;font-weight:700}.crm-tenancy-grid button[aria-pressed=true]{border-color:var(--crm-accent);background:var(--crm-accent-soft);color:var(--crm-accent)}.crm-sublet-choice{display:flex;align-items:center;gap:8px;padding-inline:10px}.crm-mobile-extra{display:flex;flex-wrap:wrap;gap:7px}.crm-mobile-extra :is(select,button){min-height:38px!important;border:1px solid var(--crm-border)!important;border-radius:11px!important;background:var(--crm-raised)!important;color:var(--crm-text)!important;font-size:10px!important}
   .crm-mobile-filter-panel>footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:14px}.crm-mobile-filter-panel>footer button{min-height:42px;padding:8px 16px;border-radius:13px;font-size:11px;font-weight:800}.crm-clear-filters{border:1px solid var(--crm-border);background:var(--crm-raised);color:var(--crm-muted)}.crm-show-results{display:flex;align-items:center;gap:8px;border:1px solid var(--crm-accent);background:var(--crm-action);color:var(--crm-inverse)}.crm-show-results svg{width:16px}
-  .crm-board-content{width:100%;max-width:1340px;margin:0 auto;padding:12px 14px 22px!important}.crm-listing-grid{gap:10px!important;margin-top:8px!important}
+  .crm-board-content{width:100%;max-width:none;margin:0;padding:18px 0 22px!important}.crm-listing-grid{gap:10px!important;margin-top:8px!important}
+  .crm-board-scope-rail{gap:6px;margin-bottom:10px}
+  .crm-board-scope-rail .crm-horizon-chip,.crm-board-scope-rail .crm-city-chip{min-height:28px!important;padding:4px 9px!important;font-size:9.5px!important}
+  .crm-board-scope-rail .crm-city-chip small{font-size:8px}
+  .crm-listing-card{grid-template-columns:minmax(160px,38%) minmax(0,1fr)!important;border-radius:14px!important}
+  .crm-board-desktop-rail{position:fixed;top:0;right:94px;z-index:48;display:flex;align-items:center;gap:5px;height:58px;max-width:calc(100vw - 560px);font-size:9px}
+  .crm-board-top-link,.crm-board-top-more{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:34px;min-height:34px!important;padding:0 7px;border:0!important;border-radius:9px;background:transparent;color:var(--crm-muted);font-size:9px;font-weight:650;white-space:nowrap;text-decoration:none;transition:background-color .2s ease,color .2s ease,transform .24s cubic-bezier(.16,1,.3,1)}
+  .crm-board-top-link:hover,.crm-board-top-more:hover{background:var(--crm-raised);color:var(--crm-text);transform:translateY(-1px)}
+  .crm-board-top-link[data-active=true]{color:var(--crm-accent);font-weight:800}
+  .crm-board-top-link small{color:var(--crm-faint);font:700 7px var(--font-jetbrains)}
+  .crm-board-map-link{font-size:11px;color:var(--crm-text)}
+  .crm-board-top-more{width:34px;padding:0;list-style:none}.crm-board-top-more::-webkit-details-marker{display:none}
+  .crm-board-top-divider{display:block;width:1px;height:16px;background:var(--crm-border)}
+  .crm-board-top-spacer{width:3px}
+  .crm-board-desktop-rail .board-tools-menu{height:34px}
+  .crm-board-desktop-rail .board-tools-popover{top:40px;right:0;min-width:190px}
+  .crm-board-controls-menu .board-tools-popover{left:0;right:auto}
+  .crm-board-selection-rail{padding:9px;border:1px solid var(--crm-border);border-radius:12px;background:var(--crm-surface)}
+}
+
+@media (min-width:761px) and (max-width:1599px){
+  .crm-board-desktop-rail .crm-board-wide-action,.crm-board-desktop-rail .crm-board-top-divider{display:none}
+}
+
+@media (min-width:761px) and (max-width:1180px){
+  .crm-workspace.crm-mobile-immersive{grid-template-columns:138px minmax(0,1fr);gap:12px;padding-inline:12px}
+  .crm-mobile-immersive .crm-brand{left:20px}
+  .crm-board-desktop-rail{right:92px;max-width:calc(100vw - 470px)}
 }
 
 @media (min-width:1680px){

@@ -351,7 +351,10 @@ function Board() {
   const isMobile = useIsMobile()
   const { me, theme } = useCrm()
   const isAdmin = me?.role === 'admin'
-  const isDark = theme !== 'light'
+  // Kevin's desktop reference is deliberately light and editorial. Keep the
+  // established mobile default untouched while an explicit viewer preference
+  // remains authoritative on either layout.
+  const isDark = isMobile ? theme !== 'light' : theme === 'dark'
 
   // Filters initialise from the URL so a shared link restores the search.
   const [f, setF] = useState<Filters>(() => ({
@@ -1645,46 +1648,30 @@ function Board() {
 
         {/* Two primary workspaces, then compact utility views. Rented stays
             available for restoring a listing without competing with daily work. */}
-        {!isMobile && <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }} style={{
-            ...chip, borderRadius: 8, background: !updatesMode && view === 'board' ? A : DCARD,
-            borderColor: !updatesMode && view === 'board' ? A : DBORDER,
-            color: !updatesMode && view === 'board' ? '#151C2C' : DTEXT_DIM,
-            fontWeight: !updatesMode && view === 'board' ? 800 : 600,
-            boxShadow: !updatesMode && view === 'board' ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
-          }} aria-label="Active board" title="Active board">{isMobile ? <LayoutGrid size={16} /> : 'Active Board'}</button>
-          <button data-tab="updates" onClick={() => setUpdatesMode(true)} style={{
-            ...chip, borderRadius: 8,
-            background: updatesMode ? A : DCARD,
-            borderColor: updatesMode ? A : DBORDER,
-            color: updatesMode ? '#151C2C' : DTEXT_DIM,
-            fontWeight: updatesMode ? 800 : 600,
-            boxShadow: updatesMode ? `0 0 0 1px ${A}, 0 3px 10px rgba(184,149,63,0.28)` : 'none',
-          }}>
-            {isMobile ? <Clock3 size={16} /> : 'Update List'}
-            {!!feedRows.length && <span style={{ marginLeft: isMobile ? 2 : 6, fontFamily: FM, fontSize: 9, opacity: .72 }}>{feedRows.length}</span>}
-          </button>
-          <div style={{ display: 'flex', gap: 5, marginLeft: isMobile ? 0 : 'auto' }}>
-            {([['favourites', 'Favourites', favCount], ['rented', 'Rented', rentedCount]] as const).map(([v, label, badge]) => {
-              const on = !updatesMode && view === v
-              return <button key={v} data-tab={v} aria-label={label} title={label} onClick={() => { setView(v); setUpdatesMode(false); setSelected(new Set()) }} style={{
-                ...chip, borderRadius: 999, padding: '6px 9px', fontSize: 10,
-                background: on ? 'rgba(184,149,63,.17)' : 'transparent',
-                borderColor: on ? A : DBORDER, color: on ? A : DTEXT_FAINT, fontWeight: 700,
-              }}>{isMobile ? (v === 'favourites' ? <Star size={15} /> : <House size={15} />) : label}{badge > 0 && <span style={{ marginLeft: 5, fontFamily: FM, opacity: .76 }}>{badge}</span>}</button>
-            })}
-          </div>
-          {!isMobile && <button type="button" onClick={toggleMapWorkspace} aria-expanded={mapOpen && !mapCollapsed} aria-controls="schedule-board-map" style={{ ...chip, minHeight: 34, borderRadius: 10, borderColor: mapOpen ? 'var(--crm-accent)' : DBORDER, color: mapOpen ? '#151C2C' : DTEXT, background: mapOpen ? 'var(--crm-accent)' : DCARD, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 7 }}><MapIcon size={15} />Map</button>}
-          {/* The owner-reachout switch. Sits here rather than in a settings page
-              because this is where you notice the robot's work, and it is where
-              Kev asked for it (2026-08-16). Admin only, and read-only for
-              everybody else — an agent still benefits from seeing whether the
-              robot is chasing owners before deciding to chase one himself. */}
-          <details className="board-tools-menu">
-            <summary aria-label="More board tools" title="More board tools" style={{ ...chip, width: 36, height: 34, padding: 0, borderRadius: 10, borderColor: DBORDER, color: DTEXT_DIM, background: DCARD, display: 'grid', placeItems: 'center' }}><MoreHorizontal size={17} /></summary>
+        {!isMobile && <div className="crm-board-desktop-rail" aria-label="Board controls">
+          <details className="board-tools-menu crm-board-controls-menu">
+            <summary className="crm-board-top-link"><List size={13} />Board controls</summary>
             <div className="board-tools-popover">
+              <button data-tab="board" onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }}><LayoutGrid size={15} />Active board</button>
+              <button data-tab="updates" onClick={() => setUpdatesMode(true)}><Clock3 size={15} />Update list {!!feedRows.length && <small>{feedRows.length}</small>}</button>
               <button data-tab="open-to-check" onClick={() => setOpenToCheck(true)}><Settings size={15} />Open to check</button>
               <button onClick={() => setBoardSettingsOpen(true)}><SlidersHorizontal size={15} />Collection shortcuts</button>
+            </div>
+          </details>
+          <i className="crm-board-top-divider" aria-hidden />
+          <button className="crm-board-top-link crm-board-wide-action" data-watag-selectall onClick={selectVisible} disabled={!visible.length}>Select for WATag</button>
+          <i className="crm-board-top-divider" aria-hidden />
+          <button className="crm-board-top-link crm-board-wide-action" onClick={() => setSwipePanelOpen(true)}><Link2 size={12} />Swipe Links</button>
+          {isAdmin && <><i className="crm-board-top-divider" aria-hidden /><button className="crm-board-top-link crm-board-wide-action" onClick={openAgentRequests}>@Agenttag Requests</button></>}
+          <span className="crm-board-top-spacer" />
+          {([['favourites', 'Favourites', favCount], ['rented', 'Rented', rentedCount]] as const).map(([v, label, badge]) => {
+            const on = !updatesMode && view === v
+            return <button key={v} className="crm-board-top-link" data-active={on} data-tab={v} onClick={() => { setView(v); setUpdatesMode(false); setSelected(new Set()) }}>{label}{badge > 0 && <small>{badge}</small>}</button>
+          })}
+          <button className="crm-board-top-link crm-board-map-link" type="button" data-active={mapOpen} onClick={toggleMapWorkspace} aria-expanded={mapOpen && !mapCollapsed} aria-controls="schedule-board-map"><MapIcon size={14} />Map</button>
+          <details className="board-tools-menu crm-board-more-menu">
+            <summary className="crm-board-top-more" aria-label="More board tools"><MoreHorizontal size={17} /></summary>
+            <div className="board-tools-popover">
               <a href="/nexus-map"><Link2 size={15} />Nexus Map</a>
               <button onClick={() => { setIntelligenceOpen(true); requestAnimationFrame(() => document.getElementById('board-intelligence-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }}><MapIcon size={15} />Smart map &amp; traffic</button>
               <ReachoutSwitch />
@@ -1790,7 +1777,7 @@ function Board() {
             picked, so the board is not carrying a dead bar around all day, and
             it names the count in the button rather than beside it — the number
             is the thing you check before firing. */}
-        {(!isMobile || selected.size > 0) && <div style={{
+        {selected.size > 0 && <div className="crm-board-selection-rail" style={{
           display: 'flex', gap: 8, alignItems: 'center', flexWrap: selected.size > 0 ? 'wrap' : 'nowrap', overflowX: selected.size > 0 ? 'visible' : 'auto',
           marginBottom: isMobile ? 14 : 8,
         }}>
