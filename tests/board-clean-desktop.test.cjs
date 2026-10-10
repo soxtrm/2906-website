@@ -40,20 +40,26 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     const header=document.querySelector('.crm-header').getBoundingClientRect()
     const filter=document.querySelector('.crm-filterbar').getBoundingClientRect()
     const brand=document.querySelector('.crm-brand').getBoundingClientRect()
+    const brandImage=document.querySelector('.crm-brand img').getBoundingClientRect()
     const sidebar=document.querySelector('.crm-sidebar').getBoundingClientRect()
     const topRail=document.querySelector('.crm-board-desktop-rail').getBoundingClientRect()
+    const headerActions=document.querySelector('.crm-header-actions').getBoundingClientRect()
+    const mapButton=document.querySelector('.crm-board-map-link').getBoundingClientRect()
     const scope=document.querySelector('.crm-board-scope-rail').getBoundingClientRect()
     const visibleFilterIcons=[...document.querySelectorAll('.crm-filter-island .crm-island-feature')].filter(node=>getComputedStyle(node).display!=='none').length
     const argusDisplay=getComputedStyle(document.querySelector('.crm-argus-orbit')).display
     const smartDisplay=getComputedStyle(document.querySelector('.crm-smart-island')).display
     const cards=[...document.querySelectorAll('.crm-listing-card')].slice(0,3).map(n=>n.getBoundingClientRect()).map(r=>({x:r.x,y:r.y,w:r.width}))
-    return {content:{x:content.x,w:content.width},header:{x:header.x,y:header.y,w:header.width,h:header.height},filter:{x:filter.x,y:filter.y,w:filter.width,h:filter.height},brand:{x:brand.x,y:brand.y,w:brand.width,h:brand.height},sidebar:{x:sidebar.x,w:sidebar.width},topRail:{x:topRail.x,y:topRail.y,h:topRail.height},scope:{x:scope.x,y:scope.y},visibleFilterIcons,argusDisplay,smartDisplay,theme:document.documentElement.dataset.crmTheme,cards}
+    return {viewport:innerWidth,content:{x:content.x,w:content.width},header:{x:header.x,y:header.y,w:header.width,h:header.height},filter:{x:filter.x,y:filter.y,w:filter.width,h:filter.height},brand:{x:brand.x,y:brand.y,w:brand.width,h:brand.height},brandImage:{x:brandImage.x,w:brandImage.width,h:brandImage.height},sidebar:{x:sidebar.x,w:sidebar.width},topRail:{x:topRail.x,y:topRail.y,h:topRail.height},headerActions:{x:headerActions.x,w:headerActions.width},mapButton:{x:mapButton.x,w:mapButton.width},scope:{x:scope.x,y:scope.y},visibleFilterIcons,argusDisplay,smartDisplay,theme:document.documentElement.dataset.crmTheme,cards}
   })
   assert.ok(layout.content.w<=1341 && layout.content.w>=1200,'centered compact board width')
   assert.ok(Math.abs(layout.header.y-layout.filter.y)<5,'header actions share top rail')
   assert.ok(layout.filter.h<=60,'compact top rail')
   assert.equal(layout.theme,'light','desktop board defaults to reference light theme')
   assert.ok(layout.brand.x<=40 && layout.brand.y===0,'ARGUS wordmark anchors the global top bar')
+  assert.ok(layout.brandImage.w>=100 && layout.brandImage.h>0,'the supplied ARGUS logo asset is visible')
+  assert.ok(layout.headerActions.x>layout.viewport-layout.headerActions.w-24,'global utility buttons align right')
+  assert.ok(Math.abs(layout.mapButton.x+layout.mapButton.w/2-layout.viewport/2)<=1,'Map is centered over the viewport')
   assert.ok(layout.sidebar.x>180 && layout.sidebar.w<=165,'Facebook-like navigation rail sits beside the centered board')
   assert.ok(layout.topRail.y===0 && layout.topRail.h<=60,'board controls stay inside the global top rail')
   assert.ok(layout.scope.y>=58 && layout.scope.x>=layout.content.x,'village filters begin directly below the top rail')
