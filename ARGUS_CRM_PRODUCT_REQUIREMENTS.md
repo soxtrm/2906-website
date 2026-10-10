@@ -55,6 +55,8 @@ This file records Kevin's current product direction so later edits do not remove
 ### Responsive design
 
 - Mobile and desktop share the same ARGUS visual language. Desktop uses the extra width for listings and information density instead of reverting to the old design.
+- Desktop keeps the same three-cloud Search / Smartfilters / Filters header. It must not fall back to the legacy row of unrelated form controls.
+- Desktop listing cards stay compact: target three readable cards per row around 1440 px and two around 1024 px. Extra viewport width must increase the number of visible listings rather than making each card huge.
 - Dark and light themes both need intentional surfaces, contrast and button states. Light mode must not be a colour inversion of dark mode.
 - Preserve reduced-motion accessibility while keeping the normal experience fluid.
 

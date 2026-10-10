@@ -293,7 +293,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     <div ref={ref} className={cn('w-full', compactMobile && 'crm-board-filter-collapsed')}>
       <motion.div
         data-panel={searchOpen ? 'search' : mobilePanel || 'default'}
-        className="crm-board-islands lg:hidden"
+        className="crm-board-islands"
       >
         <motion.div className={cn('crm-argus-orbit flex min-w-0 items-center rounded-[18px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-1.5', searchOpen && 'is-searching')}>
           <AnimatePresence mode="popLayout" initial={false}>
@@ -313,25 +313,27 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
         <motion.button type="button" onClick={() => openMobilePanel('smart')} aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" aria-label={`Smart filters${smartBadgeCount ? `, ${smartBadgeCount} active` : ''}`} className={cn('crm-nav-island crm-smart-island', mobilePanel === 'smart' && 'is-active')}>
           <span className="crm-island-icons crm-smart-icons"><MapPin aria-hidden /><Star aria-hidden /><AtSign aria-hidden /></span>
+          <span className="crm-island-label">Smartfilters</span>
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}
         </motion.button>
 
         <motion.button type="button" onClick={() => openMobilePanel('filters')} aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" aria-label={`Property filters${activeCount ? `, ${activeCount} active` : ''}`} className={cn('crm-nav-island crm-filter-island', mobilePanel === 'filters' && 'is-active')}>
           <span className="crm-island-icons crm-filter-icons"><Euro aria-hidden /><CalendarDays aria-hidden /><BedDouble aria-hidden /><Bath aria-hidden /><Building2 aria-hidden /><Cat aria-hidden /></span>
+          <span className="crm-island-label">Filters</span>
         </motion.button>
       </motion.div>
-      <button type="button" className="crm-board-islands-handle lg:hidden" onClick={() => setCompactMobile(false)} aria-label="Expand ARGUS tools"><span /></button>
+      <button type="button" className="crm-board-islands-handle" onClick={() => setCompactMobile(false)} aria-label="Expand ARGUS tools"><span /></button>
 
       <AnimatePresence initial={false} mode="wait">
         {mobilePanel === 'smart' && (
-          <motion.section id="crm-mobile-smart-panel" key="smart-panel" initial={{ opacity: 0, y: -9, scale: .975, borderRadius: 28 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -7, scale: .982, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 390, damping: 34, mass: .72 }} className="crm-mobile-island-panel crm-mobile-smart-panel lg:hidden" style={{ transformOrigin: 'top 42%' }}>
+          <motion.section id="crm-mobile-smart-panel" key="smart-panel" initial={{ opacity: 0, y: -9, scale: .975, borderRadius: 28 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -7, scale: .982, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 300, damping: 30, mass: .78 }} className="crm-mobile-island-panel crm-mobile-smart-panel" style={{ transformOrigin: 'top 42%' }} onMouseDown={event => event.stopPropagation()}>
             <header><div><span>SMART CLOUD</span><strong>Smart filters</strong></div><div className="crm-mobile-panel-head-actions">{smartBadgeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset smart filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={() => setMobilePanel(null)} aria-label="Close smart filters"><X /></button></div></header>
             <div>{smartTools}</div>
           </motion.section>
         )}
 
         {mobilePanel === 'filters' && (
-          <motion.section id="crm-mobile-filter-panel" key="filter-panel" initial={{ opacity: 0, y: -9, scale: .975, borderRadius: 28 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -7, scale: .982, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 390, damping: 34, mass: .72 }} className="crm-mobile-island-panel crm-mobile-filter-panel lg:hidden" style={{ transformOrigin: 'top right' }}>
+          <motion.section id="crm-mobile-filter-panel" key="filter-panel" initial={{ opacity: 0, y: -9, scale: .975, borderRadius: 28 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -7, scale: .982, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 300, damping: 30, mass: .78 }} className="crm-mobile-island-panel crm-mobile-filter-panel" style={{ transformOrigin: 'top right' }} onMouseDown={event => event.stopPropagation()}>
             <header>
               <div><span>ISLAND 02</span><strong>Property filters</strong></div>
               <div className="crm-mobile-panel-head-actions">{activeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset property filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={() => setMobilePanel(null)} aria-label="Close filters"><X /></button></div>
@@ -384,7 +386,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         )}
       </AnimatePresence>
 
-      <div className="hidden w-full gap-2 lg:flex lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
+      <div className="hidden w-full gap-2">
 
         {/* Search — ref, town or area. The board's own listings are local, so
             this filters instantly rather than round-tripping. */}

@@ -1544,7 +1544,7 @@ function Board() {
       dark={isDark}
       mobileImmersive
     >
-      <div style={{ padding: isMobile ? 14 : 18 }}>
+      <div className="crm-board-content" style={{ padding: isMobile ? 14 : 18 }}>
         {err && <Notice text={err} />}
 
         {/* Two primary workspaces, then compact utility views. Rented stays
@@ -1844,7 +1844,7 @@ function Board() {
         {/* cards */}
         {/* Gap 14→20 (Kev's redesign brief, 2026-08-22) — more editorial
             breathing room between cards, less packed-admin-table. */}
-        <div style={{
+        <div className="crm-listing-grid" style={{
           display: 'grid', gap: isMobile ? 10 : 20, marginTop: isMobile ? 10 : 12,
           // Kev, 2026-08-22: 268 was too narrow — the action row could not fit
           // its buttons and the on/off-market pair got clipped off the right
@@ -1852,7 +1852,7 @@ function Board() {
           // buttons have room to sit on one line instead of overflowing.
           // Kev, 2026-09-11: tried two smaller cards per row on mobile, but it
           // made the board unreadable — reverted to one full-width card per row.
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(560px,1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(min(100%,380px),1fr))',
         }}>
           {renderedVisible.map(r => (
             <Card
@@ -3623,7 +3623,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
         onPointerCancel={() => { swipeStartX.current = null }}
-        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? 138 : '100%', minHeight: isMobile ? undefined : 300, flexShrink: 0, background: '#111', gridColumn: isMobile ? undefined : 1, gridRow: isMobile ? undefined : '1 / 4', touchAction: 'pan-y' }}
+        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? 138 : '100%', minHeight: isMobile ? undefined : 248, flexShrink: 0, background: '#111', gridColumn: isMobile ? undefined : 1, gridRow: isMobile ? undefined : '1 / 4', touchAction: 'pan-y' }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
           ? <motion.img key={r.images[hoverPhotoIdx] || r.images[0]} src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" decoding="async" initial={{ opacity: .35, scale: 1.018 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .18, ease: [0.22, 1, 0.36, 1] }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
