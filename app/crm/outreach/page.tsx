@@ -36,6 +36,10 @@ type Account = {
   id: number; sessionName: string; phone: string; label: string; connected: boolean; lastOutreachAt: string | null
   pool: 'top' | 'bottom'; outreachVolumePercent: number; outreachVolumeUntil: string | null
   active?: boolean; outreachEnabled?: boolean; outreachEligible?: boolean
+  sessionStatus?: string; operationalStatus?: 'ready' | 'offline' | 'restricted'
+  restrictionDetectedAt?: string | null; restrictionUntil?: string | null; restrictionReason?: string | null
+  restrictionsThisWeek?: number
+  recentRuns?: { id: number; status: string; total_contacts: number; sent_count: number; skip_count: number; started_at: string | null; completed_at: string | null; updated_at: string | null; volume_percent_snapshot: number | null }[]
   planningDays?: {day: string; label: string; status: string; armed: boolean; scheduledAt: string | null; count: number}[]
 }
 type Template = { id: number; label: string; text: string; created_at: string }
@@ -85,8 +89,8 @@ function maltaHM(d: Date) {
 // The time picker works in whole minutes while sends retain seconds, so an
 // exact 24h15 suggestion could otherwise miss eligibility by a few seconds.
 const OUTREACH_COOLDOWN_MS = (24 * 60 + 14) * 60_000
-const OUTREACH_STARTER_BATCH_MAX = 10
-const OUTREACH_LIST_MAX = 50
+const OUTREACH_DEFAULT_COUNT = 10
+const OUTREACH_LIST_MAX = 45
 function isArgusManager(account: Account) {
   return /argus\s*1|argus[_-]?1/i.test(`${account.label} ${account.sessionName}`)
 }
@@ -226,7 +230,7 @@ function ArgusConsole() {
 
   const connectedCount = accounts?.filter(a => a.connected && !/^(jasmine|olga)$/i.test(a.sessionName)).length ?? 0
   const orderedAccounts = useMemo(() => [...(accounts || [])].filter(a => !/^(jasmine|olga)$/i.test(a.sessionName.trim())).sort((a, b) => accountPriority(a) - accountPriority(b) || a.id - b.id), [accounts])
-  const outreachAccounts = useMemo(() => orderedAccounts.filter(account => account.outreachEligible !== false && !isArgusManager(account)), [orderedAccounts])
+  const outreachAccounts = useMemo(() => orderedAccounts.filter(account => account.active !== false && account.outreachEnabled !== false && !isArgusManager(account)), [orderedAccounts])
   const selectedAccount = outreachAccounts.find(account => account.id === selectedAccountId) || outreachAccounts.find(account => account.sessionName.toLowerCase() === 'default') || outreachAccounts[0] || null
 
   useEffect(() => {
@@ -293,16 +297,17 @@ function ArgusConsole() {
       </>}
 
       {accounts && activeTab === 'tools' && <>
+        <div className="outreach-control-layout">
         <section className="outreach-account-overview">
-          <header><div><span>ACCOUNT CONTROL</span><h2>Your outreach network.</h2></div><p>Argus 1 keeps the system running. Outreach identities stay separate and use the real last-send timestamp.</p></header>
+          <header><div><span>ACCOUNT CONTROL</span><h2>Accounts</h2></div><p>Select one identity. Restricted accounts stay visible and cannot be armed.</p></header>
           <div className="outreach-account-grid"><div className="account-row-label">SYSTEM & OUTREACH / ARGUS</div>
             {orderedAccounts.map((account, index) => {
-              const manager = isArgusManager(account), rotating = account.outreachEligible !== false && !manager, selected = selectedAccount?.id === account.id, cooldown = cooldownState(account)
-              return <div key={account.id} className={/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? 'account-slot argus-slot' : 'account-slot'}>{index > 0 && /^argus[ _-]?[1-4]$/i.test(orderedAccounts[index-1].sessionName) && !/^argus[ _-]?[1-4]$/i.test(account.sessionName) && <span className="account-team-label">YOUR TEAM</span>}<button key={account.id} type="button" disabled={!rotating} aria-pressed={selected} onClick={() => setSelectedAccountId(account.id)} className={`outreach-account-tile${/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? ' is-argus' : ''}${manager ? ' is-manager' : ''}${!rotating ? ' is-support' : ''}${selected ? ' is-selected' : ''}`} style={{ '--account-accent': accentFor(index).a } as React.CSSProperties}>
-                <i aria-hidden>{manager ? '⌘' : rotating ? '↗' : '◇'}</i><span><b>{accountDisplayName(account)}</b><small>{manager ? 'SYSTEM MANAGER · NOT IN ROTATION' : rotating ? `${account.pool === 'bottom' ? 'Z→A' : 'A→Z'} OUTREACH` : 'SUPPORT · NOT IN ROTATION'}</small></span>
-                <em className={account.connected ? 'is-online' : ''}>{account.connected ? 'ONLINE' : 'OFFLINE'}</em>
-                <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{rotating && <strong className={cooldown.ready ? 'is-ready' : ''}>{cooldown.label}</strong>}</footer>
-                {rotating && <span style={{display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:4,width:'100%',gridColumn:'1 / -1'}}>{account.planningDays?.map((day,index)=><span key={day.day} title={`${day.day}: ${day.status}${day.scheduledAt ? ' · '+maltaHM(new Date(day.scheduledAt)) : ''} · ${day.count} contacts`} style={{textAlign:'center',padding:'6px 2px',borderRadius:6,background:day.armed?'rgba(62,207,142,.14)':'rgba(255,255,255,.04)',fontSize:9,color:day.status==='failed'||day.status==='blocked_session'?'#f2597a':day.armed||day.status==='completed'?'#3ecf8e':MUTED}}><span style={{display:'block'}}>{index===0?'Today':index===1?'Tomorrow':`Day ${index+1}`}</span><b>{day.status==='completed'?'✓ Done':day.status==='running'?'▶ Run':day.status==='blocked_session'?'! Held':day.armed?'✓ Armed':day.status==='failed'?'! Failed':day.status==='empty'?'—':'Draft'}</b></span>)}</span>}
+              const manager = isArgusManager(account), selectable = account.active !== false && account.outreachEnabled !== false && !manager, selected = selectedAccount?.id === account.id, cooldown = cooldownState(account), restricted = account.operationalStatus === 'restricted'
+              return <div key={account.id} className={/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? 'account-slot argus-slot' : 'account-slot'}>{index > 0 && /^argus[ _-]?[1-4]$/i.test(orderedAccounts[index-1].sessionName) && !/^argus[ _-]?[1-4]$/i.test(account.sessionName) && <span className="account-team-label">YOUR TEAM</span>}<button key={account.id} type="button" disabled={!selectable} aria-pressed={selected} onClick={() => setSelectedAccountId(account.id)} className={`outreach-account-tile${/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? ' is-argus' : ''}${manager ? ' is-manager' : ''}${!selectable ? ' is-support' : ''}${restricted ? ' is-restricted' : ''}${selected ? ' is-selected' : ''}`} style={{ '--account-accent': accentFor(index).a } as React.CSSProperties}>
+                <i aria-hidden>{manager ? '⌘' : selectable ? '↗' : '◇'}</i><span><b>{accountDisplayName(account)}</b><small>{manager ? 'SYSTEM MANAGER · NOT IN ROTATION' : selectable ? `${account.pool === 'bottom' ? 'Z→A' : 'A→Z'} OUTREACH` : 'SUPPORT · NOT IN ROTATION'}</small></span>
+                <em className={restricted ? 'is-restricted' : account.connected ? 'is-online' : ''}>{restricted ? 'RESTRICTED' : account.connected ? 'ONLINE' : 'OFFLINE'}</em>
+                <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{selectable && <strong className={cooldown.ready ? 'is-ready' : ''}>{restricted ? `Held${account.restrictionUntil ? ` until ${maltaHM(new Date(account.restrictionUntil))}` : ''}` : cooldown.label}</strong>}</footer>
+                {selectable && <span className="account-plan-strip">{account.planningDays?.map((day,index)=><span key={day.day} title={`${day.day}: ${day.status}${day.scheduledAt ? ' · '+maltaHM(new Date(day.scheduledAt)) : ''} · ${day.count} contacts`}><span>{index===0?'T':index===1?'T+1':`T+${index}`}</span><b>{day.status==='completed'?'✓':day.status==='running'?'▶':day.status==='blocked_session'?'!':day.armed?'✓':day.status==='failed'?'!':'—'}</b></span>)}</span>}
               </button></div>
             })}
             <button className="account-add" onClick={()=>setAdding(true)}><b>+</b><span>Add account<small>Expand your network</small></span></button>
@@ -321,6 +326,7 @@ function ArgusConsole() {
           <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
         </div>
         }
+        </div>
 
       {/* ── GLOBAL PANELS ──────────────────────────────────────────────── */}
       <div style={{ padding: '4px 24px', display: 'flex', gap: 18, flexWrap: 'wrap' }}>
@@ -517,8 +523,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [queueText, setQueueText] = useState('')
   const [msgOpen, setMsgOpen] = useState(true)
   const [msgDraft, setMsgDraft] = useState('')
-  const [count, setCount] = useState(OUTREACH_STARTER_BATCH_MAX)
-  const [countDraft, setCountDraft] = useState(String(OUTREACH_STARTER_BATCH_MAX))
+  const [count, setCount] = useState(OUTREACH_DEFAULT_COUNT)
+  const [countDraft, setCountDraft] = useState(String(OUTREACH_DEFAULT_COUNT))
   const [armTime, setArmTime] = useState('14:15')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
@@ -644,7 +650,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function autoRun() {
     if (!activePlan || busy || activePlan.armed || ['running', 'completed'].includes(activePlan.status)) return
     const last = loadLastUsed(account.id)
-    const seedCount = Math.min(OUTREACH_STARTER_BATCH_MAX, last?.count ?? defaultSeedCount(account))
+    const seedCount = commitCountDraft()
     const seedText = msgDraft.trim() || activePlan.message_template || last?.text || ''
 
     setCount(seedCount)
@@ -661,7 +667,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
     setBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: seedCount, topUp: true })
+      const r = await crmJson(`outreach/plans/${activePlan.id}/generate`, 'POST', { count: seedCount, topUp: false })
       if (seedText) await crmJson(`outreach/plans/${activePlan.id}/message`, 'POST', { text: seedText })
       await crmJson(`outreach/plans/${activePlan.id}/save`, 'POST', {})
       await refresh(activePlan.id)
@@ -703,7 +709,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/arm`, 'POST', { time: armTime })
       if (r.ok === false) {
-        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', account_24h14_cooldown: 'This account is still inside its 24h 14m protection window.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
+        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', account_24h14_cooldown: 'This account is still inside its 24h 14m protection window.', account_restricted: 'This account is restricted and held from outreach.', queue_lock_conflict: 'Some contacts were taken by another armed queue. Regenerate before arming.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
         setNote(reasons[r.reason] || r.reason)
       } else { setNote(`Armed for ${armTime}.`) }
       await refresh()
@@ -720,6 +726,19 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       setNote(days ? `Volume ${volume}% for ${days} days.` : `Volume ${volume}% saved.`)
       onChanged()
     } catch (e: any) { setNote(e?.message || 'Failed to save volume') } finally { setVolumeBusy(false) }
+  }
+
+  async function setRestriction(restricted: boolean) {
+    setBusy(true); setNote('')
+    try {
+      await crmJson(`outreach/accounts/${account.id}/restriction`, 'POST', {
+        restricted,
+        hours: 40,
+        reason: restricted ? 'manual_restriction' : 'manual_review_clear',
+      })
+      setNote(restricted ? 'Account held for at least 40 hours.' : 'Restriction cleared after review.')
+      await onChanged()
+    } catch (e: any) { setNote(e?.message || 'Failed to update restriction') } finally { setBusy(false) }
   }
 
   const s = activePlan?.stats
@@ -739,7 +758,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <span className="queue-eyebrow"><Radio size={13} /> OUTREACH / WORKSPACE</span>
         <h2>Prepare. Review. Connect.</h2>
         <p>One account. One queue. Every step in view.</p>
-        <button className="queue-autosetup" disabled={busy || !activePlan || activePlan.armed || ['running','completed'].includes(activePlan.status)} onClick={autoRun}><Zap size={17} />{busy ? 'Preparing…' : 'Auto-setup queue'}<span>Draft only</span></button>
+        <button className="queue-autosetup" disabled={busy || account.operationalStatus === 'restricted' || !activePlan || activePlan.armed || ['running','completed'].includes(activePlan.status)} onClick={autoRun}><Zap size={17} />{busy ? 'Preparing…' : `Prepare ${count}`}<span>Exact draft · no lock</span></button>
       </div>
       <div className="queue-progress" aria-label="Queue preparation progress">
         {[{icon: Users, label: 'Contacts', value: `${s?.eligible || 0} eligible`, done: Boolean(s?.eligible)}, {icon: MessageSquare, label: 'Message', value: activePlan?.message_template ? 'Saved' : 'Needs text', done: Boolean(activePlan?.message_template)}, {icon: Clock3, label: 'Window', value: armTime + ' · Malta', done: Boolean(activePlan?.scheduled_at)}, {icon: ShieldCheck, label: 'Release', value: activePlan?.armed ? 'Armed' : 'Review first', done: Boolean(activePlan?.armed)}].map((step, i) => <div key={step.label} className={step.done ? 'is-done' : ''}><step.icon size={17} /><span><small>0{i + 1} / {step.label}</small><b>{step.value}</b></span></div>)}
@@ -753,9 +772,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           <div style={{ fontSize: 11, color: MUTED, fontFamily: FM }}>+{account.phone}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: account.connected ? '#3ecf8e' : '#f2597a' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: account.connected ? '#3ecf8e' : '#f2597a' }} />
-            {account.connected ? 'CONNECTED' : 'DISCONNECTED'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: account.operationalStatus === 'restricted' ? '#ff9e64' : account.connected ? '#3ecf8e' : '#f2597a' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: account.operationalStatus === 'restricted' ? '#ff9e64' : account.connected ? '#3ecf8e' : '#f2597a' }} />
+            {account.operationalStatus === 'restricted' ? 'RESTRICTED' : account.connected ? 'CONNECTED' : 'DISCONNECTED'}
           </div>
           {/* Real last-send time from outreach_log; the next window observes
               the shared 24h14 account cooldown. */}
@@ -767,19 +786,21 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         </div>
       </div>
 
-      <div style={{ background: EDITOR, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: '10px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div>
-            <div style={{ fontSize: 9, color: FAINT, letterSpacing: '.1em', fontWeight: 800 }}>OUTREACH VOLUME · {account.pool === 'bottom' ? 'Z→A' : 'A→Z'}</div>
-            <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{volume}% · {volume === 100 ? 'normal pace' : `${(100 / volume).toFixed(1)}× slower`}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 5 }}>
-            <button disabled={volumeBusy} onClick={() => saveVolume(null)} style={btnGhost}>Save</button>
-            <button disabled={volumeBusy} onClick={() => saveVolume(3)} style={{ ...btnGhost, borderColor: accent.a, color: accent.a }}>3 days</button>
-          </div>
+      <div className="account-safety-panel">
+        <div className="account-volume-compact">
+          <span>PACE · {account.pool === 'bottom' ? 'Z→A' : 'A→Z'}</span>
+          <input aria-label={`${account.label} outreach volume percent`} type="number" min={10} max={100} value={volume} onChange={e => setVolume(Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
+          <b>%</b>
+          <input aria-label={`${account.label} outreach volume`} type="range" min={10} max={100} step={1} value={volume} onChange={e => setVolume(Number(e.target.value))} />
+          <button disabled={volumeBusy} onClick={() => saveVolume(null)} style={btnGhost}>Save</button>
         </div>
-        <input aria-label={`${account.label} outreach volume`} type="range" min={10} max={100} step={1} value={volume} onChange={e => setVolume(Number(e.target.value))} style={{ width: '100%', marginTop: 8, accentColor: accent.a }} />
-        {account.outreachVolumeUntil && <div style={{ fontSize: 9.5, color: FAINT }}>Temporary pace until {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(account.outreachVolumeUntil))}</div>}
+        <div className="account-restriction-line">
+          <span><b>{account.restrictionsThisWeek || 0}</b> restrictions this week</span>
+          {account.operationalStatus === 'restricted'
+            ? <><small>{account.restrictionUntil ? `Held until ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(account.restrictionUntil))}` : 'Held pending review'}</small><button disabled={busy} onClick={() => setRestriction(false)} style={btnGhost}>Clear after review</button></>
+            : <button disabled={busy} onClick={() => setRestriction(true)} style={btnGhost}>Mark restricted · 40h</button>}
+        </div>
+        <div className="account-recent-runs"><span>RECENT RUNS</span>{(account.recentRuns || []).slice(0,5).map(run => { const at=run.completed_at||run.updated_at||run.started_at; return <div key={run.id}><b>{run.sent_count}/{run.total_contacts}</b><small>{run.volume_percent_snapshot == null ? 'pace —' : `${run.volume_percent_snapshot}% pace`}</small><time>{at ? `${new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Malta',day:'2-digit',month:'short'}).format(new Date(at))} · ${maltaHM(new Date(at))}` : '—'}</time></div> })}{!(account.recentRuns || []).length && <small>No runs logged.</small>}</div>
       </div>
 
       </div>
@@ -841,8 +862,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
-            disabled={busy || !activePlan || activePlan.armed || activePlan.status === 'running'} onClick={autoRun}
-            title="Prepare up to ten eligible contacts, preserve the existing queue and save this account’s message as a draft. Does not arm or send."
+            disabled={busy || account.operationalStatus === 'restricted' || !activePlan || activePlan.armed || activePlan.status === 'running'} onClick={autoRun}
+            title="Prepare the exact target count as an editable draft. Contacts stay in the shared pool until ARM."
             style={{ ...btnPrimary(accent), flex: '0 0 auto', paddingLeft: 16, paddingRight: 16 }}>
             Auto-setup
           </button>
@@ -906,7 +927,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input type="time" value={armTime} onChange={e => setArmTime(e.target.value)} style={{ ...inputSmall, flex: 1 }} />
-            <button disabled={busy || activePlan?.armed} onClick={arm} style={btnPrimary(accent)}>ARM</button>
+            <button disabled={busy || activePlan?.armed || account.operationalStatus === 'restricted' || !account.connected} onClick={arm} style={btnPrimary(accent)}>ARM</button>
             <button disabled={busy || !activePlan?.armed} onClick={pause} style={btnGhost}>PAUSE</button>
             <button disabled={busy} onClick={cancel} style={{ ...btnGhost, color: 'var(--crm-danger)' }}>CANCEL</button>
           </div>

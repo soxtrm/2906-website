@@ -376,3 +376,12 @@ html:not([data-crm-theme="dark"]) .crm-listing-card .crm-card-still-available{ba
   @keyframes booking-gold-pulse{0%,100%{filter:brightness(1);box-shadow:0 0 0 1px rgba(255,229,111,.35),0 0 11px rgba(232,185,49,.30)}50%{filter:brightness(1.08);box-shadow:0 0 0 2px rgba(255,229,111,.48),0 0 21px rgba(232,185,49,.52)}}
   @keyframes booking-flare{0%,100%{box-shadow:0 22px 65px rgba(22,29,44,.28),0 0 0 1px rgba(232,185,49,.18),-5px 0 27px rgba(255,142,24,.08)}50%{box-shadow:0 22px 65px rgba(22,29,44,.28),0 0 0 2px rgba(232,185,49,.27),6px -2px 35px rgba(255,142,24,.18)}}
 }
+/* Shared motion language for the three top clouds. Short feedback stays
+   immediate; layout changes use one soft deceleration curve. */
+.crm-root{--crm-motion-tap:150ms;--crm-motion-panel:300ms;--crm-motion-layout:360ms;--crm-ease-out:cubic-bezier(.22,1,.36,1);--crm-ease-settle:cubic-bezier(.34,1.25,.64,1)}
+.crm-board-islands{transition:max-height var(--crm-motion-layout) var(--crm-ease-out),opacity var(--crm-motion-panel) var(--crm-ease-out),transform var(--crm-motion-layout) var(--crm-ease-out)}
+.crm-argus-orbit,.crm-nav-island{transition:flex-basis var(--crm-motion-layout) var(--crm-ease-out),width var(--crm-motion-layout) var(--crm-ease-out),color var(--crm-motion-tap) ease-out,border-color var(--crm-motion-tap) ease-out,background-color var(--crm-motion-panel) var(--crm-ease-out),transform var(--crm-motion-panel) var(--crm-ease-settle),box-shadow var(--crm-motion-panel) var(--crm-ease-out)}
+.crm-island-icons{transition:width var(--crm-motion-layout) var(--crm-ease-out),gap var(--crm-motion-layout) var(--crm-ease-out)}
+.crm-island-feature{transition:max-width var(--crm-motion-layout) var(--crm-ease-out),opacity var(--crm-motion-tap) ease-out,transform var(--crm-motion-panel) var(--crm-ease-settle),background-color var(--crm-motion-tap) ease-out,color var(--crm-motion-tap) ease-out}
+.crm-island-feature:active{transform:scale(.91)}
+.crm-mobile-island-panel .is-island-focus{animation-duration:var(--crm-motion-panel);animation-timing-function:var(--crm-ease-out)}

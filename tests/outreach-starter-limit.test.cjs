@@ -5,13 +5,13 @@ const assert = require('node:assert/strict')
 
 const page = fs.readFileSync(path.join(__dirname, '..', 'app', 'crm', 'outreach', 'page.tsx'), 'utf8')
 
-test('outreach planner exposes a ten-contact starter ceiling', () => {
-  assert.match(page, /OUTREACH_STARTER_BATCH_MAX = 10/)
-  assert.match(page, /max=\{OUTREACH_STARTER_BATCH_MAX\}/)
+test('outreach planner keeps ten as the default while accepting exact targets up to 45', () => {
+  assert.match(page, /OUTREACH_DEFAULT_COUNT = 10/)
+  assert.match(page, /OUTREACH_LIST_MAX = 45/)
   assert.match(page, /starter_batch_limit/)
 })
 
-test('saved automatic counts are clamped before list generation', () => {
-  assert.match(page, /Math\.min\(OUTREACH_STARTER_BATCH_MAX, last\?\.count/)
-  assert.match(page, /Math\.min\(OUTREACH_STARTER_BATCH_MAX, overrideCount \?\? count\)/)
+test('automatic preparation uses the operator target exactly and replaces the preview', () => {
+  assert.match(page, /const seedCount = commitCountDraft\(\)/)
+  assert.match(page, /count: seedCount, topUp: false/)
 })
