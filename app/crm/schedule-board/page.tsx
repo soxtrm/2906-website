@@ -1466,6 +1466,7 @@ function Board() {
       dark={isDark}
       townOptions={townOptions}
       smartBadgeCount={discovery.length}
+      onMapOpen={revealMapWorkspace}
       smartTools={<div className="crm-mobile-smart-body">
         <div className="crm-mobile-smart-copy"><strong>Everyday workspace</strong><span>Map, rows and profile stay first. Combined property tools follow when you need them.</span></div>
         <div className="crm-mobile-quick-priority" aria-label="Primary workspace tools">
@@ -3647,7 +3648,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         // normal rounded-photo clipping.
         position: 'relative',
         overflow: menuOpen ? 'visible' : 'hidden',
-        zIndex: menuOpen ? 30 : 'auto',
+        zIndex: menuOpen ? 140 : 'auto',
         // Kev, 2026-08-22: "copy airbnb.de's own UI" — an Airbnb card has
         // almost no shadow at all, just a hairline border; the card reads as
         // "the photo plus some text", not a boxed panel. Dropped the 14/28px
@@ -5182,7 +5183,7 @@ const menuPanel = (dark: boolean): React.CSSProperties => ({
   position: 'absolute', bottom: '100%', right: 0, marginBottom: 6,
   width: 'min(252px, 88vw)', maxHeight: '70vh', overflowY: 'auto',
   background: dark ? '#1A2233' : '#FFFFFF', border: `1px solid ${dark ? DBORDER : LBORDER}`, borderRadius: 12,
-  boxShadow: dark ? '0 10px 32px rgba(0,0,0,0.5)' : '0 10px 32px rgba(15,20,30,0.18)', padding: 8, zIndex: 40,
+  boxShadow: dark ? '0 10px 32px rgba(0,0,0,0.5)' : '0 10px 32px rgba(15,20,30,0.18)', padding: 8, zIndex: 160,
   display: 'flex', flexDirection: 'column', gap: 3,
 })
 const menuSection = (dark: boolean): React.CSSProperties => ({

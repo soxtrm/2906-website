@@ -1,7 +1,7 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Star } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -477,7 +477,6 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   const [moreOpen, setMoreOpen] = useState(false)
   const [navigationCompact, setNavigationCompact] = useState(false)
   const contentRef = useRef<HTMLElement>(null)
-  const bottomNavRef = useRef<HTMLElement>(null)
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
@@ -500,26 +499,6 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
     scroller.addEventListener('scroll', update, { passive: true })
     return () => { cancelAnimationFrame(frame); scroller.removeEventListener('scroll', update) }
   }, [mobileImmersive])
-  useEffect(() => {
-    const nav = bottomNavRef.current
-    const viewport = window.visualViewport
-    if (!nav) return
-    const placeAtVisibleBottom = () => {
-      const visualBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight
-      nav.style.setProperty('--crm-visual-bottom-shift', `${Math.round(visualBottom - window.innerHeight)}px`)
-    }
-    placeAtVisibleBottom()
-    window.addEventListener('resize', placeAtVisibleBottom, { passive: true })
-    window.addEventListener('orientationchange', placeAtVisibleBottom, { passive: true })
-    viewport?.addEventListener('resize', placeAtVisibleBottom, { passive: true })
-    viewport?.addEventListener('scroll', placeAtVisibleBottom, { passive: true })
-    return () => {
-      window.removeEventListener('resize', placeAtVisibleBottom)
-      window.removeEventListener('orientationchange', placeAtVisibleBottom)
-      viewport?.removeEventListener('resize', placeAtVisibleBottom)
-      viewport?.removeEventListener('scroll', placeAtVisibleBottom)
-    }
-  }, [])
   const navItem = (item: typeof NAV[number]) => {
     const Icon = NAV_ICONS[item.key]
     return item.disabled
@@ -549,7 +528,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
       <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
-    <nav ref={bottomNavRef} className="crm-bottom-nav" aria-label="Mobile navigation">
+    <nav className="crm-bottom-nav" aria-label="Mobile navigation">
       <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Expand mobile navigation"><span /></button>
       {items.filter(i => !i.disabled).slice(0, 4).map(item => {
         const Icon = NAV_ICONS[item.key]
@@ -565,12 +544,6 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
         ><Icon size={20} aria-hidden /><span>Map</span></button>
         return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={current ? 'page' : undefined}><Icon size={20} aria-hidden /><span>{item.label}</span></Link>
       })}
-      {active('/schedule-board') && <button
-        type="button"
-        onClick={() => window.dispatchEvent(new CustomEvent('crm-board-view', { detail: 'favourites' }))}
-        aria-label="Favourites"
-        title="Favourites"
-      ><Star size={19} aria-hidden /><span>Favourites</span></button>}
       <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation"><Menu size={20} aria-hidden /><span>More</span></button>
     </nav>
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="crm-text" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', borderRadius: 24, maxHeight: '85dvh', overflowY: 'auto' }}>

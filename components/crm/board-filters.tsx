@@ -13,7 +13,7 @@
 // inputs in inline styles — which is what made it read as bolted on.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, List, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, UserRound, X } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, List, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Star, UserRound, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -172,7 +172,7 @@ function RoomScrubber({ label, values, selected, onChange }: {
   </div>
 }
 
-export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, smartTools, smartBadgeCount = 0, townOptions = [] }: {
+export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, smartTools, onMapOpen, smartBadgeCount = 0, townOptions = [] }: {
   value: BoardFilterValue
   onChange: (patch: Partial<BoardFilterValue>) => void
   onReset: () => void
@@ -188,6 +188,9 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   /** Real board actions supplied by the page. Kept outside this component so
    * the island never invents navigation or duplicates business logic. */
   smartTools?: React.ReactNode
+  /** Uses the board's existing map action. The top Map icon is the one tool
+   * that opens its workspace immediately instead of opening the tool sheet. */
+  onMapOpen?: () => void
   smartBadgeCount?: number
   townOptions?: Array<{ key: string; label: string; n: number }>
 }) {
@@ -336,11 +339,25 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       closeIslandSurfaces()
       return
     }
+    if (smartPickerOpen && mobilePanel !== 'smart') {
+      setIslandFocus(null)
+      setMobilePanel('smart')
+      return
+    }
     setSearchOpen(false)
     setOpen(null)
     setMobilePanel(null)
     setIslandFocus(null)
     setSmartPickerOpen(true)
+  }
+
+  const openMapWorkspace = () => {
+    if (searchOpen || mobilePanel === 'filters' || filterPickerOpen) {
+      closeIslandSurfaces()
+      return
+    }
+    closeIslandSurfaces()
+    onMapOpen?.()
   }
 
   const primeFilterIsland = () => {
@@ -431,9 +448,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
         <motion.div role="group" aria-label={`Daily tools and smart filters${smartBadgeCount ? `, ${smartBadgeCount} active` : ''}`} className={cn('crm-nav-island crm-smart-island', (mobilePanel === 'smart' || smartPickerOpen) && 'is-active')} onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeSmartIsland() }}>
           <span className="crm-island-icons crm-smart-icons">
-            <button type="button" className="crm-island-feature" aria-label="Open map workspace" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-map'} onClick={() => openIslandFeature('smart', 'crm-smart-map')}><MapIcon aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open map workspace" onClick={openMapWorkspace}><MapIcon aria-hidden /></button>
             <button type="button" className="crm-island-feature" aria-label="Open rows workspace" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-rows'} onClick={() => openIslandFeature('smart', 'crm-smart-rows')}><List aria-hidden /></button>
             <button type="button" className="crm-island-feature" aria-label="Open profile workspace" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-profile'} onClick={() => openIslandFeature('smart', 'crm-smart-profile')}><UserRound aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open favourites workspace" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart' && islandFocus === 'crm-smart-favourites'} onClick={() => openIslandFeature('smart', 'crm-smart-favourites')}><Star aria-hidden /></button>
           </span>
           <span className="crm-island-label">Smartfilters</span>
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}

@@ -1,0 +1,130 @@
+--- a/services/reminderOutreach.js
++++ b/services/reminderOutreach.js
+@@ -20,6 +20,27 @@
+ const waha = require('../waha')
+ 
+ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
++const REMINDER_TIME_ZONE = 'Europe/Malta'
++const REMINDER_WINDOW_START_MINUTE = 8 * 60
++const REMINDER_WINDOW_END_MINUTE = 20 * 60 + 30
++const REVIEW_ONLY_BLOCK_REASON = 'REVIEW_ONLY: context recheck required before contact'
++
++function maltaReminderWindow(now = new Date()) {
++  const parts = new Intl.DateTimeFormat('en-CA', {
++    timeZone: REMINDER_TIME_ZONE,
++    year: 'numeric', month: '2-digit', day: '2-digit',
++    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
++  }).formatToParts(now).reduce((acc, part) => {
++    if (part.type !== 'literal') acc[part.type] = part.value
++    return acc
++  }, {})
++  const minuteOfDay = Number(parts.hour) * 60 + Number(parts.minute)
++  return {
++    date: `${parts.year}-${parts.month}-${parts.day}`,
++    minuteOfDay,
++    open: minuteOfDay >= REMINDER_WINDOW_START_MINUTE && minuteOfDay <= REMINDER_WINDOW_END_MINUTE,
++  }
++}
+ // Same "cold" pacing runDirectOutreach uses for a list that isn't a live,
+ // currently-warm conversation (services/adminCommands.js coldDelay()) — a
+ // reminder follow-up is exactly that: reopening a conversation that went
+@@ -99,6 +120,10 @@
+   const eligible = (await db.query(
+     `SELECT session_name FROM whatsapp_accounts
+       WHERE is_active = TRUE AND outreach_enabled = TRUE
++        AND NOT (
++          COALESCE(operational_status, 'active') = 'restricted'
++          AND (restriction_until IS NULL OR restriction_until > NOW())
++        )
+       ORDER BY priority, id`)).rows.map(r => r.session_name)
+   const liveEligible = eligible
+     .map(wanted => working.find(s => String(s.name || '').toLowerCase() === String(wanted).toLowerCase()))
+@@ -134,12 +159,24 @@
+   const accounts = (await db.query(
+     `SELECT session_name FROM whatsapp_accounts
+       WHERE is_active=TRUE AND outreach_enabled=TRUE AND account_persona='kev'
++        AND NOT (
++          COALESCE(operational_status, 'active') = 'restricted'
++          AND (restriction_until IS NULL OR restriction_until > NOW())
++        )
+       ORDER BY priority, id`)).rows.map(r => r.session_name)
+   if (!accounts.length) return { queued: 0, blocked: 0 }
+   const rows = (await db.query(
+     `SELECT * FROM reminders
+-      WHERE status='pending' AND auto_send_status='unplanned'
+-      ORDER BY contact_due_date, id LIMIT $1`, [limit])).rows
++      WHERE status='pending'
++        AND (
++          auto_send_status='unplanned'
++          OR (
++            auto_send_status='blocked'
++            AND auto_send_block_reason=$2
++            AND contact_due_date >= (NOW() AT TIME ZONE 'Europe/Malta')::date
++          )
++        )
++      ORDER BY contact_due_date, id LIMIT $1`, [limit, REVIEW_ONLY_BLOCK_REASON])).rows
+   let queued = 0, blocked = 0
+   const perAccountSlots = new Map()
+   for (let i = 0; i < rows.length; i++) {
+@@ -164,11 +201,23 @@
+           SET contact_classification='owner', auto_send_enabled=TRUE,
+               auto_send_status='queued', auto_send_block_reason=NULL,
+               assigned_session=$2,
+-              auto_send_for=GREATEST(
+-                (($3::date + time '09:00') AT TIME ZONE 'Europe/Malta') + ($4 * interval '2 minutes'),
+-                NOW() + interval '2 minutes')
+-        WHERE id=$1 AND auto_send_status='unplanned'`,
+-      [row.id, session, ymd, slot])
++              auto_send_for=CASE
++                WHEN $3::date > (NOW() AT TIME ZONE 'Europe/Malta')::date
++                  THEN (($3::date + time '08:00') AT TIME ZONE 'Europe/Malta') + ($4 * interval '2 minutes')
++                WHEN (NOW() AT TIME ZONE 'Europe/Malta')::time < time '08:00'
++                  THEN ((((NOW() AT TIME ZONE 'Europe/Malta')::date + time '08:00') AT TIME ZONE 'Europe/Malta') + ($4 * interval '2 minutes'))
++                WHEN (NOW() AT TIME ZONE 'Europe/Malta')::time <= time '20:30'
++                  AND NOW() + interval '2 minutes' + ($4 * interval '2 minutes')
++                    <= ((((NOW() AT TIME ZONE 'Europe/Malta')::date + time '20:30') AT TIME ZONE 'Europe/Malta'))
++                  THEN NOW() + interval '2 minutes' + ($4 * interval '2 minutes')
++                ELSE (((((NOW() AT TIME ZONE 'Europe/Malta')::date + 1) + time '08:00') AT TIME ZONE 'Europe/Malta') + ($4 * interval '2 minutes'))
++              END
++        WHERE id=$1
++          AND (
++            auto_send_status='unplanned'
++            OR (auto_send_status='blocked' AND auto_send_block_reason=$5)
++          )`,
++      [row.id, session, ymd, slot, REVIEW_ONLY_BLOCK_REASON])
+     queued++
+   }
+   return { queued, blocked }
+@@ -182,6 +231,10 @@
+   if (await ownerSendGate.getAutomationMode() === 'REVIEW_ONLY') {
+     return { due: 0, sent: [], blocked: [], waiting: [], failed: [], reviewOnly: true }
+   }
++  const sendWindow = maltaReminderWindow()
++  if (!sendWindow.open) {
++    return { due: 0, sent: [], blocked: [], waiting: [], failed: [], outsideWindow: true }
++  }
+   const preview = (await db.query(
+     `SELECT id, source_session, owner_phone, owner_name, original_note,
+             parsed_timing, estimated_owner_date, contact_due_date,
+@@ -219,7 +272,12 @@
+     if (!sendSession) {
+       await db.query(
+         `UPDATE reminders SET auto_send_status='queued', auto_send_attempted_at=NULL,
+-                auto_send_for=NOW()+INTERVAL '5 minutes'
++                auto_send_for=CASE
++                  WHEN NOW() + interval '5 minutes'
++                    <= ((((NOW() AT TIME ZONE 'Europe/Malta')::date + time '20:30') AT TIME ZONE 'Europe/Malta'))
++                    THEN NOW() + interval '5 minutes'
++                  ELSE (((((NOW() AT TIME ZONE 'Europe/Malta')::date + 1) + time '08:00') AT TIME ZONE 'Europe/Malta'))
++                END
+           WHERE id=$1`, [claim.id])
+       waiting.push({ id: claim.id, reason: 'no_outreach_session_working' })
+       continue
+@@ -320,6 +378,7 @@
+   resolveSendSession,
+   buildOutreminderMessage,
+   classifyReminderContact,
++  maltaReminderWindow,
+   stageUnplannedReminders,
+   runDueAutoBatch,
+ }

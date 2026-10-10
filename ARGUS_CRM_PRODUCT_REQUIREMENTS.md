@@ -47,7 +47,10 @@ This file records Kevin's current product direction so later edits do not remove
 - City filters use compact rounded capsules with counts and horizontal scrolling.
 - On the active board, **Active**, **+3 Months**, and the village filters share one horizontal rail in that order. Village capsules match the compact height of Active so the controls use one short row.
 - Every icon inside Smartfilters and Filters is a real control. It opens the correct cloud, moves to the matching feature or filter section, and visibly highlights that target.
+- Map is the one immediate Smart-Island action: tapping its top icon opens the real map workspace directly. Rows, Profile, Favourites and a second tap on the selected Smart-Island open the Smartfeatures sheet.
+- Favourites belongs in the upper Smart/Profile cloud and its real tool sheet, not in the persistent bottom navigation.
 - On mobile the ARGUS logo cloud stays smaller than the two feature clouds. Opening Filters gives it the same dominant width as opening Smartfilters and compresses/shifts Smartfilters on the same track.
+- The ARGUS wordmark stays optically centred inside its taller logo cloud. The two icon clouds are deliberately lower and lighter than the logo cloud.
 - Do not add a redundant Show map control when Map is already available in the top/workspace navigation.
 - The bottom navigation sits lower, is deep and rounded, and highlights the current destination clearly. **Map** is written out and visually prominent because it is heavily used.
 - The bottom navigation follows the phone's live visual viewport and safe area, staying directly above the device controls across different screen sizes and changing browser chrome instead of floating over the listings.
@@ -58,6 +61,7 @@ This file records Kevin's current product direction so later edits do not remove
 - Listing cards keep their existing actions and status logic.
 - Listing images can be browsed left/right by swipe in the focused/card view, with fluid page movement.
 - Settings and overflow controls must remain open long enough to interact with them; a click inside must never trigger the outside-close handler.
+- An open listing overflow panel paints above the sticky island header and every neighbouring listing; no later card or header may cover its actions.
 - Rented listings show `Rented since` using the actual availability-change date.
 - The Available action on a rented listing uses the separate owner-inventory follow-up flow and message, not the ordinary availability-check flow.
 
@@ -101,6 +105,9 @@ This file records Kevin's current product direction so later edits do not remove
 - Split work evenly between the configured top-start and bottom-start accounts. Keep all working accounts visible and correctly assigned; do not drop Olga or newly added ARGUS accounts.
 - Every attempted outreach produces measurable audit state, including notes-chat logging where configured, counts for queued/sent/skipped/failed and the latest outreach bars/history.
 - Never infer success from a small apparent batch; measure the actual attempt and delivery results.
+- Automatic due-reminder contact runs only on the reminder's due day between 08:00 and 20:30 Europe/Malta. It records `queued`, `sending`, `sent`, `blocked`, `waiting` or `failed`; a Due label alone is never proof of contact.
+- A reminder blocked only by a previous global `REVIEW_ONLY` mode re-enters the queue after the mode returns to `LIVE` when its due date is today or later. Old backlog, DNC, opt-outs, permanent stops and human-active conversations are never replayed by that recovery rule.
+- Reminder sender selection requires an active, outreach-enabled, unrestricted account and a live `WORKING` WAHA session at send time.
 
 ## Release checklist
 
