@@ -86,6 +86,13 @@ This file records Kevin's current product direction so later edits do not remove
 - Rented events are clearly replied/marked in the main chat with the requested strong visual marker.
 - Admins need an admin panel that exposes actions, outcomes, account used, skipped/failed items and audit history.
 
+## Owner Ask flow
+
+- `!ask` and the Board Ask action preserve every decision-relevant client fact supplied by the agent, especially budget/range, nationality, profession, household composition, pets, move-in timing and stated flexibility. The tone rewriter may polish wording but must never decide that these facts are expendable.
+- Internal commission notes, private contact details and opinions about the owner remain excluded. A client's budget is part of the owner question and is not an internal note.
+- If there is no prior conversation with that owner across their properties, the message starts politely with `Good morning`, `Good afternoon` or `Good evening` using Europe/Malta time. Existing conversations do not receive a repetitive first-contact greeting.
+- The exact message shown in the confirmation preview is the text written to the audit log and sent after `Yes`; confirmation must never trigger a second rewrite.
+
 ## Unified data and backend filters
 
 - ARGUS is a working CRM, not a visual filter mock. Every visible board filter must be represented in the backend query contract; browser filtering may provide immediate feedback but cannot be the sole source of truth.
