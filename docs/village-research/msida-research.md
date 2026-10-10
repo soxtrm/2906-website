@@ -1,6 +1,6 @@
 # Msida edition — sourced research draft
 
-Status: release candidate prepared on 10 October 2026; publication verification is pending.
+Status: published at https://www.2906.estate/link-marketplace/areas/msida.html in commit `fe165d7`; production HTTP 200 verified on 10 October 2026.
 
 Last source review: 10 October 2026 (Europe/Malta).
 
@@ -73,3 +73,7 @@ Visual review passed for the mobile single-column flow and desktop grid. Evidenc
 Immediately before preparing the release candidate on 10 October 2026, the Local Council, Office of the Address Registrar, University of Malta, government waterfront update, Primary HealthCare, Welbee's, Busy Bee and Shakinah sources were rechecked. The locality, campus, clinic, waterfront and operator-backed examples remain supported. Mutable hours, prices, menus, route times and unfinished-project assumptions remain outside the evergreen claims.
 
 No external backlink has been published for this edition.
+
+## Publication verification
+
+The production edition was verified at 390 x 844 and 1440 x 1000: exactly one H1, one self-canonical, three Open Graph fields, one BreadcrumbList and no noindex; no horizontal overflow; the 1800 x 731 licensed hero decoded and its attribution remained visible; zero initial map frames and exactly one visible OpenStreetMap frame after interaction, with successful OSM responses. The marketplace index, neighbourhood sitemap and image asset returned the released Msida entry successfully.
