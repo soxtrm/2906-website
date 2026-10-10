@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Eight English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta and Naxxar. Mellieħa is a locally verified release candidate. The older `swieqi-preview.html` is retained
+Status: Nine English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar and Mellieħa. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -33,4 +33,4 @@ Mosta is published independently at https://www.2906.estate/link-marketplace/are
 
 Naxxar is published independently at https://www.2906.estate/link-marketplace/areas/naxxar.html (commit `225972a`, production HTTP 200 verified on 9 October 2026). Its sourced dossier is `naxxar-research.md`; the edition keeps the Victory Square core distinct from the much larger council territory. Mobile/desktop, image, metadata and click-to-load map checks passed locally and in production.
 
-Mellieħa is prepared for publication independently at https://www.2906.estate/link-marketplace/areas/mellieha.html. Its sourced dossier is `mellieha-research.md`; the edition keeps the hillside village core, Mellieħa Bay/Għadira and the wider northern locality distinct. Mobile/desktop, licensed image and click-to-load map checks passed locally; production verification remains required after deployment.
+Mellieħa is published independently at https://www.2906.estate/link-marketplace/areas/mellieha.html (commit `18872e7`, production HTTP 200 verified on 10 October 2026). Its sourced dossier is `mellieha-research.md`; the edition keeps the hillside village core, Mellieħa Bay/Għadira and the wider northern locality distinct. Mobile/desktop, licensed image, metadata and click-to-load map checks passed locally and in production.

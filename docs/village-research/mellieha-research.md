@@ -1,6 +1,6 @@
 # Mellieħa edition — sourced research draft
 
-Status: release candidate. A sourced page, navigation entry, canonical and sitemap entry are ready locally; production publication still requires a commit, deployment and live verification.
+Status: published at https://www.2906.estate/link-marketplace/areas/mellieha.html from commit `18872e7`; production HTTP 200 and mobile/desktop verification completed on 10 October 2026.
 
 Verified: 10 October 2026 (Europe/Malta).
 
