@@ -351,7 +351,7 @@ function Board() {
   const isMobile = useIsMobile()
   const { me, theme } = useCrm()
   const isAdmin = me?.role === 'admin'
-  const isDark = theme === 'dark'
+  const isDark = theme !== 'light'
 
   // Filters initialise from the URL so a shared link restores the search.
   const [f, setF] = useState<Filters>(() => ({
@@ -3988,6 +3988,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             </div>
             {isAdmin && (
               <button onClick={() => guardedFutureAction('Still available check', () => askStillAvailable(false, false, true))}
+                className="crm-card-still-available"
                 style={{ ...stillAvailableBtn(dark), ...futureActionStyle, justifyContent: 'center' }}>
                 Review future check
               </button>
@@ -3996,6 +3997,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
+            className="crm-card-still-available"
             onClick={() => c.canAsk && askStillAvailable(false)}
             disabled={!c.canAsk || avBusy}
             title={c.reason || fresh.label}
@@ -4166,7 +4168,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           )}
         </div>
       )}
-      <div style={{
+      <div className="crm-card-action-tray" style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
         padding: '9px 11px', position: 'relative', gridColumn: isMobile ? '1 / -1' : 2, gridRow: 3,
       }} ref={menuRef}>
@@ -4176,6 +4178,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             exactly where it already is (still under menuSection "Tools"). */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
           <button
+            className="crm-card-action-button"
             data-favourite={r.ref}
             data-star-step={starStepOf(r)}
             aria-pressed={starStepOf(r) > 0}
@@ -4192,14 +4195,14 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <StarGlyph filled={starStepOf(r) > 0} color={starStepOf(r) === 2 ? HOT : A} size={16} />
           </button>
           <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
+          <button className="crm-card-action-button" onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
             aria-label={r.lastChatAt ? `Owner chat, last active ${ago(r.lastChatAt)}` : 'Owner chat'}
             title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}
             style={{ ...trayPrimaryBtn(dark), ...futureActionStyle }}>
             <MessageCircle size={17} />
           </button>
           <button onClick={() => guardedFutureAction('Create booking request', onBook)} data-book-btn={r.ref}
-            className={r.bookingsPossible ? 'crm-book-button-live' : undefined}
+            className={`crm-card-action-button${r.bookingsPossible ? ' crm-book-button-live' : ''}`}
             aria-label="Book a viewing"
             disabled={futureLocked && !isAdmin}
             title={r.bookingsPossible ? 'Bookings possible — owner-confirmed viewing time' : 'Book a viewing'}
@@ -4209,6 +4212,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <CalendarDays size={17} />
           </button>
           <button
+            className="crm-card-action-button"
             data-watag-one={r.ref}
             onClick={() => canTag && !tagging && guardedFutureAction('Send Property Chat tag', onTag)}
             disabled={!canTag || tagging || (futureLocked && !isAdmin)}
@@ -4221,6 +4225,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <AtSign size={17} />
           </button>
           <button
+            className="crm-card-action-button"
             onClick={() => setMenuOpen(v => !v)}
             aria-expanded={menuOpen}
             title="More actions"

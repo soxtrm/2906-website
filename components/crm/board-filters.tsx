@@ -13,7 +13,7 @@
 // inputs in inline styles — which is what made it read as bolted on.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { AtSign, Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, MapPin, RotateCcw, Search, Star, X } from 'lucide-react'
+import { AtSign, Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Star, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -130,13 +130,16 @@ function RoomScrubber({ label, values, selected, onChange }: {
   selected: string[]
   onChange: (next: string[]) => void
 }) {
-  const current = selected.length ? Math.max(0, values.indexOf(selected[selected.length - 1])) + 1 : 0
+  const selectedOrdered = values.filter(value => selected.includes(value))
+  const current = selectedOrdered.length
+    ? Math.max(...selectedOrdered.map(value => values.indexOf(value))) + 1
+    : 0
   const fill = `${(current / values.length) * 100}%`
   return <div className="rounded-2xl border border-[var(--crm-border)] bg-[var(--crm-raised)] p-3">
     <div className="mb-1 flex items-center justify-between gap-3">
       <strong className="text-[12px] text-[var(--crm-text)]">{label}</strong>
       <span className="rounded-full bg-[var(--crm-surface)] px-2 py-1 text-[10px] font-bold text-[var(--crm-accent)]">
-        {selected.length > 1 ? selected.join(' + ') : selected[0] || 'Any'}
+        {selectedOrdered.length ? selectedOrdered.join(' · ') : 'Any'}
       </span>
     </div>
     <input
@@ -190,6 +193,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'smart' | 'filters' | null>(null)
+  const [filterPickerOpen, setFilterPickerOpen] = useState(false)
   const [islandFocus, setIslandFocus] = useState<string | null>(null)
   const [compactMobile, setCompactMobile] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -244,6 +248,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(null)
         setMobilePanel(null)
+        setFilterPickerOpen(false)
       }
     }
     document.addEventListener('mousedown', away)
@@ -287,8 +292,28 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const openIslandFeature = (panel: 'smart' | 'filters', target: string) => {
     setSearchOpen(false)
     setOpen(null)
+    if (panel === 'filters' && !filterPickerOpen) {
+      setMobilePanel(null)
+      setIslandFocus(null)
+      setFilterPickerOpen(true)
+      return
+    }
+    if (panel === 'smart') setFilterPickerOpen(false)
     setIslandFocus(target)
     setMobilePanel(panel)
+  }
+
+  const primeFilterIsland = () => {
+    setSearchOpen(false)
+    setOpen(null)
+    setMobilePanel(null)
+    setIslandFocus(null)
+    setFilterPickerOpen(true)
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }))
+    }
   }
 
   useEffect(() => {
@@ -305,7 +330,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   return (
     <div ref={ref} className={cn('w-full', compactMobile && 'crm-board-filter-collapsed')}>
       <motion.div
-        data-panel={searchOpen ? 'search' : mobilePanel || 'default'}
+        data-panel={searchOpen ? 'search' : mobilePanel || (filterPickerOpen ? 'filter-picker' : 'default')}
         className="crm-board-islands"
       >
         <motion.div className={cn('crm-argus-orbit flex min-w-0 items-center rounded-[18px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-1.5', searchOpen && 'is-searching')}>
@@ -317,7 +342,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 <button type="button" onClick={() => value.q ? onChange({ q: '' }) : setSearchOpen(false)} aria-label={value.q ? 'Clear search' : 'Close search'} className="absolute right-1 grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-[var(--crm-muted)]"><X className="h-4 w-4" /></button>
               </motion.form>
             ) : (
-              <motion.button key="search-trigger" layout type="button" onClick={() => { setOpen(null); setMobilePanel(null); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }}>
+              <motion.button key="search-trigger" layout type="button" onClick={() => { setOpen(null); setMobilePanel(null); setFilterPickerOpen(false); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }}>
                 <span className="crm-argus-logo-window"><img src="/argus-logo-kevin.png" alt="ARGUS" style={{ filter: dark ? 'invert(1) brightness(1.18)' : 'none' }} />{value.q && <i className="crm-search-active-dot" aria-hidden />}</span>
               </motion.button>
             )}
@@ -334,21 +359,28 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}
         </motion.div>
 
-        <motion.div role="group" aria-label={`Property filters${activeCount ? `, ${activeCount} active` : ''}`} className={cn('crm-nav-island crm-filter-island', mobilePanel === 'filters' && 'is-active')}>
+        <motion.div
+          role="group"
+          aria-label={`Property filters${activeCount ? `, ${activeCount} active` : ''}`}
+          className={cn('crm-nav-island crm-filter-island', (mobilePanel === 'filters' || filterPickerOpen) && 'is-active')}
+          onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeFilterIsland() }}
+        >
           <span className="crm-island-icons crm-filter-icons">
-            <button type="button" className="crm-island-feature" aria-label="Open price filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-price'} onClick={() => openIslandFeature('filters', 'crm-filter-price')}><Euro aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open price filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={!!(value.min || value.max)} data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-price'} onClick={() => openIslandFeature('filters', 'crm-filter-price')}><Euro aria-hidden /></button>
             <button type="button" className="crm-island-feature" aria-label="Open availability filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-availability'} onClick={() => openIslandFeature('filters', 'crm-filter-availability')}><CalendarDays aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open bedroom filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-bedrooms'} onClick={() => openIslandFeature('filters', 'crm-filter-bedrooms')}><BedDouble aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open bathroom filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-bathrooms'} onClick={() => openIslandFeature('filters', 'crm-filter-bathrooms')}><Bath aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open property types" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-property-type'} onClick={() => openIslandFeature('filters', 'crm-filter-property-type')}><Building2 aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open pets and tenancy filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-tenancy'} onClick={() => openIslandFeature('filters', 'crm-filter-tenancy')}><Cat aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open bedroom filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={value.beds.length > 0} data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-bedrooms'} onClick={() => openIslandFeature('filters', 'crm-filter-bedrooms')}><BedDouble aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open bathroom filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={value.baths.length > 0} data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-bathrooms'} onClick={() => openIslandFeature('filters', 'crm-filter-bathrooms')}><Bath aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open property types" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={!!value.type} data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-property-type'} onClick={() => openIslandFeature('filters', 'crm-filter-property-type')}><Building2 aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open pets and tenancy filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={rulesActive} data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-tenancy'} onClick={() => openIslandFeature('filters', 'crm-filter-tenancy')}><Cat aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open updated filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={!!value.updated} data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-updated'} onClick={() => openIslandFeature('filters', 'crm-filter-updated')}><SlidersHorizontal aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label="Open rental filters" aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={!!value.rental} data-active={mobilePanel === 'filters' && islandFocus === 'crm-filter-rental'} onClick={() => openIslandFeature('filters', 'crm-filter-rental')}><Snowflake aria-hidden /></button>
           </span>
           <span className="crm-island-label">Filters</span>
         </motion.div>
       </motion.div>
       <button type="button" className="crm-board-islands-handle" onClick={() => setCompactMobile(false)} aria-label="Expand ARGUS tools"><span /></button>
 
-      <AnimatePresence initial={false} mode="sync">
+      <AnimatePresence initial={false} mode="popLayout">
         {mobilePanel === 'smart' && (
           <motion.section id="crm-mobile-smart-panel" key="smart-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-smart-panel" style={{ transformOrigin: 'top 42%' }} onMouseDown={event => event.stopPropagation()}>
             <header><div><span>SMART CLOUD</span><strong>Smart filters</strong></div><div className="crm-mobile-panel-head-actions">{smartBadgeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset smart filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={() => setMobilePanel(null)} aria-label="Close smart filters"><X /></button></div></header>
@@ -398,8 +430,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
             <div id="crm-filter-availability" data-island-focus={islandFocus === 'crm-filter-availability'} className="crm-filter-section">
               <div className="crm-filter-section-title"><CalendarDays /><span>Availability &amp; other</span></div>
               <div className="crm-mobile-extra">{extra}</div>
-              <div className="crm-filter-choice-row crm-updated-choices"><button type="button" aria-pressed={!value.updated} onClick={() => onChange({ updated: '' })}>Any update</button>{UPDATED_OPTIONS.map(([key, label]) => <button key={key} type="button" aria-pressed={value.updated === key} onClick={() => onChange({ updated: value.updated === key ? '' : key })}>{label}</button>)}</div>
-              <div className="crm-filter-choice-row"><button type="button" aria-pressed={!value.rental} onClick={() => onChange({ rental: '' })}>All rentals</button>{RENTAL_MODES.map(mode => <button key={mode.key} type="button" aria-pressed={value.rental === mode.key} onClick={() => onChange({ rental: value.rental === mode.key ? '' : mode.key })}>{mode.icon ? `${mode.icon} ` : ''}{mode.label}</button>)}</div>
+              <div id="crm-filter-updated" data-island-focus={islandFocus === 'crm-filter-updated'} className="crm-filter-choice-row crm-updated-choices"><button type="button" aria-pressed={!value.updated} onClick={() => onChange({ updated: '' })}>Any update</button>{UPDATED_OPTIONS.map(([key, label]) => <button key={key} type="button" aria-pressed={value.updated === key} onClick={() => onChange({ updated: value.updated === key ? '' : key })}>{label}</button>)}</div>
+              <div id="crm-filter-rental" data-island-focus={islandFocus === 'crm-filter-rental'} className="crm-filter-choice-row"><button type="button" aria-pressed={!value.rental} onClick={() => onChange({ rental: '' })}>All rentals</button>{RENTAL_MODES.map(mode => <button key={mode.key} type="button" aria-pressed={value.rental === mode.key} onClick={() => onChange({ rental: value.rental === mode.key ? '' : mode.key })}>{mode.icon ? `${mode.icon} ` : ''}{mode.label}</button>)}</div>
             </div>
 
             <footer>

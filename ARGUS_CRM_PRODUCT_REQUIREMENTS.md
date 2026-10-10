@@ -31,6 +31,8 @@ This file records Kevin's current product direction so later edits do not remove
 ### Normal filters
 
 - Normal Filters contain the detailed property criteria: location, price, beds, baths, pets/tenancy, property type, availability/update and rental mode.
+- Filters use a deliberate two-step mobile flow: the first tap expands the third cloud leftward without opening content below it; a second tap on an individual icon opens the matching section and scrolls it smoothly into view.
+- The expanded filter cloud keeps every category directly selectable, including update/settings and the snowflake rental-mode control. A selected category remains visibly highlighted.
 - Beds and baths use touch-friendly interactive controls and still allow exact individual selection.
 - Regular filters do not show a notification bubble/count on the top cloud.
 - Reset must be immediately visible in the open panel, work in one tap, and leave the panel usable. The sticky footer may also keep Clear all.
@@ -61,6 +63,7 @@ This file records Kevin's current product direction so later edits do not remove
 - Desktop keeps the same three-cloud Search / Smartfilters / Filters header. It must not fall back to the legacy row of unrelated form controls.
 - Desktop listing cards stay compact: target three readable cards per row around 1440 px and two around 1024 px. Extra viewport width must increase the number of visible listings rather than making each card huge.
 - Dark and light themes both need intentional surfaces, contrast and button states. Light mode must not be a colour inversion of dark mode.
+- Listing action buttons and trays must follow the active theme; dark action tiles must never leak into the light theme.
 - Preserve reduced-motion accessibility while keeping the normal experience fluid.
 
 ## Owner availability flow
