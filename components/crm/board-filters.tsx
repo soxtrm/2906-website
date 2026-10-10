@@ -479,7 +479,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
             <button type="button" className="crm-island-feature" aria-label={mapActive ? 'Close map workspace' : 'Open map workspace'} aria-pressed={mapActive} data-active={mapActive} onClick={openMapWorkspace}><MapIcon aria-hidden /></button>
             <button type="button" className="crm-island-feature" aria-label="Open daily tools" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart'} onClick={openSmartMenu}><List aria-hidden /></button>
             <button type="button" className="crm-island-feature" aria-label="Open profile workspace" onClick={() => openDirectSmartWorkspace(onProfileOpen)}><UserRound aria-hidden /></button>
-            <button type="button" className="crm-island-feature" aria-label="Open favourites workspace" aria-pressed={favouritesActive} data-active={favouritesActive} onClick={() => openDirectSmartWorkspace(onFavouritesOpen)}><Star aria-hidden /></button>
+            <button type="button" className="crm-island-feature" aria-label={favouritesActive ? 'Close favourites workspace' : 'Open favourites workspace'} aria-pressed={favouritesActive} data-active={favouritesActive} onClick={() => openDirectSmartWorkspace(onFavouritesOpen)}><Star aria-hidden /></button>
           </span>
           <span className="crm-island-label">Smartfilters</span>
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}

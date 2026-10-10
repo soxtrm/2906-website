@@ -1485,6 +1485,14 @@ function Board() {
     setRefreshTick(t => t + 1)
   }
 
+  const toggleFavouritesWorkspace = useCallback(() => {
+    const favouritesAreActive = !updatesMode && view === 'favourites'
+    setView(favouritesAreActive ? 'board' : 'favourites')
+    setUpdatesMode(false)
+    setSelected(new Set())
+    window.dispatchEvent(new CustomEvent('crm-board-tool-picked'))
+  }, [updatesMode, view])
+
   // ── filter bar ────────────────────────────────────────────────────────────
   const filterBar = (
     <BoardFilters
@@ -1501,7 +1509,7 @@ function Board() {
       favouritesActive={!updatesMode && view === 'favourites'}
       onMapToggle={toggleMapWorkspace}
       onProfileOpen={() => router.push('/crm/agent-profile')}
-      onFavouritesOpen={() => { setView('favourites'); setUpdatesMode(false); setSelected(new Set()); window.dispatchEvent(new CustomEvent('crm-board-tool-picked')) }}
+      onFavouritesOpen={toggleFavouritesWorkspace}
       smartTools={<div className="crm-mobile-smart-body">
         <div className="crm-mobile-smart-copy"><strong>Everyday workspace</strong><span>Map, rows and profile stay first. Combined property tools follow when you need them.</span></div>
         <div className="crm-mobile-quick-priority" aria-label="Primary workspace tools">
@@ -1521,7 +1529,7 @@ function Board() {
         <div className="crm-mobile-quick-grid">
           <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }}><LayoutGrid /><span>Standard</span></button>
           <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()) }}><House /><span>Rented</span></button>
-          <button id="crm-smart-favourites" type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={() => { setView('favourites'); setUpdatesMode(false); setSelected(new Set()) }}><Star /><span>Favourites</span></button>
+          <button id="crm-smart-favourites" type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={toggleFavouritesWorkspace}><Star /><span>Favourites</span></button>
           <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
           <button type="button" aria-pressed={updatesMode} onClick={() => setUpdatesMode(true)}><Clock3 /><span>Recent</span></button>
           <button id="crm-smart-tags" type="button" disabled={!visible.length} onClick={selectVisible}><AtSign /><span>Tags</span></button>
