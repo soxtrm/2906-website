@@ -200,6 +200,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const [searchOpen, setSearchOpen] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const filterPanelRef = useRef<HTMLElement>(null)
+  const filterScrollFrameRef = useRef(0)
   const ref = useRef<HTMLDivElement>(null)
 
   const mobilePlaceholders = ['Reference', 'Village', 'Owner or agent', 'Property type']
@@ -375,9 +377,34 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       ref.current?.querySelectorAll('.is-island-focus').forEach(element => element.classList.remove('is-island-focus'))
       const target = document.getElementById(islandFocus)
       target?.classList.add('is-island-focus')
+      const panel = filterPanelRef.current
+      if (mobilePanel === 'filters' && panel && target) {
+        cancelAnimationFrame(filterScrollFrameRef.current)
+        const panelTop = panel.getBoundingClientRect().top
+        const targetTop = target.getBoundingClientRect().top
+        const start = panel.scrollTop
+        const maximum = panel.scrollHeight - panel.clientHeight
+        const destination = Math.min(maximum, Math.max(0, start + targetTop - panelTop - 68))
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          panel.scrollTop = destination
+          return
+        }
+        const startedAt = performance.now()
+        const animate = (now: number) => {
+          const progress = Math.min(1, (now - startedAt) / 380)
+          const eased = 1 - Math.pow(1 - progress, 4)
+          panel.scrollTop = start + (destination - start) * eased
+          if (progress < 1) filterScrollFrameRef.current = requestAnimationFrame(animate)
+        }
+        filterScrollFrameRef.current = requestAnimationFrame(animate)
+        return
+      }
       target?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }, 140)
-    return () => window.clearTimeout(timer)
+    return () => {
+      window.clearTimeout(timer)
+      cancelAnimationFrame(filterScrollFrameRef.current)
+    }
   }, [mobilePanel, islandFocus])
 
   return (
@@ -442,7 +469,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         )}
 
         {mobilePanel === 'filters' && (
-          <motion.section id="crm-mobile-filter-panel" key="filter-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-filter-panel" style={{ transformOrigin: 'top right' }} onMouseDown={event => event.stopPropagation()}>
+          <motion.section ref={filterPanelRef} id="crm-mobile-filter-panel" key="filter-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-filter-panel" style={{ transformOrigin: 'top right' }} onMouseDown={event => event.stopPropagation()}>
             <header>
               <div><span>ISLAND 02</span><strong>Property filters</strong></div>
               <div className="crm-mobile-panel-head-actions">{activeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset property filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={() => setMobilePanel(null)} aria-label="Close filters"><X /></button></div>
@@ -486,6 +513,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
               <div id="crm-filter-updated" data-island-focus={islandFocus === 'crm-filter-updated'} className="crm-filter-choice-row crm-updated-choices"><button type="button" aria-pressed={!value.updated} onClick={() => onChange({ updated: '' })}>Any update</button>{UPDATED_OPTIONS.map(([key, label]) => <button key={key} type="button" aria-pressed={value.updated === key} onClick={() => onChange({ updated: value.updated === key ? '' : key })}>{label}</button>)}</div>
               <div id="crm-filter-rental" data-island-focus={islandFocus === 'crm-filter-rental'} className="crm-filter-choice-row"><button type="button" aria-pressed={!value.rental} onClick={() => onChange({ rental: '' })}>All rentals</button>{RENTAL_MODES.map(mode => <button key={mode.key} type="button" aria-pressed={value.rental === mode.key} onClick={() => onChange({ rental: value.rental === mode.key ? '' : mode.key })}>{mode.icon ? `${mode.icon} ` : ''}{mode.label}</button>)}</div>
             </div>
+
+            <div className="crm-mobile-filter-scroll-end" aria-hidden="true" />
 
             <footer>
               <button type="button" className="crm-clear-filters" onClick={onReset} disabled={activeCount === 0}>Clear all</button>
