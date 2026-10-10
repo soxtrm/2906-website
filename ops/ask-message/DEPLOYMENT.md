@@ -21,7 +21,7 @@ Rollback backup: `/opt/2906-system/backups/ask-facts-20261010-130948/`
 ## Verification
 
 - `node test/boardAsk.fact-preservation.test.js`
-- `node test/ask.pipeline.candidate.test.js` (WAHA and relay mocked; no external message)
+- `node test/ask.pipeline.test.js` (WAHA and relay mocked; no external message)
 - Live Gemini composition of the reported `Russian couple / IT / €1600–1700` case passed the fact and Malta greeting assertions.
 - Production history query for `#2906-9416` completed successfully.
 - Container restarted healthy with database, workers and HTTP listener up.
