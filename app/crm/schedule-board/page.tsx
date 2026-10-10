@@ -21,6 +21,7 @@ import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/component
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
+import { ListingCardSkeleton } from '@/components/crm/listing-card-skeleton'
 import dynamic from 'next/dynamic'
 const BoardIntelligenceMap = dynamic(() => import('@/components/crm/nexus-place-editor').then(m => m.NexusPlaceEditor), { ssr: false })
 
@@ -1419,7 +1420,7 @@ function Board() {
       smartBadgeCount={discovery.length}
       smartTools={<div className="crm-mobile-smart-body">
         <div className="crm-mobile-smart-copy"><strong>Combine what matters</strong><span>Pick several. Bedroom and property-type choices are matched as alternatives.</span></div>
-        <div className="crm-mobile-smart-grid" aria-label="Smart property filters">
+        <div id="crm-smart-collections" className="crm-mobile-smart-grid" aria-label="Smart property filters">
           {DISCOVERY_ITEMS.map(item => {
             const Icon = item.icon
             const on = discovery.includes(item.key)
@@ -1431,11 +1432,11 @@ function Board() {
           <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }}><LayoutGrid /><span>Standard</span></button>
           <button type="button" onClick={() => router.push('/crm/inventory')}><List /><span>Rows</span></button>
           <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()) }}><House /><span>Rented</span></button>
-          <button type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={() => { setView('favourites'); setUpdatesMode(false); setSelected(new Set()) }}><Star /><span>Favourites</span></button>
+          <button id="crm-smart-favourites" type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={() => { setView('favourites'); setUpdatesMode(false); setSelected(new Set()) }}><Star /><span>Favourites</span></button>
           <button type="button" aria-pressed={mapOpen} onClick={() => setMapOpen(current => !current)}><MapIcon /><span>Map</span></button>
           <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
           <button type="button" aria-pressed={updatesMode} onClick={() => setUpdatesMode(true)}><Clock3 /><span>Recent</span></button>
-          <button type="button" disabled={!visible.length} onClick={selectVisible}><AtSign /><span>Tags</span></button>
+          <button id="crm-smart-tags" type="button" disabled={!visible.length} onClick={selectVisible}><AtSign /><span>Tags</span></button>
           <button type="button" onClick={() => setSwipePanelOpen(true)}><Link2 /><span>Swipe Links</span></button>
           {isAdmin && <button type="button" onClick={openAgentRequests}><MessageCircle /><span>Requests</span></button>}
           <button type="button" onClick={() => router.push('/crm/agent-profile')}><UserRound /><span>Profile</span></button>
@@ -1618,11 +1619,11 @@ function Board() {
             to Active so a listing 6 months out is never mixed into the
             normal board by accident. */}
         {view === 'board' && (
-          <div style={{ display: 'flex', gap: 6, marginBottom: isMobile ? 14 : 8, alignItems: 'center' }}>
+          <div className="crm-board-scope-rail" aria-label="Availability and village filters">
             {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
               const on = horizon === h
               return (
-                <button key={h} onClick={() => setHorizon(h)} style={{
+                <button className="crm-horizon-chip" key={h} onClick={() => setHorizon(h)} style={{
                   ...chip, borderRadius: 999, padding: '4px 11px', fontSize: 11,
                   background: on ? (h === 'future' ? 'rgba(92,100,120,0.28)' : GREEN_SOFT) : 'transparent',
                   borderColor: on ? DBORDER : 'transparent',
@@ -1633,6 +1634,14 @@ function Board() {
                   {h === 'future' && futureCount > 0 && (
                     <span style={{ marginLeft: 5, fontFamily: FM, fontSize: 10, color: DTEXT_FAINT }}>{futureCount}</span>
                   )}
+                </button>
+              )
+            })}
+            {townOptions.map(t => {
+              const on = f.towns.includes(t.key)
+              return (
+                <button key={t.key} type="button" className="crm-city-chip" aria-pressed={on} onClick={() => toggleTown(t.key)}>
+                  <span>{t.label}</span><small>{t.n}</small>
                 </button>
               )
             })}
@@ -1808,7 +1817,7 @@ function Board() {
         </div>}
 
         {/* villages */}
-        {townOptions.length > 0 && (
+        {view !== 'board' && townOptions.length > 0 && (
           <div className="crm-city-rail" aria-label="Filter by city">
             {townOptions.map(t => {
               const on = f.towns.includes(t.key)
@@ -1854,6 +1863,7 @@ function Board() {
           // made the board unreadable — reverted to one full-width card per row.
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(min(100%,380px),1fr))',
         }}>
+          {loading && renderedVisible.length === 0 && <ListingCardSkeleton count={isMobile ? 4 : 6} />}
           {renderedVisible.map(r => (
             <Card
               key={r.ref}
@@ -3595,11 +3605,11 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         border: focused ? `2px solid ${A}` : (frame?.border || `1px solid ${DCARD_BORDER}`),
         boxShadow: focused ? '0 6px 16px rgba(212,137,26,0.28)' : (frame?.glow || '0 1px 3px rgba(0,0,0,0.35)'),
         transition: 'box-shadow 0.18s, border-color 0.18s',
-        display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : undefined,
-        gridTemplateColumns: isMobile ? undefined : 'minmax(190px, 38%) minmax(0, 1fr)',
-        gridTemplateRows: isMobile ? undefined : 'minmax(0, 1fr) auto auto',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '116px minmax(0, 1fr)' : 'minmax(190px, 38%) minmax(0, 1fr)',
+        gridTemplateRows: 'minmax(0, 1fr) auto auto',
         contentVisibility: menuOpen ? 'visible' : 'auto',
-        containIntrinsicSize: isMobile ? '560px' : '340px',
+        containIntrinsicSize: isMobile ? '260px' : '340px',
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
         // the card past its own column and clip against the next one. 0 makes
@@ -3623,7 +3633,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
         onPointerCancel={() => { swipeStartX.current = null }}
-        style={{ cursor: 'pointer', position: 'relative', height: isMobile ? 138 : '100%', minHeight: isMobile ? undefined : 248, flexShrink: 0, background: '#111', gridColumn: isMobile ? undefined : 1, gridRow: isMobile ? undefined : '1 / 4', touchAction: 'pan-y' }}
+        style={{ cursor: 'pointer', position: 'relative', height: '100%', minHeight: isMobile ? 142 : 248, flexShrink: 0, background: '#111', gridColumn: 1, gridRow: isMobile ? 1 : '1 / 4', touchAction: 'pan-y' }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
           ? <motion.img key={r.images[hoverPhotoIdx] || r.images[0]} src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" decoding="async" initial={{ opacity: .35, scale: 1.018 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .18, ease: [0.22, 1, 0.36, 1] }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -3765,7 +3775,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           Available and the tray below it read as dead space — bottom
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
-      <div style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gridColumn: isMobile ? undefined : 2, gridRow: isMobile ? undefined : 1 }}>
+      <div style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gridColumn: 2, gridRow: 1 }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
@@ -4141,7 +4151,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         <div data-card-bookings={r.ref} style={{
           padding: '7px 12px', borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
           background: dark ? DCARD : CARD, display: 'flex', flexDirection: 'column', gap: 3,
-          gridColumn: isMobile ? undefined : 2, gridRow: isMobile ? undefined : 2,
+          gridColumn: isMobile ? '1 / -1' : 2, gridRow: 2,
         }}>
           {r.bookings.slice(0, 2).map(b => (
             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: dark ? DTEXT_DIM : LTEXT_DIM, minWidth: 0 }}>
@@ -4158,7 +4168,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
       )}
       <div style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: '9px 11px', position: 'relative', gridColumn: isMobile ? undefined : 2, gridRow: isMobile ? undefined : 3,
+        padding: '9px 11px', position: 'relative', gridColumn: isMobile ? '1 / -1' : 2, gridRow: 3,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
             to live here moved up above the Still Available button — see the

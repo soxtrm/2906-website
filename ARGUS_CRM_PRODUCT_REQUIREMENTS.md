@@ -39,7 +39,10 @@ This file records Kevin's current product direction so later edits do not remove
 
 ### Discovery and navigation
 
-- City filters use the tall rounded mobile capsules shown in Kevin's reference, with counts and horizontal scrolling.
+- City filters use compact rounded capsules with counts and horizontal scrolling.
+- On the active board, **Active**, **+3 Months**, and the village filters share one horizontal rail in that order. Village capsules match the compact height of Active so the controls use one short row.
+- Every icon inside Smartfilters and Filters is a real control. It opens the correct cloud, moves to the matching feature or filter section, and visibly highlights that target.
+- On mobile the ARGUS logo cloud stays smaller than the two feature clouds. Opening Filters gives it the same dominant width as opening Smartfilters and compresses/shifts Smartfilters on the same track.
 - Do not add a redundant Show map control when Map is already available in the top/workspace navigation.
 - The bottom navigation sits lower, is deep and rounded, and highlights the current destination clearly. **Map** is written out and visually prominent because it is heavily used.
 - Keep useful existing actions and icons. Reorganising the UI must not silently remove working functions.
