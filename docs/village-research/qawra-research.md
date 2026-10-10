@@ -1,6 +1,6 @@
 # Qawra edition — sourced research draft
 
-Status: release candidate verified on 10 October 2026. Publication is recorded only after the production URL passes live checks.
+Status: published and production-verified on 10 October 2026 at https://www.2906.estate/link-marketplace/areas/qawra.html.
 
 Last source review: 10 October 2026 (Europe/Malta).
 
@@ -56,3 +56,10 @@ Visual review confirms a sharp sunset view across the Qawra coastline with open 
 5. Deploy through the existing path and verify the exact production URL before recording the edition as published.
 
 No external backlink has been published for this edition.
+
+## Publication record
+
+- Release commit: `d9281d4`.
+- Production checks: HTTP 200 at the exact Qawra URL; mobile 390 × 844 and desktop 1440 × 1000 without horizontal overflow; hero decoded; canonical, three Open Graph fields and BreadcrumbList present; no `noindex`.
+- The map remains click-to-load: zero initial frames and one visible OpenStreetMap frame after activation, with no failed OpenStreetMap requests during the checks.
+- Marketplace navigation, neighbourhood sitemap and the 181,320-byte WebP asset returned HTTP 200.
