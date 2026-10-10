@@ -82,6 +82,16 @@ This file records Kevin's current product direction so later edits do not remove
 - Rented events are clearly replied/marked in the main chat with the requested strong visual marker.
 - Admins need an admin panel that exposes actions, outcomes, account used, skipped/failed items and audit history.
 
+## Unified data and backend filters
+
+- ARGUS is a working CRM, not a visual filter mock. Every visible board filter must be represented in the backend query contract; browser filtering may provide immediate feedback but cannot be the sole source of truth.
+- The shared internal index joins property facts, assigned agent, protected owner facts, client-match counts, canonical village/area data, allowed map precision and stored traffic coverage.
+- Search is role-aware. Board sessions may search only the board-safe property projection. Full CRM sessions may use protected owner facts as search predicates, but cards must still never return raw owner names, phone numbers, emails or private search text.
+- People searches retain the existing assigned-agent/collaborator scope for non-admin users. Owner results expose masked contact channels only where the existing CRM permission allows the Owners workspace.
+- Exact property coordinates stay internal. Board users receive and filter by canonical village coordinates; changing a precision label alone is not considered protection.
+- Pets, sharing and subletting preserve three states: yes, no and unknown. Structured owner answers take priority. Text-derived fallback facts live in a separate evidence table with their source, rather than overwriting authoritative property columns.
+- Traffic data stays separate from property and taxi data. Responses identify modelled route coverage, observation count, latest observation time and whether the result is live; stored or modelled evidence must never be labelled as a current traffic measurement.
+
 ## Outreach queue
 
 - Manual outreach does not preload or silently consume a batch.

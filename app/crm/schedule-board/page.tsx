@@ -419,6 +419,8 @@ function Board() {
   // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
   const [avail, setAvail] = useState<string>(() => params.get('avail') || params.get('avail_from') || '')
   const [rows, setRows] = useState<Listing[]>([])
+  const [loadedQuery, setLoadedQuery] = useState('')
+  const [backendTownOptions, setBackendTownOptions] = useState<{ key: string; label: string; n: number }[]>([])
   const [rentedCount, setRentedCount] = useState(0)
   const [favCount, setFavCount] = useState(0)
   // ── WATag selection ───────────────────────────────────────────────────────
@@ -645,13 +647,27 @@ function Board() {
   }, [f, rect, circ, sort, view, onlyConfirmed, avail])
 
   // ── fetch ─────────────────────────────────────────────────────────────────
-  // Server-side filters are the numeric/enum ones. Town selection is applied
-  // client-side because the canonical-town folding (Gzira/Gżira, five
-  // spellings of St Paul's Bay) lives in the browser table, not in SQL.
+  // Every visible filter is sent to the backend. The browser repeats the same
+  // predicates below for instant interaction while a deferred request is in
+  // flight, but it is no longer the source of truth for result membership.
   // Bumped after a question is sent, so the per-listing daily counter and the
   // greyed-out state come back from the server rather than being guessed here.
   const [refreshTick, setRefreshTick] = useState(0)
   const reload = useCallback(() => setRefreshTick(t => t + 1), [])
+  const deferredQuery = useDeferredValue(f.q)
+
+  useEffect(() => {
+    let alive = true
+    crmFetch('schedule-board/towns')
+      .then(d => {
+        if (!alive || !Array.isArray(d?.towns)) return
+        setBackendTownOptions(d.towns
+          .filter((town: any) => town?.key && town?.label)
+          .map((town: any) => ({ key: String(town.key), label: String(town.label), n: Number(town.n) || 0 })))
+      })
+      .catch(() => { /* listing-derived fallback below stays usable */ })
+    return () => { alive = false }
+  }, [refreshTick])
 
   useEffect(() => {
     let alive = true
@@ -664,18 +680,30 @@ function Board() {
     if (f.min || f.max) q.set('price_min', f.min || '0')
     if (f.max) q.set('price_max', f.max)
     if (f.type) q.set('type', f.type)
+    if (deferredQuery.trim()) q.set('q', deferredQuery.trim())
+    if (f.towns.length) q.set('towns', f.towns.join(','))
+    if (f.pets) q.set('pets', f.pets)
+    if (f.sharing) q.set('sharing', f.sharing)
+    if (f.sublet) q.set('sublet', '1')
+    if (f.updated) q.set('updated', f.updated)
+    if (f.rental) q.set('rental_mode', f.rental)
+    if (discovery.length) q.set('discovery', discovery.join(','))
+    if (rect) q.set('rect', rectToParam(rect))
+    if (circ) q.set('circ', circToParam(circ))
+    if (view === 'board') q.set('horizon', horizon)
     q.set('sort', sort)
     if (onlyConfirmed) q.set('only_confirmed', '1')
     if (avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
     // 'rented' reuses GET /listings with an explicit ?status= — that filter
     // branch already existed server-side and honours sort like the board
     // does. Favourites is its own endpoint (joined to this agent's own
-    // bookmark rows) and takes neither sort nor the server-side filters, so
-    // the sort control is disabled on that tab only, below.
+    // bookmark rows), but it accepts the same filter contract. Its ordering
+    // remains favourite-time, so the sort control is disabled on that tab.
+    if (view === 'rented') q.set('status', 'rented')
     const path = view === 'rented'
-      ? `schedule-board/listings?status=rented&sort=${encodeURIComponent(sort)}`
+      ? `schedule-board/listings?${q.toString()}`
       : view === 'favourites'
-      ? 'schedule-board/favourites'
+      ? `schedule-board/favourites?${q.toString()}`
       : `schedule-board/listings?${q.toString()}`
     crmFetch(path)
       .then(d => {
@@ -683,12 +711,15 @@ function Board() {
         // canonical localities from the backend FIRST, so the pin / filter-chip / label lookups
         // below (townKey, TOWNS[k], townLabel) resolve every listing the backend can resolve
         registerCanonicalLocalities(d.listings)
-        setRows(d.listings || []); setErr(null)
+        setRows(d.listings || [])
+        setLoadedQuery(deferredQuery.trim().toLowerCase())
+        setErr(null)
       })
       .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [f.beds, f.baths, f.min, f.max, f.type, sort, view, onlyConfirmed, avail, refreshTick])
+  }, [f.beds, f.baths, f.min, f.max, f.type, f.towns, f.pets, f.sharing, f.sublet, f.updated, f.rental,
+      deferredQuery, discovery, rect, circ, horizon, sort, view, onlyConfirmed, avail, refreshTick])
 
   // Deep link from the Agent Workspace dashboard's per-listing action buttons:
   // ?ref=<ref>&action=chat|book opens the matching dialog directly instead of
@@ -761,7 +792,7 @@ function Board() {
   const positioned = useMemo(() => {
     const byTown: Record<string, Listing[]> = {}
     for (const r of rows) {
-      const k = townKey(r.town) || '_unknown'
+      const k = r.localityKey || townKey(r.town) || '_unknown'
       ;(byTown[k] ||= []).push(r)
     }
     // Grouping by town is how the pins fan out; it must NOT become a re-sort of
@@ -784,18 +815,22 @@ function Board() {
   }, [rows])
 
   const townOptions = useMemo(() => {
+    if (backendTownOptions.length) return backendTownOptions
     const counts: Record<string, number> = {}
     for (const r of rows) {
-      const k = townKey(r.town)
+      const k = r.localityKey || townKey(r.town)
       if (k) counts[k] = (counts[k] || 0) + 1
     }
     return Object.entries(counts)
-      .map(([k, n]) => ({ key: k, label: TOWNS[k].label, n }))
+      .map(([k, n]) => ({
+        key: k,
+        label: TOWNS[k]?.label || rows.find(row => row.localityKey === k)?.localityLabel || k,
+        n,
+      }))
       .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label))
-  }, [rows])
+  }, [rows, backendTownOptions])
 
   // ── visible set: filters ∩ town selection ∩ drawn rectangle ───────────────
-  const deferredQuery = useDeferredValue(f.q)
   const visible = useMemo(() => {
     // Free text matches ref, town or sub-location. Applied here rather than in
     // SQL because the whole result set is already local — typing filters at
@@ -803,7 +838,12 @@ function Board() {
     const needle = deferredQuery.trim().toLowerCase()
     return positioned.filter(r => {
       if (f.towns.length && !f.towns.includes(r.tkey)) return false
-      if (needle) {
+      // Full CRM users may match a property through protected owner data. The
+      // server returns only the safe card projection, so once this exact query
+      // has loaded there may intentionally be no owner string in the card to
+      // repeat the match against. While a newer deferred request is pending,
+      // keep local matching for immediate visual feedback.
+      if (needle && needle !== loadedQuery) {
         const hay = [r.ref, r.town, r.subLocation, r.type, r.description, r.listedBy?.displayName, r.contact?.reachesName].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(needle)) return false
       }
@@ -848,8 +888,9 @@ function Board() {
       // above — a filter promising "recently touched" must not include an
       // unknown as if it qualified.
       if (f.updated) {
-        if (!r.createdAt) return false
-        if (Date.now() - Date.parse(r.createdAt) > UPDATED_MAX_MS[f.updated]) return false
+        const touchedAt = r.updatedAt || r.createdAt
+        if (!touchedAt) return false
+        if (Date.now() - Date.parse(touchedAt) > UPDATED_MAX_MS[f.updated]) return false
       }
       if (rect) {
         if (r.lat == null || r.lng == null) return false
@@ -871,7 +912,7 @@ function Board() {
       }
       return true
     })
-  }, [positioned, f.towns, deferredQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon, discovery])
+  }, [positioned, f.towns, deferredQuery, loadedQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon, discovery])
 
   // Mount the board in small, scroll-driven batches. A normal inventory can
   // contain hundreds of cards; constructing every card (and every hook/ref)

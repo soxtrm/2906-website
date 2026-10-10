@@ -1,0 +1,204 @@
+diff --git a/routes/crmScheduleBoard.js b/routes/crmScheduleBoard.js
+index 64383e8..7494949 100644
+--- a/routes/crmScheduleBoard.js
++++ b/routes/crmScheduleBoard.js
+@@ -316,6 +316,7 @@ const BOARD_COLS = `
+ `
+ const BOARD_FROM = `
+     FROM properties p
++    LEFT JOIN argus_workspace_property_index aw ON aw.property_id = p.id
+     LEFT JOIN agents a ON a.id = p.listed_by_agent_id
+     LEFT JOIN owner_contacts oc ON oc.id = p.owner_id
+     LEFT JOIN LATERAL (
+@@ -884,6 +885,124 @@ const SORTS = {
+ const DEFAULT_SORT = 'newest'
+ function orderBy(sort) { return SORTS[String(sort || '')] || SORTS[DEFAULT_SORT] }
+
++function csvQuery(value, max = 30) {
++  return String(value || '').split(',').map(v => v.trim()).filter(Boolean).slice(0, max)
++}
++
++// Filters that used to exist only in the browser. Keeping them here makes the
++// API the source of truth for board, favourites and any future ARGUS client.
++// The joined workspace index contains private owner search text too, but this
++// board deliberately uses board_search_text only: a board query must not turn
++// an owner name or phone number into a side channel.
++function appendWorkspaceBoardFilters(q, me, params, where, allowPrivateSearch = false) {
++  const needle = String(q.q || '').trim().toLowerCase().slice(0, 120)
++  if (needle) {
++    params.push(`%${needle}%`)
++    where.push(`aw.${allowPrivateSearch ? 'private_search_text' : 'board_search_text'} LIKE $${params.length}`)
++  }
++
++  if (q.towns) {
++    const towns = csvQuery(q.towns).map(value => value.toLowerCase())
++    if (towns.length) {
++      params.push(towns)
++      where.push(`(lower(aw.village_key) = ANY($${params.length}) OR lower(p.town) = ANY($${params.length}))`)
++    }
++  }
++  if (q.pets === 'yes' || q.pets === 'no') {
++    params.push(q.pets === 'yes')
++    where.push(`aw.pets_allowed = $${params.length}`)
++  }
++  if (q.sharing === 'yes' || q.sharing === 'no') {
++    params.push(q.sharing === 'yes')
++    where.push(`aw.sharing_allowed = $${params.length}`)
++  }
++  if (q.sublet === '1') where.push(`aw.subletting_considered = TRUE`)
++
++  const recency = { '24h': '24 hours', '48h': '48 hours', '5d': '5 days', '10d': '10 days', '3w': '3 weeks' }
++  if (recency[q.updated]) {
++    params.push(recency[q.updated])
++    where.push(`GREATEST(p.created_at, p.updated_at) >= NOW() - $${params.length}::interval`)
++  }
++
++  const discovery = csvQuery(q.discovery)
++  if (discovery.includes('popular-new')) {
++    params.push(me.id)
++    where.push(`(p.is_hot_property = TRUE
++      OR EXISTS (SELECT 1 FROM agent_favourites af WHERE af.property_id=p.id AND af.agent_id=$${params.length})
++      OR GREATEST(p.created_at, p.updated_at) >= NOW() - INTERVAL '10 days')`)
++  }
++  if (discovery.includes('seafront')) {
++    where.push(`(EXISTS (
++      SELECT 1 FROM property_publishing_status pps
++      JOIN category_groups cg ON cg.group_id=pps.target_ref
++      WHERE pps.property_id=p.id AND pps.channel='category_groups'
++        AND pps.status='posted' AND lower(cg.key)='seafront'
++    ) OR lower(concat_ws(' ',p.town,p.sub_location,p.property_type,p.description,
++           p.public_payload->>'description_public',p.public_payload->>'features'))
++           ~ '(sea[[:space:]]*front|seafront|waterfront|frontline)')`)
++  }
++  const discoveryBeds = discovery.filter(key => /^beds-\d+$/.test(key)).map(key => Number(key.slice(5)))
++  if (discoveryBeds.length) {
++    params.push(discoveryBeds)
++    where.push(`p.bedrooms = ANY($${params.length})`)
++  }
++  const typeClauses = []
++  if (discovery.includes('apartments')) typeClauses.push(`lower(p.property_type) ~ '(apartment|penthouse|maisonette)'`)
++  if (discovery.includes('villas')) typeClauses.push(`lower(p.property_type) LIKE '%villa%'`)
++  if (typeClauses.length) where.push(`(${typeClauses.join(' OR ')})`)
++
++  const rect = csvQuery(q.rect, 4).map(Number)
++  if (rect.length === 4 && rect.every(Number.isFinite)) {
++    const [north, south, east, west] = rect
++    params.push(north, south, east, west)
++    where.push(`aw.locality_latitude BETWEEN $${params.length - 2} AND $${params.length - 3}
++                AND aw.locality_longitude BETWEEN $${params.length} AND $${params.length - 1}`)
++  }
++  const circ = csvQuery(q.circ, 3).map(Number)
++  if (circ.length === 3 && circ.every(Number.isFinite) && circ[2] > 0) {
++    const [lat, lng, radius] = circ
++    params.push(lat, lng, radius)
++    const latParam = params.length - 2
++    const lngParam = params.length - 1
++    const radiusParam = params.length
++    where.push(`aw.locality_latitude IS NOT NULL AND aw.locality_longitude IS NOT NULL AND
++      6371000 * 2 * asin(sqrt(
++        power(sin(radians(aw.locality_latitude - $${latParam}) / 2), 2) +
++        cos(radians($${latParam})) * cos(radians(aw.locality_latitude)) *
++        power(sin(radians(aw.locality_longitude - $${lngParam}) / 2), 2)
++      )) <= $${radiusParam}`)
++  }
++
++  if (q.horizon === 'future') where.push(FAR_FUTURE_AVAILABLE)
++  else if (q.horizon === 'active') where.push(`NOT (${FAR_FUTURE_AVAILABLE})`)
++}
++
++function appendFavouriteCoreFilters(q, params, where) {
++  if (q.beds) {
++    const clauses = csvQuery(q.beds).map(value => {
++      params.push(parseInt(value, 10))
++      return `p.bedrooms ${/\+$/.test(value) ? '>=' : '='} $${params.length}`
++    })
++    if (clauses.length) where.push(`(${clauses.join(' OR ')})`)
++  }
++  if (q.baths) {
++    const clauses = csvQuery(q.baths).map(value => {
++      params.push(parseInt(value, 10))
++      return `p.bathrooms >= $${params.length}`
++    })
++    if (clauses.length) where.push(`(${clauses.join(' OR ')})`)
++  }
++  if (q.price_min) { params.push(parseFloat(q.price_min)); where.push(`COALESCE(p.longlet_price,p.sale_price) >= $${params.length}`) }
++  if (q.price_max) { params.push(parseFloat(q.price_max)); where.push(`COALESCE(p.longlet_price,p.sale_price) <= $${params.length}`) }
++  if (q.type) { params.push(String(q.type).toLowerCase()); where.push(`lower(p.property_type) = $${params.length}`) }
++  const rental = q.rental_mode || q.rental
++  if (rental) {
++    const rm = require('../services/rentalModes')
++    const mode = rm.normalizeModes([rental])[0]
++    if (mode) { params.push(mode); where.push(rm.sqlHasMode('p', params.length)) }
++  }
++}
++
+ // ── GET /listings ───────────────────────────────────────────────────────────
+ // Filters mirror the board UI: beds, baths, budget, type, towns.
+ // Every agent sees every listing — the firewall above, not row filtering, is
+@@ -909,9 +1028,9 @@ router.get('/listings', auth, async (req, res) => {
+     // Rental-mode tab (2026-09-21): ?rental_mode=winter_let|long_let|short_let, on the
+     // effective modes. (short_let alone is hidden by REAL_LISTING_WHERE, so that tab
+     // shows the winter/long listings that are ALSO short lets.)
+-    if (q.rental_mode) {
++    if (q.rental_mode || q.rental) {
+       const rm = require('../services/rentalModes')
+-      const mode = rm.normalizeModes([q.rental_mode])[0]
++      const mode = rm.normalizeModes([q.rental_mode || q.rental])[0]
+       if (mode) { params.push(mode); where.push(rm.sqlHasMode('p', params.length)) }
+     }
+
+@@ -1013,15 +1132,7 @@ router.get('/listings', auth, async (req, res) => {
+         )
+       )`)
+     }
+-    // towns=Sliema,Gzira — the map's village click and the drawn-area
+-    // selection both resolve to a town list on the client.
+-    if (q.towns) {
+-      const towns = String(q.towns).split(',').map(s => s.trim()).filter(Boolean)
+-      if (towns.length) {
+-        params.push(towns.map(t => t.toLowerCase()))
+-        where.push(`LOWER(p.town) = ANY($${params.length})`)
+-      }
+-    }
++    appendWorkspaceBoardFilters(q, me, params, where, req.agent.aud !== 'board' && me.role !== 'board')
+     if (q.only_mine === '1') { params.push(me.id); where.push(`p.listed_by_agent_id = $${params.length}`) }
+
+     // AXIS B: the re-check tier. 'normal' has to match NULL too — the column
+@@ -1218,10 +1329,15 @@ router.post('/me/tour-complete', auth, async (req, res) => {
+ router.get('/towns', auth, async (_req, res) => {
+   try {
+     const r = await db.query(
+-      `SELECT town, COUNT(*)::int AS n
+-         FROM properties
+-        WHERE town IS NOT NULL AND btrim(town) <> ''
+-        GROUP BY town ORDER BY town`)
++      `SELECT COALESCE(aw.village_key, lower(regexp_replace(p.town, '[^a-zA-Z0-9]+', '-', 'g'))) AS key,
++              COALESCE(aw.village_name, p.town) AS label,
++              COUNT(*)::int AS n
++         FROM properties p
++         LEFT JOIN argus_workspace_property_index aw ON aw.property_id=p.id
++        WHERE ${REAL_LISTING_WHERE}
++          AND COALESCE(p.available_status, 'available') = ANY($1)
++          AND p.duplicate_flagged IS NOT TRUE
++        GROUP BY 1,2 ORDER BY n DESC, label`, [boardAction.getActiveStatuses()])
+     res.json({ towns: r.rows })
+   } catch (err) {
+     log.error('crm schedule-board towns failed', { err: err.message })
+@@ -3452,11 +3568,16 @@ router.get('/favourites', auth, async (req, res) => {
+     const me = await liveAgent(req.agent.id)
+     if (!me || !me.active) return res.status(401).json({ error: 'Account inactive' })
+
++    const params = [me.id]
++    const where = ['TRUE']
++    appendFavouriteCoreFilters(req.query, params, where)
++    appendWorkspaceBoardFilters(req.query, me, params, where, req.agent.aud !== 'board' && me.role !== 'board')
+     const r = await db.query(
+       `SELECT ${BOARD_COLS}, f.created_at AS favourited_at ${BOARD_FROM}
+          JOIN agent_favourites f ON f.property_id = p.id AND f.agent_id = $1
++        WHERE ${where.join(' AND ')}
+         ORDER BY f.created_at DESC, p.id DESC
+-        LIMIT 300`, [me.id])
++        LIMIT 300`, params)
+
+     // The viewings behind them, so a favourite can say WHY it is one. One query
+     // for the page rather than one per card. Only this agent's own viewings —

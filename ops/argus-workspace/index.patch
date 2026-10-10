@@ -1,0 +1,14 @@
+diff --git a/index.js b/index.js
+index e3b9c21..af1be6d 100644
+--- a/index.js
++++ b/index.js
+@@ -274,6 +274,9 @@ app.use("/api/crm/board", require("./routes/boardLogin"))
+ // defensive before-the-catch-all ordering as schedule-board above.
+ app.use("/api/crm/clientgroups", require("./routes/crmClientgroups"))
+ app.use("/api/crm/ownergroups", require("./routes/crmOwnergroups"))
++// Unified ARGUS read layer: property, owner, client, village/map and stored
++// traffic coverage behind one permission-aware filter contract.
++app.use("/api/crm/workspace", require("./routes/crmWorkspace"))
+ // ARGUS Agent Notification Engine (Kev, 2026-09-16) -- must mount before the
+ // /api/crm catch-all below, same defensive ordering every other crm/* route
+ // here already follows.
