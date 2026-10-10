@@ -34,11 +34,11 @@ These entries are examples, not rankings or a complete local directory. Operator
 
 ## Image candidate
 
-Candidate for visual review: [“Blick auf den Hafen von Marsaskala.JPG”](https://commons.wikimedia.org/wiki/File:Blick_auf_den_Hafen_von_Marsaskala.JPG), Volker.Ramsloh, photographed 26 October 2012, own work, CC BY-SA 3.0.
+Approved candidate: [“Blick auf den Hafen von Marsaskala.JPG”](https://commons.wikimedia.org/wiki/File:Blick_auf_den_Hafen_von_Marsaskala.JPG), Volker.Ramsloh, photographed 26 October 2012, own work, CC BY-SA 3.0.
 
-The Wikimedia Commons API reports an original size of 5,184 × 3,456 pixels and 7,150,747 bytes. The file has not yet been downloaded, hashed, converted or approved as a hero. Before use, verify that the frame clearly communicates Marsaskala harbour, remains useful at mobile and card crops, contains no misleading property-specific implication and preserves visible author, source, licence and transformation attribution.
+The Wikimedia Commons API reports an original size of 5,184 × 3,456 pixels and 7,150,747 bytes. The downloaded original has SHA-256 `80D4D25E2F4254991F3BBE3156F7BA116540B210DA6B475EA45C0777ED61F3C8`. A resize-only 1,800 × 1,200 WebP was generated at `public/link-marketplace/assets/marsaskala-harbour-volker-ramsloh.webp`; it is 326,040 bytes with SHA-256 `25ED4C67457608E7E3FCED8B049F5E450A4622B710632DE2A593F0DD1E0EF605`.
 
-The image date must remain visible in research records. A harbour photograph is evidence of waterfront context, not proof of the current appearance, outlook or access of any listed property.
+Visual review confirms a clear wide harbour view with the promenade, small craft and dense rising residential fabric. The frame is useful for the central-bay context and has enough horizontal room for a responsive hero, but its 2012 date must remain in the attribution and it must not imply the current appearance, outlook or access of any listed property. Any page treatment must preserve the harbour and hillside, disclose any CSS crop and keep visible author, source, licence and resize attribution.
 
 ## Map and mobility rules
 
@@ -50,11 +50,10 @@ The image date must remain visible in research records. A harbour photograph is 
 
 ## Release gate
 
-1. Download the exact Commons original through the API, record its hash and licence metadata, then complete a visual mobile/desktop crop review.
-2. Recheck the council, Address Registrar, Primary HealthCare and operator sources immediately before drafting the public edition.
-3. Build an independent English noindex preview that keeps central harbour, inland streets, St Thomas Bay and Żonqor distinct.
-4. Test at 390 px and 1440 px, including image decode, attribution, map loading, overflow, one H1 and accessible controls.
-5. Add self-canonical, social metadata, BreadcrumbList, Marketplace navigation and sitemap only for the final release commit.
-6. Deploy through the existing path and verify the exact production URL before recording the edition as published.
+1. Recheck the council, Address Registrar, Primary HealthCare and operator sources immediately before drafting the public edition.
+2. Build an independent English noindex preview that keeps central harbour, inland streets, St Thomas Bay and Żonqor distinct and uses the approved image with visible attribution.
+3. Test at 390 px and 1440 px, including image decode and crop, attribution, map loading, overflow, one H1 and accessible controls.
+4. Add self-canonical, social metadata, BreadcrumbList, Marketplace navigation and sitemap only for the final release commit.
+5. Deploy through the existing path and verify the exact production URL before recording the edition as published.
 
 No external backlink has been published for this edition.
