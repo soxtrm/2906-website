@@ -36,11 +36,15 @@ These are examples, not rankings or a complete local directory. Mutable opening 
 
 ## Image candidate
 
-Candidate for download and visual review: [“Malta - Gharghur - Parish Church 02 ies.jpg”](https://commons.wikimedia.org/wiki/File:Malta_-_Gharghur_-_Parish_Church_02_ies.jpg), Frank Vincentz, photographed 16 April 2014, own work, CC BY-SA 3.0.
+Approved candidate: [“Malta - Gharghur - Triq l-Oratorju + Parish Church 01 ies.jpg”](https://commons.wikimedia.org/wiki/File:Malta_-_Gharghur_-_Triq_l-Oratorju_%2B_Parish_Church_01_ies.jpg), Frank Vincentz, photographed 16 April 2014, own work, CC BY-SA 3.0.
 
-The Wikimedia Commons API reports an original size of 5,616 × 3,744 pixels and 18,438,440 bytes. Its metadata describes the subject as Għargħur Parish Church at Misraħ il-Knisja. The landscape ratio could support a village-centre hero, but the exact original has not yet been downloaded, hashed or visually approved. Any identifiable people, signage, crop risks and scene limitations must be checked at pixel level first.
+The Wikimedia Commons API reports an original size of 5,616 × 3,744 pixels. The exact downloaded original is 16,035,786 bytes with SHA-256 `6E71488A336AFE528C2ECAABEF523377F3A780044A5819F89AF55F851F79C8AC`. A resize-only 1,800 × 1,200 WebP was created at `public/link-marketplace/assets/gharghur-oratorju-parish-frank-vincentz.webp`; it is 168,336 bytes with SHA-256 `5E3C22913E830DEEDF2EC427D6A1F4C015F1961522267FA0D3DE0216C820D452`.
 
-If accepted, visible attribution must retain the author, source, capture date, CC BY-SA 3.0 licence and any resize or crop disclosure. It must not be presented as a current property view, a complete picture of the locality or proof of access from a listing.
+Visual review confirms a sharp daylight village-centre scene looking along Triq l-Oratorju towards the parish church, with the street frame, limestone buildings and square legible at responsive sizes. Two people appear at a distance on a bench and are not individually identifiable. The image has no crop or retouching; responsive CSS may crop its edges and must disclose that presentation if used.
+
+The initially documented [“Malta - Gharghur - Parish Church 02 ies.jpg”](https://commons.wikimedia.org/wiki/File:Malta_-_Gharghur_-_Parish_Church_02_ies.jpg) was rejected after exact-original review because it is a close-up of the church sundial and façade rather than a representative village view. It remains a valid CC BY-SA 3.0 file but should not be used as the hero.
+
+Any published use of the approved image must retain visible author, source, capture date, CC BY-SA 3.0 licence and resize disclosure. It must not be presented as a current property view, a complete picture of the locality or proof of access from a listing.
 
 ## Map and mobility rules
 
@@ -53,7 +57,7 @@ If accepted, visible attribution must retain the author, source, capture date, C
 ## Release gate
 
 1. Recheck the council, Address Registrar, Primary HealthCare, operator and MTA sources immediately before drafting the public edition.
-2. Download and hash the exact Commons original, inspect it visually and create only a documented resize/crop derivative, or reject it and record a better licensed candidate.
+2. Use the approved resize-only Commons derivative with visible attribution; recheck the file page and licence immediately before release.
 3. Build an independent English noindex preview that keeps the old core, outer residential/rural edge, Naxxar and Madliena distinct.
 4. Test at 390 px and 1440 px, including image decode/crop, attribution, click-to-load map, overflow, one H1 and accessible controls.
 5. Add self-canonical, social metadata, BreadcrumbList, Marketplace navigation and sitemap only for the final release commit.
