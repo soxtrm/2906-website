@@ -35,11 +35,13 @@ These are examples, not rankings. Qawra's aquarium/coast material and Buġibba's
 
 ## Image candidate
 
-Candidate for verification: [“Saint Paul's Bay.jpg”](https://commons.wikimedia.org/wiki/File:Saint_Paul%27s_Bay.jpg), Amanda Tonna (Commons user Barton86), photographed 17 September 2020, own work, CC BY-SA 4.0.
+Approved candidate: [“Saint Paul's Bay.jpg”](https://commons.wikimedia.org/wiki/File:Saint_Paul%27s_Bay.jpg), Amanda Tonna (Commons user Barton86), photographed 17 September 2020, own work, CC BY-SA 4.0.
 
-Wikimedia Commons reports a 3,456 × 3,456 JPEG of small boats in the early morning, photographed at 35.949162, 14.407745 and categorised under Buġibba Harbour. The file is therefore potentially useful for the harbour edge, but its square composition, low-light noise and category/location boundary must be visually checked before approval. It must not be labelled as a view from a property or used to collapse Buġibba into St Paul's Bay town. Download, exact file hash, resize-only derivative, crop disclosure and final visual approval remain open.
+The Wikimedia Commons API reports an original size of 3,456 × 3,456 pixels and 2,610,408 bytes. The exact downloaded original has SHA-256 `3A6BAC0C9FBCAE9513D5271EA01F3200AA0C6FCE18E29B7DB5EE943C2C4999F6`. A crop-and-resize derivative was made from the lower 3,456 × 2,304 pixels to reduce empty sky while retaining the full harbour edge, boats and building line. The 1,800 × 1,200 WebP is stored at `public/link-marketplace/assets/st-pauls-bay-amanda-tonna.webp`; it is 392,080 bytes with SHA-256 `F9E6ED9B0E867B361FB1E7F3B4170C4B4E3793DFF8EA2705C3BEE4B8AEEEC2A7`.
 
-Any published use must keep visible author, source, capture date, CC BY-SA 4.0 licence and modification/crop disclosure.
+Visual review confirms a sharp, atmospheric early-morning harbour scene with small craft, waterfront lights and the built edge. Its low-light character is suitable for an editorial hero once the crop is disclosed, but it must not be presented as a daytime condition, a current property view or evidence of access. Commons places the camera at 35.949162, 14.407745 and categorises the file under Buġibba Harbour, so the page must describe it as the wider harbour edge and must not use the image to collapse Buġibba into St Paul's Bay town.
+
+Any published use must keep visible author, source, capture date, CC BY-SA 4.0 licence and crop/resize disclosure.
 
 ## Map and mobility rules
 
