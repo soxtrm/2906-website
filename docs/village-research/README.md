@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Ten English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa and Gzira. The older `swieqi-preview.html` is retained
+Status: Thirteen English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra and Marsaskala. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -36,3 +36,9 @@ Naxxar is published independently at https://www.2906.estate/link-marketplace/ar
 Mellieħa is published independently at https://www.2906.estate/link-marketplace/areas/mellieha.html (commit `18872e7`, production HTTP 200 verified on 10 October 2026). Its sourced dossier is `mellieha-research.md`; the edition keeps the hillside village core, Mellieħa Bay/Għadira and the wider northern locality distinct. Mobile/desktop, licensed image, metadata and click-to-load map checks passed locally and in production.
 
 Gzira is published independently at https://www.2906.estate/link-marketplace/areas/gzira.html (commit `175bf9d`, production HTTP 200 verified on 10 October 2026). Its sourced dossier is `gzira-research.md`; the edition keeps the waterfront, inland residential grid and Manoel Island distinct and draws no harbour shortcut, ferry line or generic walking route. Mobile/desktop, licensed image, metadata and click-to-load map checks passed locally and in production.
+
+Msida is published independently at https://www.2906.estate/link-marketplace/areas/msida.html (commit `fe165d7`, production HTTP 200 verified on 10 October 2026). Its sourced dossier is `msida-research.md`; the edition separates the parish waterfront, inland/Valley Road context and Tal-Qroqq campus area and draws no harbour shortcut or generic route.
+
+Qawra is published independently at https://www.2906.estate/link-marketplace/areas/qawra.html (commit `d9281d4`, production HTTP 200 verified on 10 October 2026). Its sourced dossier is `qawra-research.md`; the edition separates Qawra Point/coast, the inner peninsula and neighbouring Buġibba/San Pawl il-Baħar contexts and draws no water shortcut, ferry line or generic walking route.
+
+Marsaskala is published independently at https://www.2906.estate/link-marketplace/areas/marsaskala.html (release commit `4e89a57`, production HTTP 200 verified on 11 October 2026). Its sourced dossier is `marsaskala-research.md`; the edition separates the central harbour, inland residential streets, St Thomas Bay and the Żonqor side and draws no bay shortcut, ferry line or generic walking route. Primary HealthCare's current catchment pages conflict, so the public edition deliberately does not assign Marsaskala to a specific health centre.

@@ -1,6 +1,6 @@
 # Marsaskala edition — sourced research draft
 
-Status: RESEARCH DRAFT. No public neighbourhood edition has been created or announced.
+Status: PUBLISHED in English at https://www.2906.estate/link-marketplace/areas/marsaskala.html (release commit `4e89a57`; production verified 11 October 2026).
 
 Last source review: 11 October 2026 (Europe/Malta).
 
