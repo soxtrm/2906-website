@@ -1,6 +1,6 @@
 # Għargħur edition — sourced research draft
 
-Status: RESEARCH DRAFT. No public page, navigation entry or sitemap entry exists yet.
+Status: PUBLISHED in English at https://www.2906.estate/link-marketplace/areas/gharghur.html from release commit `b1f7535`; production verification completed on 12 October 2026.
 
 Last source review: 11 October 2026 (Europe/Malta).
 
