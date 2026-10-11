@@ -64,3 +64,7 @@ Any published use of the approved image must retain visible author, source, capt
 6. Deploy through the existing path and verify the exact production URL before recording the edition as published.
 
 No external backlink has been drafted or published for this edition.
+
+## Publication record
+
+Published in English at https://www.2906.estate/link-marketplace/areas/gharghur.html from release commit `b1f7535` on 12 October 2026. Production verification passed on the 2906 and CRM domains: HTTP 200, one H1, one self-canonical, three Open Graph fields, one BreadcrumbList and no robots noindex. The licensed 1,800 × 1,200 hero decoded with visible attribution; initial page load contained no map iframe, and the click-to-load OpenStreetMap frame worked without horizontal overflow at 390 × 844 and 1,440 × 1,000. Marketplace navigation and the neighbourhood sitemap contain the exact public URL.

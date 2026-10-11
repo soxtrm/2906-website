@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Fourteen English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala and St Paul's Bay. The older `swieqi-preview.html` is retained
+Status: Fifteen English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay and Għargħur. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -45,4 +45,4 @@ Marsaskala is published independently at https://www.2906.estate/link-marketplac
 
 St Paul's Bay is published independently at https://www.2906.estate/link-marketplace/areas/st-pauls-bay.html (release commit `b9fa487`, production HTTP 200 verified on 11 October 2026). Its sourced dossier is `st-pauls-bay-research.md`; the edition keeps St Paul's Bay town/parish, inland roads, Buġibba, Qawra, Xemxija and Burmarrad distinct and draws no bay shortcut, ferry line or generic walking route.
 
-Għargħur is the next research candidate in `gharghur-research.md`. It remains a source dossier only: there is no public page, navigation entry or sitemap entry yet.
+Għargħur is published independently at https://www.2906.estate/link-marketplace/areas/gharghur.html (release commit `b1f7535`, production HTTP 200 verified on 12 October 2026). Its sourced dossier is `gharghur-research.md`; the edition separates the old village core, outer residential/rural-edge streets and neighbouring Naxxar, Madliena, Baħar iċ-Ċagħaq and Magħtab contexts and draws no invented boundary or generic walking route.
