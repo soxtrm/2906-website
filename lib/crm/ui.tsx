@@ -513,7 +513,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
       : <Link key={item.key} className="crm-nav-item" href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
   }
-  return <div className={`crm-workspace${mobileImmersive ? ' crm-mobile-immersive' : ''}${navigationCompact ? ' crm-navigation-compact' : ''}`}>
+  return <div className={`crm-workspace${mobileImmersive ? ' crm-mobile-immersive' : ''}${navigationCompact ? ' crm-navigation-compact' : ''}${moreOpen ? ' crm-menu-cloud-open' : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
     <aside className="crm-sidebar">
       <Link className="crm-brand" href={crmPath('/', pathname)} aria-label="Argus dashboard"><img src="/argus-logo-kevin-wordmark.png" alt="Argus" /><small>2906</small></Link>

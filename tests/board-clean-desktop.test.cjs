@@ -8,7 +8,8 @@ const makeListing = (i, town) => ({
   subLocation: null, type: i % 2 ? 'apartment' : 'penthouse', beds: 2 + i % 2, baths: 1, sizeSqm: 90,
   price: 1400 + i * 100, salePrice: null, shortlet: false, availableStatus: 'available', availableDate: null,
   viewingDate: null, viewingStatus: null, hasViewingLocation: false, exclusive: false, createdAt: new Date(Date.now()-i*86400000).toISOString(),
-  lastConfirmedAvailableAt: null, statusChangeReason: null, images: [], imageCount: 0,
+  lastConfirmedAvailableAt: null, statusChangeReason: null,
+  images: ['#e7a25b','#6aa7d8','#82b987','#a67bc4'].map((colour,index)=>`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="800" height="600" fill="${colour}"/><text x="400" y="320" text-anchor="middle" font-size="110" fill="white">${index+1}</text></svg>`)}`), imageCount: 4,
   listedBy: { id: 1, displayName: i % 2 ? 'Kevin' : 'Olga', colorHex: i % 2 ? '#d7b52d' : '#3b82f6' }, isMine: i % 2 === 1,
   viewing: null, bookingsPossible: i === 1, isHotProperty: i < 4,
   contact: { mode: 'owner', reachesName: 'Owner', canAsk: true, reason: null, questionsUsed: 0, questionsPerDay: 2, canQuestion: true, questionReason: null },
@@ -52,7 +53,7 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     const cards=[...document.querySelectorAll('.crm-listing-card')].slice(0,3).map(n=>n.getBoundingClientRect()).map(r=>({x:r.x,y:r.y,w:r.width}))
     return {viewport:innerWidth,content:{x:content.x,w:content.width},header:{x:header.x,y:header.y,w:header.width,h:header.height},filter:{x:filter.x,y:filter.y,w:filter.width,h:filter.height},brand:{x:brand.x,y:brand.y,w:brand.width,h:brand.height},brandImage:{x:brandImage.x,w:brandImage.width,h:brandImage.height},sidebar:{x:sidebar.x,w:sidebar.width},topRail:{x:topRail.x,y:topRail.y,h:topRail.height},headerActions:{x:headerActions.x,w:headerActions.width},mapButton:{x:mapButton.x,w:mapButton.width},scope:{x:scope.x,y:scope.y},visibleFilterIcons,argusDisplay,smartDisplay,theme:document.documentElement.dataset.crmTheme,cards}
   })
-  assert.ok(layout.content.w<=1341 && layout.content.w>=1200,'centered compact board width')
+  assert.ok(layout.content.w<=1581 && layout.content.w>=1450,'wider centered board canvas')
   assert.ok(Math.abs(layout.header.y-layout.filter.y)<5,'header actions share top rail')
   assert.ok(layout.filter.h<=60,'compact top rail')
   assert.equal(layout.theme,'light','desktop board defaults to reference light theme')
@@ -60,7 +61,9 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.ok(layout.brandImage.w>=100 && layout.brandImage.h>0,'the supplied ARGUS logo asset is visible')
   assert.ok(layout.headerActions.x>layout.viewport-layout.headerActions.w-24,'global utility buttons align right')
   assert.ok(Math.abs(layout.mapButton.x+layout.mapButton.w/2-layout.viewport/2)<=1,'Map is centered over the viewport')
-  assert.ok(layout.sidebar.x>180 && layout.sidebar.w<=165,'Facebook-like navigation rail sits beside the centered board')
+  assert.ok(layout.mapButton.x-(layout.filter.x+layout.filter.w)<70,'filter icons finish beside the centred Map control')
+  assert.ok(layout.topRail.x-(layout.mapButton.x+layout.mapButton.w)<70,'board actions start beside the centred Map control')
+  assert.ok(layout.sidebar.x>50 && layout.sidebar.w<=165,'Facebook-like navigation rail sits beside the wider centered board')
   assert.ok(layout.topRail.y===0 && layout.topRail.h<=60,'board controls stay inside the global top rail')
   assert.ok(layout.scope.y>=58 && layout.scope.x>=layout.content.x,'village filters begin directly below the top rail')
   assert.equal(layout.visibleFilterIcons,8,'all property filter icons remain available on desktop')
@@ -68,7 +71,28 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(layout.smartDisplay,'none','mobile smart island is not duplicated on desktop')
   assert.equal(new Set(layout.cards.map(c=>Math.round(c.y))).size,1,'three cards share first row')
   assert.equal(new Set(layout.cards.map(c=>Math.round(c.x))).size,3,'three columns visible')
+  assert.ok(layout.cards.every(card=>card.w>=490),'wider cards give property photography more room')
+  const firstPhoto=await page.$('.crm-listing-photo')
+  await firstPhoto.hover()
+  await page.waitForFunction(()=>document.querySelector('.crm-listing-photo')?.dataset.photoIndex!=='0',{timeout:3000})
+  const hoverGallery=await page.evaluate(()=>({
+    index:Number(document.querySelector('.crm-listing-photo')?.dataset.photoIndex),
+    arrows:[...document.querySelectorAll('.crm-listing-card:first-child .crm-photo-arrow')].map(node=>getComputedStyle(node).opacity),
+    segments:document.querySelectorAll('.crm-listing-card:first-child .crm-photo-progress i').length,
+  }))
+  assert.ok(hoverGallery.index>0,'hover advances through listing photos')
+  assert.deepEqual(hoverGallery.arrows,['1','1'],'photo navigation appears on hover')
+  assert.equal(hoverGallery.segments,4,'photo progress exposes the available images')
   await page.screenshot({path:path.join(os.tmpdir(),'board-clean-desktop.png'),fullPage:false})
+
+  await page.setViewport({width:1024,height:900,deviceScaleFactor:1})
+  const compactDesktop=await page.evaluate(()=>{
+    const cards=[...document.querySelectorAll('.crm-listing-card')].slice(0,3).map(node=>node.getBoundingClientRect())
+    return {overflow:document.documentElement.scrollWidth-innerWidth,rows:cards.map(card=>Math.round(card.y))}
+  })
+  assert.ok(compactDesktop.overflow<=0,'compact desktop has no horizontal overflow')
+  assert.ok(Math.abs(compactDesktop.rows[0]-compactDesktop.rows[1])<=5,'compact desktop keeps two cards in its first row')
+  assert.ok(compactDesktop.rows[2]-compactDesktop.rows[1]>40,'compact desktop wraps the third card cleanly')
 
   // This change is desktop-only. Guard the existing phone shell explicitly:
   // sidebar hidden, the three mobile islands present, and no desktop rail.
@@ -84,5 +108,23 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
   assert.equal(mobile.sidebar,'none','desktop sidebar remains hidden on mobile')
   assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains unchanged')
+  await page.screenshot({path:path.join(os.tmpdir(),'board-clean-mobile.png'),fullPage:false})
+  const compactEdge=await page.evaluate(()=>{
+    const workspace=document.querySelector('.crm-workspace')
+    const edge=document.querySelector('.crm-bottom-nav-edge')
+    const openOpacity=getComputedStyle(edge).opacity
+    workspace.classList.add('crm-navigation-compact')
+    const compactStyle=getComputedStyle(edge)
+    return {openOpacity,compactOpacity:compactStyle.opacity,animation:compactStyle.animationName}
+  })
+  assert.equal(compactEdge.openOpacity,'0','the handle folds into the open menu cloud')
+  assert.ok(Number(compactEdge.compactOpacity)>=.7,'the handle appears when the menu folds away')
+  assert.match(compactEdge.animation,/crm-nav-edge-float/,'the compact handle has subtle movement')
+  await page.screenshot({path:path.join(os.tmpdir(),'board-clean-mobile-compact.png'),fullPage:false})
+  await page.evaluate(()=>document.querySelector('.crm-workspace').classList.remove('crm-navigation-compact'))
+  await page.$eval('.crm-bottom-nav > button:last-child',button=>button.click())
+  await page.waitForFunction(()=>document.querySelector('.crm-workspace')?.classList.contains('crm-menu-cloud-open'))
+  const cloudEdgeOpacity=await page.$eval('.crm-bottom-nav-edge',node=>getComputedStyle(node).opacity)
+  assert.equal(cloudEdgeOpacity,'0','the handle stays hidden while the menu cloud is open')
   await browser.close();console.log('clean desktop board layout passed')
 })().catch(error=>{console.error(error);process.exitCode=1})

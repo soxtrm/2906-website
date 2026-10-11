@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDown, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, UserRound, Plus } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, UserRound, Plus } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -3653,9 +3653,15 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   // every visible card; on a phone that kept React updating cards the user was
   // not touching and made the board feel permanently busy.
   const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
+  const [photoHovered, setPhotoHovered] = useState(false)
   const swipeStartX = useRef<number | null>(null)
   const didSwipePhoto = useRef(false)
   const photoCount = (r.images || []).length
+  useEffect(() => {
+    if (isMobile || !photoHovered || photoCount < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = window.setInterval(() => setHoverPhotoIdx(index => (index + 1) % photoCount), 1400)
+    return () => window.clearInterval(timer)
+  }, [isMobile, photoHovered, photoCount])
   const previewPhotoAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'mouse' || photoCount < 2) return
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -3733,9 +3739,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           matter how many columns fit. `objectFit: cover` still crops rather
           than distorts, so nothing is squashed. */}
       <div
+        className="crm-listing-photo"
+        data-photo-index={hoverPhotoIdx}
+        data-photo-count={photoCount}
         onClick={() => { if (didSwipePhoto.current) { didSwipePhoto.current = false; return }; onOpen() }}
+        onPointerEnter={event => { if (event.pointerType === 'mouse' && photoCount > 1) setPhotoHovered(true) }}
         onPointerMove={previewPhotoAtPointer}
-        onPointerLeave={() => setHoverPhotoIdx(0)}
+        onPointerLeave={() => { setPhotoHovered(false); setHoverPhotoIdx(0) }}
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
         onPointerCancel={() => { swipeStartX.current = null }}
@@ -3755,6 +3765,24 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0) 22%, ' +
             'rgba(0,0,0,0) 72%, rgba(0,0,0,0.42) 100%)',
         }} />
+
+        {photoCount > 1 && !isMobile && <>
+          <button type="button" className="crm-photo-arrow crm-photo-arrow-prev"
+            aria-label={`Previous photo of #${r.ref}`}
+            onPointerMove={event => event.stopPropagation()}
+            onClick={event => { event.stopPropagation(); setHoverPhotoIdx(index => (index - 1 + photoCount) % photoCount) }}>
+            <ChevronLeft size={17} />
+          </button>
+          <button type="button" className="crm-photo-arrow crm-photo-arrow-next"
+            aria-label={`Next photo of #${r.ref}`}
+            onPointerMove={event => event.stopPropagation()}
+            onClick={event => { event.stopPropagation(); setHoverPhotoIdx(index => (index + 1) % photoCount) }}>
+            <ChevronRight size={17} />
+          </button>
+          <div className="crm-photo-progress" aria-hidden>
+            {(r.images || []).slice(0, 8).map((_, index) => <i key={index} data-active={index === hoverPhotoIdx} />)}
+          </div>
+        </>}
 
         {r.isHotProperty && (
           <span style={{ position: 'absolute', top: 10, left: 10, background: HOT, color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
@@ -3841,7 +3869,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         {/* Image count, bottom right. */}
         {r.imageCount > 0 && (
           <span style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#FFF', fontSize: 10, fontFamily: FM, padding: '3px 7px', borderRadius: 999 }}>
-            {r.imageCount}
+            {!isMobile && photoCount > 1 ? `${hoverPhotoIdx + 1}/${r.imageCount || photoCount}` : r.imageCount}
           </span>
         )}
 
