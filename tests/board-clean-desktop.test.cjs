@@ -36,6 +36,12 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   await page.goto('http://localhost:4174/crm/schedule-board',{waitUntil:'domcontentloaded'})
   await page.waitForSelector('.crm-listing-card')
   await page.waitForFunction(()=>document.querySelectorAll('.crm-listing-card').length>=6)
+  await page.evaluate(()=>document.fonts.ready)
+  await page.waitForFunction(()=>{
+    const header=document.querySelector('.crm-header')?.getBoundingClientRect()
+    const filter=document.querySelector('.crm-filterbar')?.getBoundingClientRect()
+    return header && filter && Math.abs(header.y-filter.y)<5
+  })
   const layout=await page.evaluate(()=>{
     const content=document.querySelector('.crm-board-content').getBoundingClientRect()
     const header=document.querySelector('.crm-header').getBoundingClientRect()
@@ -94,8 +100,8 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.ok(Math.abs(compactDesktop.rows[0]-compactDesktop.rows[1])<=5,'compact desktop keeps two cards in its first row')
   assert.ok(compactDesktop.rows[2]-compactDesktop.rows[1]>40,'compact desktop wraps the third card cleanly')
 
-  // This change is desktop-only. Guard the existing phone shell explicitly:
-  // sidebar hidden, the three mobile islands present, and no desktop rail.
+  // Guard the phone shell explicitly: sidebar hidden, the three mobile
+  // islands present, and no desktop rail.
   await page.setViewport({width:390,height:844,deviceScaleFactor:1})
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.crm-sidebar')).display==='none')
   const mobile=await page.evaluate(()=>({
@@ -108,7 +114,7 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(mobile.desktopRail,null,'desktop controls are not rendered on mobile')
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
   assert.equal(mobile.sidebar,'none','desktop sidebar remains hidden on mobile')
-  assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains unchanged')
+  assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains available')
   assert.deepEqual(mobile.workspaceLabels,['Map','Favourites','More'],'mobile workspace island has exactly three distinct actions')
   assert.equal(await page.$$('.crm-smart-island [data-label="Profile"]') .then(nodes=>nodes.length),0,'profile is not duplicated in the floating island')
 
@@ -121,24 +127,69 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(await page.$$eval('[role="dialog"] .crm-nav-item',nodes=>nodes.filter(node=>node.textContent.includes('Profile')).length),1,'profile appears once in shared navigation')
   await page.$eval('#crm-smart-tags',button=>button.click())
   await page.waitForSelector('.crm-selection-help')
+  await page.waitForSelector('[role="dialog"]',{hidden:true})
   assert.match(await page.$eval('.crm-selection-help',node=>node.textContent),/Nothing is picked automatically/)
   await page.screenshot({path:path.join(os.tmpdir(),'board-clean-mobile.png'),fullPage:false})
-  const compactEdge=await page.evaluate(()=>{
+  const motionRecorder=process.env.RECORD_MOTION
+    ? await page.screencast({path:path.join(__dirname,'..','artifacts','ui-audit','pass2-island-motion.webm'),fps:30,speed:.25})
+    : null
+  if(motionRecorder) await new Promise(resolve=>setTimeout(resolve,500))
+
+  const moveContent = async (positions, delay = 70) => {
+    for (const top of positions) {
+      await page.$eval('.crm-content',(node,nextTop)=>{
+        node.scrollTop=nextTop
+        node.dispatchEvent(new Event('scroll'))
+      },top)
+      await new Promise(resolve=>setTimeout(resolve,delay))
+    }
+  }
+  await moveContent([6,2,9],55)
+  assert.equal(await page.$eval('.crm-workspace',node=>node.classList.contains('crm-navigation-compact')),false,'tiny scroll jitter keeps the island expanded')
+  await moveContent([28,52,78,104,132],150)
+  await page.waitForFunction(()=>document.querySelector('.crm-workspace')?.classList.contains('crm-navigation-compact'))
+  assert.deepEqual(await page.$$eval('.crm-bottom-nav :is(a,button)',nodes=>nodes.filter(node=>node.tabIndex>=0).map(node=>node.getAttribute('aria-label')||node.textContent.trim())),['Show mobile navigation'],'only the visible compact handle remains in the keyboard order')
+  await moveContent([128,133,129],55)
+  assert.equal(await page.$eval('.crm-workspace',node=>node.classList.contains('crm-navigation-compact')),true,'tiny direction changes do not flicker the compact island')
+  await moveContent([111,88,62],45)
+  await page.waitForFunction(()=>!document.querySelector('.crm-workspace')?.classList.contains('crm-navigation-compact'))
+  await new Promise(resolve=>setTimeout(resolve,560))
+  if(motionRecorder) await motionRecorder.stop()
+
+  const openIsland=await page.evaluate(()=>{
     const workspace=document.querySelector('.crm-workspace')
-    const edge=document.querySelector('.crm-bottom-nav-edge')
-    const openOpacity=getComputedStyle(edge).opacity
+    const island=document.querySelector('.crm-bottom-nav')
+    const handle=document.querySelector('.crm-bottom-nav-handle')
+    const openRect=island.getBoundingClientRect()
+    const openHandleOpacity=getComputedStyle(handle).opacity
     workspace.classList.add('crm-navigation-compact')
-    const compactStyle=getComputedStyle(edge)
-    return {openOpacity,compactOpacity:compactStyle.opacity,animation:compactStyle.animationName}
+    return {w:openRect.width,h:openRect.height,openHandleOpacity}
   })
-  assert.equal(compactEdge.openOpacity,'0','the handle folds into the open menu cloud')
-  assert.ok(Number(compactEdge.compactOpacity)>=.7,'the handle appears when the menu folds away')
-  assert.match(compactEdge.animation,/crm-nav-edge-float/,'the compact handle has subtle movement')
+  await new Promise(resolve=>setTimeout(resolve,620))
+  const compactIsland=await page.evaluate(()=>{
+    const island=document.querySelector('.crm-bottom-nav')
+    const handle=document.querySelector('.crm-bottom-nav-handle')
+    const compactRect=island.getBoundingClientRect()
+    const compactStyle=getComputedStyle(island)
+    const handleStyle=getComputedStyle(handle)
+    const handleMarkStyle=getComputedStyle(handle.querySelector('span'))
+    return {w:compactRect.width,h:compactRect.height,compactOpacity:compactStyle.opacity,handleOpacity:handleStyle.opacity,animation:handleMarkStyle.animationName}
+  })
+  assert.equal(openIsland.openHandleOpacity,'0','the handle stays inside the expanded island')
+  assert.ok(compactIsland.w<openIsland.w/3 && compactIsland.h<openIsland.h/2,'the same island shell morphs into a small bar')
+  assert.ok(Number(compactIsland.compactOpacity)>=.7 && Number(compactIsland.handleOpacity)>=.9,'the compact shell and its handle remain usable')
+  assert.match(compactIsland.animation,/crm-nav-handle-breathe/,'the compact handle has subtle movement')
   await page.screenshot({path:path.join(os.tmpdir(),'board-clean-mobile-compact.png'),fullPage:false})
+  assert.equal(await page.$$('.crm-bottom-nav').then(nodes=>nodes.length),1,'expanded and compact states share one island shell')
+  assert.equal(await page.$$('.crm-bottom-nav-edge').then(nodes=>nodes.length),0,'there is no replacement edge control')
   await page.evaluate(()=>document.querySelector('.crm-workspace').classList.remove('crm-navigation-compact'))
   await page.$eval('.crm-bottom-nav > button:last-child',button=>button.click())
   await page.waitForFunction(()=>document.querySelector('.crm-workspace')?.classList.contains('crm-menu-cloud-open'))
-  const cloudEdgeOpacity=await page.$eval('.crm-bottom-nav-edge',node=>getComputedStyle(node).opacity)
-  assert.equal(cloudEdgeOpacity,'0','the handle stays hidden while the menu cloud is open')
+  await new Promise(resolve=>setTimeout(resolve,260))
+  const cloudIslandOpacity=await page.$eval('.crm-bottom-nav',node=>getComputedStyle(node).opacity)
+  assert.equal(cloudIslandOpacity,'0','the complete mini island disappears while the menu cloud is open')
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}])
+  await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.crm-bottom-nav')).transitionDuration)<=.001)
+  assert.equal(await page.$eval('.crm-bottom-nav-handle span',node=>getComputedStyle(node).animationName),'none','reduced motion removes idle handle movement')
   await browser.close();console.log('clean desktop board layout passed')
 })().catch(error=>{console.error(error);process.exitCode=1})

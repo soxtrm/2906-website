@@ -491,21 +491,36 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
     if (!mobileImmersive || !scroller) return
     let frame = 0
     let lastTop = scroller.scrollTop
+    let lastTime = performance.now()
+    let velocity = 0
     let direction: 'up' | 'down' | null = null
     let directionStart = lastTop
     const update = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
         const nextTop = scroller.scrollTop
-        const nextDirection = nextTop > lastTop ? 'down' : nextTop < lastTop ? 'up' : direction
+        const now = performance.now()
+        const delta = nextTop - lastTop
+        const elapsed = Math.max(8, now - lastTime)
+        const instantVelocity = delta / elapsed
+        velocity = velocity * .68 + instantVelocity * .32
+        const nextDirection = delta > 1 ? 'down' : delta < -1 ? 'up' : direction
         if (nextDirection && nextDirection !== direction) {
           direction = nextDirection
           directionStart = lastTop
         }
         const travel = nextTop - directionStart
-        if (nextTop < 24 || travel < -12) setNavigationCompact(false)
-        else if (nextTop > 86 && travel > 22) setNavigationCompact(true)
+        // Directional hysteresis prevents the island from chattering during
+        // small finger corrections. A deliberate downward gesture needs more
+        // travel than an upward reveal, while velocity keeps slow reading
+        // scrolls from constantly moving the controls.
+        if (nextTop < 20 || (direction === 'up' && travel < -14 && velocity < -.025)) {
+          setNavigationCompact(false)
+        } else if (nextTop > 92 && direction === 'down' && travel > 30 && velocity > .045) {
+          setNavigationCompact(true)
+        }
         lastTop = nextTop
+        lastTime = now
       })
     }
     update()
@@ -541,8 +556,8 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
       {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
       <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
     </div>
-    <button type="button" className="crm-bottom-nav-edge" onClick={() => setNavigationCompact(false)} aria-label={navigationCompact ? 'Show mobile navigation' : 'Mobile navigation is open'}><span /></button>
-    <nav className="crm-bottom-nav" aria-label="Mobile navigation" aria-hidden={navigationCompact || undefined} inert={navigationCompact}>
+    <nav className="crm-bottom-nav" aria-label="Mobile navigation" data-compact={navigationCompact || undefined}>
+      <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Show mobile navigation" tabIndex={navigationCompact ? 0 : -1}><span /></button>
       {items.filter(i => !i.disabled).slice(0, 4).map(item => {
         const Icon = NAV_ICONS[item.key]
         const current = active(item.href)
@@ -553,11 +568,12 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
           className="crm-bottom-nav-primary"
           aria-current="page"
           aria-label="Open or close map"
+          tabIndex={navigationCompact ? -1 : 0}
           onClick={() => window.dispatchEvent(new CustomEvent('crm-board-map-toggle'))}
         ><Icon size={20} aria-hidden /><span>Map</span></button>
-        return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={current ? 'page' : undefined}><Icon size={20} aria-hidden /><span>{item.label}</span></Link>
+        return <Link key={item.key} href={crmPath(item.href, pathname)} aria-current={current ? 'page' : undefined} tabIndex={navigationCompact ? -1 : 0}><Icon size={20} aria-hidden /><span>{item.label}</span></Link>
       })}
-      <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation"><Menu size={20} aria-hidden /><span>More</span></button>
+      <button onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-label="More navigation" tabIndex={navigationCompact ? -1 : 0}><Menu size={20} aria-hidden /><span>More</span></button>
     </nav>
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="crm-text" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', borderRadius: 24, maxHeight: '85dvh', overflowY: 'auto' }}>
       <DialogTitle>Workspace</DialogTitle><nav className="crm-mobile-menu" aria-label="All navigation">{items.map(navItem)}</nav>

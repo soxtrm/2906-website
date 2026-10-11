@@ -14,7 +14,7 @@
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
 import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, Menu, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Star, X } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
 
@@ -203,6 +203,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const [compactMobile, setCompactMobile] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const prefersReducedMotion = useReducedMotion()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const filterPanelRef = useRef<HTMLElement>(null)
   const filterScrollFrameRef = useRef(0)
@@ -230,14 +231,28 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     if (!scroller) return
     let frame = 0
     let lastTop = scroller.scrollTop
+    let lastTime = performance.now()
+    let velocity = 0
+    let direction: 'up' | 'down' | null = null
+    let directionStart = lastTop
     const update = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
         const nextTop = scroller.scrollTop
-        if (nextTop < 28) setCompactMobile(false)
-        else if (nextTop > lastTop + 5 && nextTop > 112) setCompactMobile(true)
-        else if (nextTop < lastTop - 5) setCompactMobile(false)
+        const now = performance.now()
+        const delta = nextTop - lastTop
+        const elapsed = Math.max(8, now - lastTime)
+        velocity = velocity * .7 + (delta / elapsed) * .3
+        const nextDirection = delta > 1 ? 'down' : delta < -1 ? 'up' : direction
+        if (nextDirection && nextDirection !== direction) {
+          direction = nextDirection
+          directionStart = lastTop
+        }
+        const travel = nextTop - directionStart
+        if (nextTop < 28 || (direction === 'up' && travel < -17 && velocity < -.025)) setCompactMobile(false)
+        else if (nextTop > 112 && direction === 'down' && travel > 34 && velocity > .045) setCompactMobile(true)
         lastTop = nextTop
+        lastTime = now
       })
     }
     scroller.addEventListener('scroll', update, { passive: true })
@@ -443,13 +458,13 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         <motion.div className={cn('crm-argus-orbit flex min-w-0 items-center rounded-[18px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-1.5', searchOpen && 'is-searching')}>
           <AnimatePresence mode="popLayout" initial={false}>
             {searchOpen ? (
-              <motion.form key="search-field" layout initial={{ opacity: 0, scaleX: .9, scaleY: .97 }} animate={{ opacity: 1, scaleX: 1, scaleY: 1 }} exit={{ opacity: 0, scaleX: .92, scaleY: .98 }} transition={{ type: 'spring', stiffness: 360, damping: 32, mass: .62 }} className="relative flex min-w-0 flex-1 items-center" onSubmit={event => { event.preventDefault(); setSearchOpen(false); searchInputRef.current?.blur() }}>
+              <motion.form key="search-field" layout initial={{ opacity: 0, scaleX: .9, scaleY: .97 }} animate={{ opacity: 1, scaleX: 1, scaleY: 1 }} exit={{ opacity: 0, scaleX: .92, scaleY: .98 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 360, damping: 32, mass: .62 }} className="relative flex min-w-0 flex-1 items-center" onSubmit={event => { event.preventDefault(); setSearchOpen(false); searchInputRef.current?.blur() }}>
                 <Search className="pointer-events-none absolute left-3 h-4 w-4 text-[var(--crm-muted)]" />
                 <input ref={searchInputRef} type="search" enterKeyHint="search" autoComplete="off" value={value.q} onChange={event => onChange({ q: event.target.value })} onKeyDown={event => { if (event.key === 'Escape') setSearchOpen(false) }} placeholder={mobilePlaceholders[placeholderIndex]} aria-label="Search by reference, village, owner, agent or property type" className="h-10 w-full min-w-0 rounded-[13px] border-0 bg-[var(--crm-raised)] pl-9 pr-9 text-[13px] text-[var(--crm-text)] outline-none placeholder:text-[var(--crm-faint)]" />
                 <button type="button" onClick={() => value.q ? onChange({ q: '' }) : setSearchOpen(false)} aria-label={value.q ? 'Clear search' : 'Close search'} className="absolute right-1 grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-[var(--crm-muted)]"><X className="h-4 w-4" /></button>
               </motion.form>
             ) : (
-              <motion.button key="search-trigger" layout type="button" onClick={() => { if (mobilePanel || smartPickerOpen || filterPickerOpen) { closeIslandSurfaces(); return }; setOpen(null); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }}>
+              <motion.button key="search-trigger" layout type="button" onClick={() => { if (mobilePanel || smartPickerOpen || filterPickerOpen) { closeIslandSurfaces(); return }; setOpen(null); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 340, damping: 34, mass: .65 }}>
                 <span className="crm-argus-logo-window"><img src="/argus-logo-kevin.png" alt="ARGUS" style={{ filter: dark ? 'invert(1) brightness(1.18)' : 'none' }} />{value.q && <i className="crm-search-active-dot" aria-hidden />}</span>
               </motion.button>
             )}
@@ -489,7 +504,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
       <AnimatePresence initial={false} mode="popLayout">
         {mobilePanel === 'filters' && (
-          <motion.section ref={filterPanelRef} id="crm-mobile-filter-panel" key="filter-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-filter-panel" style={{ transformOrigin: 'top right' }} onMouseDown={event => event.stopPropagation()}>
+          <motion.section ref={filterPanelRef} id="crm-mobile-filter-panel" key="filter-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-filter-panel" style={{ transformOrigin: 'top right' }} onMouseDown={event => event.stopPropagation()}>
             <header>
               <div><span>ISLAND 02</span><strong>Property filters</strong></div>
               <div className="crm-mobile-panel-head-actions">{activeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset property filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={closeIslandSurfaces} aria-label="Close filters"><X /></button></div>
