@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, UserRound, Plus } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -435,6 +435,7 @@ function Board() {
   // preserves that, and the backend re-applies the same rule on the order it
   // receives.
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [tagSelectionMode, setTagSelectionMode] = useState(false)
   const [tagging, setTagging] = useState(false)
   // @Agenttag: send a photo+description card into MY OWN workspace group,
   // no message to Kev at all. Reuses the same `selected` set as WATag.
@@ -511,6 +512,10 @@ function Board() {
   }, [discoveryVisible])
   const revealMapWorkspace = useCallback(() => {
     mapMotionStartedAtRef.current = performance.now()
+    setView('board')
+    setUpdatesMode(false)
+    setSelected(new Set())
+    setTagSelectionMode(false)
     setMapOpen(true)
     setMapCollapsed(false)
     window.dispatchEvent(new CustomEvent('crm-board-tool-picked'))
@@ -1152,22 +1157,16 @@ function Board() {
     })
   }
 
-  // "Select all" over a filtered board is how the map and the search become the
-  // selection tool: draw a circle round Sliema, search 2-bed, hit select.
-  // Kev, 2026-09-02: was also excluding canTag===false listings (the 85/215
-  // with no WATag anchor) — same over-coupling as the "+" button itself (see
-  // canSelect above). Off-market is the only real exclusion for a pick meant
-  // for swipe-link creation.
+  // Enter deliberate selection mode. This used to silently take the first 15
+  // visible cards, which made a filter or sort order decide who was tagged.
+  // Agents now pick each property themselves; the existing per-card + control
+  // and MAX_TAGS guard remain the single source of truth.
   function selectVisible() {
-    const eligible = visible.filter(r => !lockedStatus(r.availableStatus))
-    const take = eligible.slice(0, MAX_TAGS).map(r => r.ref)
-    setSelected(new Set(take))
-    if (eligible.length > MAX_TAGS) {
-      showToast('info',
-        `Picked the first ${MAX_TAGS} of ${eligible.length}. Unpick any you do not want, or send these and select the rest after.`)
-    } else if (!take.length) {
-      showToast('info', 'None of these listings has a group message to anchor to.')
+    if (!visible.some(r => !lockedStatus(r.availableStatus))) {
+      showToast('info', 'There are no available properties to select in this view.')
+      return
     }
+    setTagSelectionMode(true)
   }
 
   async function tagOne(r: Listing) {
@@ -1493,6 +1492,7 @@ function Board() {
     setView(favouritesAreActive ? 'board' : 'favourites')
     setUpdatesMode(false)
     setSelected(new Set())
+    setTagSelectionMode(false)
     window.dispatchEvent(new CustomEvent('crm-board-tool-picked'))
   }, [updatesMode, view])
 
@@ -1511,36 +1511,7 @@ function Board() {
       mapActive={mapOpen}
       favouritesActive={!updatesMode && view === 'favourites'}
       onMapToggle={toggleMapWorkspace}
-      onProfileOpen={() => router.push('/crm/agent-profile')}
       onFavouritesOpen={toggleFavouritesWorkspace}
-      smartTools={<div className="crm-mobile-smart-body">
-        <div className="crm-mobile-smart-copy"><strong>Everyday workspace</strong><span>Map, rows and profile stay first. Combined property tools follow when you need them.</span></div>
-        <div className="crm-mobile-quick-priority" aria-label="Primary workspace tools">
-          <button id="crm-smart-map" type="button" aria-pressed={mapOpen} onClick={toggleMapWorkspace}><MapIcon /><span>Map</span></button>
-          <button id="crm-smart-rows" type="button" onClick={() => router.push('/crm/inventory')}><List /><span>Rows</span></button>
-          <button id="crm-smart-profile" type="button" onClick={() => router.push('/crm/agent-profile')}><UserRound /><span>Profile</span></button>
-        </div>
-        <div className="crm-mobile-smart-divider"><span>Smart combinations</span></div>
-        <div id="crm-smart-collections" className="crm-mobile-smart-grid" aria-label="Smart property filters">
-          {DISCOVERY_ITEMS.map(item => {
-            const Icon = item.icon
-            const on = discovery.includes(item.key)
-            return <button key={item.key} type="button" aria-pressed={on} onClick={() => toggleDiscovery(item.key)}><Icon /><span>{item.label}</span>{on && <Check aria-hidden />}</button>
-          })}
-        </div>
-        <div className="crm-mobile-smart-divider"><span>More tools</span></div>
-        <div className="crm-mobile-quick-grid">
-          <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()) }}><LayoutGrid /><span>Standard</span></button>
-          <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()) }}><House /><span>Rented</span></button>
-          <button id="crm-smart-favourites" type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={toggleFavouritesWorkspace}><Star /><span>Favourites</span></button>
-          <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
-          <button type="button" aria-pressed={updatesMode} onClick={() => setUpdatesMode(true)}><Clock3 /><span>Recent</span></button>
-          <button id="crm-smart-tags" type="button" disabled={!visible.length} onClick={selectVisible}><AtSign /><span>Tags</span></button>
-          <button type="button" onClick={() => setSwipePanelOpen(true)}><Link2 /><span>Swipe Links</span></button>
-          {isAdmin && <button type="button" onClick={openAgentRequests}><MessageCircle /><span>Requests</span></button>}
-          <button type="button" onClick={() => setBoardSettingsOpen(true)}><MoreHorizontal /><span>More</span></button>
-        </div>
-      </div>}
       extra={
         <>
           {/* Sort. Newest-first is the default and the reason the board reads
@@ -1635,11 +1606,35 @@ function Board() {
     />
   )
 
+  const mobileBoardActions = <div className="crm-mobile-smart-body">
+    <div className="crm-mobile-smart-copy"><strong>Board tools</strong><span>These actions belong to the property board. Every workspace and profile stays in the navigation above.</span></div>
+    <div className="crm-mobile-smart-divider"><span>Smart combinations</span></div>
+    <div id="crm-smart-collections" className="crm-mobile-smart-grid" aria-label="Smart property filters">
+      {DISCOVERY_ITEMS.map(item => {
+        const Icon = item.icon
+        const on = discovery.includes(item.key)
+        return <button key={item.key} type="button" aria-pressed={on} onClick={() => toggleDiscovery(item.key)}><Icon /><span>{item.label}</span>{on && <Check aria-hidden />}</button>
+      })}
+    </div>
+    <div className="crm-mobile-smart-divider"><span>Board actions</span></div>
+    <div className="crm-mobile-quick-grid">
+      <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()); setTagSelectionMode(false) }}><LayoutGrid /><span>Active board</span></button>
+      <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()); setTagSelectionMode(false) }}><House /><span>Rented</span></button>
+      <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
+      <button type="button" aria-pressed={updatesMode} onClick={() => { setUpdatesMode(true); setTagSelectionMode(false) }}><Clock3 /><span>Recent updates</span></button>
+      <button id="crm-smart-tags" type="button" disabled={!visible.length} aria-pressed={tagSelectionMode} onClick={() => setTagSelectionMode(current => !current)}><AtSign /><span>{tagSelectionMode ? 'Finish selecting' : 'Select for WATag'}</span></button>
+      <button type="button" onClick={() => setSwipePanelOpen(true)}><Link2 /><span>Swipe Links</span></button>
+      {isAdmin && <button type="button" onClick={openAgentRequests}><MessageCircle /><span>Requests</span></button>}
+      <button type="button" onClick={() => setBoardSettingsOpen(true)}><MoreHorizontal /><span>Collection settings</span></button>
+    </div>
+  </div>
+
   return (
     <CrmShell
       title="Schedule Board"
       subtitle={me ? 'Availability and viewing locations across the whole team' : undefined}
       filterBar={filterBar}
+      mobileActions={mobileBoardActions}
       dark={isDark}
       mobileImmersive
     >
@@ -1760,15 +1755,9 @@ function Board() {
         )}
 
         {view === 'favourites' && (
-          <div style={{
-            background: 'rgba(47,111,87,0.14)', border: '1px solid rgba(47,111,87,0.32)', borderRadius: 10,
-            padding: '10px 14px', fontSize: 11.5, color: '#9CC2B1',
-            marginBottom: 14, lineHeight: 1.5,
-          }}>
-            Everything you have booked a viewing on, newest first. Listings land
-            here by themselves when a booking goes through — including ones that
-            have since gone off the market, because that is a viewing somebody
-            still has to be told about.
+          <div className="crm-favourites-note">
+            Your saved properties and booked viewings, newest first. Tap the
+            star again to remove a property from this view.
           </div>
         )}
 
@@ -1777,7 +1766,7 @@ function Board() {
             picked, so the board is not carrying a dead bar around all day, and
             it names the count in the button rather than beside it — the number
             is the thing you check before firing. */}
-        {selected.size > 0 && <div className="crm-board-selection-rail" style={{
+        {(tagSelectionMode || selected.size > 0) && <div className="crm-board-selection-rail" style={{
           display: 'flex', gap: 8, alignItems: 'center', flexWrap: selected.size > 0 ? 'wrap' : 'nowrap', overflowX: selected.size > 0 ? 'visible' : 'auto',
           marginBottom: isMobile ? 14 : 8,
         }}>
@@ -1785,7 +1774,7 @@ function Board() {
             data-watag-selectall
             onClick={selectVisible}
             disabled={!visible.length}
-            title={`Pick the first ${MAX_TAGS} listings in this search that can be tagged`}
+            title={`Choose up to ${MAX_TAGS} properties yourself`}
             style={{
               ...chip, borderRadius: 8, background: DCARD, borderColor: DBORDER,
               color: visible.length ? DTEXT_DIM : DTEXT_FAINT,
@@ -1819,7 +1808,7 @@ function Board() {
             </button>
           )}
 
-          {selected.size > 0 && (
+          {selected.size > 0 ? (
             <>
               <button
                 data-watag-send
@@ -1895,7 +1884,10 @@ function Board() {
                   : `${MAX_TAGS - selected.size} more can be picked`}
               </span>
             </>
-          )}
+          ) : <>
+            <span className="crm-selection-help">Tap the + on each property you want to include. Nothing is picked automatically.</span>
+            <button type="button" onClick={() => setTagSelectionMode(false)} style={{ ...subtleLink, fontSize: 11 }}>Done</button>
+          </>}
         </div>}
 
         {/* villages */}
@@ -2019,7 +2011,7 @@ function Board() {
             {view === 'rented'
               ? 'Nothing rented right now.'
               : view === 'favourites'
-              ? 'No favourites yet. Book a viewing and the listing lands here.'
+              ? 'Nothing saved yet. Tap the star on a property or book a viewing to keep it here.'
               : 'Nothing matches this search.'}
           </div>
         )}

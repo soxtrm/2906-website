@@ -33,7 +33,7 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     if(url.includes('reachout-settings'))return json({mode:'off'})
     return json({})
   })
-  await page.goto('http://127.0.0.1:4174/crm/schedule-board',{waitUntil:'domcontentloaded'})
+  await page.goto('http://localhost:4174/crm/schedule-board',{waitUntil:'domcontentloaded'})
   await page.waitForSelector('.crm-listing-card')
   await page.waitForFunction(()=>document.querySelectorAll('.crm-listing-card').length>=6)
   const layout=await page.evaluate(()=>{
@@ -103,11 +103,25 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     islands:getComputedStyle(document.querySelector('.crm-board-islands')).display,
     sidebar:getComputedStyle(document.querySelector('.crm-sidebar')).display,
     bottomNav:getComputedStyle(document.querySelector('.crm-bottom-nav')).display,
+    workspaceLabels:[...document.querySelectorAll('.crm-smart-island [data-label]')].map(node=>node.dataset.label),
   }))
   assert.equal(mobile.desktopRail,null,'desktop controls are not rendered on mobile')
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
   assert.equal(mobile.sidebar,'none','desktop sidebar remains hidden on mobile')
   assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains unchanged')
+  assert.deepEqual(mobile.workspaceLabels,['Map','Favourites','More'],'mobile workspace island has exactly three distinct actions')
+  assert.equal(await page.$$('.crm-smart-island [data-label="Profile"]') .then(nodes=>nodes.length),0,'profile is not duplicated in the floating island')
+
+  await page.$eval('.crm-smart-island [data-label="Favourites"]',button=>button.click())
+  await page.waitForFunction(()=>document.querySelector('.crm-smart-island [data-label="Favourites"]')?.getAttribute('aria-pressed')==='true')
+  await page.$eval('.crm-smart-island [data-label="Map"]',button=>button.click())
+  await page.waitForFunction(()=>document.querySelector('.crm-smart-island [data-label="Map"]')?.getAttribute('aria-pressed')==='true' && document.querySelector('.crm-smart-island [data-label="Favourites"]')?.getAttribute('aria-pressed')==='false')
+  await page.$eval('.crm-smart-island [data-label="More"]',button=>button.click())
+  await page.waitForSelector('[role="dialog"] .crm-mobile-menu-actions')
+  assert.equal(await page.$$eval('[role="dialog"] .crm-nav-item',nodes=>nodes.filter(node=>node.textContent.includes('Profile')).length),1,'profile appears once in shared navigation')
+  await page.$eval('#crm-smart-tags',button=>button.click())
+  await page.waitForSelector('.crm-selection-help')
+  assert.match(await page.$eval('.crm-selection-help',node=>node.textContent),/Nothing is picked automatically/)
   await page.screenshot({path:path.join(os.tmpdir(),'board-clean-mobile.png'),fullPage:false})
   const compactEdge=await page.evaluate(()=>{
     const workspace=document.querySelector('.crm-workspace')

@@ -466,8 +466,8 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
 }
 const NAV_ICONS = { dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database }
 
-export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: darkDefault, mobileImmersive }:
-  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileImmersive?: boolean }) {
+export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, children, dark: darkDefault, mobileImmersive }:
+  { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; mobileActions?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileImmersive?: boolean }) {
   const pathname = usePathname() || '/'
   const { me, reveals, nav, logout, theme, toggleTheme } = useCrm()
   const dark = theme != null ? theme === 'dark' : !!darkDefault
@@ -481,6 +481,11 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
   useEffect(() => { setMoreOpen(false) }, [pathname])
+  useEffect(() => {
+    const open = () => setMoreOpen(true)
+    window.addEventListener('crm-open-mobile-menu', open)
+    return () => window.removeEventListener('crm-open-mobile-menu', open)
+  }, [])
   useEffect(() => {
     const scroller = contentRef.current
     if (!mobileImmersive || !scroller) return
@@ -556,6 +561,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, children, dark: da
     </nav>
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}><DialogContent className="crm-text" style={{ background: 'var(--crm-surface)', borderColor: 'var(--crm-border)', borderRadius: 24, maxHeight: '85dvh', overflowY: 'auto' }}>
       <DialogTitle>Workspace</DialogTitle><nav className="crm-mobile-menu" aria-label="All navigation">{items.map(navItem)}</nav>
+      {mobileActions && <section className="crm-mobile-menu-actions" aria-label="Current workspace tools" onClick={event => { if ((event.target as Element).closest('button,a')) setMoreOpen(false) }}>{mobileActions}</section>}
       <button className="crm-button" onClick={logout}><LogOut size={16} />Sign out</button>
     </DialogContent></Dialog>
   </div>

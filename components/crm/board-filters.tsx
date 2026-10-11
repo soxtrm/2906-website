@@ -13,7 +13,7 @@
 // inputs in inline styles — which is what made it read as bolted on.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, List, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Star, UserRound, X } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, Menu, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Star, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -172,7 +172,7 @@ function RoomScrubber({ label, values, selected, onChange }: {
   </div>
 }
 
-export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, smartTools, onMapToggle, onProfileOpen, onFavouritesOpen, mapActive = false, favouritesActive = false, smartBadgeCount = 0, townOptions = [] }: {
+export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, onMapToggle, onFavouritesOpen, mapActive = false, favouritesActive = false, smartBadgeCount = 0, townOptions = [] }: {
   value: BoardFilterValue
   onChange: (patch: Partial<BoardFilterValue>) => void
   onReset: () => void
@@ -187,10 +187,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   dark?: boolean
   /** Real board actions supplied by the page. Kept outside this component so
    * the island never invents navigation or duplicates business logic. */
-  smartTools?: React.ReactNode
-  /** Direct workspace actions. Only the burger icon opens the daily-tools sheet. */
+  /** Direct workspace actions. The burger opens the shared mobile navigation. */
   onMapToggle?: () => void
-  onProfileOpen?: () => void
   onFavouritesOpen?: () => void
   mapActive?: boolean
   favouritesActive?: boolean
@@ -358,32 +356,16 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   }
 
   const openMapWorkspace = () => {
-    if (searchOpen || mobilePanel === 'filters' || filterPickerOpen) {
-      closeIslandSurfaces()
-      return
-    }
     closeIslandSurfaces()
     onMapToggle?.()
   }
 
   const openSmartMenu = () => {
-    if (searchOpen || mobilePanel === 'filters' || filterPickerOpen) {
-      closeIslandSurfaces()
-      return
-    }
-    setOpen(null)
-    setSearchOpen(false)
-    setFilterPickerOpen(false)
-    setIslandFocus(null)
-    setSmartPickerOpen(true)
-    setMobilePanel(current => current === 'smart' ? null : 'smart')
+    closeIslandSurfaces()
+    window.dispatchEvent(new CustomEvent('crm-open-mobile-menu'))
   }
 
   const openDirectSmartWorkspace = (action?: () => void) => {
-    if (searchOpen || mobilePanel === 'filters' || filterPickerOpen) {
-      closeIslandSurfaces()
-      return
-    }
     closeIslandSurfaces()
     action?.()
   }
@@ -474,14 +456,13 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           </AnimatePresence>
         </motion.div>
 
-        <motion.div role="group" aria-label={`Daily tools and smart filters${smartBadgeCount ? `, ${smartBadgeCount} active` : ''}`} className={cn('crm-nav-island crm-smart-island', (mobilePanel === 'smart' || smartPickerOpen) && 'is-active')} onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeSmartIsland() }}>
+        <motion.div role="group" aria-label={`Board workspaces${smartBadgeCount ? `, ${smartBadgeCount} smart filters active` : ''}`} className="crm-nav-island crm-smart-island">
           <span className="crm-island-icons crm-smart-icons">
             <button type="button" className="crm-island-feature" data-label="Map" aria-label={mapActive ? 'Close map workspace' : 'Open map workspace'} aria-pressed={mapActive} data-active={mapActive} onClick={openMapWorkspace}><MapIcon aria-hidden /></button>
-            <button type="button" className="crm-island-feature" data-label="Tools" aria-label="Open daily tools" aria-expanded={mobilePanel === 'smart'} aria-controls="crm-mobile-smart-panel" data-active={mobilePanel === 'smart'} onClick={openSmartMenu}><List aria-hidden /></button>
-            <button type="button" className="crm-island-feature" data-label="Profile" aria-label="Open profile workspace" onClick={() => openDirectSmartWorkspace(onProfileOpen)}><UserRound aria-hidden /></button>
             <button type="button" className="crm-island-feature" data-label="Favourites" aria-label={favouritesActive ? 'Close favourites workspace' : 'Open favourites workspace'} aria-pressed={favouritesActive} data-active={favouritesActive} onClick={() => openDirectSmartWorkspace(onFavouritesOpen)}><Star aria-hidden /></button>
+            <button type="button" className="crm-island-feature" data-label="More" aria-label="Open workspace navigation" onClick={openSmartMenu}><Menu aria-hidden /></button>
           </span>
-          <span className="crm-island-label">Smartfilters</span>
+          <span className="crm-island-label">Workspaces</span>
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}
         </motion.div>
 
@@ -507,13 +488,6 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       {hasActiveIslandSelection && <button type="button" className="crm-board-islands-handle" onClick={() => setCompactMobile(false)} aria-label="Expand active ARGUS tools"><span /></button>}
 
       <AnimatePresence initial={false} mode="popLayout">
-        {mobilePanel === 'smart' && (
-          <motion.section id="crm-mobile-smart-panel" key="smart-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-smart-panel" style={{ transformOrigin: 'top 42%' }} onMouseDown={event => event.stopPropagation()}>
-            <header><div><span>ACTION CLOUD</span><strong>Daily tools</strong></div><div className="crm-mobile-panel-head-actions">{smartBadgeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset smart filters"><RotateCcw /><em>Reset</em></button>}<button type="button" onClick={closeIslandSurfaces} aria-label="Close daily tools"><X /></button></div></header>
-            <div>{smartTools}</div>
-          </motion.section>
-        )}
-
         {mobilePanel === 'filters' && (
           <motion.section ref={filterPanelRef} id="crm-mobile-filter-panel" key="filter-panel" initial={{ opacity: 0, y: -7, scale: .985, borderRadius: 29 }} animate={{ opacity: 1, y: 0, scale: 1, borderRadius: 24 }} exit={{ opacity: 0, y: -5, scale: .989, borderRadius: 28 }} transition={{ type: 'spring', stiffness: 235, damping: 28, mass: .92 }} className="crm-mobile-island-panel crm-mobile-filter-panel" style={{ transformOrigin: 'top right' }} onMouseDown={event => event.stopPropagation()}>
             <header>

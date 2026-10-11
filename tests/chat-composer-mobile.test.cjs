@@ -20,9 +20,12 @@ const relay = { open: true, ownerLabel: 'Owner 1234', persona: 'Argus', messages
   assert.match(source, /Message owner…/)
   assert.match(source, /Photos/)
   assert.match(source, /Files/)
+  assert.match(source, /window\.visualViewport/)
+  assert.match(source, /data-keyboard-open/)
 
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const page = await browser.newPage()
+  await page.evaluateOnNewDocument(() => localStorage.setItem('crm_theme_pref', 'light'))
   await page.setRequestInterception(true)
   page.on('request', req => {
     const url = req.url()
@@ -41,7 +44,7 @@ const relay = { open: true, ownerLabel: 'Owner 1234', persona: 'Argus', messages
   })
 
   await page.setViewport({ width: 430, height: 860 })
-  await page.goto('http://127.0.0.1:4174/crm/schedule-board?ref=2906-TEST&action=chat', { waitUntil: 'domcontentloaded' })
+  await page.goto('http://localhost:4174/crm/schedule-board?ref=2906-TEST&action=chat', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.crm-chat-dialog textarea[placeholder="Message owner…"]')
 
   for (const width of [320, 360, 390, 430]) {
@@ -65,13 +68,28 @@ const relay = { open: true, ownerLabel: 'Owner 1234', persona: 'Argus', messages
   await new Promise(resolve => setTimeout(resolve, 280))
   await page.screenshot({ path: path.join(os.tmpdir(), 'chat-composer-mobile.png'), fullPage: false })
 
-  await page.click('button[aria-label="Add attachment"]')
+  // Next's development overlay owns the very last screen pixels in headless
+  // mode, so invoke the button's native click rather than hitting that overlay.
+  await page.$eval('button[aria-label="Add attachment"]', n => n.click())
   await page.waitForFunction(() => document.body.innerText.includes('Photos') && document.body.innerText.includes('Files'))
   assert.equal(await page.$eval('button[aria-label="Add attachment"]', n => n.getAttribute('aria-expanded')), 'true')
   await page.mouse.click(250, 250)
   await page.waitForFunction(() => document.querySelector('button[aria-label="Add attachment"]')?.getAttribute('aria-expanded') === 'false')
   assert.equal(await page.$eval('input[accept="image/*"]', n => n.multiple), true)
   assert.equal(await page.$$eval('.crm-chat-dialog input[type="file"]', ns => ns.every(n => n.multiple)), true)
+
+  // A short viewport approximates the visual area left above a software
+  // keyboard. Focusing the textarea must keep the whole composer reachable.
+  await page.focus('.crm-chat-dialog textarea')
+  await page.setViewport({ width: 390, height: 430 })
+  await new Promise(resolve => setTimeout(resolve, 220))
+  const keyboardGeometry = await page.evaluate(() => {
+    const composer = document.querySelector('.crm-chat-composer').getBoundingClientRect()
+    const send = document.querySelector('button[aria-label="Send"]').getBoundingClientRect()
+    return { composerBottom: composer.bottom, sendBottom: send.bottom, height: innerHeight }
+  })
+  assert.ok(keyboardGeometry.composerBottom <= keyboardGeometry.height + 2, 'composer remains above keyboard viewport')
+  assert.ok(keyboardGeometry.sendBottom <= keyboardGeometry.height + 2, 'send remains above keyboard viewport')
 
   await browser.close()
   console.log('mobile chat composer passed at 320/360/390/430')

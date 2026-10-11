@@ -519,6 +519,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
   const scrollRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
   const reduceMotion = useReducedMotion()
+  const [mobileViewport, setMobileViewport] = useState<{ height: number; bottom: number; keyboard: boolean } | null>(null)
 
   async function load() {
     try {
@@ -548,6 +549,32 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
     input.style.height = 'auto'
     input.style.height = `${Math.min(input.scrollHeight, 120)}px`
   }, [draft])
+
+  // Follow the visible screen, not only the layout viewport. Some mobile
+  // browsers keep 100dvh behind the software keyboard, which used to leave the
+  // composer hidden even though the dialog itself still looked correctly fixed.
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const update = () => {
+      const bottom = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      setMobileViewport({
+        height: viewport.height,
+        bottom,
+        keyboard: viewport.height < window.innerHeight * .78,
+      })
+      if (stickToBottom.current) requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+      })
+    }
+    update()
+    viewport.addEventListener('resize', update)
+    viewport.addEventListener('scroll', update)
+    return () => {
+      viewport.removeEventListener('resize', update)
+      viewport.removeEventListener('scroll', update)
+    }
+  }, [])
 
   useEffect(() => {
     if (!attachmentMenuOpen) return
@@ -653,7 +680,11 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
                    inset-x-0 bottom-0 rounded-t-2xl h-[88dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.75rem)]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
                    sm:w-[440px] sm:h-[680px] sm:rounded-2xl sm:max-h-[88vh]"
-        style={{ background: 'linear-gradient(180deg, #0C1120 0%, #10162A 55%, #0C1120 100%)' }}
+        data-keyboard-open={mobileViewport?.keyboard || undefined}
+        style={mobileViewport ? {
+          '--crm-chat-visual-height': `${mobileViewport.height}px`,
+          '--crm-chat-keyboard-bottom': `${mobileViewport.bottom}px`,
+        } as React.CSSProperties : undefined}
       >
         {/* ── 2906 signature watermark — dezent, own identity, never a stock chat look ── */}
         <div
@@ -850,10 +881,10 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
         </div>
 
         {/* ── composer ───────────────────────────────────────────────────────── */}
-        <div className="px-3.5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-white/[0.06] shrink-0 relative z-10">
+        <div className="crm-chat-composer px-3 pt-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] border-t border-white/[0.06] shrink-0 relative z-10 sm:px-3.5 sm:pt-3 sm:pb-3">
           <input ref={imageInput} type="file" accept="image/*" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
           <input ref={fileInput} type="file" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-2">
             <textarea
               ref={composerInput}
               value={draft}
@@ -862,11 +893,11 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               rows={1}
               disabled={closed || chatBusy}
               placeholder={closed ? 'Conversation closed' : chatBusy ? 'Another agent is chatting' : 'Message owner…'}
-              className="col-span-2 min-h-14 max-h-[120px] w-full resize-none overflow-y-auto rounded-2xl border border-white/15 bg-white/[0.07]
+              className="col-start-2 row-start-1 min-h-12 max-h-[120px] w-full resize-none overflow-y-auto rounded-2xl border border-white/15 bg-white/[0.07]
                          px-4 py-3 text-base leading-6 text-white placeholder:text-white/55 focus:border-gold/50 focus:outline-none focus:ring-2
-                         focus:ring-gold/40 disabled:opacity-40 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:min-h-11 sm:py-2.5"
+                         focus:ring-gold/40 disabled:opacity-40 sm:min-h-11 sm:py-2.5"
             />
-            <div ref={attachmentMenu} className="relative col-start-1 row-start-2 sm:row-start-1">
+            <div ref={attachmentMenu} className="relative col-start-1 row-start-1">
               <button type="button" onClick={() => setAttachmentMenuOpen(open => !open)} disabled={closed || uploading || chatBusy}
                 aria-label="Add attachment" aria-expanded={attachmentMenuOpen}
                 className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white/70
@@ -899,13 +930,12 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             <button
               onClick={send}
               disabled={!draft.trim() || sending || closed || chatBusy}
-              className="col-start-2 row-start-2 flex h-12 min-w-28 items-center justify-center justify-self-end gap-2 rounded-full bg-gold px-5
+              className="col-start-3 row-start-1 flex h-12 w-12 min-w-12 items-center justify-center justify-self-end rounded-full bg-gold p-0
                          font-semibold text-navy transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-gold-light
-                         active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-25 sm:col-start-3 sm:row-start-1 sm:h-11 sm:min-w-11 sm:px-0"
+                         active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-25 sm:h-11 sm:w-11 sm:min-w-11"
               aria-label="Send"
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              <span className="sm:hidden">Send</span>
             </button>
           </div>
         </div>
