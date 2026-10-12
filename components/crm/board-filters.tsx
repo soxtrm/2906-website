@@ -199,6 +199,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const [mobilePanel, setMobilePanel] = useState<'smart' | 'filters' | null>(null)
   const [smartPickerOpen, setSmartPickerOpen] = useState(false)
   const [filterPickerOpen, setFilterPickerOpen] = useState(false)
+  const [islandReady, setIslandReady] = useState(true)
   const [islandFocus, setIslandFocus] = useState<string | null>(null)
   const [compactMobile, setCompactMobile] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -210,6 +211,20 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const ref = useRef<HTMLDivElement>(null)
 
   const mobilePlaceholders = ['Reference', 'Village', 'Owner or agent', 'Property type']
+
+  useEffect(() => {
+    if (!smartPickerOpen && !filterPickerOpen) {
+      setIslandReady(true)
+      return
+    }
+    if (prefersReducedMotion) {
+      setIslandReady(true)
+      return
+    }
+    setIslandReady(false)
+    const timer = window.setTimeout(() => setIslandReady(true), 520)
+    return () => window.clearTimeout(timer)
+  }, [filterPickerOpen, prefersReducedMotion, smartPickerOpen])
 
   useEffect(() => {
     if (!searchOpen || value.q) return
@@ -352,6 +367,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       setFilterPickerOpen(true)
       return
     }
+    if (!islandReady) return
     setSmartPickerOpen(panel === 'smart')
     setFilterPickerOpen(panel === 'filters')
     setIslandFocus(target)
@@ -381,6 +397,11 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   }
 
   const openDirectSmartWorkspace = (action?: () => void) => {
+    if (!smartPickerOpen) {
+      primeSmartIsland()
+      return
+    }
+    if (!islandReady) return
     closeIslandSurfaces()
     action?.()
   }
@@ -453,6 +474,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     <div ref={ref} className={cn('w-full', compactMobile && 'crm-board-filter-collapsed')}>
       <motion.div
         data-panel={searchOpen ? 'search' : mobilePanel || (smartPickerOpen ? 'smart-picker' : filterPickerOpen ? 'filter-picker' : 'default')}
+        data-ready={islandReady ? 'true' : 'false'}
         className="crm-board-islands"
       >
         <motion.div className={cn('crm-argus-orbit flex min-w-0 items-center rounded-[18px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-1.5', searchOpen && 'is-searching')}>
@@ -471,11 +493,11 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           </AnimatePresence>
         </motion.div>
 
-        <motion.div role="group" aria-label={`Board workspaces${smartBadgeCount ? `, ${smartBadgeCount} smart filters active` : ''}`} className="crm-nav-island crm-smart-island">
+        <motion.div role="group" aria-busy={smartPickerOpen && !islandReady} aria-label={`Board workspaces${smartBadgeCount ? `, ${smartBadgeCount} smart filters active` : ''}`} className={cn('crm-nav-island crm-smart-island', smartPickerOpen && 'is-active')} onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeSmartIsland() }}>
           <span className="crm-island-icons crm-smart-icons">
-            <button type="button" className="crm-island-feature" data-label="Map" aria-label={mapActive ? 'Close map workspace' : 'Open map workspace'} aria-pressed={mapActive} data-active={mapActive} onClick={openMapWorkspace}><MapIcon aria-hidden /></button>
+            <button type="button" className="crm-island-feature" data-label="Map" aria-label={mapActive ? 'Close map workspace' : 'Open map workspace'} aria-pressed={mapActive} data-active={mapActive} onClick={() => openDirectSmartWorkspace(openMapWorkspace)}><MapIcon aria-hidden /></button>
             <button type="button" className="crm-island-feature" data-label="Favourites" aria-label={favouritesActive ? 'Close favourites workspace' : 'Open favourites workspace'} aria-pressed={favouritesActive} data-active={favouritesActive} onClick={() => openDirectSmartWorkspace(onFavouritesOpen)}><Star aria-hidden /></button>
-            <button type="button" className="crm-island-feature" data-label="More" aria-label="Open workspace navigation" onClick={openSmartMenu}><Menu aria-hidden /></button>
+            <button type="button" className="crm-island-feature" data-label="More" aria-label="Open workspace navigation" onClick={() => openDirectSmartWorkspace(openSmartMenu)}><Menu aria-hidden /></button>
           </span>
           <span className="crm-island-label">Workspaces</span>
           {smartBadgeCount > 0 && <span className="crm-island-count" aria-label={`${smartBadgeCount} active smart filters`}>{smartBadgeCount}</span>}
@@ -483,6 +505,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
         <motion.div
           role="group"
+          aria-busy={filterPickerOpen && !islandReady}
           aria-label={`Property filters${activeCount ? `, ${activeCount} active` : ''}`}
           className={cn('crm-nav-island crm-filter-island', (mobilePanel === 'filters' || filterPickerOpen) && 'is-active')}
           onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeFilterIsland() }}
