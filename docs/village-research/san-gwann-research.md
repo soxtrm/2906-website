@@ -41,9 +41,11 @@ These are examples rather than rankings. Do not infer walkability from the local
 
 ## Image candidates
 
-Preferred thumbnail-reviewed candidate: [“Main open space in San Gwann with Parish Church.jpeg”](https://commons.wikimedia.org/wiki/File:Main_open_space_in_San_Gwann_with_Parish_Church.jpeg), Continentaleurope, photographed 15 December 2015, 2,592 × 1,936 pixels, CC BY-SA 3.0.
+Approved candidate: [“Main open space in San Gwann with Parish Church.jpeg”](https://commons.wikimedia.org/wiki/File:Main_open_space_in_San_Gwann_with_Parish_Church.jpeg), Continentaleurope, photographed 15 December 2015, own work, CC BY-SA 3.0.
 
-The Wikimedia Commons API thumbnail was visually reviewed on 12 October 2026. It shows the parish church together with the surrounding open space, roads and mature trees, making the central urban setting clearer than a façade-only image. Several distant people and parked vehicles are visible but no person is individually prominent. The exact original has not yet been downloaded, hashed or approved for publication.
+The Wikimedia Commons API reports an original size of 2,592 × 1,936 pixels and 1,269,029 bytes. The exact downloaded original has SHA-256 `0FDD785482E0A21614B31B28C4ED5E381083374A9C813B955BF9DB0C50CE2B0F`. A resize-only 1,800 × 1,344 WebP was created at `public/link-marketplace/assets/san-gwann-open-space-church-continentaleurope.webp`; it is 203,988 bytes with SHA-256 `68CCCE734630BCB5C3454286D934DB02B034A9A4CDA7392976701B792D853AA7`.
+
+Exact-original and derivative review on 12 October 2026 confirms the parish church together with the surrounding open space, roads and mature trees, making the central urban setting clearer than a façade-only image. Several people and parked vehicles are visible at a distance, but no person is individually prominent. The derivative contains no crop or retouching; responsive CSS may crop its edges and must disclose that presentation if used.
 
 Alternative thumbnail-reviewed candidates:
 
@@ -51,7 +53,7 @@ Alternative thumbnail-reviewed candidates:
 - [“San Frangisk, San Ġwann, Malta - panoramio.jpg”](https://commons.wikimedia.org/wiki/File:San_Frangisk,_San_%C4%A0wann,_Malta_-_panoramio.jpg), Alan C. Bonnici, 14 February 2015, 2,624 × 1,968, CC BY-SA 3.0. Useful street context, but visually dominated by overhead cables, parked cars and dated storefronts.
 - [“San Gwann and other 02.jpg”](https://commons.wikimedia.org/wiki/File:San_Gwann_and_other_02.jpg), Continentaleurope, 29 December 2015, 2,592 × 1,936, CC BY-SA 4.0. Rural-edge context rather than a representative central hero.
 
-Before any image is published, download and inspect the exact original, verify author/date/licence on the file page, calculate a SHA-256 hash and create a resize-only derivative. Published use must retain visible author, source, capture date, licence and resize disclosure and must not present the image as a current property view.
+Published use of the approved image must retain visible author, source, capture date, CC BY-SA 3.0 licence and resize disclosure and must not present the image as a current property view, current traffic evidence or a complete picture of the locality. Recheck the Commons file page and licence immediately before release.
 
 ## Map and mobility rules
 
@@ -64,7 +66,7 @@ Before any image is published, download and inspect the exact original, verify a
 ## Release gate
 
 1. Recheck the council, Address Registrar, Primary HealthCare and operator sources immediately before drafting the public edition.
-2. Download and inspect the exact original of the preferred Commons image, verify its licence metadata and create an attributed resize-only derivative.
+2. Use the approved resize-only Commons derivative with visible attribution; recheck the file page and licence immediately before release.
 3. Build an independent English noindex preview that keeps central San Ġwann, valley-edge context, Kappara and Iklin distinct.
 4. Test at 390 px and 1440 px, including image decode/crop, attribution, click-to-load map, overflow, one H1 and accessible controls.
 5. Add self-canonical, social metadata, BreadcrumbList, Marketplace navigation and sitemap only for the final release commit.
