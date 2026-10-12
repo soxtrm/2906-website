@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "nexus-traffic-segment-mapping-v1",
+  "datasetStatus": "NOT_READY",
+  "geometryFormat": "GeoJSON",
+  "directionality": "opposite directions require separate segment IDs",
+  "segments": [],
+  "sourceMappings": []
+}

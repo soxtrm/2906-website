@@ -1,0 +1,28 @@
+{
+  "auditGeneratedUtc": "2026-10-12T00:47:37.527752Z",
+  "timezone": "Europe/Malta",
+  "firstSuccessUtc": "2026-10-10T05:16:03.201198Z",
+  "firstSuccessLocal": "2026-10-10T07:16:03.201198+02:00",
+  "lastSuccessUtc": "2026-10-12T00:46:56.177966Z",
+  "lastSuccessLocal": "2026-10-12T02:46:56.177966+02:00",
+  "successRuns": 174,
+  "completedRouteResponsesReportedByRuns": 2088,
+  "retainedHistoricalObservations": 0,
+  "runsByLocalDate": {
+    "2026-10-10": 68,
+    "2026-10-11": 94,
+    "2026-10-12": 12
+  },
+  "uniqueQuarterHourBucketsByLocalDate": {
+    "2026-10-10": 67,
+    "2026-10-11": 94,
+    "2026-10-12": 12
+  },
+  "immediateDuplicateStarts": 1,
+  "cadenceExcludingImmediateDuplicateSeconds": {
+    "minimum": 900.388684,
+    "median": 910.9190865,
+    "maximum": 920.318229,
+    "gapsOverTwentyMinutes": 0
+  }
+}

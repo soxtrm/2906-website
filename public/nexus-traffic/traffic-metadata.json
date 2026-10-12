@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "nexus-traffic-v1",
+  "datasetStatus": "NOT_READY",
+  "generatedAt": "2026-10-12T00:47:37.527752Z",
+  "timezone": "Europe/Malta",
+  "slotMinutes": 15,
+  "slotCount": 96,
+  "providerInventory": [
+    "Google Maps Routes API current snapshot",
+    "systemd run journal"
+  ],
+  "sourceWindow": {
+    "firstSuccessfulRun": "2026-10-10T05:16:03.201198Z",
+    "lastRunIncluded": "2026-10-12T00:46:56.177966Z",
+    "calendarDaysRepresented": 3,
+    "completeOperationalDays": 1,
+    "completeDaysWithRetainedMeasurements": 0
+  },
+  "coverage": {
+    "canonicalDirectionalSegments": 0,
+    "historicalObservations": 0,
+    "segmentsWithAll96Slots": 0,
+    "currentDirectionalCorridorKeys": 24,
+    "coveragePercent": 0
+  },
+  "currentSnapshot": {
+    "retention": "ephemeral",
+    "maxAgeMinutes": 35,
+    "containsGeometry": false,
+    "containsStreetSegmentIds": false
+  },
+  "corridorKeys": [
+    "airport--central-birkirkara",
+    "airport--south-marsaskala",
+    "central-birkirkara--airport",
+    "central-birkirkara--ta-qali",
+    "cirkewwa--north-mellieha",
+    "cirkewwa--st-julians",
+    "mdina-gate--north-mellieha",
+    "mdina-gate--sliema",
+    "north-mellieha--cirkewwa",
+    "north-mellieha--mdina-gate",
+    "portomaso--sliema",
+    "portomaso--st-julians",
+    "sliema--mdina-gate",
+    "sliema--portomaso",
+    "sliema--valletta-gate",
+    "south-marsaskala--airport",
+    "south-marsaskala--ta-qali",
+    "st-julians--cirkewwa",
+    "st-julians--portomaso",
+    "st-julians--valletta-gate",
+    "ta-qali--central-birkirkara",
+    "ta-qali--south-marsaskala",
+    "valletta-gate--sliema",
+    "valletta-gate--st-julians"
+  ],
+  "legal": {
+    "historicalGoogleRoutesArchiveApproved": false,
+    "googleContentOnNonGoogleMapApproved": false,
+    "policyReviewedAt": "2026-10-12",
+    "policyUrls": [
+      "https://developers.google.com/maps/documentation/routes/policies",
+      "https://cloud.google.com/maps-platform/terms/maps-service-terms"
+    ]
+  },
+  "reason": "No retained, licensable historical street observations were found. Values must remain UNKNOWN."
+}

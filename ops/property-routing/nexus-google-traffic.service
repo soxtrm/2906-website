@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh targeted current Malta traffic corridors from Google Routes
+After=network-online.target nexus-routing.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/nexus-routing
+ExecStart=/usr/bin/node /opt/nexus-routing/google-traffic-scan.cjs
+MemoryMax=128M
+NoNewPrivileges=true
+
