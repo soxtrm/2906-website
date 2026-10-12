@@ -3640,20 +3640,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   const latestTouch = listingTouch(r)
   const isFreshlyUpdated = !!latestTouch && (Date.now() - Date.parse(latestTouch.at) < 48 * 3600_000)
 
-  // Photos change only while the pointer moves across the image. The previous
-  // implementation created an IntersectionObserver, timeout and interval for
-  // every visible card; on a phone that kept React updating cards the user was
-  // not touching and made the board feel permanently busy.
+  // Photos change only through an explicit pointer position, arrow click or
+  // touch swipe. Never advance a card on a timer: a stationary pointer should
+  // leave the selected photo stable and avoid background React updates.
   const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
-  const [photoHovered, setPhotoHovered] = useState(false)
   const swipeStartX = useRef<number | null>(null)
   const didSwipePhoto = useRef(false)
   const photoCount = (r.images || []).length
-  useEffect(() => {
-    if (isMobile || !photoHovered || photoCount < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const timer = window.setInterval(() => setHoverPhotoIdx(index => (index + 1) % photoCount), 1400)
-    return () => window.clearInterval(timer)
-  }, [isMobile, photoHovered, photoCount])
   const previewPhotoAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'mouse' || photoCount < 2) return
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -3735,9 +3728,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         data-photo-index={hoverPhotoIdx}
         data-photo-count={photoCount}
         onClick={() => { if (didSwipePhoto.current) { didSwipePhoto.current = false; return }; onOpen() }}
-        onPointerEnter={event => { if (event.pointerType === 'mouse' && photoCount > 1) setPhotoHovered(true) }}
         onPointerMove={previewPhotoAtPointer}
-        onPointerLeave={() => { setPhotoHovered(false); setHoverPhotoIdx(0) }}
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
         onPointerCancel={() => { swipeStartX.current = null }}
