@@ -3732,7 +3732,18 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
         onPointerCancel={() => { swipeStartX.current = null }}
-        style={{ cursor: 'pointer', position: 'relative', height: '100%', minHeight: isMobile ? 142 : 230, flexShrink: 0, background: '#111', gridColumn: 1, gridRow: isMobile ? 1 : '1 / 4', touchAction: 'pan-y' }}
+        style={{
+          cursor: 'pointer', position: 'relative',
+          // Keep every listing photo in one predictable frame. Previously
+          // height:100% let verbose cards stretch their image far beyond the
+          // standard-sized #2906-9340 card.
+          height: isMobile ? 142 : 230,
+          minHeight: isMobile ? 142 : 230,
+          maxHeight: isMobile ? 142 : 230,
+          alignSelf: 'start',
+          flexShrink: 0, background: '#111', gridColumn: 1,
+          gridRow: isMobile ? 1 : '1 / 4', touchAction: 'pan-y',
+        }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
           ? <motion.img key={r.images[hoverPhotoIdx] || r.images[0]} src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" decoding="async" initial={{ opacity: .35, scale: 1.018 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .18, ease: [0.22, 1, 0.36, 1] }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
