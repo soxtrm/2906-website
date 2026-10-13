@@ -16,6 +16,12 @@ const EDIT_MODEL = process.env.GPTUPLOAD_IMAGE_MODEL || 'gemini-3.1-flash-image'
 const VISION_MODEL = process.env.GPTUPLOAD_VISION_MODEL || 'gemini-2.5-flash'
 const EDIT_TIMEOUT_MS = Number(process.env.GPTUPLOAD_IMAGE_TIMEOUT_MS || 120000)
 const VISION_TIMEOUT_MS = Number(process.env.GPTUPLOAD_VISION_TIMEOUT_MS || 90000)
+// Edits run a few at a time: sequential took up to 10 × EDIT_TIMEOUT_MS, all
+// at once would hammer the provider and hold ten decoded images in memory.
+const EDIT_CONCURRENCY = Math.max(1, Math.min(4, Number(process.env.GPTUPLOAD_CONCURRENCY || 3)))
+// An edit whose long edge falls below this share of the original is kept but
+// flagged for review — the model may return a smaller frame than WhatsApp sent.
+const MIN_RESOLUTION_RATIO = 0.8
 
 const apiKey = () => process.env.GEMINI_API_KEY || config?.gemini?.apiKey || null
 const sha256 = buffer => crypto.createHash('sha256').update(buffer).digest('hex')
@@ -26,6 +32,55 @@ function withTimeout(promise, ms, label) {
     timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms)
   })
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+// Width/height from the image header (PNG, JPEG, WebP) without a decoder.
+// Returns null for anything it cannot read; callers treat that as unknown.
+function imageSize(buffer) {
+  try {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 30) return null
+    if (buffer.readUInt32BE(0) === 0x89504e47) return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) }
+    if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+      const chunk = buffer.toString('ascii', 12, 16)
+      if (chunk === 'VP8X') return { width: 1 + buffer.readUIntLE(24, 3), height: 1 + buffer.readUIntLE(27, 3) }
+      if (chunk === 'VP8 ') return { width: buffer.readUInt16LE(26) & 0x3fff, height: buffer.readUInt16LE(28) & 0x3fff }
+      if (chunk === 'VP8L') { const bits = buffer.readUInt32LE(21); return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 } }
+      return null
+    }
+    if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+      let offset = 2
+      while (offset + 9 < buffer.length) {
+        if (buffer[offset] !== 0xff) { offset += 1; continue }
+        const marker = buffer[offset + 1]
+        const length = buffer.readUInt16BE(offset + 2)
+        if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+          return { width: buffer.readUInt16BE(offset + 7), height: buffer.readUInt16BE(offset + 5) }
+        }
+        offset += 2 + length
+      }
+    }
+  } catch { /* unreadable header */ }
+  return null
+}
+
+function lowerResolution(source, edited) {
+  if (!source || !edited) return false
+  return Math.max(edited.width, edited.height) < MIN_RESOLUTION_RATIO * Math.max(source.width, source.height)
+}
+
+/** Runs fn over items with at most `limit` in flight; results keep input order. */
+async function mapLimited(items, limit, fn) {
+  const results = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next
+      next += 1
+      results[index] = await fn(items[index], index)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
 }
 
 function jsonText(response) {
@@ -159,12 +214,14 @@ async function processImages({ images = [], facts = {}, mode = 'pimp', triggerId
   const bases = []
   for (const image of limited) bases.push(await recoverOriginal(image, { store, fetcher }))
   const audit = mode === 'vision' ? await auditImages(bases, facts, { ai }) : null
-  const items = []
   let editedCount = 0
   let fallbackCount = 0
+  let lowerResolutionCount = 0
+  let completed = 0
   const keyPresent = !!apiKey() || !!ai
-  for (let index = 0; index < bases.length; index += 1) {
-    const sourceImage = bases[index]
+  // Bounded parallel edits; every item is written to its own index, so the
+  // final order is the input order no matter which edit finishes first.
+  const items = await mapLimited(bases, EDIT_CONCURRENCY, async (sourceImage, index) => {
     let output = { buffer: sourceImage.buffer, mimeType: sourceImage.mimeType }
     let status = 'fallback_original'
     let error = null
@@ -182,7 +239,16 @@ async function processImages({ images = [], facts = {}, mode = 'pimp', triggerId
       error = 'image editing key unavailable'
       fallbackCount += 1
     }
-    items.push({
+    const sourceSize = imageSize(sourceImage.buffer)
+    const editedSize = status === 'edited' ? imageSize(output.buffer) : null
+    const reviewResolution = status === 'edited' && lowerResolution(sourceSize, editedSize)
+    if (reviewResolution) {
+      lowerResolutionCount += 1
+      log.warn('gptPhotoPipeline: edited image is lower resolution than its original', { index, sourceSize, editedSize })
+    }
+    completed += 1
+    if (onProgress) await onProgress({ complete: completed, total: bases.length, edited: editedCount, fallback: fallbackCount })
+    return {
       position: index,
       sourceBuffer: sourceImage.buffer,
       sourceMimeType: sourceImage.mimeType,
@@ -192,10 +258,12 @@ async function processImages({ images = [], facts = {}, mode = 'pimp', triggerId
       mimeType: output.mimeType,
       editedSha256: status === 'edited' ? sha256(output.buffer) : null,
       status,
-      error,
-    })
-    if (onProgress) await onProgress({ complete: index + 1, total: bases.length, edited: editedCount, fallback: fallbackCount })
-  }
+      error: error || (reviewResolution ? `review: edited ${editedSize.width}x${editedSize.height} < original ${sourceSize.width}x${sourceSize.height}` : null),
+      sourceSize,
+      editedSize,
+      reviewResolution,
+    }
+  })
   for (let i = 0; i < untouched.length; i += 1) {
     const image = untouched[i]
     items.push({ position: MAX_EDIT_IMAGES + i, sourceBuffer: image.buffer, sourceMimeType: image.mimeType, sourceSha256: sha256(image.buffer), sourceKind: 'ORIGINAL', buffer: image.buffer, mimeType: image.mimeType, editedSha256: null, status: 'skipped_limit', error: null })
@@ -203,7 +271,7 @@ async function processImages({ images = [], facts = {}, mode = 'pimp', triggerId
   await safeQuery(
     `UPDATE property_photo_processing_runs SET status='processed', edited_count=$2, fallback_count=$3, audit=$4::jsonb, completed_at=NOW() WHERE run_id=$1`,
     [id, editedCount, fallbackCount, JSON.stringify(audit || {})], store)
-  return { runId: id, mode, items, audit, editedCount, fallbackCount, sourceCount: images.length, models: { edit: EDIT_MODEL, vision: mode === 'vision' ? VISION_MODEL : null } }
+  return { runId: id, mode, items, audit, editedCount, fallbackCount, lowerResolutionCount, overLimitCount: untouched.length, sourceCount: images.length, models: { edit: EDIT_MODEL, vision: mode === 'vision' ? VISION_MODEL : null } }
 }
 
 async function persistResult({ result, propertyId, uploaded }) {
@@ -233,6 +301,6 @@ async function persistResult({ result, propertyId, uploaded }) {
 }
 
 module.exports = {
-  MAX_EDIT_IMAGES, EDIT_MODEL, VISION_MODEL, sha256, normaliseAudit,
+  MAX_EDIT_IMAGES, EDIT_MODEL, VISION_MODEL, EDIT_CONCURRENCY, sha256, normaliseAudit, imageSize, mapLimited,
   auditImages, editOne, processImages, persistResult, responseImage,
 }

@@ -70,3 +70,56 @@ test('an enhanced input resolves back to its stored original before editing', as
   assert.deepEqual(received, original)
   assert.equal(result.items[0].sourceKind, 'GPT_ENHANCED')
 })
+
+const png = (width, height) => {
+  const buffer = Buffer.alloc(33)
+  buffer.writeUInt32BE(0x89504e47, 0); buffer.writeUInt32BE(0x0d0a1a0a, 4)
+  buffer.writeUInt32BE(13, 8); buffer.write('IHDR', 12, 'ascii')
+  buffer.writeUInt32BE(width, 16); buffer.writeUInt32BE(height, 20)
+  return buffer
+}
+const runStore = () => ({ query: async sql => ({ rows: /INSERT INTO property_photo_processing_runs/.test(sql) ? [{ run_id: '00000000-0000-0000-0000-000000000003' }] : [] }) })
+
+test('parallel edits keep the input order even when they finish out of order', async () => {
+  let inFlight = 0
+  let peak = 0
+  const ai = { models: { generateContent: async request => {
+    inFlight += 1; peak = Math.max(peak, inFlight)
+    const source = Buffer.from(request.contents[0].parts[0].inlineData.data, 'base64').toString()
+    await new Promise(resolve => setTimeout(resolve, source.endsWith('0') ? 40 : 5)) // first image is slowest
+    inFlight -= 1
+    return { candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/jpeg', data: Buffer.from(`edited-${source}`).toString('base64') } }] } }] }
+  } } }
+  const images = Array.from({ length: 6 }, (_, i) => ({ buffer: Buffer.from(`source-${i}`), mimeType: 'image/jpeg' }))
+  const result = await pipeline.processImages({ images, ai, store: runStore() })
+  assert.deepEqual(result.items.map(item => item.buffer.toString()), images.map((_, i) => `edited-source-${i}`))
+  assert.deepEqual(result.items.map(item => item.position), [0, 1, 2, 3, 4, 5])
+  assert.ok(peak > 1 && peak <= pipeline.EDIT_CONCURRENCY, `bounded concurrency, peak ${peak}`)
+})
+
+test('more than ten images: first ten are edited, the rest stay original and are counted', async () => {
+  const ai = { models: { generateContent: async () => ({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/jpeg', data: Buffer.from('e').toString('base64') } }] } }] }) } }
+  const images = Array.from({ length: 11 }, (_, i) => ({ buffer: Buffer.from(`s${i}`), mimeType: 'image/jpeg' }))
+  const result = await pipeline.processImages({ images, ai, store: runStore() })
+  assert.equal(result.editedCount, 10)
+  assert.equal(result.overLimitCount, 1)
+  assert.equal(result.items.length, 11)
+  assert.equal(result.items[10].status, 'skipped_limit')
+  assert.deepEqual(result.items[10].buffer, Buffer.from('s10'))
+})
+
+test('reads PNG and JPEG dimensions from the header', () => {
+  assert.deepEqual(pipeline.imageSize(png(1600, 1200)), { width: 1600, height: 1200 })
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x03, 0x00, 0x04, 0x00, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00])
+  assert.deepEqual(pipeline.imageSize(jpeg), { width: 1024, height: 768 })
+  assert.equal(pipeline.imageSize(Buffer.from('not an image at all, just text')), null)
+})
+
+test('an edit that shrinks the photo is kept but flagged for review', async () => {
+  const ai = { models: { generateContent: async () => ({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: png(1024, 768).toString('base64') } }] } }] }) } }
+  const result = await pipeline.processImages({ images: [{ buffer: png(1600, 1200), mimeType: 'image/png' }], ai, store: runStore() })
+  assert.equal(result.items[0].status, 'edited')
+  assert.equal(result.items[0].reviewResolution, true)
+  assert.equal(result.lowerResolutionCount, 1)
+  assert.match(result.items[0].error, /review: edited 1024x768 < original 1600x1200/)
+})

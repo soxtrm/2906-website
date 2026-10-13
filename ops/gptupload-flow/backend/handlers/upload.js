@@ -1470,9 +1470,13 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
 
     step = 'create'
     if (photoMode) {
-      const count = Math.min((gathered.imageItems || []).length, gptPhotoPipeline.MAX_EDIT_IMAGES)
+      const total = (gathered.imageItems || []).length
+      const count = Math.min(total, gptPhotoPipeline.MAX_EDIT_IMAGES)
+      // Internal chat only. Photos beyond the limit are still uploaded, as
+      // originals - say so up front instead of silently leaving them unedited.
+      const overLimit = total > count ? `\nMaximum ${gptPhotoPipeline.MAX_EDIT_IMAGES} images supported for gptupload - ${total - count} more kept as original.` : ''
       await reply(session, chatId,
-        `${photoMode === 'vision' ? 'VISION + GPT PHOTO PROCESSING' : 'GPT PHOTO PROCESSING'}\n0 / ${count} complete`)
+        `${photoMode === 'vision' ? 'VISION + GPT PHOTO PROCESSING' : 'GPT PHOTO PROCESSING'}\n0 / ${count} complete${overLimit}`)
     }
     const created = []
     const dupes = []
@@ -1546,7 +1550,7 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
         (c.multiUnit ? `Multi-unit post — also created ${c.units.map(u => '#' + u.ref).filter(r => r !== '#' + c.ref).join(', ')}, both cross-referenced.\n` : '') +
         `${c.town || '—'} · ${c.beds || 0}BR/${c.baths || 0}BA · ${price}\n` +
         `${media}\n` +
-        (c.photoSummary ? `GPT PIMP ${c.photoSummary.editedCount}/${Math.min(c.photoSummary.sourceCount, gptPhotoPipeline.MAX_EDIT_IMAGES)} complete${c.photoSummary.fallbackCount ? ` · ${c.photoSummary.fallbackCount} original fallback` : ''}${c.photoSummary.audit?.hero_candidates?.length ? ` · hero candidate ${c.photoSummary.audit.hero_candidates[0] + 1}` : ''}\n` : '') +
+        (c.photoSummary ? `GPT PIMP ${c.photoSummary.editedCount}/${Math.min(c.photoSummary.sourceCount, gptPhotoPipeline.MAX_EDIT_IMAGES)} complete${c.photoSummary.fallbackCount ? ` · ${c.photoSummary.fallbackCount} original fallback` : ''}${c.photoSummary.lowerResolutionCount ? ` · ${c.photoSummary.lowerResolutionCount} lower-res, review` : ''}${c.photoSummary.overLimitCount ? ` · ${c.photoSummary.overLimitCount} over limit kept original` : ''}${c.photoSummary.audit?.hero_candidates?.length ? ` · hero candidate ${c.photoSummary.audit.hero_candidates[0] + 1}` : ''}\n` : '') +
         `\n` +
         (noAd ? `🚫 noad — no Facebook at all (no page post, no group share)\n` : '') +
         (!noAd && !c.imageCount && !c.videoCount
