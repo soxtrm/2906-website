@@ -1,6 +1,6 @@
 # Birkirkara neighbourhood edition — source dossier
 
-Status: RESEARCH DRAFT — no public edition exists yet.
+Status: RESEARCH DRAFT — licensed hero asset prepared; no public edition exists yet.
 
 Research date: 14 October 2026.
 
@@ -84,10 +84,19 @@ Preferred candidate: `The Old Railway Station.jpg` by Karm photography.
 
 - Commons record: https://commons.wikimedia.org/wiki/File:The_Old_Railway_Station.jpg
 - Original: 4292 × 2864 pixels, 7,307,082 bytes.
+- Original SHA-256: `02FEA5084B080A6FA16640A43D00ECBE2B5AE0EF44D5A446466BDA7B1CF5E83C`.
 - Taken: 15 August 2018.
 - Licence: CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0/
 - Visual review: clear daylight view of the historic station façade, platform canopy, rail carriage and mature trees. It provides a specific Birkirkara heritage / public-space anchor without presenting a generic church façade as the whole locality.
 - Limitation: it represents the old railway-station context, not the appearance, view or access of any property and not the whole of modern Birkirkara.
+
+Prepared web asset: `public/link-marketplace/assets/birkirkara-old-railway-station-karm.webp`.
+
+- Resize-only conversion from the exact Commons original; no crop, retouching or generated content.
+- 1800 × 1201 pixels, 371,120 bytes.
+- SHA-256: `955B0BB8DCDCE0CC0AED6D7B74634BA06F42CA63BE169A37A0E74A3B82D89A04`.
+- Final pixel review passed: façade detail, station lettering, canopy, carriage and surrounding trees remain sharp; no person is visibly identifiable.
+- Any responsive `object-fit` crop must be reviewed again at the final 390px and 1440px page layouts and disclosed in the caption if it materially trims the frame.
 
 Alternatives visually reviewed but not preferred:
 
@@ -96,7 +105,7 @@ Alternatives visually reviewed but not preferred:
 - `St Helen Feast, Birkirkara.jpg`, Terry Caselli, CC BY-SA 4.0: vivid 2022 street scene, but it records a special feast event and should not stand in for ordinary daily conditions.
 - Older Panoramio street frames: correctly licensed but visually weaker and less current.
 
-Release gate: download the exact preferred original through the Commons API, hash it, produce a documented resize-only derivative, and inspect the final crop on mobile and desktop before use.
+Release gate: inspect the final responsive crop on mobile and desktop and preserve visible author, source, date, licence and resize disclosure in the page caption.
 
 ## Map and mobility rules
 
@@ -109,7 +118,7 @@ Release gate: download the exact preferred original through the Commons API, has
 ## Publication gates
 
 - Verify the exact operator address for a weekly-shopping anchor.
-- Download, hash and process the preferred Commons original with visible author/date/licence attribution.
+- Preserve the prepared Commons derivative with visible author/date/licence attribution and review its final responsive crop.
 - Draft a standalone English edition that does not duplicate San Ġwann, Msida, Mosta or the Central Business District.
 - Add the click-to-load 2D map without boundaries or generic routes.
 - Review source claims immediately before release.
