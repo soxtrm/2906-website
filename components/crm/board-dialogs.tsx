@@ -253,13 +253,18 @@ type Preview = {
 const MAX_IMAGES = 3
 const MAX_IMAGE_BYTES = 2_000_000
 
-export function AskDialog({ refId, town, contact, onClose, onDone }: {
+export function AskDialog({ refId, town, contact, intent = 'property', initialNote = '', title, onClose, onDone }: {
   refId: string; town?: string | null
   contact: { mode: 'owner' | 'agent'; reachesName: string | null; questionsUsed: number; questionsPerDay: number }
+  // 'owner-inventory' (Rented tab): a general "anything else free?" check to
+  // the owner, separate from the rented listing itself.
+  intent?: 'property' | 'owner-inventory'
+  initialNote?: string
+  title?: string
   onClose: () => void
   onDone: (msg: string) => void
 }) {
-  const [note, setNote] = useState('')
+  const [note, setNote] = useState(initialNote)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [edited, setEdited] = useState('')
   const [images, setImages] = useState<{ name: string; mime: string; dataBase64: string; url: string }[]>([])
@@ -292,7 +297,7 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
     if (!note.trim()) return setErr('Write your question first.')
     setBusy('preview')
     try {
-      const d = await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/ask/preview`, 'POST', { note })
+      const d = await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/ask/preview`, 'POST', { note, intent })
       setPreview(d); setEdited(d.text)
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not prepare the message.')
@@ -306,6 +311,7 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
     try {
       const d = await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/ask/send`, 'POST', {
         text: edited,
+        intent,
         images: images.map(i => ({ mime: i.mime, dataBase64: i.dataBase64 })),
       })
       onDone(d.message || 'Sent.')
@@ -319,7 +325,7 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
 
   return (
     <Sheet
-      title={preview ? 'Check before it sends' : 'Ask a question'}
+      title={preview ? 'Check before it sends' : (title || 'Ask a question')}
       sub={`#${refId}${town ? ` · ${town}` : ''} · goes to ${preview?.recipientLabel || to}`}
       onClose={onClose}
       footer={preview ? <>
@@ -350,8 +356,9 @@ export function AskDialog({ refId, town, contact, onClose, onDone }: {
                 : 'is this still available? client wants Saturday'}
             />
             <p className="text-[11px] text-navy/40 mt-2 leading-relaxed">
-              Write it however you like — it gets rewritten into a polite message and
-              you approve the exact wording on the next step.
+              {intent === 'owner-inventory'
+                ? 'This is a general inventory check, separate from the rented listing. You approve the exact wording on the next step.'
+                : <>Write it however you like — it gets rewritten into a polite message and you approve the exact wording on the next step.</>}
             </p>
 
             {/* images */}
