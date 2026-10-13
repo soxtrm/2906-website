@@ -30,7 +30,7 @@ export function PropertySearch() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [locationSearch, setLocationSearch] = useState('')
-  const searchRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
