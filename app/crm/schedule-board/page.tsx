@@ -1766,18 +1766,7 @@ function Board() {
             normal board by accident. */}
         {view === 'board' && (
           <div className="crm-board-location-filter">
-          <div className="crm-area-rail" aria-label="Malta areas">
-            {VILLAGE_AREAS.map(area => {
-              const on = villageArea === area.key
-              const areaCount = (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0)
-              return (
-                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => applyVillageArea(on ? null : area.key)}>
-                  <span>{area.label}</span>{areaCount > 0 && <small>{areaCount}</small>}
-                </button>
-              )
-            })}
-          </div>
-          <div className="crm-board-scope-rail" aria-label="Availability">
+          <div className="crm-board-scope-rail crm-area-rail" aria-label="Availability and Malta areas">
             {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
               const on = horizon === h
               return (
@@ -1792,6 +1781,15 @@ function Board() {
                   {h === 'future' && futureCount > 0 && (
                     <span style={{ marginLeft: 5, fontFamily: FM, fontSize: 10, color: DTEXT_FAINT }}>{futureCount}</span>
                   )}
+                </button>
+              )
+            })}
+            {VILLAGE_AREAS.map(area => {
+              const on = villageArea === area.key
+              const areaCount = (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0)
+              return (
+                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => applyVillageArea(on ? null : area.key)}>
+                  <span>{area.label}</span>{areaCount > 0 && <small>{areaCount}</small>}
                 </button>
               )
             })}
