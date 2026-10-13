@@ -32,4 +32,5 @@ export type Me = {
   daily_reveal_limit: number
   boardOnly?: boolean
   boardTourCompletedAt?: string | null
+  can_create_owner_group?: boolean
 }

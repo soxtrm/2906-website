@@ -490,7 +490,7 @@ function agoShort(iso: string): string {
   return `${Math.floor(hrs / 24)}d`
 }
 
-export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClose }: {
+export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, onCreateGroup, onClose }: {
   refId: string; town?: string | null
   // Kev, 2026-08-28: "the Book button could also be in the chat, and +
   // group too" — same data + same handlers the board card's own Book /
@@ -499,6 +499,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
   // canCreateGroup/groupJid) — optional because a caller that only wants the
   // conversation (no Book/Group actions available) can omit all three.
   viewing?: { canCreateGroup?: boolean; groupJid?: string | null } | null
+  ownerGroupRequest?: { status?: string; groupJid?: string | null } | null
   onBook?: () => void
   onCreateGroup?: () => void
   onClose: () => void
@@ -749,22 +750,23 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               </button>
             )}
             {onCreateGroup && (() => {
-              const ready = canCreateGroupBtn && !!viewing?.canCreateGroup
-              const already = !!viewing?.groupJid
+              const open = ['GROUP_REQUEST_DRAFT','GROUP_REQUEST_PENDING','GROUP_REQUEST_APPROVED','GROUP_CREATING'].includes(ownerGroupRequest?.status || '')
+              const already = !!viewing?.groupJid || !!ownerGroupRequest?.groupJid || ['GROUP_CREATED','GROUP_ACTIVE'].includes(ownerGroupRequest?.status || '')
+              const ready = canCreateGroupBtn && !already
               const title = already
-                ? 'Group already created for this booking.'
-                : ready
-                ? 'Owner confirmed — create the WhatsApp group with the agent and owner.'
-                : 'Needs a confirmed booking first — the owner has to say yes.'
+                ? 'Owner group already created.'
+                : open ? 'Open the pending owner approval request.'
+                : ready ? 'Request owner approval for a property coordination group.'
+                : 'Create Group ★ is not enabled for this profile.'
               return (
                 <button onClick={ready ? onCreateGroup : undefined} disabled={!ready || already} title={title}
                   className={cn(
                     'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
                     ready && !already
-                      ? 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
+                      ? 'bg-[#B8953F]/10 text-[#E8CC82] border border-[#B8953F]/35 hover:bg-[#B8953F]/20'
                       : 'bg-transparent text-white/25 border border-dashed border-white/15 cursor-not-allowed',
                   )}>
-                  <Users className="w-3 h-3" /> {already ? 'Group created' : 'Create Group'}
+                  <Users className="w-3 h-3" /> {already ? 'Group created' : open ? 'Waiting ★' : 'Create Group ★'}
                 </button>
               )
             })()}

@@ -21,6 +21,7 @@ import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/component
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
+import { OwnerGroupRequestDialog } from '@/components/crm/owner-group-request-dialog'
 import { ListingCardSkeleton } from '@/components/crm/listing-card-skeleton'
 import dynamic from 'next/dynamic'
 const BoardIntelligenceMap = dynamic(() => import('@/components/crm/nexus-place-editor').then(m => m.NexusPlaceEditor), { ssr: false })
@@ -184,6 +185,8 @@ type Listing = {
     // the button's enabled state.
     canCreateGroup?: boolean
   } | null
+  canCreateOwnerGroup?: boolean
+  ownerGroupRequest?: { requestId:string; status:string; approvalPolicy:string; expiresAt:string; groupJid?:string|null; groupName?:string|null; lastError?:string|null } | null
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
@@ -1060,6 +1063,7 @@ function Board() {
   // operator clicked because they already know the answer; making them wait on
   // a round trip to see it is how a card gets clicked twice.
   const [busyRef, setBusyRef] = useState<string | null>(null)
+  const [groupTarget, setGroupTarget] = useState<Listing | null>(null)
 
   async function checkIn(r: Listing) {
     if (busyRef) return
@@ -1109,25 +1113,9 @@ function Board() {
   // ── Create Group (Phase 2) ──────────────────────────────────────────────
   // One-shot, not a toggle — no optimistic update, just disable the button
   // via busyRef until the server confirms the real WhatsApp group exists.
-  async function createGroup(r: Listing) {
-    if (busyRef) return
-    setBusyRef(r.ref)
-    try {
-      const d = await crmJson(`schedule-board/listings/${encodeURIComponent(r.ref)}/create-group`, 'POST', {})
-      const patch = (x: Listing) => x.viewing
-        ? { ...x, viewing: { ...x.viewing, groupJid: d.groupId || 'created', canCreateGroup: false } }
-        : x
-      setRows(rs => rs.map(x => x.ref === r.ref ? patch(x) : x))
-      // The Chat dialog holds its own snapshot (`chatting`), separate from
-      // `rows` — without this it kept showing "Create Group" as clickable
-      // after a successful create from inside the chat itself.
-      setChatting(c => (c && c.ref === r.ref) ? patch(c) : c)
-      showToast('ok', d.message || `Group created for #${r.ref}.`)
-    } catch (e: any) {
-      showToast('err', e?.data?.error || e?.message || 'Could not create the group.')
-    } finally {
-      setBusyRef(null)
-    }
+  function createGroup(r: Listing) {
+    setChatting(null)
+    setGroupTarget(r)
   }
 
   // ── WATag ─────────────────────────────────────────────────────────────────
@@ -2108,6 +2096,7 @@ function Board() {
             refId={chatting.ref}
             town={chatting.town}
             viewing={chatting.viewing}
+            ownerGroupRequest={chatting.ownerGroupRequest}
             // Same handlers the card's own Book / Create Group buttons use —
             // Kev, 2026-08-28: "the Book button could also be in the chat,
             // and + group too, whichever's easier" — this is that, not a
@@ -2117,6 +2106,18 @@ function Board() {
             onBook={() => { setChatting(null); openBook(chatting) }}
             onCreateGroup={() => createGroup(chatting)}
             onClose={() => setChatting(null)}
+          />
+        )}
+        {groupTarget && (
+          <OwnerGroupRequestDialog
+            key="owner-group-request"
+            propertyRef={groupTarget.ref}
+            viewingId={groupTarget.viewing?.id || null}
+            onClose={() => { setGroupTarget(null); reload() }}
+            onChange={request => {
+              const patch = (x: Listing) => x.ref === groupTarget.ref ? { ...x, ownerGroupRequest: request } : x
+              setRows(rs => rs.map(patch)); setFeedRows(rs => rs.map(patch))
+            }}
           />
         )}
         {statusing && (
@@ -4423,22 +4424,21 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
                 Match
               </button>
               {(() => {
-                const ready = canCreateGroupBtn && !!r.viewing?.canCreateGroup
-                const already = !!r.viewing?.groupJid
+                const open = ['GROUP_REQUEST_DRAFT','GROUP_REQUEST_PENDING','GROUP_REQUEST_APPROVED','GROUP_CREATING'].includes(r.ownerGroupRequest?.status || '')
+                const already = !!r.viewing?.groupJid || ['GROUP_CREATED','GROUP_ACTIVE'].includes(r.ownerGroupRequest?.status || '')
+                const ready = canCreateGroupBtn && !already
                 const title = already
-                  ? 'Group already created for this booking.'
-                  : ready
-                  ? 'Owner confirmed — create the WhatsApp group with the agent and owner.'
-                  : r.viewing?.status === 'confirmed'
-                  ? 'Admins only.'
-                  : 'Needs a confirmed booking first — the owner has to say yes.'
+                  ? 'Owner group already created.'
+                  : open ? 'Open the pending owner approval request.'
+                  : ready ? 'Request owner approval for a property coordination group.'
+                  : 'Create Group ★ is not enabled for this profile.'
                 return (
                   <button
                     onClick={() => { if (ready) guardedFutureAction('Create viewing group', () => { onCreateGroup(); setMenuOpen(false) }) }}
                     disabled={!ready || already || (futureLocked && !isAdmin)}
                     title={title}
-                    style={{ ...menuGridBtn(dark), ...futureActionStyle, color: ready && !already ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
-                    {already ? 'Grouped ✓' : 'Create Group'}
+                    style={{ ...menuGridBtn(dark), ...futureActionStyle, color: ready && !already ? '#E8CC82' : (dark ? DTEXT_FAINT : LTEXT_FAINT), borderColor: ready && !already ? 'rgba(184,149,63,.5)' : undefined, background: ready && !already ? 'rgba(184,149,63,.09)' : undefined, cursor: ready && !already ? 'pointer' : 'not-allowed' }}>
+                    {already ? 'Grouped ✓' : open ? 'Waiting ★' : 'Create Group ★'}
                   </button>
                 )
               })()}

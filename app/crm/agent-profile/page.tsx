@@ -63,6 +63,7 @@ type Agent = {
   role: string; active: boolean; whatsapp_session: string | null
   feature_entitlements: Record<string, string>; invoice_settings: any; contract_settings: any
   notifications_paused: boolean
+  can_create_owner_group: boolean
 }
 type SavedSearch = {
   id: number; name: string; filters: any; enabled: boolean
@@ -79,6 +80,7 @@ type Bundle = {
   activity: { action_type: string; target_ref: string | null; details: any; created_at: string }[]
   invoices: Invoice[]
   contracts: ContractRow[]
+  ownerGroups: { requestId:string; status:string; approvalPolicy:string; propertyRef:string; town?:string|null; createdAt:string; updatedAt:string; groupName?:string|null; clients:{id:string;name:string}[] }[]
 }
 
 const FEATURES: { key: string; label: string; desc: string }[] = [
@@ -287,6 +289,10 @@ function AgentProfilePage() {
               <input placeholder="Company number" defaultValue={a.company_number || ''} onChange={e => setEditDraft(d => ({ ...d, company_number: e.target.value }))} style={inputStyle()} />
               <input placeholder="IBAN" defaultValue={a.bank_iban || ''} onChange={e => setEditDraft(d => ({ ...d, bank_iban: e.target.value }))} style={inputStyle()} />
               <input placeholder="Bank account name" defaultValue={a.bank_account_name || ''} onChange={e => setEditDraft(d => ({ ...d, bank_account_name: e.target.value }))} style={inputStyle()} />
+              <label style={{ ...inputStyle(), display:'flex', alignItems:'center', gap:9, cursor:'pointer' }}>
+                <input type="checkbox" defaultChecked={a.can_create_owner_group} onChange={e => setEditDraft(d => ({ ...d, can_create_owner_group:e.target.checked }))}/>
+                <span>Create Owner Group ★</span>
+              </label>
             </>}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -335,6 +341,15 @@ function AgentProfilePage() {
           <Stat label="Active Listings" value={bundle.propertyFeeds.my_active_listings} />
           <Stat label="Total Listings" value={bundle.propertyFeeds.my_total_listings} />
         </div>
+      </SectionCard>
+
+      <SectionCard title="Owner Groups ★" icon="★" right={<Badge bg={a.can_create_owner_group ? 'rgba(184,149,63,.15)' : 'rgba(255,255,255,.06)'} fg={a.can_create_owner_group ? '#E8CC82' : DTEXT_FAINT} label={a.can_create_owner_group ? 'ENABLED' : 'NOT ENABLED'} />}>
+        {bundle.ownerGroups.length === 0 ? <div style={{fontSize:12,color:DTEXT_FAINT}}>No owner-group activity recorded.</div> :
+          <div style={{display:'grid',gap:8}}>{bundle.ownerGroups.map(g=><div key={g.requestId} style={{display:'grid',gridTemplateColumns:'minmax(90px,1fr) minmax(130px,1.5fr) auto',gap:10,alignItems:'center',padding:'10px 12px',border:`1px solid ${DBORDER}`,borderRadius:10,background:DCARD2}}>
+            <div><strong style={{fontSize:12,color:DTEXT}}>#{g.propertyRef}</strong><div style={{fontSize:10.5,color:DTEXT_FAINT}}>{g.town || 'Malta'}</div></div>
+            <div><div style={{fontSize:11.5,color:g.status==='GROUP_CREATED'||g.status==='GROUP_ACTIVE'?'#3ECF8E':g.status==='GROUP_REQUEST_DECLINED'?'#F2597A':DTEXT_DIM}}>{g.status.replace(/^GROUP_/,'').replace(/_/g,' ')}</div><div style={{fontSize:10.5,color:DTEXT_FAINT}}>{g.clients.map(c=>c.name).join(', ') || 'No linked client'}</div></div>
+            <div style={{fontSize:10.5,color:DTEXT_FAINT,textAlign:'right'}}>{new Date(g.createdAt).toLocaleDateString()}</div>
+          </div>)}</div>}
       </SectionCard>
 
       {/* ── Personal Outreach (Phase E, 2026-09-17) ─────────────────────────

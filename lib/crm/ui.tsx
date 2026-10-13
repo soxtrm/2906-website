@@ -14,14 +14,10 @@ import { crmFetch, crmJson, type Me, type NavKey, type Reveals } from './api'
 //
 // A / AD / AB stay the accent triple (solid / 10% fill / 28% border) so every
 // existing call site keeps working — only the hue moved.
-// Kev, 2026-09-04 (explicit trust call, not a general permission relaxation):
-// Olga and Katya may hit board actions that otherwise require role==='admin'
-// (currently just Create Group) — "ich vertrau denen, der bot ist eh
-// introduced". Mirrors backend/routes/crmScheduleBoard.js's TRUSTED_CREATE_GROUP;
-// the server enforces the real gate, this only drives the button's UI state.
-export const TRUSTED_CREATE_GROUP = new Set(['olga', 'katya'])
+// Owner-group access is server-owned. The browser only renders the capability
+// returned by /crm/me; it never carries a second username allowlist.
 export function canCreateGroup(me: Me | null | undefined) {
-  return me?.role === 'admin' || TRUSTED_CREATE_GROUP.has((me?.username || '').toLowerCase())
+  return me?.role === 'admin' || me?.can_create_owner_group === true
 }
 
 export const A = 'rgba(64,86,232,1)', AD = 'rgba(64,86,232,0.10)', AB = 'rgba(64,86,232,0.28)'
