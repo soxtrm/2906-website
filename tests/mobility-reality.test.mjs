@@ -27,7 +27,9 @@ assert.equal(unknown.modes[0].time,'UNKNOWN');
 assert.equal(unknown.modes[0].confidence,'UNKNOWN');
 
 const overview=buildMobilityReality({area:'Sliema',coordinates:[14.50,35.91]},{transport:null,anchors:[]});
-assert.equal(overview.length,6);
+// 8 since 76cd10e (2026-09-28): Airport and Ta’ Qali were added on purpose,
+// labelled "entrance unverified"; this count was not updated at the time.
+assert.equal(overview.length,8);
 assert.deepEqual(overview.map(item=>item.anchor.location),MALTA_OVERVIEW_ANCHORS.map(item=>item.location));
 assert.ok(overview.every(item=>item.anchor.overview===true));
 assert.equal(buildMobilityReality({area:'Victoria',island:'GOZO',coordinates:[14.24,36.04]},{transport:null,anchors:[]}).length,0);
