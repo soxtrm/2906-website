@@ -3678,6 +3678,17 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
     <div
       ref={innerRef}
       className="crm-listing-card transition-transform duration-200 hover:-translate-y-1 active:scale-[0.995]"
+      tabIndex={0}
+      aria-label={`Open listing ${r.ref}${r.town ? ` in ${r.town}` : ''}`}
+      onClick={event => {
+        if ((event.target as HTMLElement).closest('button, a, input, textarea, select, [role="button"]')) return
+        onOpen()
+      }}
+      onKeyDown={event => {
+        if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
+        event.preventDefault()
+        onOpen()
+      }}
       // The ref on the DOM node, so a test can assert "this listing's card shows
       // that icon" instead of matching on position in the grid.
       data-ref={r.ref}
@@ -3727,7 +3738,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         className="crm-listing-photo"
         data-photo-index={hoverPhotoIdx}
         data-photo-count={photoCount}
-        onClick={() => { if (didSwipePhoto.current) { didSwipePhoto.current = false; return }; onOpen() }}
+        onClick={event => { event.stopPropagation(); if (didSwipePhoto.current) { didSwipePhoto.current = false; return }; onOpen() }}
         onPointerMove={previewPhotoAtPointer}
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
@@ -3911,8 +3922,8 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             reads cleaner ("wie Apple"). */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-            <span onClick={onOpen} title={status.t} style={{
-              cursor: 'pointer', fontSize: isMobile ? 14.5 : 17, fontWeight: 600, color: DTEXT, letterSpacing: '-0.02em',
+            <span title={status.t} style={{
+              fontSize: isMobile ? 14.5 : 17, fontWeight: 600, color: DTEXT, letterSpacing: '-0.02em',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
             }}>{townLabel(r.town)}</span>
             {/* Kev, 2026-09-16 (WINTER tag, spec item 1): a longlet with a
@@ -3987,7 +3998,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
 
         {/* ── description preview ──────────────────────────────────────────── */}
         {r.description && !isMobile && (
-          <div onClick={onOpen} title="Click to read the full listing" style={{ marginTop: 9, cursor: 'pointer' }}>
+          <div title="Click to read the full listing" style={{ marginTop: 9 }}>
             <p style={{
               fontSize: 11.5, color: DTEXT_DIM, lineHeight: 1.5, margin: 0,
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -4364,7 +4375,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         </div>
 
         {menuOpen && (
-          <div style={menuPanel(dark)}>
+          <div className="crm-card-more-panel" style={menuPanel(dark)} role="menu" aria-label={`Actions for listing ${r.ref}`} onClick={event => event.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 2px 4px' }}>
               <ClassificationGear r={r} dark={dark} isAdmin={me?.role === 'admin'} />
             </div>
@@ -4500,6 +4511,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
                   title={`Delete #${r.ref} permanently`}
                   style={{
                     ...menuItemBtn(dark), justifyContent: 'center', fontWeight: 700,
+                    width: 'auto', flex: '0 0 auto', whiteSpace: 'nowrap',
                     color: deleteArmed ? '#FFF' : '#EF4444',
                     background: deleteArmed ? '#B91C1C' : 'rgba(239,68,68,0.10)',
                   }}>
@@ -5256,15 +5268,16 @@ const trayMoreBtn = (dark: boolean): React.CSSProperties => ({
 // where the card sits in the grid — on a 2-column mobile board a left-column
 // card's panel would otherwise run off the right of the viewport.
 const menuPanel = (dark: boolean): React.CSSProperties => ({
-  position: 'absolute', bottom: '100%', right: 0, marginBottom: 6,
-  width: 'min(252px, 88vw)', maxHeight: '70vh', overflowY: 'auto',
+  position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+  width: '100%', maxWidth: 'min(720px, 94vw)', overflowX: 'auto', overflowY: 'hidden',
   background: dark ? '#1A2233' : '#FFFFFF', border: `1px solid ${dark ? DBORDER : LBORDER}`, borderRadius: 12,
   boxShadow: dark ? '0 10px 32px rgba(0,0,0,0.5)' : '0 10px 32px rgba(15,20,30,0.18)', padding: 8, zIndex: 160,
-  display: 'flex', flexDirection: 'column', gap: 3,
+  display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6,
 })
 const menuSection = (dark: boolean): React.CSSProperties => ({
   fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-  color: dark ? DTEXT_FAINT : LTEXT_FAINT, padding: '6px 8px 2px',
+  color: dark ? DTEXT_FAINT : LTEXT_FAINT, padding: '0 4px 0 8px', whiteSpace: 'nowrap',
+  alignSelf: 'stretch', display: 'flex', alignItems: 'center', borderLeft: `1px solid ${dark ? DBORDER : LBORDER}`,
 })
 // One row per action inside the popover — full width, left-aligned, an icon
 // slot on the right for a value/hint (e.g. "Grouped", "queued"). Deliberately
@@ -5281,13 +5294,13 @@ const menuItemBtn = (dark: boolean): React.CSSProperties => ({
 // icon row he liked. Same actions, a compact 2-column grid of small pills
 // instead, so the popover reads as one tidy panel, not a long menu.
 const menuGrid: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 4,
+  display: 'flex', alignItems: 'center', gap: 6, marginBottom: 0, flex: '0 0 auto',
 }
 const menuGridBtn = (dark: boolean): React.CSSProperties => ({
   padding: '7px 8px', borderRadius: 8, fontSize: 11, fontFamily: F,
   fontWeight: 500, color: dark ? DTEXT : LTEXT, cursor: 'pointer', minHeight: 30,
   background: dark ? '#1B2333' : LSURFACE, border: `1px solid ${dark ? DBORDER : LBORDER}`, textAlign: 'center',
-  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '0 0 auto',
 })
 // The two low-frequency card actions. Reads as a text link, sized as a button:
 // 30px is the same tap floor the buttons and village chips hold to.

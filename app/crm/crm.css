@@ -413,9 +413,26 @@ html:not([data-crm-theme="dark"]) .crm-listing-card .crm-card-action-button.crm-
 html:not([data-crm-theme="dark"]) .crm-listing-card .crm-card-action-button[aria-expanded=true]{background:var(--crm-action)!important;border-color:var(--crm-action)!important;color:var(--crm-inverse)!important}
 html:not([data-crm-theme="dark"]) .crm-listing-card .crm-card-still-available{background:#eaf5f0!important;border-color:#9fcdb9!important;color:#176447!important}
 
-/* Owner chat follows the shared CRM theme. The previous fixed navy panel was
-   combined with global light-theme text tokens, producing dark-on-dark copy. */
-.crm-chat-dialog{background:linear-gradient(180deg,var(--crm-surface),color-mix(in srgb,var(--crm-surface) 92%,var(--crm-bg)))!important;border:1px solid var(--crm-border);color:var(--crm-text)}
+/* Owner chat keeps the CRM identity but now follows WhatsApp's familiar
+   structure: compact contact bar, patterned conversation canvas, asymmetric
+   bubbles and a composer that stays attached to the visible mobile viewport. */
+.crm-chat-dialog{--crm-wa-header:#f0f2f5;--crm-wa-canvas:#efeae2;--crm-wa-in:#fff;--crm-wa-out:#d9fdd3;--crm-wa-green:#00a884;background:var(--crm-wa-canvas)!important;border:1px solid var(--crm-border);color:#111b21;isolation:isolate}
+html[data-crm-theme="dark"] .crm-chat-dialog{--crm-wa-header:#202c33;--crm-wa-canvas:#0b141a;--crm-wa-in:#202c33;--crm-wa-out:#005c4b;--crm-wa-green:#00a884;color:#e9edef}
+.crm-chat-header{background:var(--crm-wa-header);min-height:60px}
+.crm-chat-avatar{background:linear-gradient(145deg,#dfe5e7,#aebac1)!important;border:0!important;color:#54656f!important}
+.crm-chat-header-button{background:transparent!important}
+.crm-chat-quick-actions{background:var(--crm-wa-header);scrollbar-width:none}
+.crm-chat-quick-actions::-webkit-scrollbar{display:none}
+.crm-chat-timeline{background-color:var(--crm-wa-canvas);background-image:radial-gradient(circle at 18px 18px,color-mix(in srgb,currentColor 4%,transparent) 1px,transparent 1.5px),radial-gradient(circle at 52px 47px,color-mix(in srgb,currentColor 3%,transparent) 1px,transparent 1.5px);background-size:72px 72px;overscroll-behavior:contain;scroll-padding-bottom:16px}
+.crm-chat-bubble{position:relative;border:0!important;box-shadow:0 1px .5px rgba(11,20,26,.13);color:#111b21!important}
+.crm-chat-bubble-incoming{background:var(--crm-wa-in)!important;border-top-left-radius:2px!important}
+.crm-chat-bubble-outgoing{background:var(--crm-wa-out)!important;border-top-right-radius:2px!important}
+.crm-chat-bubble-incoming:before,.crm-chat-bubble-outgoing:before{content:"";position:absolute;top:0;width:9px;height:12px;background:inherit}
+.crm-chat-bubble-incoming:before{left:-6px;clip-path:polygon(100% 0,100% 100%,0 0)}
+.crm-chat-bubble-outgoing:before{right:-6px;clip-path:polygon(0 0,100% 0,0 100%)}
+.crm-chat-message-time{color:#667781!important}
+html[data-crm-theme="dark"] .crm-chat-bubble{color:#e9edef!important}
+html[data-crm-theme="dark"] .crm-chat-message-time{color:#aebac1!important}
 .crm-chat-dialog [class*="border-white"]{border-color:var(--crm-border)!important}
 .crm-chat-dialog [class*="bg-white/"]{background-color:var(--crm-raised)!important}
 .crm-chat-dialog [class*="bg-[#171e31]"]{background:color-mix(in srgb,var(--crm-surface) 94%,var(--crm-bg))!important}
@@ -423,14 +440,27 @@ html:not([data-crm-theme="dark"]) .crm-listing-card .crm-card-still-available{ba
 .crm-chat-dialog :is([class*="text-white/85"],[class*="text-white/90"]){color:var(--crm-text)!important}
 .crm-chat-dialog [class~="text-white"]{color:var(--crm-text)!important}
 .crm-chat-dialog [class*="text-white/[0.035]"]{color:color-mix(in srgb,var(--crm-text) 3.5%,transparent)!important}
-.crm-chat-dialog .crm-chat-composer{background:color-mix(in srgb,var(--crm-surface) 96%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-.crm-chat-dialog textarea{color:var(--crm-text)!important;background:var(--crm-raised)!important;border-color:var(--crm-border)!important}
+.crm-chat-dialog .crm-chat-composer{background:var(--crm-wa-header);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.crm-chat-dialog textarea{color:#111b21!important;background:#fff!important;border-color:transparent!important;box-shadow:none!important}
+html[data-crm-theme="dark"] .crm-chat-dialog textarea{color:#e9edef!important;background:#2a3942!important}
 .crm-chat-dialog textarea::placeholder{color:var(--crm-faint)!important}
+.crm-chat-send{background:var(--crm-wa-green)!important;color:#fff!important}
+.crm-chat-attach{border:0!important;background:transparent!important}
+.crm-listing-card{cursor:pointer;outline:none}
+.crm-listing-card:focus-visible{outline:2px solid var(--crm-accent);outline-offset:3px}
+.crm-card-action-tray .crm-card-action-button{width:36px!important;height:36px!important;min-height:36px!important;flex:0 0 36px!important;padding:0!important;border-radius:10px!important;display:grid!important;place-items:center!important}
+.crm-card-more-panel{scrollbar-width:thin;scrollbar-color:var(--crm-accent) transparent;overscroll-behavior-x:contain;animation:crm-card-actions-in .22s cubic-bezier(.22,1,.36,1);transform-origin:top right}
+.crm-card-more-panel::-webkit-scrollbar{height:4px}.crm-card-more-panel::-webkit-scrollbar-thumb{background:var(--crm-accent);border-radius:999px}
+@keyframes crm-card-actions-in{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:none}}
 .crm-favourites-note{margin-bottom:14px;padding:10px 13px;border:1px solid var(--crm-border);border-radius:12px;background:var(--crm-raised);color:var(--crm-muted);font-size:11.5px;line-height:1.5}
 .crm-selection-help{color:var(--crm-muted);font-size:11px;line-height:1.45}
 @media(max-width:639px){
-  .crm-chat-dialog[data-keyboard-open=true]{bottom:var(--crm-chat-keyboard-bottom,0px)!important;height:calc(var(--crm-chat-visual-height,100dvh) - 4px)!important;max-height:calc(var(--crm-chat-visual-height,100dvh) - 4px)!important;border-radius:18px 18px 0 0}
-  .crm-chat-dialog[data-keyboard-open=true] .crm-chat-composer{padding-bottom:8px!important}
+  .crm-chat-dialog{height:min(88dvh,calc(100dvh - env(safe-area-inset-top,0px) - 4px))!important}
+  .crm-chat-dialog[data-keyboard-open=true]{top:var(--crm-chat-visual-top,0px)!important;bottom:auto!important;height:var(--crm-chat-visual-height,100dvh)!important;max-height:var(--crm-chat-visual-height,100dvh)!important;border-radius:0}
+  .crm-chat-dialog[data-keyboard-open=true] .crm-chat-composer{padding-bottom:max(7px,env(safe-area-inset-bottom,0px))!important}
+  .crm-chat-dialog[data-keyboard-open=true] .crm-chat-header{min-height:54px}
+  .crm-chat-dialog[data-keyboard-open=true] .crm-chat-quick-actions{padding-block:4px!important}
+  .crm-card-more-panel{left:0!important;right:auto!important;width:min(92vw,560px)!important;max-width:min(92vw,560px)!important}
 }
 
 @media (prefers-reduced-motion: reduce) { .crm-root * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

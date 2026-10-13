@@ -519,7 +519,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
   const scrollRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
   const reduceMotion = useReducedMotion()
-  const [mobileViewport, setMobileViewport] = useState<{ height: number; bottom: number; keyboard: boolean } | null>(null)
+  const [mobileViewport, setMobileViewport] = useState<{ height: number; top: number; keyboard: boolean } | null>(null)
 
   async function load() {
     try {
@@ -556,12 +556,14 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
   useEffect(() => {
     const viewport = window.visualViewport
     if (!viewport) return
+    let expandedHeight = Math.max(window.innerHeight, viewport.height)
     const update = () => {
-      const bottom = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      if (viewport.height > expandedHeight - 48) expandedHeight = Math.max(expandedHeight, window.innerHeight, viewport.height)
+      const occluded = Math.max(0, expandedHeight - viewport.height - viewport.offsetTop)
       setMobileViewport({
         height: viewport.height,
-        bottom,
-        keyboard: viewport.height < window.innerHeight * .78,
+        top: viewport.offsetTop,
+        keyboard: occluded > 120,
       })
       if (stickToBottom.current) requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
@@ -683,7 +685,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
         data-keyboard-open={mobileViewport?.keyboard || undefined}
         style={mobileViewport ? {
           '--crm-chat-visual-height': `${mobileViewport.height}px`,
-          '--crm-chat-keyboard-bottom': `${mobileViewport.bottom}px`,
+          '--crm-chat-visual-top': `${mobileViewport.top}px`,
         } as React.CSSProperties : undefined}
       >
         {/* ── 2906 signature watermark — dezent, own identity, never a stock chat look ── */}
@@ -700,9 +702,9 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
         </div>
 
         {/* ── header: owner label + persona identity badge ─────────────────────── */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/[0.06] shrink-0 relative z-10">
+        <div className="crm-chat-header flex items-center justify-between px-3.5 sm:px-4 py-2.5 border-b border-white/[0.06] shrink-0 relative z-10">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-gold/15 border border-gold/25 flex items-center justify-center shrink-0">
+            <div className="crm-chat-avatar w-10 h-10 rounded-full bg-gold/15 border border-gold/25 flex items-center justify-center shrink-0">
               <MessageCircle className="w-4 h-4 text-gold" />
             </div>
             <div className="min-w-0">
@@ -725,7 +727,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               </span>
             )}
             <button onClick={onClose} aria-label="Close"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-white/70 transition-colors hover:bg-white/10 hover:text-white">
+              className="crm-chat-header-button flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/70 transition-colors hover:bg-white/10 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -738,10 +740,10 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             viewing.canCreateGroup is true (owner said yes, no group yet) AND
             the signed-in agent is an admin, exactly like the card. */}
         {(onBook || onCreateGroup) && (
-          <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 border-b border-white/[0.06] shrink-0 relative z-10">
+          <div className="crm-chat-quick-actions flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 border-b border-white/[0.06] shrink-0 relative z-10 overflow-x-auto">
             {onBook && (
               <button onClick={onBook} title="Book a viewing"
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold
                            bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-colors">
                 <Calendar className="w-3 h-3" /> Book
               </button>
@@ -757,7 +759,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               return (
                 <button onClick={ready ? onCreateGroup : undefined} disabled={!ready || already} title={title}
                   className={cn(
-                    'inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors',
+                    'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
                     ready && !already
                       ? 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
                       : 'bg-transparent text-white/25 border border-dashed border-white/15 cursor-not-allowed',
@@ -822,7 +824,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             const el = e.currentTarget
             stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
           }}
-          className="grow overflow-y-auto px-3.5 py-3 space-y-2 relative z-10"
+          className="crm-chat-timeline grow overflow-y-auto px-3.5 py-3 space-y-2 relative z-10"
         >
           {err && <ErrorLine text={err} />}
 
@@ -860,10 +862,8 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             return (
               <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                 <div className={cn(
-                  'max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap break-words sm:max-w-[78%] sm:text-sm',
-                  mine
-                    ? 'bg-gradient-to-br from-gold/25 to-gold/10 border border-gold/25 text-white rounded-br-sm'
-                    : 'bg-white/[0.06] border border-white/[0.08] text-white/90 rounded-bl-sm',
+                  'crm-chat-bubble max-w-[88%] rounded-lg px-3 py-2 text-[15px] leading-relaxed whitespace-pre-wrap break-words sm:max-w-[78%] sm:text-sm',
+                  mine ? 'crm-chat-bubble-outgoing' : 'crm-chat-bubble-incoming',
                 )}>
                   {m.redacted ? (
                     <div className="min-w-[112px] py-0.5" aria-label="Private message content hidden">
@@ -871,7 +871,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
                       <div className="mt-1.5 h-2 w-[62%] rounded-full bg-current opacity-20 blur-[2.5px]" />
                     </div>
                   ) : m.text}
-                  <div className={cn('mt-1 text-right text-[11px] font-medium', mine ? 'text-gold-light/70' : 'text-white/55')}>
+                  <div className="crm-chat-message-time mt-1 text-right text-[11px] font-medium">
                     {timeOnly(m.at)}
                   </div>
                 </div>
@@ -889,18 +889,22 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
               ref={composerInput}
               value={draft}
               onChange={e => setDraft(e.target.value)}
+              onFocus={() => {
+                stickToBottom.current = true
+                requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }))
+              }}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
               rows={1}
               disabled={closed || chatBusy}
               placeholder={closed ? 'Conversation closed' : chatBusy ? 'Another agent is chatting' : 'Message owner…'}
-              className="col-start-2 row-start-1 min-h-12 max-h-[120px] w-full resize-none overflow-y-auto rounded-2xl border border-white/15 bg-white/[0.07]
+              className="crm-chat-input col-start-2 row-start-1 min-h-12 max-h-[120px] w-full resize-none overflow-y-auto rounded-3xl border border-white/15 bg-white/[0.07]
                          px-4 py-3 text-base leading-6 text-white placeholder:text-white/55 focus:border-gold/50 focus:outline-none focus:ring-2
                          focus:ring-gold/40 disabled:opacity-40 sm:min-h-11 sm:py-2.5"
             />
             <div ref={attachmentMenu} className="relative col-start-1 row-start-1">
               <button type="button" onClick={() => setAttachmentMenuOpen(open => !open)} disabled={closed || uploading || chatBusy}
                 aria-label="Add attachment" aria-expanded={attachmentMenuOpen}
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white/70
+                className="crm-chat-attach flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white/70
                            transition-[transform,background-color,color] duration-200 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white
                            active:scale-95 disabled:opacity-30 sm:h-11 sm:w-11">
                 {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className={cn('h-5 w-5 transition-transform duration-200', attachmentMenuOpen && 'rotate-45')} />}
@@ -930,7 +934,7 @@ export function ChatDialog({ refId, town, viewing, onBook, onCreateGroup, onClos
             <button
               onClick={send}
               disabled={!draft.trim() || sending || closed || chatBusy}
-              className="col-start-3 row-start-1 flex h-12 w-12 min-w-12 items-center justify-center justify-self-end rounded-full bg-gold p-0
+              className="crm-chat-send col-start-3 row-start-1 flex h-12 w-12 min-w-12 items-center justify-center justify-self-end rounded-full bg-gold p-0
                          font-semibold text-navy transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-gold-light
                          active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-25 sm:h-11 sm:w-11 sm:min-w-11"
               aria-label="Send"
