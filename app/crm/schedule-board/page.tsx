@@ -53,6 +53,51 @@ const DISCOVERY_ITEMS: { key: DiscoveryKey; label: string; icon: React.Component
   { key: 'villas', label: 'Villas', icon: House },
 ]
 
+type VillageArea = 'north' | 'central' | 'central-surroundings' | 'south' | 'south-east' | 'gozo'
+const VILLAGE_AREAS: Array<{ key: VillageArea; label: string }> = [
+  { key: 'north', label: 'North' },
+  { key: 'central', label: 'Central' },
+  { key: 'central-surroundings', label: 'Central Surroundings' },
+  { key: 'south', label: 'South' },
+  { key: 'south-east', label: 'South East' },
+  { key: 'gozo', label: 'Gozo' },
+]
+
+// Mirrors the CRM's six practical search areas. The locations table currently
+// stores Central Surroundings inside Central/North, so that useful agent-facing
+// split is kept here until it becomes a first-class backend region.
+const CENTRAL_SURROUNDING_VILLAGES = new Set([
+  'attard', 'balzan', 'birkirkara', 'fleur-de-lys-birkirkara', 'hamrun', 'iklin',
+  'lija', 'mriehel', 'mosta', 'naxxar', 'qormi', 'rabat', 'santa-venera',
+  'swatar', 'swatar-birkirkara',
+])
+const SOUTH_VILLAGES = new Set([
+  'birzebbuga', 'ghaxaq', 'gudja', 'hal-far', 'hal-farrug', 'kirkop', 'luqa',
+  'mqabba', 'qajjenza', 'qrendi', 'safi', 'santa-lucia', 'siggiewi', 'zebbug', 'zurrieq',
+])
+const SOUTH_EAST_VILLAGES = new Set([
+  'birgu', 'birgu-vittoriosa', 'bormla', 'bormla-cospicua', 'fgura', 'floriana',
+  'isla-senglea', 'kalkara', 'marsa', 'marsaskala', 'marsaxlokk', 'paola',
+  'tarxien', 'valletta', 'vittoriosa', 'xghajra', 'zabbar', 'zejtun',
+])
+const NORTH_VILLAGES = new Set([
+  'bahar-ic-caghaq', 'bahrija', 'bidnija', 'birguma-naxxar', 'bugibba', 'burmarrad',
+  'dingli', 'ghadira', 'ghajn-tuffieha', 'gharghur', 'madliena', 'maghtab', 'manikata',
+  'mdina', 'mellieha', 'mgarr', 'mtarfa', 'mtarleb', 'pembroke', 'qawra', 'salina',
+  'san-pawl-tat-targa-naxxar', 'st-pauls-bay', 'swieqi', 'ta-ibragg-swieqi',
+  'wardija', 'xemxija',
+])
+
+function villageAreaFor(key: string): VillageArea {
+  const normalized = key.toLowerCase().trim().replace(/[_\s]+/g, '-').replace(/-+/g, '-')
+  if (normalized.startsWith('gozo-')) return 'gozo'
+  if (CENTRAL_SURROUNDING_VILLAGES.has(normalized)) return 'central-surroundings'
+  if (SOUTH_EAST_VILLAGES.has(normalized)) return 'south-east'
+  if (SOUTH_VILLAGES.has(normalized)) return 'south'
+  if (NORTH_VILLAGES.has(normalized)) return 'north'
+  return 'central'
+}
+
 // ── dark redesign, Kev 2026-09-11 ────────────────────────────────────────────
 // "erstmal darkmode, sehr clean und übersichtlicher... es bleibt nur FAV
 // (gelb) und HOT (red) als Umrandung". Scoped to this page only (CrmShell's
@@ -427,6 +472,10 @@ function Board() {
   const [rows, setRows] = useState<Listing[]>([])
   const [loadedQuery, setLoadedQuery] = useState('')
   const [backendTownOptions, setBackendTownOptions] = useState<{ key: string; label: string; n: number }[]>([])
+  const [villageArea, setVillageArea] = useState<VillageArea>(() => {
+    const firstTown = (params.get('towns') || '').split(',').map(s => s.trim()).find(Boolean)
+    return firstTown ? villageAreaFor(firstTown) : 'north'
+  })
   const [rentedCount, setRentedCount] = useState(0)
   const [favCount, setFavCount] = useState(0)
   // ── WATag selection ───────────────────────────────────────────────────────
@@ -871,6 +920,16 @@ function Board() {
       }))
       .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label))
   }, [rows, backendTownOptions])
+  const townOptionsByArea = useMemo(() => {
+    const groups = new Map<VillageArea, typeof townOptions>(VILLAGE_AREAS.map(area => [area.key, []]))
+    for (const town of townOptions) groups.get(villageAreaFor(town.key))?.push(town)
+    return groups
+  }, [townOptions])
+  const visibleVillageOptions = useMemo(() => {
+    const inArea = townOptionsByArea.get(villageArea) || []
+    const selectedElsewhere = townOptions.filter(town => f.towns.includes(town.key) && villageAreaFor(town.key) !== villageArea)
+    return [...selectedElsewhere, ...inArea]
+  }, [f.towns, townOptions, townOptionsByArea, villageArea])
 
   // ── visible set: filters ∩ town selection ∩ drawn rectangle ───────────────
   const visible = useMemo(() => {
@@ -1684,7 +1743,19 @@ function Board() {
             to Active so a listing 6 months out is never mixed into the
             normal board by accident. */}
         {view === 'board' && (
-          <div className="crm-board-scope-rail" aria-label="Availability and village filters">
+          <div className="crm-board-location-filter">
+          <div className="crm-area-rail" aria-label="Malta areas">
+            {VILLAGE_AREAS.map(area => {
+              const on = villageArea === area.key
+              const areaCount = (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0)
+              return (
+                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => setVillageArea(area.key)}>
+                  <span>{area.label}</span>{areaCount > 0 && <small>{areaCount}</small>}
+                </button>
+              )
+            })}
+          </div>
+          <div className="crm-board-scope-rail" aria-label="Availability and villages">
             {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
               const on = horizon === h
               return (
@@ -1702,14 +1773,18 @@ function Board() {
                 </button>
               )
             })}
-            {townOptions.map(t => {
+            <button type="button" className="crm-city-chip crm-city-any" aria-pressed={f.towns.length === 0} onClick={() => setF(s => ({ ...s, towns: [] }))}>
+              <span>Any</span><small>{(townOptionsByArea.get(villageArea) || []).reduce((sum, town) => sum + town.n, 0)}</small>
+            </button>
+            {visibleVillageOptions.map(t => {
               const on = f.towns.includes(t.key)
               return (
-                <button key={t.key} type="button" className="crm-city-chip" aria-pressed={on} onClick={() => toggleTown(t.key)}>
+                <button key={t.key} type="button" className="crm-city-chip" data-outside-area={villageAreaFor(t.key) !== villageArea || undefined} aria-pressed={on} onClick={() => toggleTown(t.key)}>
                   <span>{t.label}</span><small>{t.n}</small>
                 </button>
               )
             })}
+          </div>
           </div>
         )}
 
