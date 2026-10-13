@@ -9,16 +9,17 @@
 // /:id/invoices, /:id/contracts, and /api/crm/notification-engine/*. This
 // page is real data end to end -- no fake parallel store, per spec.
 //
-// Scope note (spec section 27, "second delivery"): WA self-serve QR
-// connect, CREATE NEW GROUP via waha.createGroup(), the full outreach
-// workspace (drafts/arm/schedule), and scheduled-message pre-send recheck
-// are NOT wired here yet -- this is the profile shell + real-data widgets
-// the spec's own "First Deliverable" asks for first.
+// The page now combines the operating profile and the agent dashboard. WAHA
+// remains the source of truth for connection state and QR setup; reminders,
+// owner requests, outreach and listing counters remain backed by their
+// existing canonical services.
 // ============================================================================
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { ArrowUpRight, BellRing, Building2, CalendarClock, MessageSquareText, Radar, SlidersHorizontal, Sparkles, Target, Wifi } from 'lucide-react'
 import { CrmProvider, CrmShell, useCrm, DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, A, AD, F } from '@/lib/crm/ui'
 import { crmFetch, crmJson } from '@/lib/crm/api'
+import './profile.css'
 // Dynamically imported inside buildInvoicePdf() instead of a static top-level
 // import: jspdf pulls in fflate's Node build (a dynamic Worker() require)
 // which Turbopack cannot resolve while SSR-ing this 'use client' page's
@@ -64,6 +65,7 @@ type Agent = {
   feature_entitlements: Record<string, string>; invoice_settings: any; contract_settings: any
   notifications_paused: boolean
   can_create_owner_group: boolean
+  dashboard_preferences?: { focus?: number; outreach?: number; motion?: number }
 }
 type SavedSearch = {
   id: number; name: string; filters: any; enabled: boolean
@@ -146,6 +148,132 @@ function btnGhost(): React.CSSProperties {
   return { background: 'transparent', border: `1px solid ${DBORDER}`, color: DTEXT_DIM, borderRadius: 8, padding: '7px 13px', fontSize: 11.5, fontWeight: 700, fontFamily: F, cursor: 'pointer' }
 }
 
+type CockpitPrefs = { focus: number; outreach: number; motion: number }
+const DEFAULT_COCKPIT_PREFS: CockpitPrefs = { focus: 72, outreach: 55, motion: 62 }
+
+function AgentCockpit({ agentId, bundle, onEdit, onPickPhoto, photoBusy, onChange }: {
+  agentId: number; bundle: Bundle; onEdit: () => void
+  onPickPhoto: (event: React.ChangeEvent<HTMLInputElement>) => void; photoBusy: boolean; onChange: () => void
+}) {
+  const agent = bundle.agent
+  const [reminders, setReminders] = useState<any[]>([])
+  const [prefs, setPrefs] = useState<CockpitPrefs>({ ...DEFAULT_COCKPIT_PREFS, ...(agent.dashboard_preferences || {}) })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    crmFetch(`scheduled-messages?agent_id=${agentId}`)
+      .then(rows => setReminders(Array.isArray(rows) ? rows : []))
+      .catch(() => setReminders([]))
+  }, [agentId])
+
+  useEffect(() => {
+    setPrefs({ ...DEFAULT_COCKPIT_PREFS, ...(agent.dashboard_preferences || {}) })
+  }, [agent.dashboard_preferences])
+
+  async function persist(next = prefs) {
+    setSaving(true)
+    try {
+      await crmJson(`agent-profile/${agentId}`, 'PATCH', { dashboard_preferences: next })
+      onChange()
+    } catch { /* controls stay usable; next profile load restores server state */ }
+    finally { setSaving(false) }
+  }
+
+  function setControl(key: keyof CockpitPrefs, value: number) {
+    setPrefs(current => ({ ...current, [key]: value }))
+  }
+
+  function commitControl(key: keyof CockpitPrefs, value: number) {
+    const next = { ...prefs, [key]: value }
+    setPrefs(next)
+    persist(next)
+  }
+
+  const due = reminders.filter(item => ['SCHEDULED', 'DRAFT'].includes(item.status))
+    .sort((a, b) => +new Date(a.scheduled_at) - +new Date(b.scheduled_at)).slice(0, 4)
+  const latestRequests = bundle.ownerGroups.slice(0, 3)
+  const profileSignals = [agent.profile_image_url, agent.email, agent.whatsapp_phone, agent.bio, agent.languages?.length, agent.specialties?.length]
+  const profileScore = Math.round(profileSignals.filter(Boolean).length / profileSignals.length * 100)
+  const outreachActive = bundle.outreach.reduce((sum, row) => sum + Number(row.n || 0), 0)
+  const fullName = `${agent.name || agent.username}${agent.surname ? ` ${agent.surname}` : ''}`
+
+  return (
+    <section className="agent-cockpit" style={{ '--cockpit-motion': `${Math.max(0.15, prefs.motion / 100)}s` } as React.CSSProperties}>
+      <div className="agent-cockpit-orbit" aria-hidden="true" />
+      <header className="agent-cockpit-head">
+        <div className="agent-cockpit-person">
+          <label className="agent-cockpit-avatar" style={agent.profile_image_url ? { backgroundImage: `url(${agent.profile_image_url})` } : undefined}>
+            {!agent.profile_image_url && fullName.charAt(0).toUpperCase()}
+            <input type="file" accept="image/*" onChange={onPickPhoto} />
+            <span>{photoBusy ? '…' : '+'}</span>
+          </label>
+          <div>
+            <div className="agent-kicker"><Sparkles size={13} /> Personal command centre</div>
+            <h1>{fullName}</h1>
+            <p>@{agent.username} · {agent.role} · Malta</p>
+          </div>
+        </div>
+        <div className="agent-cockpit-head-actions">
+          <span className={`agent-live-pill ${bundle.whatsapp.status === 'CONNECTED' ? 'is-live' : ''}`}><Wifi size={14} /> {bundle.whatsapp.status === 'CONNECTED' ? 'Argus connected' : 'Connect Argus'}</span>
+          <button onClick={onEdit}>Edit profile <ArrowUpRight size={15} /></button>
+        </div>
+      </header>
+
+      <div className="agent-score-strip">
+        <div><strong>{profileScore}%</strong><span>Profile ready</span><i style={{ width: `${profileScore}%` }} /></div>
+        <div><strong>{bundle.propertyFeeds.my_active_listings}</strong><span>Active listings</span></div>
+        <div><strong>{due.length}</strong><span>Due reminders</span></div>
+        <div><strong>{outreachActive}</strong><span>Outreach runs</span></div>
+      </div>
+
+      <div className="agent-cockpit-grid">
+        <article className="agent-mission-card">
+          <div className="agent-card-title"><CalendarClock size={17} /><div><strong>Your next moves</strong><span>Saved reminders and scheduled owner follow-ups</span></div><a href="#scheduled">Calendar</a></div>
+          <div className="agent-reminder-stack">
+            {due.length ? due.map(item => (
+              <div className="agent-reminder" key={item.id}>
+                <time>{new Date(item.scheduled_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}<small>{new Date(item.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></time>
+                <span><strong>{item.recipient_name || item.recipient_phone}</strong><small>{item.message_payload}</small></span>
+                {item.property_ref && <b>#{item.property_ref}</b>}
+              </div>
+            )) : <div className="agent-empty-mission"><Target size={22} /><span>Your runway is clear.</span><small>Schedule an owner reminder below and it will stay here.</small></div>}
+          </div>
+        </article>
+
+        <article className="agent-request-card">
+          <div className="agent-card-title"><MessageSquareText size={17} /><div><strong>Latest requests</strong><span>Owner introductions and group decisions</span></div><a href="/crm/ownergroups">All</a></div>
+          <div className="agent-request-stack">
+            {latestRequests.length ? latestRequests.map(request => (
+              <div key={request.requestId}><i className={request.status.includes('DECLINED') ? 'is-declined' : request.status.includes('CREATED') || request.status.includes('ACTIVE') ? 'is-done' : ''} />
+                <span><strong>#{request.propertyRef} · {request.town || 'Malta'}</strong><small>{request.clients.map(client => client.name).join(', ') || 'Awaiting client link'}</small></span>
+                <b>{request.status.replace(/^GROUP_/, '').replace(/_/g, ' ')}</b>
+              </div>
+            )) : <div className="agent-empty-mission"><Building2 size={22} /><span>No open requests.</span><small>New owner introductions will appear here.</small></div>}
+          </div>
+        </article>
+
+        <article className="agent-mixer-card">
+          <div className="agent-card-title"><SlidersHorizontal size={17} /><div><strong>Workspace mixer</strong><span>{saving ? 'Saving your setup…' : 'Your layout settings sync with this profile'}</span></div></div>
+          {([
+            ['focus', 'Focus', 'How strongly due work leads the dashboard', BellRing],
+            ['outreach', 'Outreach', 'How much outreach context stays visible', Radar],
+            ['motion', 'Motion', 'Animation energy across this cockpit', Sparkles],
+          ] as const).map(([key, label, description, Icon]) => (
+            <label className="agent-mixer-row" key={key}>
+              <Icon size={16} /><span><strong>{label}</strong><small>{description}</small></span><b>{prefs[key]}</b>
+              <input aria-label={label} type="range" min="0" max="100" value={prefs[key]}
+                style={{ background: `linear-gradient(90deg,var(--lime) 0 ${prefs[key]}%,#353740 ${prefs[key]}% 100%)` }}
+                onChange={event => setControl(key, Number(event.target.value))}
+                onPointerUp={event => commitControl(key, Number(event.currentTarget.value))}
+                onKeyUp={event => commitControl(key, Number(event.currentTarget.value))} />
+            </label>
+          ))}
+        </article>
+      </div>
+    </section>
+  )
+}
+
 function AgentProfilePage() {
   const { me } = useCrm()
   const params = useSearchParams()
@@ -219,63 +347,9 @@ function AgentProfilePage() {
           box-shadow: 0 16px 34px -16px rgba(184,149,63,0.25) !important;
         }
       `}</style>
-      {/* ── Identity card ─────────────────────────────────────────────── */}
-      <div style={{
-        background: `linear-gradient(160deg, #172038 0%, ${DCARD2} 65%, #0A0D14 100%)`,
-        border: `1px solid ${DCARD_BORDER}`, borderTop: `1px solid rgba(184,149,63,0.45)`,
-        borderRadius: 16, padding: '24px 22px 22px', marginBottom: 18, position: 'relative', overflow: 'hidden',
-        boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
-      }}>
-        {/* Dual-tone brand glow — gold (identity/warmth) top-right, electric
-            blue (system/tech) bottom-left, per "das soll super modern
-            aussehen" — echoes the mockup's own gold radial without being flat. */}
-        <div style={{ position: 'absolute', top: -80, right: -80, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(184,149,63,0.22), transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -100, left: -60, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,123,242,0.16), transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(184,149,63,0.6), transparent)' }} />
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
-          <label style={{
-            width: 78, height: 78, borderRadius: '50%', flexShrink: 0, position: 'relative', cursor: canSeeFull ? 'pointer' : 'default',
-            background: a.profile_image_url ? `url(${a.profile_image_url}) center/cover` : 'linear-gradient(135deg, rgba(184,149,63,0.4), rgba(79,123,242,0.4))',
-            border: `2px solid ${A}`, boxShadow: '0 0 0 4px rgba(184,149,63,0.10), 0 8px 24px -6px rgba(184,149,63,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 700,
-          }}>
-            {!a.profile_image_url && (a.name || a.username || '?').charAt(0).toUpperCase()}
-            {canSeeFull && (
-              <>
-                <div style={{
-                  position: 'absolute', bottom: -2, right: -2, width: 24, height: 24, borderRadius: '50%',
-                  background: A, color: '#151C2C', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, border: `2px solid ${DCARD}`,
-                }} title="Change photo">{photoBusy ? '…' : '✎'}</div>
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onPickPhoto} />
-              </>
-            )}
-          </label>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 19, fontWeight: 800 }}>{a.name}{a.surname ? ` ${a.surname}` : ''}</div>
-              <Badge bg={a.active ? 'rgba(62,207,142,0.14)' : 'rgba(242,89,122,0.14)'} fg={a.active ? '#3ECF8E' : '#F2597A'} label={a.active ? 'Active' : 'Suspended'} />
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: DTEXT_FAINT, letterSpacing: '0.04em' }}>{a.role.toUpperCase()}</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '6px 20px', marginTop: 12, fontSize: 12 }}>
-              {a.email && <div style={{ color: DTEXT_DIM }}>✉ {a.email}</div>}
-              {(a.whatsapp_phone || a.public_phone) && <div style={{ color: DTEXT_DIM }}>☏ {a.whatsapp_phone || a.public_phone}</div>}
-              {a.address && <div style={{ color: DTEXT_DIM }}>⌂ {a.address}</div>}
-              {a.vat_number && <div style={{ color: DTEXT_DIM }}>VAT {a.vat_number}</div>}
-              {a.company_number && <div style={{ color: DTEXT_DIM }}>Co. Nr {a.company_number}</div>}
-              {a.bank_iban && (
-                <div style={{ color: DTEXT_DIM, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🏦 {maskedIban}
-                  <span onClick={() => setIbanRevealed(v => !v)} style={{ cursor: 'pointer', color: 'var(--crm-accent)', fontSize: 11 }}>{ibanRevealed ? 'hide' : 'reveal'}</span>
-                  <span onClick={() => navigator.clipboard?.writeText(a.bank_iban || '')} style={{ cursor: 'pointer', color: DTEXT_FAINT, fontSize: 11 }}>copy</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <button onClick={() => { setEditing(true); setEditDraft({}) }} style={btnGhost()}>✎ Edit Profile</button>
-        </div>
-      </div>
-
+      <AgentCockpit agentId={agentId!} bundle={bundle}
+        onEdit={() => { setEditing(true); setEditDraft({}) }}
+        onPickPhoto={onPickPhoto} photoBusy={photoBusy} onChange={load} />
       {editing && (
         <SectionCard title="Edit Profile" icon="✎">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
@@ -330,7 +404,7 @@ function AgentProfilePage() {
       </div>
 
       {/* ── WhatsApp connection ──────────────────────────────────────────── */}
-      <WhatsAppConnectionPanel agentId={agentId!} whatsapp={bundle.whatsapp} canSeeFull={canSeeFull} onChange={load} />
+      <WhatsAppConnectionPanel agentId={agentId!} agent={a} whatsapp={bundle.whatsapp} canSeeFull={canSeeFull} onChange={load} />
 
       {/* ── Notification Engine ──────────────────────────────────────────── */}
       <NotificationEnginePanel agentId={agentId!} bundle={bundle} onChange={load} />
@@ -381,7 +455,7 @@ function AgentProfilePage() {
       </SectionCard>
 
       {/* ── Scheduled Messages ───────────────────────────────────────────── */}
-      <ScheduledMessagesPanel agentId={agentId!} />
+      <div id="scheduled"><ScheduledMessagesPanel agentId={agentId!} /></div>
 
       {/* ── Invoice Creator ──────────────────────────────────────────────── */}
       <InvoiceCreator agentId={agentId!} agent={a} invoices={bundle.invoices} onCreated={load} />
@@ -430,10 +504,12 @@ function AgentProfilePage() {
 // image each tick since WAHA's QR rotates/expires. RBAC is enforced
 // server-side (assertScope in crmAgentProfile.js) -- `canSeeFull` here is
 // only a display convenience, not the actual security boundary.
-function WhatsAppConnectionPanel({ agentId, whatsapp, canSeeFull, onChange }: { agentId: number; whatsapp: Bundle['whatsapp']; canSeeFull: boolean; onChange: () => void }) {
+function WhatsAppConnectionPanel({ agentId, agent, whatsapp, canSeeFull, onChange }: { agentId: number; agent: Agent; whatsapp: Bundle['whatsapp']; canSeeFull: boolean; onChange: () => void }) {
   const [live, setLive] = useState(whatsapp)
   const [busy, setBusy] = useState(false)
   const [polling, setPolling] = useState(false)
+  const [connectName, setConnectName] = useState(agent.display_name || agent.username || '')
+  const [connectPhone, setConnectPhone] = useState(agent.whatsapp_phone || '')
 
   useEffect(() => { setLive(whatsapp) }, [whatsapp])
 
@@ -450,8 +526,15 @@ function WhatsAppConnectionPanel({ agentId, whatsapp, canSeeFull, onChange }: { 
   }, [polling, agentId, onChange])
 
   async function connect() {
+    if (!connectName.trim() || !connectPhone.replace(/\D/g, '')) {
+      alert('Add your Argus name and WhatsApp number first.')
+      return
+    }
     setBusy(true)
     try {
+      await crmJson(`agent-profile/${agentId}`, 'PATCH', {
+        display_name: connectName.trim(), whatsapp_phone: connectPhone.replace(/\D/g, ''),
+      })
       const d = await crmFetch(`agent-profile/${agentId}/whatsapp/connect`, { method: 'POST' })
       setLive(d)
       if (d.status !== 'CONNECTED') setPolling(true)
@@ -472,14 +555,21 @@ function WhatsAppConnectionPanel({ agentId, whatsapp, canSeeFull, onChange }: { 
   }
 
   return (
-    <SectionCard title="WhatsApp Connection" icon="💬" right={<Badge {...(WA_BADGE[live.status] || WA_BADGE.OFFLINE)} />}>
+    <SectionCard title="Connect to Argus" icon="💬" right={<Badge {...(WA_BADGE[live.status] || WA_BADGE.OFFLINE)} />}>
+      {canSeeFull && live.status !== 'CONNECTED' && (
+        <div className="agent-connect-setup">
+          <div><strong>Your Argus identity</strong><span>One stable profile, one WAHA session. The QR and connected number are mirrored back here.</span></div>
+          <label><span>Display username</span><input value={connectName} onChange={event => setConnectName(event.target.value)} placeholder="e.g. Maria" /></label>
+          <label><span>WhatsApp number</span><input value={connectPhone} onChange={event => setConnectPhone(event.target.value)} inputMode="tel" placeholder="356 99 123 456" /></label>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: DTEXT_DIM, marginBottom: 10 }}>
         <div>Session: <span style={{ color: DTEXT }}>{live.session || 'not assigned'}</span></div>
         {live.phone && <div>Number: <span style={{ color: DTEXT }}>{live.phone}</span></div>}
       </div>
 
       {canSeeFull && live.status !== 'CONNECTED' && !live.qr && (
-        <button onClick={connect} disabled={busy} style={btnPrimary()}>{busy ? 'Starting…' : 'Connect WhatsApp'}</button>
+        <button onClick={connect} disabled={busy} style={btnPrimary()}>{busy ? 'Starting…' : 'Generate secure QR'}</button>
       )}
 
       {live.qr && live.status !== 'CONNECTED' && (
