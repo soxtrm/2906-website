@@ -2179,6 +2179,14 @@ router.patch('/owners/:ownerId/group-policy', auth, async (req,res) => {
 // ════════════════════════════════════════════════════════════════════════════
 router.post('/listings/:ref/create-group', auth, async (req, res) => {
   try {
+    // Compatibility endpoint retained so older clients receive a clear,
+    // fail-closed answer. Every new group must enter through /group-request;
+    // a confirmed viewing alone is no longer sufficient owner consent.
+    return res.status(409).json({
+      error:'Owner approval is required. Open Create Group ★ and send an owner request.',
+      replacement:`/api/crm/schedule-board/listings/${encodeURIComponent(req.params.ref)}/group-request`,
+    })
+    /* istanbul ignore next -- legacy implementation kept below as an audit reference */
     const loaded = await loadForAction(req, res)
     if (!loaded) return
     const { prop, me } = loaded
