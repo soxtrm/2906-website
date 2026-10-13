@@ -17,7 +17,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
-import { BoardFilters, type BoardFilterValue, UPDATED_MAX_MS } from '@/components/crm/board-filters'
+import { BoardFilters, type BoardFilterValue, type BoardLocationArea, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
@@ -63,13 +63,14 @@ const VILLAGE_AREAS: Array<{ key: VillageArea; label: string }> = [
   { key: 'gozo', label: 'Gozo' },
 ]
 
-// Mirrors the CRM's six practical search areas. The locations table currently
-// stores Central Surroundings inside Central/North, so that useful agent-facing
-// split is kept here until it becomes a first-class backend region.
+// Central Surroundings is intentionally an overlay rather than a mutually
+// exclusive backend region: it contains the complete Central group plus a
+// small ring of one or two neighbouring villages in each direction.
 const CENTRAL_SURROUNDING_VILLAGES = new Set([
-  'attard', 'balzan', 'birkirkara', 'fleur-de-lys-birkirkara', 'hamrun', 'iklin',
-  'lija', 'mriehel', 'mosta', 'naxxar', 'qormi', 'rabat', 'santa-venera',
-  'swatar', 'swatar-birkirkara',
+  'attard', 'rabat',                 // west
+  'mosta', 'naxxar',                 // north
+  'gharghur', 'madliena',            // north-east / east
+  'qormi', 'santa-venera',           // south
 ])
 const SOUTH_VILLAGES = new Set([
   'birzebbuga', 'ghaxaq', 'gudja', 'hal-far', 'hal-farrug', 'kirkop', 'luqa',
@@ -91,11 +92,19 @@ const NORTH_VILLAGES = new Set([
 function villageAreaFor(key: string): VillageArea {
   const normalized = key.toLowerCase().trim().replace(/[_\s]+/g, '-').replace(/-+/g, '-')
   if (normalized.startsWith('gozo-')) return 'gozo'
-  if (CENTRAL_SURROUNDING_VILLAGES.has(normalized)) return 'central-surroundings'
   if (SOUTH_EAST_VILLAGES.has(normalized)) return 'south-east'
   if (SOUTH_VILLAGES.has(normalized)) return 'south'
   if (NORTH_VILLAGES.has(normalized)) return 'north'
   return 'central'
+}
+
+function villageBelongsToArea(key: string, area: VillageArea): boolean {
+  const normalized = key.toLowerCase().trim().replace(/[_\s]+/g, '-').replace(/-+/g, '-')
+  const baseArea = villageAreaFor(normalized)
+  if (area === 'central-surroundings') {
+    return baseArea === 'central' || CENTRAL_SURROUNDING_VILLAGES.has(normalized)
+  }
+  return baseArea === area
 }
 
 // ── dark redesign, Kev 2026-09-11 ────────────────────────────────────────────
@@ -472,9 +481,9 @@ function Board() {
   const [rows, setRows] = useState<Listing[]>([])
   const [loadedQuery, setLoadedQuery] = useState('')
   const [backendTownOptions, setBackendTownOptions] = useState<{ key: string; label: string; n: number }[]>([])
-  const [villageArea, setVillageArea] = useState<VillageArea>(() => {
+  const [villageArea, setVillageArea] = useState<VillageArea | null>(() => {
     const firstTown = (params.get('towns') || '').split(',').map(s => s.trim()).find(Boolean)
-    return firstTown ? villageAreaFor(firstTown) : 'north'
+    return firstTown ? villageAreaFor(firstTown) : null
   })
   const [rentedCount, setRentedCount] = useState(0)
   const [favCount, setFavCount] = useState(0)
@@ -922,14 +931,27 @@ function Board() {
   }, [rows, backendTownOptions])
   const townOptionsByArea = useMemo(() => {
     const groups = new Map<VillageArea, typeof townOptions>(VILLAGE_AREAS.map(area => [area.key, []]))
-    for (const town of townOptions) groups.get(villageAreaFor(town.key))?.push(town)
+    for (const town of townOptions) {
+      for (const area of VILLAGE_AREAS) {
+        if (villageBelongsToArea(town.key, area.key)) groups.get(area.key)?.push(town)
+      }
+    }
     return groups
   }, [townOptions])
-  const visibleVillageOptions = useMemo(() => {
-    const inArea = townOptionsByArea.get(villageArea) || []
-    const selectedElsewhere = townOptions.filter(town => f.towns.includes(town.key) && villageAreaFor(town.key) !== villageArea)
-    return [...selectedElsewhere, ...inArea]
-  }, [f.towns, townOptions, townOptionsByArea, villageArea])
+  const villageAreaOptions = useMemo<BoardLocationArea[]>(() => VILLAGE_AREAS.map(area => ({
+    ...area,
+    n: (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0),
+  })), [townOptionsByArea])
+
+  const applyVillageArea = useCallback((area: string | null) => {
+    const next = area && VILLAGE_AREAS.some(option => option.key === area) ? area as VillageArea : null
+    setVillageArea(next)
+    setF(current => ({ ...current, towns: next ? (townOptionsByArea.get(next) || []).map(town => town.key) : [] }))
+  }, [townOptionsByArea])
+
+  useEffect(() => {
+    if (!f.towns.length && villageArea) setVillageArea(null)
+  }, [f.towns.length, villageArea])
 
   // ── visible set: filters ∩ town selection ∩ drawn rectangle ───────────────
   const visible = useMemo(() => {
@@ -1051,9 +1073,6 @@ function Board() {
     () => (view === 'board' ? positioned.filter(isFarFuture).length : 0),
     [positioned, view])
 
-  function toggleTown(k: string) {
-    setF(s => ({ ...s, towns: s.towns.includes(k) ? s.towns.filter(x => x !== k) : [...s.towns, k] }))
-  }
   function reset() { setF(EMPTY); setRect(null); setCirc(null); setDiscovery([]) }
 
   const onMarkerClick = useCallback((ref: string) => {
@@ -1553,7 +1572,10 @@ function Board() {
       mineCount={mineCount}
       loading={loading}
       dark={isDark}
-      townOptions={townOptions}
+      locationAreas={villageAreaOptions}
+      locationTotalCount={townOptions.reduce((sum, town) => sum + town.n, 0)}
+      locationArea={villageArea}
+      onLocationAreaChange={applyVillageArea}
       smartBadgeCount={discovery.length}
       mapActive={mapOpen}
       favouritesActive={!updatesMode && view === 'favourites'}
@@ -1749,13 +1771,13 @@ function Board() {
               const on = villageArea === area.key
               const areaCount = (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0)
               return (
-                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => setVillageArea(area.key)}>
+                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => applyVillageArea(on ? null : area.key)}>
                   <span>{area.label}</span>{areaCount > 0 && <small>{areaCount}</small>}
                 </button>
               )
             })}
           </div>
-          <div className="crm-board-scope-rail" aria-label="Availability and villages">
+          <div className="crm-board-scope-rail" aria-label="Availability">
             {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
               const on = horizon === h
               return (
@@ -1770,17 +1792,6 @@ function Board() {
                   {h === 'future' && futureCount > 0 && (
                     <span style={{ marginLeft: 5, fontFamily: FM, fontSize: 10, color: DTEXT_FAINT }}>{futureCount}</span>
                   )}
-                </button>
-              )
-            })}
-            <button type="button" className="crm-city-chip crm-city-any" aria-pressed={f.towns.length === 0} onClick={() => setF(s => ({ ...s, towns: [] }))}>
-              <span>Any</span><small>{(townOptionsByArea.get(villageArea) || []).reduce((sum, town) => sum + town.n, 0)}</small>
-            </button>
-            {visibleVillageOptions.map(t => {
-              const on = f.towns.includes(t.key)
-              return (
-                <button key={t.key} type="button" className="crm-city-chip" data-outside-area={villageAreaFor(t.key) !== villageArea || undefined} aria-pressed={on} onClick={() => toggleTown(t.key)}>
-                  <span>{t.label}</span><small>{t.n}</small>
                 </button>
               )
             })}
@@ -1952,20 +1963,6 @@ function Board() {
             <button type="button" onClick={() => setTagSelectionMode(false)} style={{ ...subtleLink, fontSize: 11 }}>Done</button>
           </>}
         </div>}
-
-        {/* villages */}
-        {view !== 'board' && townOptions.length > 0 && (
-          <div className="crm-city-rail" aria-label="Filter by city">
-            {townOptions.map(t => {
-              const on = f.towns.includes(t.key)
-              return (
-                <button key={t.key} type="button" className="crm-city-chip" aria-pressed={on} onClick={() => toggleTown(t.key)}>
-                  <span>{t.label}</span><small>{t.n}</small>
-                </button>
-              )
-            })}
-          </div>
-        )}
 
         <AnimatePresence initial={false}>
           {mapOpen && <motion.section

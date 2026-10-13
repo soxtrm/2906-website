@@ -77,6 +77,38 @@ const TYPES: [string, string][] = [
 const BEDS = ['1', '2', '3', '4+']
 const BATHS = ['1', '2', '3']
 
+export type BoardLocationArea = { key: string; label: string; n: number }
+
+const AREA_OVERLAY: Record<string, string> = {
+  north: '/regions/north.png',
+  central: '/regions/central.png',
+  'central-surroundings': '/regions/central.png',
+  south: '/regions/south.png',
+  'south-east': '/regions/southeast.png',
+  gozo: '/regions/gozo.png',
+}
+
+function AreaMiniMap({ areas, totalCount, selected, onToggle }: {
+  areas: BoardLocationArea[]
+  totalCount: number
+  selected: string | null
+  onToggle: (area: string | null) => void
+}) {
+  return <div className="crm-location-minimap">
+    <div className="crm-location-map" data-area={selected || 'all'} aria-hidden="true">
+      <span className="crm-map-grid" />
+      <img src="/regions/malta-base.png" alt="" />
+      {selected && AREA_OVERLAY[selected] && <img className="crm-location-map-active" src={AREA_OVERLAY[selected]} alt="" />}
+      <i className="crm-map-pulse" />
+      <b>Malta</b><small>{selected ? areas.find(area => area.key === selected)?.label : 'All areas'}</small>
+    </div>
+    <div className="crm-location-topics" role="group" aria-label="Malta areas">
+      <button type="button" aria-pressed={!selected} onClick={() => onToggle(null)}><span>All areas</span><small>{totalCount}</small></button>
+      {areas.map(area => <button key={area.key} type="button" aria-pressed={selected === area.key} onClick={() => onToggle(selected === area.key ? null : area.key)}><span>{area.label}</span><small>{area.n}</small></button>)}
+    </div>
+  </div>
+}
+
 // ── shared shells, so every control lines up on the same baseline ───────────
 // Kev's redesign brief (2026-08-22): the row read flat — every control the
 // same off-white block with no lift. A soft shadow gives each trigger the
@@ -172,7 +204,7 @@ function RoomScrubber({ label, values, selected, onChange }: {
   </div>
 }
 
-export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, onMapToggle, onFavouritesOpen, mapActive = false, favouritesActive = false, smartBadgeCount = 0, townOptions = [] }: {
+export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, onMapToggle, onFavouritesOpen, mapActive = false, favouritesActive = false, smartBadgeCount = 0, locationAreas = [], locationTotalCount = 0, locationArea = null, onLocationAreaChange }: {
   value: BoardFilterValue
   onChange: (patch: Partial<BoardFilterValue>) => void
   onReset: () => void
@@ -193,7 +225,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   mapActive?: boolean
   favouritesActive?: boolean
   smartBadgeCount?: number
-  townOptions?: Array<{ key: string; label: string; n: number }>
+  locationAreas?: BoardLocationArea[]
+  locationTotalCount?: number
+  locationArea?: string | null
+  onLocationAreaChange?: (area: string | null) => void
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'smart' | 'filters' | null>(null)
@@ -331,10 +366,6 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     if (value.sublet)  bits.push('Sublet ok')
     return bits.join(' · ')
   })()
-
-  const toggleTown = (key: string) => onChange({
-    towns: value.towns.includes(key) ? value.towns.filter(item => item !== key) : [...value.towns, key],
-  })
 
   const closeIslandSurfaces = () => {
     setOpen(null)
@@ -535,10 +566,9 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
             <div className="crm-filter-section">
               <div className="crm-filter-section-title"><MapPin /><span>Location</span></div>
-              <div className="crm-location-choices">
-                {townOptions.map(town => <button key={town.key} type="button" aria-pressed={value.towns.includes(town.key)} onClick={() => toggleTown(town.key)}>{town.label}<small>{town.n}</small></button>)}
-                {!townOptions.length && <p>Locations appear when inventory is loaded.</p>}
-              </div>
+              {locationAreas.length && onLocationAreaChange
+                ? <AreaMiniMap areas={locationAreas} totalCount={locationTotalCount} selected={locationArea} onToggle={onLocationAreaChange} />
+                : <p className="crm-filter-hint">Areas appear when inventory is loaded.</p>}
             </div>
 
             <div id="crm-filter-price" data-island-focus={islandFocus === 'crm-filter-price'} className="crm-filter-section">
