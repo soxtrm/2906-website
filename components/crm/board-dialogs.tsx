@@ -19,7 +19,7 @@
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
 import {
-  AlertTriangle, Calendar, Clock, EyeOff, FileText, HelpCircle, Home, ImagePlus,
+  AlertTriangle, ArrowDown, Calendar, Clock, EyeOff, FileText, HelpCircle, Home, ImagePlus,
   Images, Loader2, MessageCircle, Plus, Send, Sparkles, Users, X,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
@@ -490,6 +490,8 @@ function agoShort(iso: string): string {
   return `${Math.floor(hrs / 24)}d`
 }
 
+function chatDraftKey(refId: string) { return `argus-owner-chat-draft:${refId}` }
+
 export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, onCreateGroup, onClose }: {
   refId: string; town?: string | null
   // Kev, 2026-08-28: "the Book button could also be in the chat, and +
@@ -509,9 +511,12 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
   const canCreateGroupBtn = canCreateGroup(me)
   const [state, setState] = useState<ChatState | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [draft, setDraft] = useState('')
+  const [draft, setDraft] = useState(() => {
+    try { return sessionStorage.getItem(chatDraftKey(refId)) || '' } catch { return '' }
+  })
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [unseen, setUnseen] = useState(0)
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
   const imageInput = useRef<HTMLInputElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -519,8 +524,17 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
   const composerInput = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
+  const lastScrollTop = useRef(0)
+  const seenLength = useRef(0)
   const reduceMotion = useReducedMotion()
   const [mobileViewport, setMobileViewport] = useState<{ height: number; top: number; keyboard: boolean } | null>(null)
+
+  useEffect(() => {
+    try {
+      if (draft) sessionStorage.setItem(chatDraftKey(refId), draft)
+      else sessionStorage.removeItem(chatDraftKey(refId))
+    } catch { /* the draft still lives in component state */ }
+  }, [draft, refId])
 
   async function load() {
     try {
@@ -541,8 +555,20 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
 
   const timelineLength = (state?.messages.length || 0) + (state?.events.length || 0)
   useEffect(() => {
-    if (stickToBottom.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+    const added = timelineLength - seenLength.current
+    seenLength.current = timelineLength
+    if (stickToBottom.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+      return
+    }
+    if (added > 0) setUnseen(count => count + added)
   }, [timelineLength])
+
+  function jumpToLatest() {
+    stickToBottom.current = true
+    setUnseen(0)
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: reduceMotion ? 'auto' : 'smooth' })
+  }
 
   useEffect(() => {
     const input = composerInput.current
@@ -600,10 +626,13 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
     if (!text || sending) return
     setSending(true)
     setErr(null)
+    stickToBottom.current = true
+    setUnseen(0)
     try {
       await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/relay/message`, 'POST', { text })
       setDraft('')
       await load()
+      requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }))
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not send that.')
     } finally { setSending(false) }
@@ -824,7 +853,11 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
           ref={scrollRef}
           onScroll={e => {
             const el = e.currentTarget
-            stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+            if (atBottom) stickToBottom.current = true
+            else if (el.scrollTop < lastScrollTop.current - 1) stickToBottom.current = false
+            lastScrollTop.current = el.scrollTop
+            if (atBottom && unseen) setUnseen(0)
           }}
           className="crm-chat-timeline grow overflow-y-auto px-3.5 py-3 space-y-2 relative z-10"
         >
@@ -880,6 +913,16 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
               </div>
             )
           })}
+          <AnimatePresence>
+            {unseen > 0 && (
+              <motion.button type="button" onClick={jumpToLatest}
+                initial={{ opacity: 0, y: 8, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: .96 }}
+                transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 32, mass: .8 }}
+                className="crm-chat-jump sticky left-1/2 bottom-1 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold">
+                <ArrowDown className="h-3.5 w-3.5" /> {unseen === 1 ? '1 new message' : `${unseen} new messages`}
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* ── composer ───────────────────────────────────────────────────────── */}

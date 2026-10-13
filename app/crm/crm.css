@@ -424,6 +424,7 @@ html[data-crm-theme="dark"] .crm-chat-dialog{--crm-wa-header:#202c33;--crm-wa-ca
 .crm-chat-quick-actions{background:var(--crm-wa-header);scrollbar-width:none}
 .crm-chat-quick-actions::-webkit-scrollbar{display:none}
 .crm-chat-timeline{background-color:var(--crm-wa-canvas);background-image:radial-gradient(circle at 18px 18px,color-mix(in srgb,currentColor 4%,transparent) 1px,transparent 1.5px),radial-gradient(circle at 52px 47px,color-mix(in srgb,currentColor 3%,transparent) 1px,transparent 1.5px);background-size:72px 72px;overscroll-behavior:contain;scroll-padding-bottom:16px}
+.crm-chat-jump{z-index:4;border:1px solid color-mix(in srgb,var(--crm-wa-green) 55%,var(--crm-border));background:var(--crm-wa-header);color:var(--crm-wa-green);box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .crm-chat-bubble{position:relative;border:0!important;box-shadow:0 1px .5px rgba(11,20,26,.13);color:#111b21!important}
 .crm-chat-bubble-incoming{background:var(--crm-wa-in)!important;border-top-left-radius:2px!important}
 .crm-chat-bubble-outgoing{background:var(--crm-wa-out)!important;border-top-right-radius:2px!important}
