@@ -22,6 +22,7 @@
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { SHEET_SPRING } from '@/lib/crm/motion'
 import { AlertTriangle, CalendarDays, Copy, Link2, Loader2, RefreshCw, Trash2, X } from 'lucide-react'
 import ReactCountryFlag from 'react-country-flag'
 import countries from 'world-countries'
@@ -255,7 +256,7 @@ export function BookingDialog({ refId, town, onClose, onDone, onRequest }: {
         className="fixed inset-0 z-[199] bg-navy/20 backdrop-blur-[3px]" />
       <motion.div
         initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
-        transition={{ duration: 0.16, ease: 'easeOut' }}
+        transition={SHEET_SPRING}
         data-booking-dialog={refId}
         className={cn(
           'fixed z-[200] bg-white shadow-2xl flex flex-col inset-x-0 bottom-0 rounded-t-2xl max-h-[92vh]',

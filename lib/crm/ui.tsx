@@ -1,11 +1,12 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
 import { crmFetch, crmJson, type Me, type NavKey, type Reveals } from './api'
+import { ArgusIntro, ARGUS_INTRO_ENTRANCE_MS } from '@/components/crm/argus-intro'
 
 // ── design tokens ────────────────────────────────────────────────────────────
 // These are the brand values from tailwind.config.ts / globals.css, not the
@@ -201,12 +202,32 @@ const THEME_STORAGE_KEY = 'crm_theme_pref'
 
 const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory', 'bookings']
 
+// Every CRM page mounts its own CrmProvider, so without this each navigation
+// re-fetched /me behind a full-screen splash. The last good session is kept
+// for the tab's lifetime: client-side page changes render instantly and the
+// session is revalidated in the background (a 401 still redirects to login).
+let sessionCache: { me: Me; reveals: Reveals; nav: NavKey[] } | null = null
+const INTRO_SEEN_KEY = 'argus_intro_seen'
+
 export function CrmProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [me, setMe] = useState<Me | null>(null)
-  const [reveals, setReveals] = useState<Reveals>({ used: 0, limit: 50 })
-  const [nav, setNav] = useState<NavKey[]>(FULL_NAV)
-  const [ready, setReady] = useState(false)
+  const [me, setMe] = useState<Me | null>(() => sessionCache?.me ?? null)
+  const [reveals, setReveals] = useState<Reveals>(() => sessionCache?.reveals ?? { used: 0, limit: 50 })
+  const [nav, setNav] = useState<NavKey[]>(() => sessionCache?.nav ?? FULL_NAV)
+  const [ready, setReady] = useState(() => !!sessionCache)
+  // The ARGUS intro plays on a cold load only. It stays up for its entrance
+  // even if the session answers instantly, then dissolves into the app.
+  const [intro, setIntro] = useState<'off' | 'playing' | 'leaving'>(() => sessionCache ? 'off' : 'playing')
+  const [entranceDone, setEntranceDone] = useState(false)
+  useEffect(() => {
+    if (intro !== 'playing') return
+    let seen = false
+    try { seen = sessionStorage.getItem(INTRO_SEEN_KEY) === '1'; sessionStorage.setItem(INTRO_SEEN_KEY, '1') } catch {}
+    // Second cold load in the same tab (refresh): shorter hold, same motion.
+    const timer = window.setTimeout(() => setEntranceDone(true), seen ? 650 : ARGUS_INTRO_ENTRANCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [intro])
+  useEffect(() => { if (ready && entranceDone && intro === 'playing') setIntro('leaving') }, [ready, entranceDone, intro])
   // null = "no explicit viewer preference yet" -- each CrmShell falls back
   // to its own `dark` prop in that case. Read lazily (not in an effect) so
   // the very first paint already has the right theme instead of a flash of
@@ -220,6 +241,10 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     } catch { return null }
   })
   const toggleTheme = useCallback((currentDark = false) => {
+    // Cross-fade colours for the length of the switch instead of snapping.
+    const root = document.body
+    root.classList.add('crm-theme-fading')
+    window.setTimeout(() => root.classList.remove('crm-theme-fading'), 380)
     setTheme(prev => {
       const next = (prev === null ? currentDark : prev === 'dark') ? 'light' : 'dark'
       try { localStorage.setItem(THEME_STORAGE_KEY, next) } catch {}
@@ -236,17 +261,19 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       .then(d => {
         if (!alive) return
         setMe(d.agent); setReveals(d.reveals); setNav(FULL_NAV); setReady(true)
+        sessionCache = { me: d.agent, reveals: d.reveals, nav: FULL_NAV }
       })
       .catch(async (e: any) => {
         if (!alive) return
-        if (e?.status !== 403) { router.replace('/crm/login'); return }
+        if (e?.status !== 403) { sessionCache = null; router.replace('/crm/login'); return }
         try {
           const d = await crmFetch('schedule-board/me')
           if (!alive) return
           setMe(d.agent); setReveals(d.reveals || { used: 0, limit: 0 })
           setNav((d.nav as NavKey[]) || ['board'])
           setReady(true)
-        } catch { router.replace('/crm/login') }
+          sessionCache = { me: d.agent, reveals: d.reveals || { used: 0, limit: 0 }, nav: (d.nav as NavKey[]) || ['board'] }
+        } catch { sessionCache = null; router.replace('/crm/login') }
       })
     return () => { alive = false }
   }, [router])
@@ -259,21 +286,20 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await crmFetch('logout', { method: 'POST' }).catch(() => {})
+    sessionCache = null
     router.replace('/crm/login')
   }, [router])
 
-  if (!ready) {
-    // Kev, 2026-08-22: this used to be the literal text "2906" — the real
-    // wordmark (same file the sidebar already uses) so the loading screen
-    // doesn't show a stale placeholder before the real logo ever renders.
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F6F4EF' }}>
-        <img src="/logo-wide.png" alt="2906" style={{ width: 150 }} />
-      </div>
-    )
-  }
+  // Kev, 2026-10-13: the old splash was the static 2906 logo-wide.png. Now
+  // the ARGUS wordmark animates in while the session loads and dissolves
+  // into the rendered app (components/crm/argus-intro.tsx).
+  const introOverlay = intro !== 'off' && (
+    <ArgusIntro leaving={intro === 'leaving'} onExited={() => setIntro('off')} />
+  )
+  if (!ready) return <>{introOverlay}</>
   return <Ctx.Provider value={{ me, reveals, nav, doReveal, logout, theme, toggleTheme }}>
     {children}
+    {introOverlay}
     {me?.boardOnly && !me.boardTourCompletedAt && (
       <BoardFirstRunTour onDone={() => setMe(current => current ? { ...current, boardTourCompletedAt: new Date().toISOString() } : current)} />
     )}
@@ -460,7 +486,7 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS = { dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database }
 
 export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, children, dark: darkDefault, mobileImmersive }:
   { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; mobileActions?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileImmersive?: boolean }) {
@@ -550,7 +576,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
       </header>
       {hasReveals && reveals.used >= 40 && <div className="crm-notice" role="status">{reveals.used >= reveals.limit ? 'Reveal limit reached. Contact admin to raise your limit.' : `You have used ${reveals.used} of ${reveals.limit} contact reveals today.`}</div>}
       {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
-      <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content">{children}</main>
+      <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content"><div key={pathname} className="crm-route-enter">{children}</div></main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation" data-compact={navigationCompact || undefined}>
       <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Show mobile navigation" tabIndex={navigationCompact ? 0 : -1}><span /></button>

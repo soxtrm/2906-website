@@ -25,6 +25,7 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
+import { SHEET_SPRING } from '@/lib/crm/motion'
 import { useCrm, canCreateGroup } from '@/lib/crm/ui'
 
 // ── shared shell ────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ function Sheet({ title, sub, onClose, children, footer }: {
       />
       <motion.div
         initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
-        transition={{ duration: 0.16, ease: 'easeOut' }}
+        transition={SHEET_SPRING}
         className="fixed z-[200] bg-white shadow-2xl flex flex-col
                    inset-x-0 bottom-0 rounded-t-2xl max-h-[88vh]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
@@ -701,7 +702,7 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
     : { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
   const rise = reduceMotion
     ? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 1, y: 0 }, transition: { duration: 0 } }
-    : { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 24 }, transition: { duration: 0.18, ease: 'easeOut' as const } }
+    : { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 24 }, transition: SHEET_SPRING }
 
   return (
     <>
