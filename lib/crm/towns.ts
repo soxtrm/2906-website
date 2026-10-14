@@ -41,6 +41,8 @@ const ALIASES: Record<string, string> = {
   'bormla cospicua': 'bormla',
   'swatar birkirkara': 'swatar',
   'ibragg swieqi': 'ibragg',
+  'ta ibragg swieqi': 'ibragg',
+  'ta ibragg': 'ibragg',
   'ta l ibragg': 'ibragg',
   'ibrag': 'ibragg',
   'st julian s balluta': 'st julians',

@@ -19,6 +19,11 @@ const listings = [
   makeListing(2, '2906-JULIANS', "St Julian's", 'st-julians'),
   makeListing(3, '2906-MELLIEHA', 'Mellieħa', 'mellieha'),
 ]
+const archivedListing = {
+  ...makeListing(4, '2906-9129', 'Swieqi', 'ta-ibragg-swieqi'),
+  localityLabel: 'Ta Ibragg (Swieqi)',
+  availableStatus: 'archived',
+}
 
 ;(async () => {
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
@@ -31,14 +36,18 @@ const listings = [
     if (!raw.includes('/api/crm/')) return request.continue()
     const json = body => request.respond({ contentType: 'application/json', body: JSON.stringify(body) })
     if (raw.endsWith('/api/crm/me')) return json({ agent: { id: 1, username: 'kevin', name: 'Kevin', role: 'admin', daily_reveal_limit: 50 }, reveals: { used: 0, limit: 50 }, nav: ['dashboard', 'inventory', 'board', 'bookings', 'access', 'owners', 'clientgroups', 'ownergroups', 'outreach', 'agentchats', 'profile', 'baseinventory'] })
-    const detail = raw.match(/schedule-board\/listings\/(2906-[A-Z]+)$/)
-    if (detail) return json(listings.find(listing => listing.ref === detail[1]))
+    const detail = raw.match(/schedule-board\/listings\/(2906-[A-Z0-9-]+)$/)
+    if (detail) return json([...listings, archivedListing].find(listing => listing.ref === detail[1]))
     if (raw.includes('schedule-board/listings?status=rented')) return json({ listings: [] })
     if (raw.includes('schedule-board/listings?')) {
       const selected = new URL(raw).searchParams.get('towns')?.split(',').filter(Boolean) || []
       return json({ listings: selected.length ? listings.filter(listing => selected.includes(listing.localityKey)) : listings })
     }
-    if (raw.includes('schedule-board/towns')) return json({ towns: listings.map(listing => ({ key: listing.localityKey, label: listing.town, n: 1 })) })
+    if (raw.includes('schedule-board/towns')) return json({ towns: [
+      ...listings.map(listing => ({ key: listing.localityKey, label: listing.town, n: 1 })),
+      { key: 'ta-ibragg-swieqi', label: 'Ta Ibragg (Swieqi)', n: 2 },
+      { key: 'ibragg', label: 'Ibraġġ', n: 1 },
+    ] })
     if (raw.includes('schedule-board/notifications')) return json({ notifications: [] })
     if (raw.includes('property-changes/pending')) return json([])
     if (raw.includes('schedule-board/config')) return json({})
@@ -60,7 +69,8 @@ const listings = [
   await page.waitForFunction(() => document.querySelectorAll('.crm-listing-card').length === 3)
   const selectedAreas = await page.$$eval('.crm-area-chip[aria-pressed="true"] span', nodes => nodes.map(node => node.textContent))
   assert.deepEqual(selectedAreas.sort(), ['Central', 'North'], 'areas combine as an OR union')
-  assert.deepEqual(await page.$$eval('.crm-city-chip:not(.crm-city-any) span', nodes => nodes.map(node => node.textContent).sort()), ['Mellieħa', 'Sliema', "St Julian's"], 'town row contains the deduplicated union of selected areas')
+  assert.deepEqual(await page.$$eval('.crm-city-chip:not(.crm-city-any) span', nodes => nodes.map(node => node.textContent).sort()), ['Ibraġġ', 'Mellieħa', 'Sliema', "St Julian's"], 'town row contains the deduplicated union of selected areas')
+  assert.equal(await page.$$eval('.crm-city-chip:not(.crm-city-any) span', nodes => nodes.filter(node => node.textContent === 'Ibraġġ').length), 1, 'Ibraġġ aliases merge into one canonical village chip')
   assert.equal(await page.$eval('.crm-area-chip span', node => node.closest('button').disabled), false)
   const southDisabled = await page.$$eval('.crm-area-chip', buttons => buttons.find(button => button.querySelector('span')?.textContent === 'South')?.disabled)
   assert.equal(southDisabled, true, 'an area with zero listings cannot create an empty search')
@@ -85,6 +95,16 @@ const listings = [
   await page.waitForSelector('.crm-board-map-close')
   await page.$eval('.crm-board-map-close', button => button.click())
   await page.waitForSelector('.crm-board-map-shell', { hidden: true })
+
+  // A known reference is a global lookup: it bypasses the selected North area
+  // and active-only horizon, so an archived property can still be recovered.
+  await page.click('[aria-label="Open ARGUS search"]')
+  await new Promise(resolve => setTimeout(resolve, 250))
+  if (!await page.$('input[aria-label^="Search by reference"]')) await page.click('[aria-label="Open ARGUS search"]')
+  await page.waitForSelector('input[aria-label^="Search by reference"]')
+  await page.type('input[aria-label^="Search by reference"]', '9129')
+  await page.waitForFunction(() => document.querySelectorAll('.crm-listing-card').length === 1 && document.body.innerText.includes('2906-9129'))
+  assert.equal(await page.$eval('.crm-listing-card', card => card.getAttribute('aria-label').includes('2906-9129')), true, 'exact reference lookup bypasses stale area filters')
 
   await browser.close()
   console.log('mobile multi-area selection and persistent listing close passed')
