@@ -1,6 +1,6 @@
 # Birżebbuġa neighbourhood edition — source dossier
 
-Status: ASSET READY — public sources verified and the licensed hero asset prepared; no public edition exists yet.
+Status: NOINDEX DRAFT READY — public sources and licensed hero asset integrated; browser and release checks pending.
 
 Research date: 14 October 2026.
 
