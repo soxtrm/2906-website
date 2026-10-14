@@ -943,11 +943,39 @@ function Board() {
     n: (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0),
   })), [townOptionsByArea])
 
+  const activeVillageOptions = useMemo(
+    () => villageArea ? (townOptionsByArea.get(villageArea) || []) : [],
+    [townOptionsByArea, villageArea],
+  )
+  const allAreaVillagesSelected = activeVillageOptions.length > 0 &&
+    activeVillageOptions.every(town => f.towns.includes(town.key))
+
   const applyVillageArea = useCallback((area: string | null) => {
     const next = area && VILLAGE_AREAS.some(option => option.key === area) ? area as VillageArea : null
     setVillageArea(next)
     setF(current => ({ ...current, towns: next ? (townOptionsByArea.get(next) || []).map(town => town.key) : [] }))
   }, [townOptionsByArea])
+
+  const toggleVillageArea = useCallback((area: VillageArea) => {
+    applyVillageArea(villageArea === area ? null : area)
+  }, [applyVillageArea, villageArea])
+
+  const selectAnyVillageInArea = useCallback(() => {
+    setF(current => ({ ...current, towns: activeVillageOptions.map(town => town.key) }))
+  }, [activeVillageOptions])
+
+  const toggleVillageInArea = useCallback((key: string) => {
+    const areaKeys = activeVillageOptions.map(town => town.key)
+    const areaKeySet = new Set(areaKeys)
+    setF(current => {
+      const selected = current.towns.filter(town => areaKeySet.has(town))
+      const allSelected = areaKeys.length > 0 && areaKeys.every(town => selected.includes(town))
+      if (allSelected) return { ...current, towns: [key] }
+      if (!selected.includes(key)) return { ...current, towns: [...selected, key] }
+      const remaining = selected.filter(town => town !== key)
+      return { ...current, towns: remaining.length ? remaining : areaKeys }
+    })
+  }, [activeVillageOptions])
 
   useEffect(() => {
     if (!f.towns.length && villageArea) setVillageArea(null)
@@ -1788,12 +1816,27 @@ function Board() {
               const on = villageArea === area.key
               const areaCount = (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0)
               return (
-                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => applyVillageArea(on ? null : area.key)}>
+                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => toggleVillageArea(area.key)}>
                   <span>{area.label}</span>{areaCount > 0 && <small>{areaCount}</small>}
                 </button>
               )
             })}
           </div>
+          {villageArea && activeVillageOptions.length > 0 && (
+            <div className="crm-city-rail crm-area-villages" aria-label={`${VILLAGE_AREAS.find(area => area.key === villageArea)?.label || 'Selected area'} villages`}>
+              <button type="button" className="crm-city-chip crm-city-any" aria-pressed={allAreaVillagesSelected} onClick={selectAnyVillageInArea}>
+                <span>Any</span><small>{activeVillageOptions.reduce((sum, town) => sum + town.n, 0)}</small>
+              </button>
+              {activeVillageOptions.map(town => {
+                const on = !allAreaVillagesSelected && f.towns.includes(town.key)
+                return (
+                  <button key={town.key} type="button" className="crm-city-chip" aria-pressed={on} onClick={() => toggleVillageInArea(town.key)}>
+                    <span>{town.label}</span><small>{town.n}</small>
+                  </button>
+                )
+              })}
+            </div>
+          )}
           </div>
         )}
 
