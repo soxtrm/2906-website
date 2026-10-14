@@ -1,6 +1,6 @@
 # Rabat neighbourhood edition — source dossier
 
-Status: RESEARCH DRAFT — source boundary and licensed image candidate verified; no public page exists yet.
+Status: ASSET READY — source boundary and licensed image verified; no public page exists yet.
 
 Research date: 14 October 2026.
 
@@ -95,7 +95,17 @@ Selected candidate: `Rabat, Malta 24. listopada 2025.jpg` by August Dominus.
 
 Required caption: author, Commons source, CC0 link and capture date, plus a clear statement that the dated locality image is illustrative and not evidence of a listed home's street, outlook, access or present condition.
 
-The candidate has been visually compared with the other Commons results and selected for its legible Rabat street texture. Before use, download the exact file or documented Commons resize, verify dimensions and pixels, create a proportional local WebP without generative alteration, record SHA-256 values and inspect the responsive mobile and desktop framing. The portrait orientation requires particular care: CSS cropping must not obscure the subject or make the image appear to document a specific listing.
+The candidate was visually compared with the other Commons results and selected for its legible Rabat street texture. Asset verification completed 14 October 2026:
+
+- the exact Commons original is a 3,179,061-byte JPEG with SHA-256 `2CDC9B03E0D21A5A76D9186F060F31B34360DE22B426A29F0FF3C792E07D53DC`;
+- its stored pixel array is 4080 × 3060 with EXIF orientation 6; applying that orientation produces the documented 3060 × 4080 portrait frame;
+- EXIF orientation was applied and the image was resized proportionally, without a crop, retouching or generative change, to a local 1800 × 2400 RGB WebP;
+- output path: `public/link-marketplace/assets/rabat-street-august-dominus.webp`;
+- output size: 445,852 bytes;
+- output SHA-256: `53A256678D74D9306E0B5176ABF3188B403FF7E8AF3564002ADD586CB74B1506`;
+- visual review confirms a narrow limestone lane, planted pots, domestic façades and a decorated religious niche. No person is visible. The image supports an honest historic-street-texture treatment, but it does not identify a specific street or establish the outlook, access or condition of any listing.
+
+The downloaded original remains an unversioned evidence file under `artifacts/`; only the verified WebP is intended for the repository. The portrait orientation still requires particular care in the page: responsive framing must be inspected at mobile and desktop sizes and must not obscure the subject or make the image appear to document a specific listing.
 
 ## Claims deliberately withheld
 
@@ -110,11 +120,10 @@ The candidate has been visually compared with the other Commons results and sele
 
 ## Release gates
 
-1. Download and verify the selected CC0 image; record source and derivative hashes and inspect the portrait framing.
-2. Build a distinct English noindex draft with visible image attribution and a click-to-load OSM overview.
-3. Check mobile and desktop layout, image decode/crop, lazy map behaviour, outbound source links and horizontal overflow.
-4. Only after those checks, add one canonical, matching Open Graph metadata and one BreadcrumbList; remove draft/noindex labels.
-5. Add exactly one marketplace discovery link and one sitemap URL, then run the production build.
-6. Publish through the established Git/Vercel path and verify the exact production page, asset, index and sitemap before marking the edition live.
+1. Build a distinct English noindex draft with visible image attribution and a click-to-load OSM overview.
+2. Check mobile and desktop layout, portrait-image decode/framing, lazy map behaviour, outbound source links and horizontal overflow.
+3. Only after those checks, add one canonical, matching Open Graph metadata and one BreadcrumbList; remove draft/noindex labels.
+4. Add exactly one marketplace discovery link and one sitemap URL, then run the production build.
+5. Publish through the established Git/Vercel path and verify the exact production page, asset, index and sitemap before marking the edition live.
 
 No external backlink or community post has been published for this edition.
