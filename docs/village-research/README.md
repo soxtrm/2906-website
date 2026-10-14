@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Sixteen English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur and San Ġwann. The older `swieqi-preview.html` is retained
+Status: Seventeen English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann and Birkirkara. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -48,3 +48,5 @@ St Paul's Bay is published independently at https://www.2906.estate/link-marketp
 Għargħur is published independently at https://www.2906.estate/link-marketplace/areas/gharghur.html (release commit `b1f7535`, production HTTP 200 verified on 12 October 2026). Its sourced dossier is `gharghur-research.md`; the edition separates the old village core, outer residential/rural-edge streets and neighbouring Naxxar, Madliena, Baħar iċ-Ċagħaq and Magħtab contexts and draws no invented boundary or generic walking route.
 
 San Ġwann is published independently at https://www.2906.estate/link-marketplace/areas/san-gwann.html (release commit `f572569`, production HTTP 200 verified on 13 October 2026). Its sourced dossier is `san-gwann-research.md`; the edition separates the modern centre and valley edges from Kappara and Iklin and draws no invented boundary or generic walking route.
+
+Birkirkara is published independently at https://www.2906.estate/link-marketplace/areas/birkirkara.html (release commit `666332e`, production HTTP 200 verified on 14 October 2026). Its sourced dossier is `birkirkara-research.md`; the edition separates the older core, Valley Road and mixed edge labels from neighbouring localities and draws no invented boundary, historic-rail promise or generic walking route.
