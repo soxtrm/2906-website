@@ -99,12 +99,9 @@ const isAuthorizedGroup = (chatId) =>
 // (Kev, 2026-08-27: !upload must not die just because Default is down).
 const SESSION_FOR_GROUPS = 'default'
 
-// Default → Second → Third → Cedric → Jasmine. Reuses waha.pickActiveAdminSession()
-// (the same Default→Second→Third fallback chain !av/!book/outreach already run
-// on) for the first three rather than re-deriving that logic; Cedric/Jasmine are
-// an additive extension on top, tried only when NONE of Kev's three main
-// accounts are live. No caching — re-checked on every call, so a recovered
-// Default is picked again on the very next command with no restart needed.
+// Fallback used only when there is no observed webhook session. Normal group
+// dispatch supplies the account that actually received the message, because a
+// healthy global primary is not necessarily a member of every listing group.
 const UPLOAD_FALLBACK_PERSONAS = ['Cedric', 'Jasmine']
 async function pickUploadSession() {
   const admin = await waha.pickActiveAdminSession()
@@ -147,8 +144,12 @@ async function pickUploadSession() {
 // it. Falls back to the live (uncached) pick on any Redis hiccup or when no
 // messageId is available — never worse than before, only stickier when it
 // can be.
-async function pickUploadSessionSticky(messageId) {
-  if (!messageId) return pickUploadSession()
+async function pickUploadSessionSticky(messageId, observedSession = null) {
+  // For a group webhook, prefer the session that actually delivered this
+  // message. The old resolver could nominate a healthy account that was not a
+  // member of this particular group; every account that did receive the
+  // command then rejected it and the command vanished without a reply.
+  if (!messageId) return observedSession || pickUploadSession()
   const key = `groupgate:winner:${messageId}`
   try {
     const cached = await redis.get(key)
@@ -156,7 +157,7 @@ async function pickUploadSessionSticky(messageId) {
   } catch (err) {
     log.warn('pickUploadSessionSticky: redis get failed, resolving live', { err: err.message })
   }
-  const winner = await pickUploadSession()
+  const winner = observedSession || await pickUploadSession()
   try {
     // NX: only the first caller's resolution is stored. Re-read afterwards so
     // BOTH the winner (whose value got stored) and any concurrent caller (who

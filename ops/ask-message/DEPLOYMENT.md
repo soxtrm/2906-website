@@ -25,3 +25,16 @@ Rollback backup: `/opt/2906-system/backups/ask-facts-20261010-130948/`
 - Live Gemini composition of the reported `Russian couple / IT / €1600–1700` case passed the fact and Malta greeting assertions.
 - Production history query for `#2906-9416` completed successfully.
 - Container restarted healthy with database, workers and HTTP listener up.
+
+## 2026-10-14 group-command reliability update
+
+- Group commands now claim the first connected session that actually receives
+  the WhatsApp event. A healthy account that is absent from that group can no
+  longer be selected as the winner and silently discard `!ask`.
+- `!ask 9454 ...` and `!ask 2906-9454 ...` share the same lookup path.
+- The obsolete two-questions-per-property throttle was removed from the
+  WhatsApp command. Do-not-contact and explicit pause gates remain.
+- Verification is fully mocked and sends no WhatsApp message:
+  `node test/groupSessionClaim.test.js` and `node test/ask.pipeline.test.js`.
+- Production rollback:
+  `/opt/2906-system/backups/ask-group-routing-20261014-201442/`.

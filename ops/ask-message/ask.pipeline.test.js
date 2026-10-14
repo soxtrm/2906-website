@@ -35,7 +35,9 @@ const mocks = {
   '../services/ownerAsk': {
     QUESTIONS_PER_DAY: 2,
     async resolveAgentByPhone() { return { id: 7, name: 'Kevin', username: 'Kevin', notify_whatsapp: '35600000000', whatsapp_phones: [] } },
-    async questionsUsedFor() { return 0 },
+    // A historical count must not block a fresh Ask. DNC is the safety gate;
+    // the former two-per-day product throttle has been removed.
+    async questionsUsedFor() { return 999 },
     async ownerFor() { return { id: 55, phone_normalized: '35611111111', do_not_contact: false } },
     async isReachout() { return false },
     humanName(v) { return v },
@@ -62,6 +64,12 @@ const { cmdAsk, cmdAskConfirm } = require(handlerPath)
   assert.equal(replies.length, 1)
   assert.match(replies[0], /Reply \*Yes\* to send/)
   assert.ok(replies[0].includes(composedText), 'preview must show the complete composed text')
+
+  await cmdAsk('default', 'second-agent-chat@g.us',
+    '2906-9454 Client interested to see it tomorrow',
+    { senderPhone: '35600000000' })
+  assert.equal(replies.length, 2)
+  assert.match(replies[1], /Reply \*Yes\* to send/)
 
   const consumed = await cmdAskConfirm({ session: 'default', chatId: 'agent-chat@g.us', text: 'Yes' })
   assert.equal(consumed, true)
