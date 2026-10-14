@@ -2,6 +2,8 @@
 
 Audit snapshot: 2026-10-12 02:47 Europe/Malta (00:47 UTC)
 
+Operational follow-up: 2026-10-14 03:29 Europe/Malta. The v2 append-only run journal now contains 190 successful records across 190 unique expected slots, with zero failed queries or duplicate starts in the last 24 hours. Historical traffic observations remain zero because the Google adapter is intentionally blocked from the immutable value store. The owner requested persistence on 14 October; the permitted retention boundary and official policy references are recorded in `TRAFFIC_RETENTION_DECISION.md`.
+
 ## Result
 
 The repository and production host do **not** contain a 15-day traffic measurement series. The Google traffic collector first produced a successful run on 2026-10-10 at 07:16:03 Europe/Malta. It intentionally keeps only an expiring current snapshot at `/run/nexus-routing/google-traffic-current.json`; every later run replaces that file.

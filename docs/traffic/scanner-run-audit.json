@@ -1,28 +1,43 @@
 {
-  "auditGeneratedUtc": "2026-10-12T00:47:37.527752Z",
+  "auditGeneratedUtc": "2026-10-14T01:28:44.466Z",
   "timezone": "Europe/Malta",
   "firstSuccessUtc": "2026-10-10T05:16:03.201198Z",
   "firstSuccessLocal": "2026-10-10T07:16:03.201198+02:00",
-  "lastSuccessUtc": "2026-10-12T00:46:56.177966Z",
-  "lastSuccessLocal": "2026-10-12T02:46:56.177966+02:00",
-  "successRuns": 174,
-  "completedRouteResponsesReportedByRuns": 2088,
+  "lastSuccessUtc": "2026-10-14T01:15:01.876Z",
+  "lastSuccessLocal": "2026-10-14T03:15:01.876+02:00",
+  "connectedServiceRunsSinceFirstSuccess": 368,
+  "durableV2Runs": 190,
+  "durableV2StatusCounts": {
+    "SUCCESS": 190
+  },
+  "durableV2FirstUtc": "2026-10-12T02:02:45.954Z",
+  "durableV2LastUtc": "2026-10-14T01:15:00.962Z",
+  "durableV2UniqueExpectedSlots": 190,
   "retainedHistoricalObservations": 0,
-  "runsByLocalDate": {
-    "2026-10-10": 68,
-    "2026-10-11": 94,
-    "2026-10-12": 12
+  "durableV2RunsByLocalDate": {
+    "2026-10-12": 80,
+    "2026-10-13": 96,
+    "2026-10-14": 14
   },
-  "uniqueQuarterHourBucketsByLocalDate": {
-    "2026-10-10": 67,
-    "2026-10-11": 94,
-    "2026-10-12": 12
+  "last24Hours": {
+    "runs": 97,
+    "missingSlots": 0,
+    "successfulQueries": 1164,
+    "failedQueries": 0,
+    "duplicateStarts": 0
   },
-  "immediateDuplicateStarts": 1,
-  "cadenceExcludingImmediateDuplicateSeconds": {
-    "minimum": 900.388684,
-    "median": 910.9190865,
-    "maximum": 920.318229,
-    "gapsOverTwentyMinutes": 0
+  "currentSnapshot": {
+    "generatedUtc": "2026-10-14T01:15:01.876Z",
+    "expiresUtc": "2026-10-14T01:35:01.876Z",
+    "batch": 1,
+    "requestedRoutes": 12,
+    "completedRoutes": 12,
+    "cachedDirectionalRoutes": 24
+  },
+  "retentionDecision": {
+    "runMetadata": "append-only durable",
+    "googleTrafficValues": "ephemeral current snapshot only",
+    "reason": "Google Routes historical-value storage is not licensed under the current EEA-safe policy basis",
+    "decisionDocument": "TRAFFIC_RETENTION_DECISION.md"
   }
 }

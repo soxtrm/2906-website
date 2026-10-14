@@ -8,6 +8,8 @@ The scheduler invokes `ops/property-routing/google-traffic-scan.cjs`. `currentTr
 
 The current Google adapter is declared `snapshotOnly`. The standard Routes policy restricts caching of most Routes content and requires Routes results shown on a map to be shown on a Google Map. The project therefore does not archive Google durations, derive a historical model from them, or export them to Nexus Mapbox. The native Google `TrafficLayer` remains a separate live Google-only view.
 
+The project owner explicitly requested persistence on 2026-10-14. Authorization is recorded, but it does not override the provider licence. Because the billing address may be in the EEA, the current implementation uses the EEA-safe interpretation: the EEA Terms prohibit caching except where expressly permitted, and the Routes service-specific exception does not grant historical storage of duration or traffic-duration values. See `TRAFFIC_RETENTION_DECISION.md` for the decision record and official links.
+
 `traffic-provider-contract.cjs` makes this enforceable. A future adapter must explicitly declare all three capabilities before the immutable store accepts values:
 
 - historical storage allowed;
