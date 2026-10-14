@@ -481,9 +481,9 @@ function Board() {
   const [rows, setRows] = useState<Listing[]>([])
   const [loadedQuery, setLoadedQuery] = useState('')
   const [backendTownOptions, setBackendTownOptions] = useState<{ key: string; label: string; n: number }[]>([])
-  const [villageArea, setVillageArea] = useState<VillageArea | null>(() => {
-    const firstTown = (params.get('towns') || '').split(',').map(s => s.trim()).find(Boolean)
-    return firstTown ? villageAreaFor(firstTown) : null
+  const [villageAreas, setVillageAreas] = useState<VillageArea[]>(() => {
+    const towns = (params.get('towns') || '').split(',').map(s => s.trim()).filter(Boolean)
+    return Array.from(new Set(towns.map(villageAreaFor)))
   })
   const [rentedCount, setRentedCount] = useState(0)
   const [favCount, setFavCount] = useState(0)
@@ -781,7 +781,11 @@ function Board() {
     if (f.max) q.set('price_max', f.max)
     if (f.type) q.set('type', f.type)
     if (deferredQuery.trim()) q.set('q', deferredQuery.trim())
-    if (f.towns.length) q.set('towns', f.towns.join(','))
+    // Area/town selection stays local. The board already has the complete
+    // active inventory for the current non-location filters, while the backend
+    // CSV parser caps lists at 30 values. Keeping locations out of this request
+    // prevents a broad multi-area union from being silently truncated and also
+    // avoids a second loading flash when an agent taps adjacent areas.
     if (f.pets) q.set('pets', f.pets)
     if (f.sharing) q.set('sharing', f.sharing)
     if (f.sublet) q.set('sublet', '1')
@@ -818,7 +822,7 @@ function Board() {
       .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [f.beds, f.baths, f.min, f.max, f.type, f.towns, f.pets, f.sharing, f.sublet, f.updated, f.rental,
+  }, [f.beds, f.baths, f.min, f.max, f.type, f.pets, f.sharing, f.sublet, f.updated, f.rental,
       deferredQuery, discovery, rect, circ, horizon, sort, view, onlyConfirmed, avail, refreshTick])
 
   // Deep link from the Agent Workspace dashboard's per-listing action buttons:
@@ -943,22 +947,52 @@ function Board() {
     n: (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0),
   })), [townOptionsByArea])
 
-  const activeVillageOptions = useMemo(
-    () => villageArea ? (townOptionsByArea.get(villageArea) || []) : [],
-    [townOptionsByArea, villageArea],
-  )
+  const activeVillageOptions = useMemo(() => {
+    if (!villageAreas.length) return []
+    return townOptions.filter(town => villageAreas.some(area => villageBelongsToArea(town.key, area)))
+  }, [townOptions, villageAreas])
   const allAreaVillagesSelected = activeVillageOptions.length > 0 &&
     activeVillageOptions.every(town => f.towns.includes(town.key))
 
   const applyVillageArea = useCallback((area: string | null) => {
-    const next = area && VILLAGE_AREAS.some(option => option.key === area) ? area as VillageArea : null
-    setVillageArea(next)
-    setF(current => ({ ...current, towns: next ? (townOptionsByArea.get(next) || []).map(town => town.key) : [] }))
-  }, [townOptionsByArea])
+    if (!area) {
+      setVillageAreas([])
+      setF(current => ({ ...current, towns: [] }))
+      return
+    }
+    if (!VILLAGE_AREAS.some(option => option.key === area)) return
+    const nextArea = area as VillageArea
+    const removing = villageAreas.includes(nextArea)
+    const nextAreas = removing
+      ? villageAreas.filter(selected => selected !== nextArea)
+      : [...villageAreas, nextArea]
+    const previousAreaKeys = townOptions
+      .filter(town => villageAreas.some(selected => villageBelongsToArea(town.key, selected)))
+      .map(town => town.key)
+    const nextAreaKeys = townOptions
+      .filter(town => nextAreas.some(selected => villageBelongsToArea(town.key, selected)))
+      .map(town => town.key)
+    const toggledAreaKeys = (townOptionsByArea.get(nextArea) || []).map(town => town.key)
+    const nextAreaKeySet = new Set(nextAreaKeys)
+    setVillageAreas(nextAreas)
+    setF(current => {
+      if (!nextAreas.length) return { ...current, towns: [] }
+      const selectedAllPrevious = previousAreaKeys.length > 0 && previousAreaKeys.every(key => current.towns.includes(key))
+      if (!removing) {
+        const preserved = current.towns.filter(key => nextAreaKeySet.has(key))
+        const towns = selectedAllPrevious
+          ? nextAreaKeys
+          : Array.from(new Set([...preserved, ...toggledAreaKeys]))
+        return { ...current, towns }
+      }
+      const preserved = current.towns.filter(key => nextAreaKeySet.has(key))
+      return { ...current, towns: preserved.length ? preserved : nextAreaKeys }
+    })
+  }, [townOptions, townOptionsByArea, villageAreas])
 
   const toggleVillageArea = useCallback((area: VillageArea) => {
-    applyVillageArea(villageArea === area ? null : area)
-  }, [applyVillageArea, villageArea])
+    applyVillageArea(area)
+  }, [applyVillageArea])
 
   const selectAnyVillageInArea = useCallback(() => {
     setF(current => ({ ...current, towns: activeVillageOptions.map(town => town.key) }))
@@ -978,8 +1012,8 @@ function Board() {
   }, [activeVillageOptions])
 
   useEffect(() => {
-    if (!f.towns.length && villageArea) setVillageArea(null)
-  }, [f.towns.length, villageArea])
+    if (!f.towns.length && villageAreas.length) setVillageAreas([])
+  }, [f.towns.length, villageAreas.length])
 
   // ── visible set: filters ∩ town selection ∩ drawn rectangle ───────────────
   const visible = useMemo(() => {
@@ -1603,7 +1637,7 @@ function Board() {
       locationAreas={villageAreaOptions}
       locationTowns={activeVillageOptions}
       locationTotalCount={townOptions.reduce((sum, town) => sum + town.n, 0)}
-      locationArea={villageArea}
+      locationAreasSelected={villageAreas}
       onLocationAreaChange={applyVillageArea}
       onLocationTownChange={toggleVillageInArea}
       onLocationTownsReset={selectAnyVillageInArea}
@@ -1816,17 +1850,17 @@ function Board() {
               )
             })}
             {VILLAGE_AREAS.map(area => {
-              const on = villageArea === area.key
+              const on = villageAreas.includes(area.key)
               const areaCount = (townOptionsByArea.get(area.key) || []).reduce((sum, town) => sum + town.n, 0)
               return (
-                <button key={area.key} type="button" className="crm-area-chip" aria-pressed={on} onClick={() => toggleVillageArea(area.key)}>
+                <button key={area.key} type="button" className="crm-area-chip" disabled={areaCount === 0} aria-pressed={on} onClick={() => toggleVillageArea(area.key)}>
                   <span>{area.label}</span>{areaCount > 0 && <small>{areaCount}</small>}
                 </button>
               )
             })}
           </div>
-          {villageArea && activeVillageOptions.length > 0 && (
-            <div className="crm-city-rail crm-area-villages" aria-label={`${VILLAGE_AREAS.find(area => area.key === villageArea)?.label || 'Selected area'} villages`}>
+          {villageAreas.length > 0 && activeVillageOptions.length > 0 && (
+            <div className="crm-city-rail crm-area-villages" aria-label={`Villages in ${villageAreas.length} selected area${villageAreas.length === 1 ? '' : 's'}`}>
               <button type="button" className="crm-city-chip crm-city-any" aria-pressed={allAreaVillagesSelected} onClick={selectAnyVillageInArea}>
                 <span>Any</span><small>{activeVillageOptions.reduce((sum, town) => sum + town.n, 0)}</small>
               </button>
@@ -4846,15 +4880,16 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
   }, [onClose])
 
   return (
-    <div onClick={onClose} style={{
+    <div className="crm-listing-detail-backdrop" onClick={onClose} style={{
       position: 'fixed', inset: 0, background: 'rgba(19,19,19,0.55)', zIndex: 200,
       display: 'grid', placeItems: 'center', padding: 16,
     }}>
-      <div onClick={ev => ev.stopPropagation()} style={{
+      <div className="crm-listing-detail-dialog" onClick={ev => ev.stopPropagation()} style={{
         background: CARD, borderRadius: 16, maxWidth: 720, width: '100%',
         maxHeight: '88vh', overflowY: 'auto', fontFamily: F,
         boxShadow: '0 18px 60px rgba(0,0,0,0.30)',
       }}>
+        <button type="button" className="crm-listing-detail-close" onClick={onClose} aria-label="Close listing"><X size={20} /></button>
         {e && <div style={{ padding: 26 }}><Notice text={e} /></div>}
         {!d && !e && <div style={{ padding: 44, textAlign: 'center', color: '#BBB', fontSize: 12 }}>loading…</div>}
         {d && (
@@ -4863,11 +4898,6 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
               {d.images?.length
                 ? <img src={d.images[i]} alt={`#${d.ref}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#CCC', fontSize: 12 }}>no photos</div>}
-              <button onClick={onClose} style={{
-                position: 'absolute', top: 12, right: 12, border: 'none', cursor: 'pointer',
-                background: 'rgba(0,0,0,0.55)', color: '#FFF', width: 30, height: 30,
-                borderRadius: '50%', fontSize: 15, lineHeight: 1,
-              }}>×</button>
               {intent && (
                 <div style={{
                   position: 'absolute', top: 12, left: 12, zIndex: 2,

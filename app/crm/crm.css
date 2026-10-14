@@ -576,3 +576,18 @@ html[data-crm-theme="dark"] .argus-intro-sheen { mix-blend-mode: normal; backgro
 /* Theme switch cross-fades instead of snapping. */
 .crm-root.crm-theme-fading, .crm-root.crm-theme-fading * { transition: background-color .32s var(--ease-std), color .32s var(--ease-std), border-color .32s var(--ease-std) !important; }
 @media (prefers-reduced-motion: reduce) { .crm-route-enter { animation: none; } }
+
+/* Area selection is additive: unavailable regions are visible for orientation
+   but cannot create an impossible empty filter. */
+.crm-location-topics button:disabled,.crm-area-chip:disabled{cursor:not-allowed;opacity:.38;transform:none!important}
+
+/* The listing sheet scrolls independently, so its exit must remain attached to
+   the viewport rather than disappearing with the first photo. */
+.crm-listing-detail-dialog{position:relative}
+.crm-listing-detail-close{position:sticky;z-index:25;top:max(10px,env(safe-area-inset-top,0px));float:right;display:grid;width:42px;height:42px;margin:10px 10px -52px 0;place-items:center;border:1px solid rgb(255 255 255/.3);border-radius:50%;background:rgb(7 13 25/.82);color:#fff;box-shadow:0 8px 24px rgb(0 0 0/.28);backdrop-filter:blur(12px);cursor:pointer}
+.crm-listing-detail-close:focus-visible{outline:3px solid var(--crm-focus);outline-offset:2px}
+@media(max-width:760px){
+  .crm-listing-detail-backdrop{padding:0!important;place-items:stretch!important}
+  .crm-listing-detail-dialog{width:100%!important;max-width:none!important;max-height:100dvh!important;min-height:100dvh;border-radius:0!important}
+  .crm-listing-detail-close{top:max(12px,env(safe-area-inset-top,0px));margin-right:max(12px,env(safe-area-inset-right,0px))}
+}
