@@ -1,6 +1,6 @@
 # Birżebbuġa neighbourhood edition — source dossier
 
-Status: RELEASE CANDIDATE — sources rechecked, licensed hero integrated, and local browser checks passed; production verification pending.
+Status: PUBLISHED — production page, asset, discovery link, sitemap entry and click-to-load map verified 14 October 2026.
 
 Research date: 14 October 2026.
 
