@@ -80,13 +80,16 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.ok(layout.cards.every(card=>card.w>=490),'wider cards give property photography more room')
   const firstPhoto=await page.$('.crm-listing-photo')
   await firstPhoto.hover()
-  await page.waitForFunction(()=>document.querySelector('.crm-listing-photo')?.dataset.photoIndex!=='0',{timeout:3000})
+  await new Promise(resolve=>setTimeout(resolve,1200))
+  assert.equal(await page.$eval('.crm-listing-photo',node=>node.dataset.photoIndex),'0','hover never auto-advances listing photos')
+  await page.click('.crm-listing-card:first-child .crm-photo-arrow-next')
+  await page.waitForFunction(()=>document.querySelector('.crm-listing-photo')?.dataset.photoIndex==='1',{timeout:3000})
   const hoverGallery=await page.evaluate(()=>({
     index:Number(document.querySelector('.crm-listing-photo')?.dataset.photoIndex),
     arrows:[...document.querySelectorAll('.crm-listing-card:first-child .crm-photo-arrow')].map(node=>getComputedStyle(node).opacity),
     segments:document.querySelectorAll('.crm-listing-card:first-child .crm-photo-progress i').length,
   }))
-  assert.ok(hoverGallery.index>0,'hover advances through listing photos')
+  assert.equal(hoverGallery.index,1,'manual next arrow advances exactly one photo')
   assert.deepEqual(hoverGallery.arrows,['1','1'],'photo navigation appears on hover')
   assert.equal(hoverGallery.segments,4,'photo progress exposes the available images')
   await page.screenshot({path:path.join(os.tmpdir(),'board-clean-desktop.png'),fullPage:false})
@@ -105,13 +108,13 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   await page.setViewport({width:390,height:844,deviceScaleFactor:1})
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.crm-sidebar')).display==='none')
   const mobile=await page.evaluate(()=>({
-    desktopRail:document.querySelector('.crm-board-desktop-rail'),
+    desktopRail:document.querySelector('.crm-board-desktop-rail') ? getComputedStyle(document.querySelector('.crm-board-desktop-rail')).display : 'missing',
     islands:getComputedStyle(document.querySelector('.crm-board-islands')).display,
     sidebar:getComputedStyle(document.querySelector('.crm-sidebar')).display,
     bottomNav:getComputedStyle(document.querySelector('.crm-bottom-nav')).display,
     workspaceLabels:[...document.querySelectorAll('.crm-smart-island [data-label]')].map(node=>node.dataset.label),
   }))
-  assert.equal(mobile.desktopRail,null,'desktop controls are not rendered on mobile')
+  assert.equal(mobile.desktopRail,'none','desktop controls are hidden on mobile')
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
   assert.equal(mobile.sidebar,'none','desktop sidebar remains hidden on mobile')
   assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains available')
@@ -119,9 +122,15 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(await page.$$('.crm-smart-island [data-label="Profile"]') .then(nodes=>nodes.length),0,'profile is not duplicated in the floating island')
 
   await page.$eval('.crm-smart-island [data-label="Favourites"]',button=>button.click())
+  await new Promise(resolve=>setTimeout(resolve,700))
+  await page.$eval('.crm-smart-island [data-label="Favourites"]',button=>button.click())
   await page.waitForFunction(()=>document.querySelector('.crm-smart-island [data-label="Favourites"]')?.getAttribute('aria-pressed')==='true')
   await page.$eval('.crm-smart-island [data-label="Map"]',button=>button.click())
+  await new Promise(resolve=>setTimeout(resolve,700))
+  await page.$eval('.crm-smart-island [data-label="Map"]',button=>button.click())
   await page.waitForFunction(()=>document.querySelector('.crm-smart-island [data-label="Map"]')?.getAttribute('aria-pressed')==='true' && document.querySelector('.crm-smart-island [data-label="Favourites"]')?.getAttribute('aria-pressed')==='false')
+  await page.$eval('.crm-smart-island [data-label="More"]',button=>button.click())
+  await new Promise(resolve=>setTimeout(resolve,700))
   await page.$eval('.crm-smart-island [data-label="More"]',button=>button.click())
   await page.waitForSelector('[role="dialog"] .crm-mobile-menu-actions')
   assert.equal(await page.$$eval('[role="dialog"] .crm-nav-item',nodes=>nodes.filter(node=>node.textContent.includes('Profile')).length),1,'profile appears once in shared navigation')

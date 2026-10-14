@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus, Cat, Snowflake, UsersRound, HelpCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -2976,46 +2976,27 @@ function availChip(a?: Listing['availability']) {
            title: 'No clear date on file — treated as soon, never as "now"' }
 }
 
-// ── pets / sharing ──────────────────────────────────────────────────────────
-// Two questions clients ask before anything else, answered on the card instead
-// of three clicks deeper. The flag comes from the server (services/listingRules.js
-// reads the listing's own wording); this only draws it.
-//
-// THREE STATES, because that is what the data says:
-//   yes     → solid icon, brand navy. The listing says so.
-//   no      → outline with a slash. The listing says the opposite.
-//   unknown → nothing at all. Not a faint icon, not a grey one: 168 of 200
-//             listings say nothing about pets, and 200 faint paws on a board
-//             would be noise that also invites reading them as "no".
-const PAW_PATH =
-  'M4.5 10.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm3.4-3.3c-1 0-1.9-1-1.9-2.2S6.9 2.8 7.9 2.8s1.9 1 1.9 2.2-.9 2.2-1.9 2.2Zm4.2 0c-1 0-1.9-1-1.9-2.2s.9-2.2 1.9-2.2 1.9 1 1.9 2.2-.9 2.2-1.9 2.2Zm3.4 3.3c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm-5.5.4c1.7 0 3.1.8 4 2 .8 1 .6 2.4-.4 3-.9.6-2.2.3-3.6.3s-2.7.3-3.6-.3c-1-.6-1.2-2 .4-3 .5-1.2 1.9-2 3.2-2Z'
-const PEOPLE_PATH =
-  'M7 9a2.6 2.6 0 1 0 0-5.2A2.6 2.6 0 0 0 7 9Zm6.2.4a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4ZM7 10.6c-2.5 0-4.6 1.4-4.6 3.1v1.1h9.2v-1.1c0-1.7-2.1-3.1-4.6-3.1Zm6.2.5c-.5 0-1 .05-1.5.16.9.7 1.5 1.6 1.5 2.6v.95h4.4v-.95c0-1.5-1.8-2.76-4.4-2.76Z'
-
-function RuleIcon({ state, label, path }: {
-  state: boolean | null | undefined
+// Compact facts live beside the favourite action. Unknown values draw nothing:
+// an absent answer must never look like a prohibition. A diagonal line is used
+// only when the listing explicitly says no.
+function CompactFactIcon({ state = true, label, icon: Icon, tone = '#8CCFE8' }: {
+  state?: boolean | null
   label: string
-  path: string
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
+  tone?: string
 }) {
   if (state !== true && state !== false) return null
-  const yes = state === true
+  const denied = state === false
   return (
     <span
-      title={yes ? `${label}: the listing says yes` : `${label}: the listing says no`}
-      style={{ display: 'inline-flex', lineHeight: 0 }}
+      className="crm-card-mini-fact"
+      data-card-fact={label.toLowerCase().replaceAll(' ', '-')}
+      title={denied ? `${label}: not allowed` : label}
+      aria-label={denied ? `${label}: not allowed` : label}
+      style={{ color: denied ? 'var(--crm-muted)' : tone }}
     >
-      <svg width="15" height="15" viewBox="0 0 20 20" aria-label={`${label} ${yes ? 'yes' : 'no'}`}>
-        <path
-          d={path}
-          fill={yes ? NAVY : 'none'}
-          stroke={yes ? 'none' : '#C9C3B6'}
-          strokeWidth={yes ? 0 : 1.2}
-        />
-        {!yes && (
-          <line x1="3.2" y1="16.8" x2="16.8" y2="3.2"
-            stroke="#C0392B" strokeWidth="1.4" strokeLinecap="round" opacity="0.75" />
-        )}
-      </svg>
+      <Icon size={14} strokeWidth={1.8} />
+      {denied && <i aria-hidden />}
     </span>
   )
 }
@@ -4138,15 +4119,6 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             own listing — see streetWithoutNumber() on the server. */}
         {r.streetName && <div style={{ fontSize: 11, color: 'var(--crm-accent)', opacity: 0.85, marginTop: 3 }}>{r.streetName}</div>}
 
-        {/* Sharing / pets, whenever the listing actually says. Nothing is
-            drawn when it does not — see RuleIcon. */}
-        {(r.sharing != null || r.petFriendly != null) && (
-          <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
-            <RuleIcon state={r.sharing} label="Sharing" path={PEOPLE_PATH} />
-            <RuleIcon state={r.petFriendly} label="Pets" path={PAW_PATH} />
-          </div>
-        )}
-
         {/* ── description preview ──────────────────────────────────────────── */}
         {r.description && !isMobile && (
           <div title="Click to read the full listing" style={{ marginTop: 9 }}>
@@ -4176,16 +4148,6 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
               <div style={{ fontSize: 10.5, color: DTEXT_DIM, fontFamily: FM, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>
                 {r.viewingDate ? fmtDateDots(r.viewingDate) : 'soon'}
               </div>
-              {/* ARGUS V3 (Kev, 2026-09-16): "mache bei allen properties die
-                  zeitlich begrenzt sind auf shortlets und winterperiod so ein
-                  schneeflocke icon unter viewable" — winter/short-let stock
-                  gets a snowflake right under Viewable so it reads as
-                  time-limited at a glance, distinct from a normal long-let. */}
-              {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
-                <div style={{ fontSize: 10, color: '#7EC8E3', marginTop: 3, whiteSpace: 'nowrap' }} title="Time-limited — winter/short-let, excluded from normal !match search">
-                  ❄️ {r.leaseType === 'winter_let' ? 'Winter let' : 'Short let'}
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -4467,24 +4429,41 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             block right before `isUpcoming` above. Facebook stays inside "..."
             exactly where it already is (still under menuSection "Tools"). */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+          <div className="crm-card-favourite-facts">
+            <button
+              className="crm-card-action-button"
+              data-favourite={r.ref}
+              data-star-step={starStepOf(r)}
+              aria-pressed={starStepOf(r) > 0}
+              onClick={onStar}
+              title={
+                starStepOf(r) === 2
+                  ? (isAdmin ? 'HOT property — click to clear' : 'HOT property')
+                  : starStepOf(r) === 1
+                    ? (isAdmin ? 'Favourite — click to make Hot' : 'Remove from Favourites')
+                    : 'Save to Favourites'
+              }
+              style={{ ...trayPrimaryBtn(dark), color: starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : (dark ? DTEXT_DIM : LTEXT_DIM) }}
+            >
+              <StarGlyph filled={starStepOf(r) > 0} color={starStepOf(r) === 2 ? HOT : A} size={16} />
+            </button>
+            {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let') || r.availableUntil) && (
+              <CompactFactIcon icon={Snowflake} label="Winter let" />
+            )}
+            <CompactFactIcon icon={Cat} state={r.petFriendly} label="Pets" tone="var(--crm-success)" />
+            <CompactFactIcon icon={UsersRound} state={r.sharing} label="Sharing" tone="var(--crm-success)" />
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
           <button
             className="crm-card-action-button"
-            data-favourite={r.ref}
-            data-star-step={starStepOf(r)}
-            aria-pressed={starStepOf(r) > 0}
-            onClick={onStar}
-            title={
-              starStepOf(r) === 2
-                ? (isAdmin ? 'HOT property — click to clear' : 'HOT property')
-                : starStepOf(r) === 1
-                  ? (isAdmin ? 'Favourite — click to make Hot' : 'Remove from Favourites')
-                  : 'Save to Favourites'
-            }
-            style={{ ...trayPrimaryBtn(dark), color: starStepOf(r) === 2 ? HOT : starStepOf(r) === 1 ? A : (dark ? DTEXT_DIM : LTEXT_DIM) }}
-          >
-            <StarGlyph filled={starStepOf(r) > 0} color={starStepOf(r) === 2 ? HOT : A} size={16} />
+            data-ask-btn={r.ref}
+            onClick={() => c.canQuestion && guardedFutureAction(r.isMine ? 'Ask owner' : 'Ask agent', onAsk)}
+            disabled={!c.canQuestion || (futureLocked && !isAdmin)}
+            aria-label={r.isMine ? 'Ask owner' : 'Ask listing agent'}
+            title={c.questionReason || 'Ask a question — approve the exact wording before it sends'}
+            style={{ ...trayPrimaryBtn(dark), ...futureActionStyle, opacity: c.canQuestion ? 1 : .42 }}>
+            <HelpCircle size={17} />
           </button>
-          <div style={{ display: 'flex', gap: 6 }}>
           <button className="crm-card-action-button" onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
             aria-label={r.lastChatAt ? `Owner chat, last active ${ago(r.lastChatAt)}` : 'Owner chat'}
             title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}

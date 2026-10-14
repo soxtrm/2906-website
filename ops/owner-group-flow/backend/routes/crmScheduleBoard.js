@@ -530,10 +530,12 @@ function contactState(row, isMine, questionsUsed) {
       can = false; blockCode = 'PROPERTY_PAUSED'
       reason = `Property contact paused until ${propertyPauseUntil}${row.property_contact_pause_note ? `: ${row.property_contact_pause_note}` : '.'}`
     }
-    else if (row.owner_contacted_today)  {
-      can = false; blockCode = 'CONTACTED_TODAY'
-      reason = 'This owner already got a message today.'
-    }
+    // A prior message today is context, not a dead button. The availability
+    // service still detects a same-day AV check and returns its deliberate
+    // "Ask anyway" confirmation, while ordinary Ask keeps its own atomic
+    // per-listing question counter. DNC and explicit pauses above remain hard
+    // stops. This keeps ASK/AV available during the working day without
+    // bypassing the real recipient protections.
     return {
       mode: 'owner',
       reachesName: null,
@@ -1725,6 +1727,18 @@ router.post('/listings/:ref/ask/preview', auth, async (req, res) => {
           ref: prop.ref,
           agentName: me.name || me.username,
           recipientName,
+          // Owner-first viewing introductions name Kevin as the referring
+          // colleague for every other profile. Kevin's own profile uses the
+          // separately configured colleague instead, so he never claims that
+          // he referred the number to himself.
+          colleagueName: String(me.name || me.username || '').trim().split(/\s+/)[0].toLowerCase() === 'kevin'
+            ? (process.env.BOARD_KEVIN_REFERRAL_PROFILE || 'Cedric')
+            : 'Kevin',
+          propertySummary: [
+            prop.bedrooms != null ? `${prop.bedrooms} bedroom` : null,
+            prop.property_type || prop.type || 'property',
+            prop.town ? `in ${prop.town}` : null,
+          ].filter(Boolean).join(' '),
           rawNote: note,
           isReachout: isMine ? await isReachout(owner.phone_normalized, prop.id) : false,
         })

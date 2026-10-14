@@ -90,7 +90,7 @@ async function run() {
       const out = {}
       for (const card of document.querySelectorAll('[data-ref]')) {
         const ref = card.getAttribute('data-ref')
-        const labels = [...card.querySelectorAll('svg[aria-label]')].map(s => s.getAttribute('aria-label'))
+        const labels = [...card.querySelectorAll('[data-card-fact]')].map(s => s.getAttribute('aria-label'))
         out[ref] = labels
       }
       return out
@@ -104,13 +104,13 @@ async function run() {
     // A listing whose text says yes must show the solid icon…
     const yesRef = petYes.map(r => r.ref).find(ref => shown[ref])
     if (!yesRef) no('a pets-yes listing is on the page', 'none of the yes listings rendered')
-    else if (iconFor(yesRef, 'Pets') === 'Pets yes') ok('pets-yes draws the paw', `#${yesRef}`)
+    else if (iconFor(yesRef, 'Pets') === 'Pets') ok('pets-yes draws the cat', `#${yesRef}`)
     else no('pets-yes draws the paw', `#${yesRef} → ${iconFor(yesRef, 'Pets')}`)
 
     // …one whose text says no must show the refused icon…
     const noRef = petNo.map(r => r.ref).find(ref => shown[ref])
     if (!noRef) ok('no pets-no listing on this page (fine)', 'skipped')
-    else if (iconFor(noRef, 'Pets') === 'Pets no') ok('pets-no draws the slashed paw', `#${noRef}`)
+    else if (iconFor(noRef, 'Pets') === 'Pets: not allowed') ok('pets-no draws the slashed cat', `#${noRef}`)
     else no('pets-no draws the slashed paw', `#${noRef} → ${iconFor(noRef, 'Pets')}`)
 
     // …and a listing that says nothing must draw NOTHING. This is the assertion
@@ -122,7 +122,7 @@ async function run() {
 
     const shareYesRef = shareYes.map(r => r.ref).find(ref => shown[ref])
     if (!shareYesRef) ok('no sharing-yes listing on this page (fine)', 'skipped')
-    else if (iconFor(shareYesRef, 'Sharing') === 'Sharing yes') ok('sharing-yes draws the people icon', `#${shareYesRef}`)
+    else if (iconFor(shareYesRef, 'Sharing') === 'Sharing') ok('sharing-yes draws the people icon', `#${shareYesRef}`)
     else no('sharing-yes draws the people icon', `#${shareYesRef} → ${iconFor(shareYesRef, 'Sharing')}`)
 
     // ── the download button ─────────────────────────────────────────────────

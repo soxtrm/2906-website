@@ -14,7 +14,6 @@
 // model was unavailable.
 // ============================================================================
 
-const { GoogleGenAI } = require('@google/genai')
 const log    = require('../logger')
 const config = require('../config')
 
@@ -144,7 +143,7 @@ function nextSendTime(from = new Date()) {
 // Constraints mirror the house rules in CLAUDE.md: first name only, never a
 // title. Internal operational notes stay private, while tenant facts that let
 // the recipient make a decision (including budget) must remain in the message.
-function buildPrompt({ mode, ref, agentName, recipientName, rawNote, isReachout, now = new Date() }) {
+function buildPrompt({ mode, ref, agentName, recipientName, colleagueName, propertySummary, rawNote, isReachout, now = new Date() }) {
   const audience = mode === 'owner'
     ? 'the property OWNER (a private landlord, not a colleague)'
     : `a COLLEAGUE — ${recipientName || 'the listing agent'}, who manages this listing`
@@ -154,6 +153,8 @@ function buildPrompt({ mode, ref, agentName, recipientName, rawNote, isReachout,
 WHO IT GOES TO: ${audience}
 LISTING REFERENCE: #${ref}
 THE AGENT ASKING: ${agentName || 'an agent'}
+REFERRING COLLEAGUE: ${colleagueName || 'a colleague'}
+PROPERTY SUMMARY: ${propertySummary || `listing #${ref}`}
 ${recipientName ? `RECIPIENT FIRST NAME: ${recipientName}` : ''}
 ${isReachout
     ? 'THIS IS A FOLLOW-UP — there is prior conversation history with this recipient. Do not add a new time-of-day greeting or re-introduce yourself.'
@@ -173,6 +174,7 @@ RULES:
 - Use the FIRST NAME only if one is given. Never "Mr", "Mrs", "Ms", "Dr", never a surname.
 - If a recipient name is given, use only their first name. Never write "Hi ,".
 - For a first owner contact, use the exact Malta-time greeting stated above even when no owner name is available.
+- If the agent asks to arrange a viewing, structure the first contact naturally as: "${maltaGreeting(now)}, my colleague ${colleagueName || 'a colleague'} gave me your number regarding ${propertySummary || `listing #${ref}`}." Then ask whether the agent may view it with the clients. Keep their country/nationality, work and requested time or "as soon as possible" in the message. Do not leave template placeholders in the output.
 - Keep it concise, ideally under 500 characters. One question, or two at most.
 - Refer to the property as #${ref}. Never invent an address, price, or detail that is not in the agent's text.
 - PRESERVE every decision-relevant client fact from the agent's text: budget/range, nationality, profession/job, household/group composition, pets, move-in timing and flexibility. These facts are elementary to the question and must never be shortened away.
@@ -187,34 +189,40 @@ Return ONLY JSON:
 // A usable message even with no model in the loop: the agent's own words,
 // greeted and referenced. Deliberately plain — a fallback that tries to be
 // clever is worse than one that is obviously literal.
-function fallbackMessage({ mode, ref, recipientName, rawNote, isReachout = false, now = new Date() }) {
+function fallbackMessage({ mode, ref, recipientName, colleagueName, propertySummary, rawNote, isReachout = false, now = new Date() }) {
   const note = tidyAgentText(rawNote)
   let opening = ''
-  if (mode === 'owner' && !isReachout) opening = `${maltaGreeting(now)}, I hope you're well. `
+  if (mode === 'owner' && !isReachout && /\b(view|viewing|client|asap|as soon as possible)\b/i.test(note)) {
+    opening = `${maltaGreeting(now)}, my colleague ${colleagueName || 'a colleague'} gave me your number regarding ${propertySummary || `listing #${ref}`}.\n\n`
+  } else if (mode === 'owner' && !isReachout) opening = `${maltaGreeting(now)}, I hope you're well. `
   else if (recipientName) opening = `Hi ${String(recipientName).trim().split(/\s+/)[0]}, `
-  return `${opening}Regarding #${ref}, ${note}`.slice(0, MAX_OUT_CHARS)
+  const body = opening.includes('gave me your number') ? note : `Regarding #${ref}, ${note}`
+  return `${opening}${body}`.slice(0, MAX_OUT_CHARS)
 }
 
 /**
  * Rewrite one agent question. Never throws.
  * @returns {{ text: string, dropped: string|null, model: string|null, rewritten: boolean }}
  */
-async function composeQuestion({ mode, ref, agentName, recipientName, rawNote, isReachout = false, now = new Date() }) {
+async function composeQuestion({ mode, ref, agentName, recipientName, colleagueName, propertySummary, rawNote, isReachout = false, now = new Date() }) {
   const note = String(rawNote || '').trim()
   if (!note) throw new Error('Empty question')
 
   const key = apiKey()
   if (!key) {
     log.info('[boardAsk] no GEMINI_API_KEY — sending the agent text as typed', { ref })
-    return { text: fallbackMessage({ mode, ref, recipientName, rawNote: note, isReachout, now }), dropped: null, model: null, rewritten: false }
+    return { text: fallbackMessage({ mode, ref, recipientName, colleagueName, propertySummary, rawNote: note, isReachout, now }), dropped: null, model: null, rewritten: false }
   }
 
   try {
+    // Lazy so the deterministic fallback and its tests keep working in
+    // maintenance checkouts that do not install the production-only SDK.
+    const { GoogleGenAI } = require('@google/genai')
     const ai = new GoogleGenAI({ apiKey: key })
     const response = await Promise.race([
       ai.models.generateContent({
         model: MODEL,
-        contents: [{ role: 'user', parts: [{ text: buildPrompt({ mode, ref, agentName, recipientName, rawNote: note, isReachout, now }) }] }],
+        contents: [{ role: 'user', parts: [{ text: buildPrompt({ mode, ref, agentName, recipientName, colleagueName, propertySummary, rawNote: note, isReachout, now }) }] }],
         config: { responseMimeType: 'application/json', temperature: 0.4 },
       }),
       new Promise((_, rej) => setTimeout(() => rej(new Error('gemini timeout')), CALL_TIMEOUT_MS)),
@@ -236,7 +244,7 @@ async function composeQuestion({ mode, ref, agentName, recipientName, rawNote, i
     }
   } catch (err) {
     log.warn('[boardAsk] rewrite failed — falling back to the agent text', { ref, err: err.message })
-    return { text: fallbackMessage({ mode, ref, recipientName, rawNote: note, isReachout, now }), dropped: null, model: null, rewritten: false }
+    return { text: fallbackMessage({ mode, ref, recipientName, colleagueName, propertySummary, rawNote: note, isReachout, now }), dropped: null, model: null, rewritten: false }
   }
 }
 
