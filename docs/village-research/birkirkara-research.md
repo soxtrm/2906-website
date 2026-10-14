@@ -1,6 +1,6 @@
 # Birkirkara neighbourhood edition — source dossier
 
-Status: RESEARCH DRAFT — licensed hero asset prepared; no public edition exists yet.
+Status: RELEASE CANDIDATE — licensed hero asset and public metadata prepared; production verification pending.
 
 Research date: 14 October 2026.
 
