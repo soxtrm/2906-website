@@ -78,6 +78,7 @@ const BEDS = ['1', '2', '3', '4+']
 const BATHS = ['1', '2', '3']
 
 export type BoardLocationArea = { key: string; label: string; n: number }
+export type BoardLocationTown = { key: string; label: string; n: number }
 
 const AREA_OVERLAY: Record<string, string> = {
   north: '/regions/north.png',
@@ -204,7 +205,7 @@ function RoomScrubber({ label, values, selected, onChange }: {
   </div>
 }
 
-export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, onMapToggle, onFavouritesOpen, mapActive = false, favouritesActive = false, smartBadgeCount = 0, locationAreas = [], locationTotalCount = 0, locationArea = null, onLocationAreaChange }: {
+export function BoardFilters({ value, onChange, onReset, count, mineCount, loading, extra, dark, onMapToggle, onFavouritesOpen, mapActive = false, favouritesActive = false, smartBadgeCount = 0, locationAreas = [], locationTowns = [], locationTotalCount = 0, locationArea = null, onLocationAreaChange, onLocationTownChange, onLocationTownsReset }: {
   value: BoardFilterValue
   onChange: (patch: Partial<BoardFilterValue>) => void
   onReset: () => void
@@ -226,9 +227,12 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   favouritesActive?: boolean
   smartBadgeCount?: number
   locationAreas?: BoardLocationArea[]
+  locationTowns?: BoardLocationTown[]
   locationTotalCount?: number
   locationArea?: string | null
   onLocationAreaChange?: (area: string | null) => void
+  onLocationTownChange?: (town: string) => void
+  onLocationTownsReset?: () => void
 }) {
   const [open, setOpen] = useState<string | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'smart' | 'filters' | null>(null)
@@ -377,6 +381,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   }
 
   const openIslandFeature = (panel: 'smart' | 'filters', target: string) => {
+    if (mobilePanel === panel && islandFocus === target) {
+      closeIslandSurfaces()
+      return
+    }
     setOpen(null)
     const otherSurfaceOpen = panel === 'smart'
       ? searchOpen || mobilePanel === 'filters' || filterPickerOpen
@@ -410,6 +418,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       closeIslandSurfaces()
       return
     }
+    if (smartPickerOpen || mobilePanel === 'smart') {
+      closeIslandSurfaces()
+      return
+    }
     setSearchOpen(false)
     setOpen(null)
     setMobilePanel(null)
@@ -439,6 +451,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
   const primeFilterIsland = () => {
     if (searchOpen || mobilePanel === 'smart' || smartPickerOpen) {
+      closeIslandSurfaces()
+      return
+    }
+    if (filterPickerOpen || mobilePanel === 'filters') {
       closeIslandSurfaces()
       return
     }
@@ -569,6 +585,25 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
               {locationAreas.length && onLocationAreaChange
                 ? <AreaMiniMap areas={locationAreas} totalCount={locationTotalCount} selected={locationArea} onToggle={onLocationAreaChange} />
                 : <p className="crm-filter-hint">Areas appear when inventory is loaded.</p>}
+              <div className="crm-location-town-block">
+                <div className="crm-location-town-heading">
+                  <strong>Towns</strong>
+                  <span>{locationArea ? `${locationTowns.length} in selected area` : 'Choose an area first'}</span>
+                </div>
+                {locationArea && locationTowns.length && onLocationTownChange && onLocationTownsReset ? (
+                  <div className="crm-location-choices" role="group" aria-label="Towns in selected area">
+                    <button type="button" aria-pressed={locationTowns.every(town => value.towns.includes(town.key))} onClick={onLocationTownsReset}>
+                      Any <small>{locationTowns.reduce((sum, town) => sum + town.n, 0)}</small>
+                    </button>
+                    {locationTowns.map(town => {
+                      const allSelected = locationTowns.every(option => value.towns.includes(option.key))
+                      return <button key={town.key} type="button" aria-pressed={!allSelected && value.towns.includes(town.key)} onClick={() => onLocationTownChange(town.key)}>
+                        {town.label} <small>{town.n}</small>
+                      </button>
+                    })}
+                  </div>
+                ) : <p className="crm-filter-hint">Select North, Central, South or another area to reveal its towns.</p>}
+              </div>
             </div>
 
             <div id="crm-filter-price" data-island-focus={islandFocus === 'crm-filter-price'} className="crm-filter-section">

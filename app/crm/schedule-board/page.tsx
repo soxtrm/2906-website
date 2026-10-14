@@ -1601,9 +1601,12 @@ function Board() {
       loading={loading}
       dark={isDark}
       locationAreas={villageAreaOptions}
+      locationTowns={activeVillageOptions}
       locationTotalCount={townOptions.reduce((sum, town) => sum + town.n, 0)}
       locationArea={villageArea}
       onLocationAreaChange={applyVillageArea}
+      onLocationTownChange={toggleVillageInArea}
+      onLocationTownsReset={selectAnyVillageInArea}
       smartBadgeCount={discovery.length}
       mapActive={mapOpen}
       favouritesActive={!updatesMode && view === 'favourites'}
@@ -4423,7 +4426,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
       )}
       <div className="crm-card-action-tray" style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: '9px 11px', position: 'relative', gridColumn: isMobile ? '1 / -1' : 2, gridRow: 3,
+        padding: '9px 11px', position: 'relative', gridColumn: '1 / -1', gridRow: 3,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
             to live here moved up above the Still Available button — see the
@@ -5381,10 +5384,10 @@ const trayMoreBtn = (dark: boolean): React.CSSProperties => ({
 // where the card sits in the grid — on a 2-column mobile board a left-column
 // card's panel would otherwise run off the right of the viewport.
 const menuPanel = (dark: boolean): React.CSSProperties => ({
-  position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
-  width: '100%', maxWidth: 'min(720px, 94vw)', overflowX: 'auto', overflowY: 'hidden',
-  background: dark ? '#1A2233' : '#FFFFFF', border: `1px solid ${dark ? DBORDER : LBORDER}`, borderRadius: 12,
-  boxShadow: dark ? '0 10px 32px rgba(0,0,0,0.5)' : '0 10px 32px rgba(15,20,30,0.18)', padding: 8, zIndex: 160,
+  position: 'relative',
+  width: '100%', maxWidth: 'none', marginTop: 9, overflowX: 'auto', overflowY: 'hidden',
+  background: dark ? '#111827' : '#FFFFFF', border: `1px solid ${dark ? DBORDER : LBORDER}`, borderRadius: 11,
+  boxShadow: dark ? 'inset 0 1px 0 rgba(255,255,255,.035)' : 'inset 0 1px 0 rgba(255,255,255,.8)', padding: 8, zIndex: 1,
   display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6,
 })
 const menuSection = (dark: boolean): React.CSSProperties => ({
