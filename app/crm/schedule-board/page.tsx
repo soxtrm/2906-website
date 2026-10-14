@@ -1140,7 +1140,7 @@ function Board() {
   const onMarkerClick = useCallback((ref: string) => {
     setFocusRef(ref)
     const el = cardRefs.current[ref]
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     setTimeout(() => setFocusRef(cur => (cur === ref ? null : cur)), 2400)
   }, [])
 
@@ -2052,6 +2052,12 @@ function Board() {
             transition={{ type: 'spring', stiffness: 360, damping: 34, mass: .72 }}
             style={{ transformOrigin: 'left center' }}
           >
+            {!mapCollapsed && <button
+              type="button"
+              className="crm-board-map-close"
+              aria-label="Close map"
+              onClick={() => setMapOpen(false)}
+            ><X size={17} /></button>}
             <AnimatePresence initial={false}>
               {mapCollapsed && <motion.button
                 key="map-reveal-handle"
@@ -2372,6 +2378,8 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
   const [loadErr, setLoadErr] = useState<string | null>(null)
   // null = still asking the backend, '' = there is no key
   const [mapsKey, setMapsKey] = useState<string | null>(BUNDLED_MAPS_KEY || null)
+  const [selectedRef, setSelectedRef] = useState<string | null>(null)
+  const selectedItem = useMemo(() => items.find(item => item.ref === selectedRef) || null, [items, selectedRef])
 
   useEffect(() => {
     if (mapsKey !== null) return
@@ -2615,7 +2623,7 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
           strokeWeight: 2,
         },
       })
-      m.addListener('click', () => onMarkerClick(it.ref))
+      m.addListener('click', () => setSelectedRef(it.ref))
       markersRef.current.push(m)
     }
   }, [ready, items, onMarkerClick])
@@ -2706,6 +2714,19 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
       {ready && (
         <div style={{ position: 'absolute', bottom: 10, left: 10, display: 'flex', gap: 12, background: 'rgba(255,253,250,0.94)', padding: '6px 10px', borderRadius: 8, fontSize: 10, color: '#666', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
           <Dot c={GREEN} /> yours <Dot c={A} /> team
+        </div>
+      )}
+      {selectedItem && (
+        <div className="crm-map-listing-preview" role="status" aria-label={`Selected listing ${selectedItem.ref}`}>
+          {selectedItem.images?.[0]
+            ? <img src={selectedItem.images[0]} alt="" />
+            : <div className="crm-map-listing-preview-empty"><House size={17} /></div>}
+          <button type="button" onClick={() => onMarkerClick(selectedItem.ref)}>
+            <small>#{selectedItem.ref}</small>
+            <strong>{selectedItem.localityLabel || townLabel(selectedItem.town)}</strong>
+            <span>{selectedItem.price ? `€${selectedItem.price.toLocaleString()}` : 'Open listing'}</span>
+          </button>
+          <button type="button" className="crm-map-listing-preview-close" onClick={() => setSelectedRef(null)} aria-label="Close listing preview"><X size={14} /></button>
         </div>
       )}
     </div>
@@ -4801,6 +4822,7 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
   const [fav, setFav] = useState(false)
   const [hot, setHot] = useState(false)
   const [mediaStatus, setMediaStatus] = useState('')
+  const closeGesture = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -4833,7 +4855,15 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
       position: 'fixed', inset: 0, background: 'rgba(19,19,19,0.55)', zIndex: 200,
       display: 'grid', placeItems: 'center', padding: 16,
     }}>
-      <div className="crm-listing-detail-dialog" onClick={ev => ev.stopPropagation()} style={{
+      <div className="crm-listing-detail-dialog" onClick={ev => ev.stopPropagation()}
+        onTouchStart={ev => { const touch = ev.touches[0]; closeGesture.current = { x: touch.clientX, y: touch.clientY } }}
+        onTouchEnd={ev => {
+          const start = closeGesture.current
+          const touch = ev.changedTouches[0]
+          closeGesture.current = null
+          if (start && (touch.clientY - start.y > 96 || touch.clientX - start.x > 120)) onClose()
+        }}
+        style={{
         background: CARD, borderRadius: 16, maxWidth: 720, width: '100%',
         maxHeight: '88vh', overflowY: 'auto', fontFamily: F,
         boxShadow: '0 18px 60px rgba(0,0,0,0.30)',

@@ -81,6 +81,11 @@ const listings = [
   await page.$eval('.crm-listing-detail-close', button => button.click())
   await page.waitForSelector('.crm-listing-detail-dialog', { hidden: true })
 
+  await page.evaluate(() => window.dispatchEvent(new Event('crm-board-map-toggle')))
+  await page.waitForSelector('.crm-board-map-close')
+  await page.$eval('.crm-board-map-close', button => button.click())
+  await page.waitForSelector('.crm-board-map-shell', { hidden: true })
+
   await browser.close()
   console.log('mobile multi-area selection and persistent listing close passed')
 })().catch(error => { console.error(error); process.exitCode = 1 })

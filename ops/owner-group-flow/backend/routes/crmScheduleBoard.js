@@ -894,7 +894,14 @@ function appendWorkspaceBoardFilters(q, me, params, where, allowPrivateSearch = 
   const needle = String(q.q || '').trim().toLowerCase().slice(0, 120)
   if (needle) {
     params.push(`%${needle}%`)
-    where.push(`aw.${allowPrivateSearch ? 'private_search_text' : 'board_search_text'} LIKE $${params.length}`)
+    // Town/sub-location remain searchable even while the derived workspace
+    // index is missing or stale. The index is enrichment, never the only way
+    // to find a locality already stored on the property row.
+    where.push(`(
+      COALESCE(aw.${allowPrivateSearch ? 'private_search_text' : 'board_search_text'}, '') LIKE $${params.length}
+      OR lower(COALESCE(p.town, '')) LIKE $${params.length}
+      OR lower(COALESCE(p.sub_location, '')) LIKE $${params.length}
+    )`)
   }
 
   if (q.towns) {

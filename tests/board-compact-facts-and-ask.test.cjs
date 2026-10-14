@@ -37,6 +37,16 @@ const { launch, openPage, defaultFixtures, listing } = require('./helpers/crm-mo
     const composer = await page.$('textarea[placeholder*="pets ok"]')
     assert.ok(composer, 'ASK is directly reachable from every actionable card')
 
+    await page.evaluate(() => {
+      const heading = [...document.querySelectorAll('h2')].find(node => /Ask a question/i.test(node.textContent || ''))
+      const dialog = heading?.closest('.fixed.z-\\[200\\]')
+      if (!dialog) throw new Error('ASK sheet not found')
+      const touch = (x, y) => new Touch({ identifier: 1, target: dialog, clientX: x, clientY: y })
+      dialog.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [touch(40, 80)] }))
+      dialog.dispatchEvent(new TouchEvent('touchend', { bubbles: true, changedTouches: [touch(42, 210)] }))
+    })
+    await page.waitForFunction(() => ![...document.querySelectorAll('h2')].some(node => /Ask a question/i.test(node.textContent || '')))
+
     assert.deepEqual(page.consoleErrors, [])
     console.log('clean action tray and always-visible ASK action passed')
   } finally {

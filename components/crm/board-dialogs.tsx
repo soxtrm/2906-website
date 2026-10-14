@@ -42,6 +42,7 @@ function Sheet({ title, sub, onClose, children, footer }: {
   title: string; sub?: string; onClose: () => void
   children: React.ReactNode; footer?: React.ReactNode
 }) {
+  const closeGesture = useRef<{ x: number; y: number } | null>(null)
   // Escape closes. A dialog that traps you is worse than one that closes by
   // accident — nothing here sends without a second, explicit click.
   useEffect(() => {
@@ -60,6 +61,13 @@ function Sheet({ title, sub, onClose, children, footer }: {
       <motion.div
         initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
         transition={SHEET_SPRING}
+        onTouchStart={event => { const touch = event.touches[0]; closeGesture.current = { x: touch.clientX, y: touch.clientY } }}
+        onTouchEnd={event => {
+          const start = closeGesture.current
+          const touch = event.changedTouches[0]
+          closeGesture.current = null
+          if (start && (touch.clientY - start.y > 92 || touch.clientX - start.x > 120)) onClose()
+        }}
         className="fixed z-[200] bg-white shadow-2xl flex flex-col
                    inset-x-0 bottom-0 rounded-t-2xl max-h-[88vh]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
