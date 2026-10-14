@@ -1,6 +1,6 @@
 # Birżebbuġa neighbourhood edition — source dossier
 
-Status: NOINDEX DRAFT READY — public sources and licensed hero asset integrated; browser and release checks pending.
+Status: RELEASE CANDIDATE — sources rechecked, licensed hero integrated, and local browser checks passed; production verification pending.
 
 Research date: 14 October 2026.
 
@@ -36,6 +36,8 @@ Sources:
 ### Għar Dalam and Borġ in-Nadur
 
 Heritage Malta identifies Għar Dalam Cave and Museum in Birżebbuġa and describes Borġ in-Nadur as a prehistoric complex on high ground between Wied Żembaq and Wied Dalam, facing the harbour entrance. Current opening hours, tickets and access arrangements must remain direct checks on the operator pages.
+
+On 14 October 2026, the Borġ in-Nadur operator page carried an until-further-notice closure notice. The public edition records that review date and still directs readers to check the operator because the notice can change.
 
 Sources:
 

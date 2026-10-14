@@ -1,6 +1,6 @@
 # Malta village editions — editorial checkpoint
 
-Status: Seventeen English editions are published: Sliema, St Julian's, Swieqi,
+Status: Eighteen English editions are published: Sliema, St Julian's, Swieqi,
 Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann and Birkirkara. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
@@ -50,3 +50,5 @@ Għargħur is published independently at https://www.2906.estate/link-marketplac
 San Ġwann is published independently at https://www.2906.estate/link-marketplace/areas/san-gwann.html (release commit `f572569`, production HTTP 200 verified on 13 October 2026). Its sourced dossier is `san-gwann-research.md`; the edition separates the modern centre and valley edges from Kappara and Iklin and draws no invented boundary or generic walking route.
 
 Birkirkara is published independently at https://www.2906.estate/link-marketplace/areas/birkirkara.html (release commit `666332e`, production HTTP 200 verified on 14 October 2026). Its sourced dossier is `birkirkara-research.md`; the edition separates the older core, Valley Road and mixed edge labels from neighbouring localities and draws no invented boundary, historic-rail promise or generic walking route.
+
+Birżebbuġa is prepared independently at https://www.2906.estate/link-marketplace/areas/birzebbuga.html; its sourced dossier is `birzebbuga-research.md`. The release candidate separates Pretty Bay, Qajjenza, inland heritage valleys and port-facing edges, records the dated Borġ in-Nadur closure notice, and draws no invented boundary, harbour shortcut, ferry line or generic walking route. Production verification remains pending.
