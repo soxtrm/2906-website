@@ -107,6 +107,16 @@ function villageBelongsToArea(key: string, area: VillageArea): boolean {
   return baseArea === area
 }
 
+function canonicalBoardTownKey(key?: string | null, label?: string | null): string | null {
+  const resolved = townKey(label) || townKey(key) || key
+  return resolved ? resolved.toLowerCase().trim().replace(/[_\s]+/g, '-').replace(/-+/g, '-') : null
+}
+
+function exactPropertyRef(raw: string): string | null {
+  const match = raw.trim().replace(/^#/, '').match(/^(?:2906[-\s]?)?(\d{3,6})$/i)
+  return match ? `2906-${match[1]}` : null
+}
+
 // ── dark redesign, Kev 2026-09-11 ────────────────────────────────────────────
 // "erstmal darkmode, sehr clean und übersichtlicher... es bleibt nur FAV
 // (gelb) und HOT (red) als Umrandung". Scoped to this page only (CrmShell's
@@ -761,9 +771,19 @@ function Board() {
     crmFetch('schedule-board/towns')
       .then(d => {
         if (!alive || !Array.isArray(d?.towns)) return
-        setBackendTownOptions(d.towns
-          .filter((town: any) => town?.key && town?.label)
-          .map((town: any) => ({ key: String(town.key), label: String(town.label), n: Number(town.n) || 0 })))
+        const merged = new Map<string, { key: string; label: string; n: number }>()
+        for (const town of d.towns) {
+          if (!town?.key || !town?.label) continue
+          const key = canonicalBoardTownKey(String(town.key), String(town.label))
+          if (!key) continue
+          const current = merged.get(key)
+          merged.set(key, {
+            key,
+            label: TOWNS[key]?.label || String(town.label),
+            n: (current?.n || 0) + (Number(town.n) || 0),
+          })
+        }
+        setBackendTownOptions(Array.from(merged.values()).sort((a, b) => b.n - a.n || a.label.localeCompare(b.label)))
       })
       .catch(() => { /* listing-derived fallback below stays usable */ })
     return () => { alive = false }
@@ -772,39 +792,43 @@ function Board() {
   useEffect(() => {
     let alive = true
     setLoading(true)
+    const search = deferredQuery.trim()
+    const exactRef = exactPropertyRef(search)
     const q = new URLSearchParams()
-    if (f.beds.length) q.set('beds', f.beds.join(','))
-    if (f.baths.length) q.set('baths', f.baths.join(','))
+    if (!search && f.beds.length) q.set('beds', f.beds.join(','))
+    if (!search && f.baths.length) q.set('baths', f.baths.join(','))
     // A maximum by itself is an explicit €0..max range. Sending the lower
     // bound makes that contract unambiguous all the way through the API.
-    if (f.min || f.max) q.set('price_min', f.min || '0')
-    if (f.max) q.set('price_max', f.max)
-    if (f.type) q.set('type', f.type)
-    if (deferredQuery.trim()) q.set('q', deferredQuery.trim())
+    if (!search && (f.min || f.max)) q.set('price_min', f.min || '0')
+    if (!search && f.max) q.set('price_max', f.max)
+    if (!search && f.type) q.set('type', f.type)
+    if (search) q.set('q', search)
     // Area/town selection stays local. The board already has the complete
     // active inventory for the current non-location filters, while the backend
     // CSV parser caps lists at 30 values. Keeping locations out of this request
     // prevents a broad multi-area union from being silently truncated and also
     // avoids a second loading flash when an agent taps adjacent areas.
-    if (f.pets) q.set('pets', f.pets)
-    if (f.sharing) q.set('sharing', f.sharing)
-    if (f.sublet) q.set('sublet', '1')
-    if (f.updated) q.set('updated', f.updated)
-    if (f.rental) q.set('rental_mode', f.rental)
-    if (discovery.length) q.set('discovery', discovery.join(','))
-    if (rect) q.set('rect', rectToParam(rect))
-    if (circ) q.set('circ', circToParam(circ))
-    if (view === 'board') q.set('horizon', horizon)
+    if (!search && f.pets) q.set('pets', f.pets)
+    if (!search && f.sharing) q.set('sharing', f.sharing)
+    if (!search && f.sublet) q.set('sublet', '1')
+    if (!search && f.updated) q.set('updated', f.updated)
+    if (!search && f.rental) q.set('rental_mode', f.rental)
+    if (!search && discovery.length) q.set('discovery', discovery.join(','))
+    if (!search && rect) q.set('rect', rectToParam(rect))
+    if (!search && circ) q.set('circ', circToParam(circ))
+    if (!search && view === 'board') q.set('horizon', horizon)
     q.set('sort', sort)
-    if (onlyConfirmed) q.set('only_confirmed', '1')
-    if (avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
+    if (!search && onlyConfirmed) q.set('only_confirmed', '1')
+    if (!search && avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
     // 'rented' reuses GET /listings with an explicit ?status= — that filter
     // branch already existed server-side and honours sort like the board
     // does. Favourites is its own endpoint (joined to this agent's own
     // bookmark rows), but it accepts the same filter contract. Its ordering
     // remains favourite-time, so the sort control is disabled on that tab.
     if (view === 'rented') q.set('status', 'rented')
-    const path = view === 'rented'
+    const path = exactRef
+      ? `schedule-board/listings/${encodeURIComponent(exactRef)}`
+      : view === 'rented'
       ? `schedule-board/listings?${q.toString()}`
       : view === 'favourites'
       ? `schedule-board/favourites?${q.toString()}`
@@ -814,9 +838,10 @@ function Board() {
         if (!alive) return
         // canonical localities from the backend FIRST, so the pin / filter-chip / label lookups
         // below (townKey, TOWNS[k], townLabel) resolve every listing the backend can resolve
-        registerCanonicalLocalities(d.listings)
-        setRows(d.listings || [])
-        setLoadedQuery(deferredQuery.trim().toLowerCase())
+        const listings = exactRef ? (d ? [d] : []) : (d.listings || [])
+        registerCanonicalLocalities(listings)
+        setRows(listings)
+        setLoadedQuery(search.toLowerCase())
         setErr(null)
       })
       .catch(e => { if (alive) setErr(e?.message || 'Could not load listings') })
@@ -896,7 +921,7 @@ function Board() {
   const positioned = useMemo(() => {
     const byTown: Record<string, Listing[]> = {}
     for (const r of rows) {
-      const k = r.localityKey || townKey(r.town) || '_unknown'
+      const k = canonicalBoardTownKey(r.localityKey, r.localityLabel || r.town) || '_unknown'
       ;(byTown[k] ||= []).push(r)
     }
     // Grouping by town is how the pins fan out; it must NOT become a re-sort of
@@ -922,7 +947,7 @@ function Board() {
     if (backendTownOptions.length) return backendTownOptions
     const counts: Record<string, number> = {}
     for (const r of rows) {
-      const k = r.localityKey || townKey(r.town)
+      const k = canonicalBoardTownKey(r.localityKey, r.localityLabel || r.town)
       if (k) counts[k] = (counts[k] || 0) + 1
     }
     return Object.entries(counts)
@@ -1022,16 +1047,21 @@ function Board() {
     // keystroke speed instead of a round trip per character.
     const needle = deferredQuery.trim().toLowerCase()
     return positioned.filter(r => {
+      // The search field is global. It must be able to recover a known ref or
+      // locality even while stale Area, map or feature filters are selected.
+      if (needle) {
+        if (needle !== loadedQuery) {
+          const hay = [r.ref, r.town, r.subLocation, r.type, r.description, r.listedBy?.displayName, r.contact?.reachesName].filter(Boolean).join(' ').toLowerCase()
+          if (!hay.includes(needle)) return false
+        }
+        return true
+      }
       if (f.towns.length && !f.towns.includes(r.tkey)) return false
       // Full CRM users may match a property through protected owner data. The
       // server returns only the safe card projection, so once this exact query
       // has loaded there may intentionally be no owner string in the card to
       // repeat the match against. While a newer deferred request is pending,
       // keep local matching for immediate visual feedback.
-      if (needle && needle !== loadedQuery) {
-        const hay = [r.ref, r.town, r.subLocation, r.type, r.description, r.listedBy?.displayName, r.contact?.reachesName].filter(Boolean).join(' ').toLowerCase()
-        if (!hay.includes(needle)) return false
-      }
       if (discovery.length) {
         const copy = [r.type, r.town, r.subLocation, r.description].filter(Boolean).join(' ').toLowerCase()
         if (discovery.includes('popular-new')) {
