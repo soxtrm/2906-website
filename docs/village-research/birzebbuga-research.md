@@ -1,6 +1,6 @@
 # Birżebbuġa neighbourhood edition — source dossier
 
-Status: RESEARCH DRAFT — public sources and a licensed hero candidate verified; no public edition exists yet.
+Status: ASSET READY — public sources verified and the licensed hero asset prepared; no public edition exists yet.
 
 Research date: 14 October 2026.
 
@@ -95,12 +95,22 @@ Selected candidate: `Malta - Birzebbuga - Triq il-Bajja s-Sabiha - Pretty Bay 04
 - Original dimensions: 5616 × 3744 JPEG.
 - Licence: CC BY-SA 3.0 (the file page also offers GFDL; use the CC licence for the edition).
 - Source: https://commons.wikimedia.org/wiki/File:Malta_-_Birzebbuga_-_Triq_il-Bajja_s-Sabiha_-_Pretty_Bay_04_ies.jpg
-- Direct resize candidate: https://commons.wikimedia.org/wiki/Special:Redirect/file/Malta_-_Birzebbuga_-_Triq_il-Bajja_s-Sabiha_-_Pretty_Bay_04_ies.jpg?width=1800
+- Direct resize source: https://commons.wikimedia.org/wiki/Special:Redirect/file/Malta_-_Birzebbuga_-_Triq_il-Bajja_s-Sabiha_-_Pretty_Bay_04_ies.jpg?width=1800
 - Licence text: https://creativecommons.org/licenses/by-sa/3.0/
 
 Required caption: author, source, CC BY-SA 3.0 link, capture date, and a clear statement that the responsive image is a resize/crop of a dated locality view rather than evidence of present beach conditions, a listed home's outlook or current access.
 
-The file has not yet been downloaded or converted. Pixel decoding, output dimensions, visual crop, file hash and the visible attribution must be checked before it becomes a repository asset.
+Asset verification completed 14 October 2026:
+
+- the Commons resize endpoint returned a fully decodable 1920 × 1280 RGB JPEG despite the `width=1800` request;
+- the source was resized proportionally, without a crop or generative change, to a local 1800 × 1200 RGB WebP;
+- output path: `public/link-marketplace/assets/birzebbuga-pretty-bay-frank-vincentz.webp`;
+- output size: 305,318 bytes;
+- output SHA-256: `BDDA58CFE305478BA04C9A0C1777E5EC8C4F382A6B1DB80BFDE5E7457F9850BA`;
+- downloaded-source SHA-256: `9E56FECDD79C96AAA3B4E5DEC783522B3DB334A5DE0454727F1AF28E9CA15AAC`;
+- visual review confirms the frame shows the sandy waterfront in the foreground, a person fishing, harbour water and port/ship infrastructure across the bay. That visible coexistence supports an honest central-waterfront-versus-port-context treatment, without proving current conditions or the outlook from any property.
+
+The downloaded JPEG remains an unversioned evidence file under `artifacts/`; only the verified WebP is intended for the repository.
 
 ## Claims deliberately withheld
 
@@ -114,11 +124,10 @@ The file has not yet been downloaded or converted. Pixel decoding, output dimens
 
 ## Release gates
 
-1. Download the selected Commons image through the documented file redirect, convert it to a local WebP without generative changes, then record exact dimensions, byte size and SHA-256.
-2. Build a distinct English noindex draft with visible image attribution and a click-to-load OSM overview.
-3. Check mobile and desktop layout, image decode/crop, lazy map behaviour, outbound source links and horizontal overflow.
-4. Only after those checks, add one canonical, matching Open Graph metadata and one BreadcrumbList; remove draft/noindex labels.
-5. Add exactly one marketplace discovery link and one sitemap URL, then run the production build.
-6. Publish through the established Git/Vercel path and verify the exact production page, asset, index and sitemap before marking the edition live.
+1. Build a distinct English noindex draft with visible image attribution and a click-to-load OSM overview.
+2. Check mobile and desktop layout, image decode/crop, lazy map behaviour, outbound source links and horizontal overflow.
+3. Only after those checks, add one canonical, matching Open Graph metadata and one BreadcrumbList; remove draft/noindex labels.
+4. Add exactly one marketplace discovery link and one sitemap URL, then run the production build.
+5. Publish through the established Git/Vercel path and verify the exact production page, asset, index and sitemap before marking the edition live.
 
 No external backlink or community post has been published for this edition.
