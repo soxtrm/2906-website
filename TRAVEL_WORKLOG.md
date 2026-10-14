@@ -343,3 +343,11 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Releasebrowser bei 390×844 und 1440×1000: HTTP 200, genau ein H1, korrektes Canonical, drei Open-Graph-Felder, ein JSON-LD-Block, kein noindex, kein horizontaler Overflow, vollständig dekodiertes 1800×2400-Hero, initial null iframes und nach Klick genau ein sichtbarer OSM-Frame ohne fehlgeschlagene Requests.
 - Hashes: HTML `BE04C60C52C222F91B431C8F2DBF84E75C5BA8C49191D73124FF69321B4D9258`; Asset unverändert `53A256678D74D9306E0B5176ABF3188B403FF7E8AF3564002ADD586CB74B1506`; Index `695291D23ECF089C76F9C348A067A2121D790E85805C575DCC4DE18833EE2EDC`; Sitemap `BAE28D45FF783319EE2C2F58FEDF763A0C97580AD6EC94033E2D78D666E65C35`.
 - Noch nicht live behauptet: gezielter Releasecommit, Fast-Forward-Push und Produktionsprüfung folgen. Keine externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Änderung.
+
+## 00:09 Malta, 15.10 — Rabat-Ausgabe veröffentlicht und live geprüft
+
+- Releasecommit `9ffcf14` nach Fast-Forward-Prüfung auf `main` gepusht; der bestehende Git-/Vercel-Weg veröffentlichte anschließend `https://www.2906.estate/link-marketplace/areas/rabat.html`.
+- Exakte öffentliche URL und CRM-Kopie liefern HTTP 200 und enthalten die Rabat-Ausgabe. Marketplace-Index und `neighbourhood-sitemap.xml` liefern HTTP 200 und jeweils genau den vorgesehenen Rabat-Verweis; das verifizierte 445852-Byte-WebP bleibt öffentlich erreichbar.
+- Produktionsbrowser bei 390×844 und 1440×1000 bestätigt ohne horizontalen Overflow genau ein H1, ein Self-Canonical, drei Open-Graph-Felder, einen BreadcrumbList-Block, kein noindex, ein vollständig dekodiertes 1800×2400-Hero, initial null iframes und nach Klick genau einen sichtbaren OSM-Frame. Es traten keine fehlgeschlagenen Seiten-, Bild- oder Kartenrequests auf.
+- Die Ausgabe unterscheidet historischen Rabat-Kern, das separate Mdina, Tal-Virtù/Għajn Qajjet und das weitere ländliche Council-Gebiet. Sie behauptet weder eine Verwaltungsgrenze noch eine Propertyroute, Luftlinie, pauschale Gehzeit, Öffnung, Ruhe, Aussicht oder Nähe.
+- Dossierstatus auf PUBLISHED gesetzt. Rollback erfolgt durch gezielten Revert von `9ffcf14` zusammen mit diesem abschließenden Dokumentationscommit. Keine externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Änderung.

@@ -1,6 +1,6 @@
 # Rabat neighbourhood edition — source dossier
 
-Status: RELEASE CANDIDATE — source boundary, licensed image, responsive preview and release metadata verified; production publication pending.
+Status: PUBLISHED — source boundary, licensed image, responsive layout, release metadata and production delivery verified 15 October 2026.
 
 Research date: 14 October 2026.
 
