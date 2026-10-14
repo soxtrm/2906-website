@@ -247,7 +247,7 @@ type Preview = {
   text: string; dropped: string | null; rewritten: boolean
   recipientLabel: string; mode: 'owner' | 'agent'
   willQueue: boolean; windowNote: string | null
-  questionsLeft: number
+  questionsLeft: number | null
 }
 
 const MAX_IMAGES = 3
@@ -272,7 +272,7 @@ export function AskDialog({ refId, town, contact, intent = 'property', initialNo
   const [err, setErr] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const left = contact.questionsPerDay - contact.questionsUsed
+  const sentToday = contact.questionsUsed
 
   function addFiles(list: FileList | null) {
     if (!list) return
@@ -388,7 +388,7 @@ export function AskDialog({ refId, town, contact, intent = 'property', initialNo
             </div>
 
             <div className="mt-5 pt-4 border-t border-gray-100 text-[11px] text-navy/40">
-              {left} of {contact.questionsPerDay} questions left on this listing today.
+                {sentToday ? `${sentToday} message${sentToday === 1 ? '' : 's'} sent today · ` : ''}You approve every message before it is sent.
             </div>
           </motion.div>
         ) : (

@@ -586,7 +586,6 @@ html[data-crm-theme="dark"] .argus-intro-sheen { mix-blend-mode: normal; backgro
 .crm-listing-detail-dialog{position:relative}
 .crm-listing-detail-close{position:sticky;z-index:25;top:max(10px,env(safe-area-inset-top,0px));float:right;display:grid;width:42px;height:42px;margin:10px 10px -52px 0;place-items:center;border:1px solid rgb(255 255 255/.3);border-radius:50%;background:rgb(7 13 25/.82);color:#fff;box-shadow:0 8px 24px rgb(0 0 0/.28);backdrop-filter:blur(12px);cursor:pointer}
 .crm-listing-detail-close:focus-visible{outline:3px solid var(--crm-focus);outline-offset:2px}
-.crm-card-favourite-facts{display:flex;align-items:center;gap:5px;min-width:0}.crm-card-mini-fact{position:relative;display:inline-grid;width:22px;height:22px;flex:0 0 22px;place-items:center;border:1px solid var(--crm-border);border-radius:7px;background:color-mix(in srgb,var(--crm-surface) 84%,transparent);line-height:0}.crm-card-mini-fact i{position:absolute;width:17px;height:1.5px;border-radius:2px;background:#e56f6f;box-shadow:0 0 0 1px color-mix(in srgb,#151c2c 28%,transparent);transform:rotate(-45deg)}
 @media(max-width:760px){
   .crm-listing-detail-backdrop{padding:0!important;place-items:stretch!important}
   .crm-listing-detail-dialog{width:100%!important;max-width:none!important;max-height:100dvh!important;min-height:100dvh;border-radius:0!important}

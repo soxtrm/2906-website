@@ -550,11 +550,8 @@ function contactState(row, isMine, questionsUsed) {
       lastContactStatus: row.owner_last_contact_status || null,
       questionsUsed,
       questionsPerDay: QUESTIONS_PER_DAY,
-      canQuestion: can && questionsUsed < QUESTIONS_PER_DAY,
-      questionReason: can
-        ? (questionsUsed >= QUESTIONS_PER_DAY
-            ? `You have used both of today's questions on this listing.` : null)
-        : reason,
+      canQuestion: can,
+      questionReason: reason,
     }
   }
 
@@ -578,11 +575,8 @@ function contactState(row, isMine, questionsUsed) {
     lastContactStatus: row.owner_last_contact_status || null,
     questionsUsed,
     questionsPerDay: QUESTIONS_PER_DAY,
-    canQuestion: can && questionsUsed < QUESTIONS_PER_DAY,
-    questionReason: can
-      ? (questionsUsed >= QUESTIONS_PER_DAY
-          ? `You have used both of today's questions on this listing.` : null)
-      : reason,
+    canQuestion: can,
+    questionReason: reason,
   }
 }
 
@@ -1403,7 +1397,7 @@ async function loadForAction(req, res) {
   if (!me || !me.active) { res.status(401).json({ error: 'Account inactive' }); return null }
 
   const r = await db.query(
-    `SELECT p.id, p.ref, p.town, p.bedrooms, p.listed_by_agent_id, p.owner_id,
+    `SELECT p.id, p.ref, p.town, p.bedrooms, p.property_type, p.listed_by_agent_id, p.owner_id,
             p.available_status, p.available_date, p.updated_at, p.last_confirmed_available_at,
             (p.street IS NOT NULL AND btrim(p.street) <> '') AS has_viewing_location,
             a.id AS agent_id, a.username AS agent_username, a.name AS agent_name,
@@ -1426,9 +1420,10 @@ function blockFutureAction(res, prop, me, action) {
   return true
 }
 
-// Fall B relay: DM the listing agent. Shared by all three buttons.
-// Fire-and-forget so a slow WAHA send never blocks the board.
-function relayToListingAgent({ res, kind, prop, me, note }) {
+// Fall B relay: DM the listing agent. Shared by all three buttons. Wait for
+// the central router's delivered/queued result so the board never says
+// "sent" while a broken self-session send is failing in the background.
+async function relayToListingAgent({ res, kind, prop, me, note }) {
   if (!prop.agent_id) {
     return res.status(409).json({
       error: `#${prop.ref} has no listing agent on file — nobody to relay to.`,
@@ -1454,16 +1449,24 @@ function relayToListingAgent({ res, kind, prop, me, note }) {
     : kind === 'location' ? notify.requestLocation
     : notify.sendComment
 
-  fn({ operator, ref: prop.ref, note, agentRow })
-    .then(r => log.info('board relay sent', { kind, ref: prop.ref, agent: agentRow.username, ...r }))
-    .catch(e => log.warn('board relay failed', { kind, ref: prop.ref, err: e.message }))
+  let delivery
+  try {
+    delivery = await fn({ operator, ref: prop.ref, note, agentRow })
+    log.info('board relay routed', { kind, ref: prop.ref, agent: agentRow.username, ...delivery })
+  } catch (e) {
+    log.warn('board relay failed', { kind, ref: prop.ref, err: e.message })
+    return res.status(502).json({ error: `Could not send: ${e.message}` })
+  }
 
   return res.json({
     ok: true,
+    queued: !!delivery.queued,
     mode: 'fall_b',
     ref: prop.ref,
     sentTo: { agent: agentRow.name || agentRow.username, agentId: agentRow.id },
-    message: `Request sent to ${agentRow.name || agentRow.username}.`,
+    message: delivery.queued
+      ? `Request queued for ${agentRow.name || agentRow.username}; it will send when the ARGUS bridge is back.`
+      : `Request sent to ${agentRow.name || agentRow.username}.`,
   })
 }
 
@@ -1478,7 +1481,6 @@ router.post('/listings/:ref/request-availability', auth, async (req, res) => {
     // owner chat, so the listing carries the owner's latest word (2026-09-23).
     ownerFactEngine.rescanProperty(loaded.prop.id).catch(() => {})
     const { prop, me } = loaded
-    if (blockFutureAction(res, prop, me, 'Availability checks')) return
     const note = req.body && req.body.note ? String(req.body.note).slice(0, 1000) : null
     // Kev, 2026-09-11 ("Still Available" escalation): the agent already got
     // "already_checked_today" once and is deliberately asking again. Only
@@ -1680,19 +1682,9 @@ router.post('/listings/:ref/ask/preview', auth, async (req, res) => {
     const isMine = !!(prop.listed_by_agent_id && prop.listed_by_agent_id === me.id)
     const owner = isMine ? await ownerFor(prop.id) : null
     const recipientKey = owner ? owner.phone_normalized : `agent:${prop.listed_by_agent_id || 0}`
-    const questionLimit = ownerInventoryIntent ? 1 : QUESTIONS_PER_DAY
     const used = ownerInventoryIntent
       ? await ownerInventoryQuestionsUsedFor(me.id, recipientKey)
       : await questionsUsedFor(me.id, prop.id)
-    if (used >= questionLimit) {
-      return res.status(429).json({
-        error: ownerInventoryIntent
-          ? 'This owner or agent has already received an inventory question from you today.'
-          : `You have already used both of today's questions on #${prop.ref}.`,
-        questionsUsed: used, questionsPerDay: questionLimit,
-      })
-    }
-
     if (isMine) {
       if (!owner || !owner.phone_normalized) {
         return res.status(422).json({ error: 'No owner phone on file for this listing.' })
@@ -1757,7 +1749,7 @@ router.post('/listings/:ref/ask/preview', auth, async (req, res) => {
         ? `Outside the ${boardAsk.WINDOW_START_HOUR}:00–${boardAsk.WINDOW_END_HOUR}:00 contact window — this will go out at 08:00.`
         : null,
       questionsUsed: used,
-      questionsLeft: questionLimit - used,
+      questionsLeft: null,
     })
   } catch (err) {
     log.error('board ask/preview failed', { err: err.message, ref: req.params.ref })
@@ -1793,7 +1785,6 @@ router.post('/listings/:ref/ask/send', auth, async (req, res) => {
     // owner chat, so the listing carries the owner's latest word (2026-09-23).
     ownerFactEngine.rescanProperty(loaded.prop.id).catch(() => {})
     const { prop, me } = loaded
-    if (blockFutureAction(res, prop, me, 'Owner questions')) return
 
     const isMine = !!(prop.listed_by_agent_id && prop.listed_by_agent_id === me.id)
 
@@ -1803,16 +1794,9 @@ router.post('/listings/:ref/ask/send', auth, async (req, res) => {
       return res.status(422).json({ error: 'This owner cannot be contacted.' })
     }
     const recipientKey = owner ? owner.phone_normalized : `agent:${prop.listed_by_agent_id || 0}`
-    const questionLimit = ownerInventoryIntent ? 1 : QUESTIONS_PER_DAY
     const used = ownerInventoryIntent
       ? await ownerInventoryQuestionsUsedFor(me.id, recipientKey)
       : await questionsUsedFor(me.id, prop.id)
-    if (used >= questionLimit) {
-      return res.status(429).json({ error: ownerInventoryIntent
-        ? 'This owner or agent has already received an inventory question from you today.'
-        : `You have already used both of today's questions on #${prop.ref}.` })
-    }
-
     const now      = new Date()
     const inWindow = !explicitSchedule && boardAsk.insideWindow(now)
     const sendAt   = explicitSchedule || (inWindow ? now : boardAsk.nextSendTime(now))
@@ -1844,11 +1828,12 @@ router.post('/listings/:ref/ask/send', auth, async (req, res) => {
         message: explicitSchedule
           ? `Planned — goes out ${sendAt.toLocaleString('en-GB', { timeZone: 'Europe/Malta', dateStyle: 'medium', timeStyle: 'short' })} (Malta time).`
           : `Queued — outside the ${boardAsk.WINDOW_START_HOUR}:00–${boardAsk.WINDOW_END_HOUR}:00 window. It goes out at 08:00.`,
-        questionsUsed: used + 1, questionsLeft: questionLimit - used - 1,
+        questionsUsed: used + 1, questionsLeft: null,
       })
     }
 
     // ── deliver ────────────────────────────────────────────────────────────
+    let relayQueued = false
     try {
       if (isMine) {
         // Fall A — opens (or supersedes) this agent's Board relay thread for
@@ -1874,7 +1859,7 @@ router.post('/listings/:ref/ask/send', auth, async (req, res) => {
         // Fall B — relayed to the listing agent, same path the old comment
         // button used. The owner is never reachable from here.
         const notify = require('../services/listingAgentNotify')
-        await notify.sendComment({
+        const delivery = await notify.sendComment({
           operator: { email: me.email, name: me.name || me.username },
           ref: prop.ref,
           note: text,
@@ -1883,8 +1868,13 @@ router.post('/listings/:ref/ask/send', auth, async (req, res) => {
             whatsapp_phones: prop.whatsapp_phones || [], whatsapp_session: prop.whatsapp_session,
           },
         })
+        relayQueued = !!delivery.queued
       }
-      await db.query(`UPDATE owner_contact_log SET sent_at = now() WHERE id = $1`, [logId])
+      await db.query(
+        relayQueued
+          ? `UPDATE owner_contact_log SET status = 'queued' WHERE id = $1`
+          : `UPDATE owner_contact_log SET status = 'sent', sent_at = now() WHERE id = $1`,
+        [logId])
     } catch (sendErr) {
       // The row stays, marked failed, so a broken send does not silently
       // burn one of the agent's two daily questions.
@@ -1896,10 +1886,13 @@ router.post('/listings/:ref/ask/send', auth, async (req, res) => {
     }
 
     res.json({
-      ok: true, queued: false, ref: prop.ref, logId,
+      ok: true, ref: prop.ref, logId,
+      queued: relayQueued,
       message: isMine ? `Sent to the owner of #${prop.ref}.`
-                      : `Sent to ${prop.agent_name || prop.agent_username}.`,
-      questionsUsed: used + 1, questionsLeft: questionLimit - used - 1,
+                      : relayQueued
+                        ? `Queued for ${prop.agent_name || prop.agent_username}; it will send when the ARGUS bridge is back.`
+                        : `Sent to ${prop.agent_name || prop.agent_username}.`,
+      questionsUsed: used + 1, questionsLeft: null,
     })
   } catch (err) {
     log.error('board ask/send failed', { err: err.message, ref: req.params.ref })
@@ -3907,7 +3900,7 @@ router.get('/agents', auth, async (_req, res) => {
 // this is the same answers, surfaced as a toast/badge on the board instead of
 // a full request-tracking inbox — that inbox is separate, later work.
 const NOTIFICATION_STATUS_LABEL = {
-  replied_available: 'Available',
+  replied_available: 'Now available for viewings',
   replied_no:         'Rented',
   closed_off_market:  'Off the board',
 }

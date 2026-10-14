@@ -85,45 +85,21 @@ async function run() {
     ok('the flags are actually populated',
       `pets ${petYes.length} yes / ${petNo.length} no · sharing ${shareYes.length} yes / ${shareNo.length} no`)
 
-    // ── what the DOM draws ──────────────────────────────────────────────────
+    // Property facts already live in the established card body. The compact
+    // action tray must stay clean and must not duplicate pets/sharing/winter.
     const shown = await page.evaluate(() => {
       const out = {}
       for (const card of document.querySelectorAll('[data-ref]')) {
         const ref = card.getAttribute('data-ref')
-        const labels = [...card.querySelectorAll('[data-card-fact]')].map(s => s.getAttribute('aria-label'))
-        out[ref] = labels
+        out[ref] = [...card.querySelectorAll('[data-card-fact]')].map(s => s.getAttribute('aria-label'))
       }
       return out
     })
     const cardCount = Object.keys(shown).length
     if (cardCount > 0) ok('cards are in the DOM', `${cardCount}`)
-    else { no('cards are in the DOM', '0 — nothing rendered, every icon check below is meaningless'); throw new Error('no cards') }
-
-    const iconFor = (ref, what) => (shown[ref] || []).find(l => l && l.startsWith(what))
-
-    // A listing whose text says yes must show the solid icon…
-    const yesRef = petYes.map(r => r.ref).find(ref => shown[ref])
-    if (!yesRef) no('a pets-yes listing is on the page', 'none of the yes listings rendered')
-    else if (iconFor(yesRef, 'Pets') === 'Pets') ok('pets-yes draws the cat', `#${yesRef}`)
-    else no('pets-yes draws the paw', `#${yesRef} → ${iconFor(yesRef, 'Pets')}`)
-
-    // …one whose text says no must show the refused icon…
-    const noRef = petNo.map(r => r.ref).find(ref => shown[ref])
-    if (!noRef) ok('no pets-no listing on this page (fine)', 'skipped')
-    else if (iconFor(noRef, 'Pets') === 'Pets: not allowed') ok('pets-no draws the slashed cat', `#${noRef}`)
-    else no('pets-no draws the slashed paw', `#${noRef} → ${iconFor(noRef, 'Pets')}`)
-
-    // …and a listing that says nothing must draw NOTHING. This is the assertion
-    // that keeps the board from implying a policy nobody stated.
-    const unknownRef = rows.filter(r => r.petFriendly === null).map(r => r.ref).find(ref => shown[ref])
-    if (!unknownRef) no('an unknown-pets listing is on the page', 'none rendered')
-    else if (!iconFor(unknownRef, 'Pets')) ok('unknown pets draws no icon at all', `#${unknownRef}`)
-    else no('unknown pets draws no icon at all', `#${unknownRef} → ${iconFor(unknownRef, 'Pets')}`)
-
-    const shareYesRef = shareYes.map(r => r.ref).find(ref => shown[ref])
-    if (!shareYesRef) ok('no sharing-yes listing on this page (fine)', 'skipped')
-    else if (iconFor(shareYesRef, 'Sharing') === 'Sharing') ok('sharing-yes draws the people icon', `#${shareYesRef}`)
-    else no('sharing-yes draws the people icon', `#${shareYesRef} → ${iconFor(shareYesRef, 'Sharing')}`)
+    else { no('cards are in the DOM', '0 — nothing rendered'); throw new Error('no cards') }
+    if (Object.values(shown).every(labels => labels.length === 0)) ok('action trays do not duplicate property facts')
+    else no('action trays do not duplicate property facts', 'legacy mini facts are still rendered')
 
     // ── the download button ─────────────────────────────────────────────────
     const withPhotos = rows.find(r => (r.imageCount || 0) >= 2 && shown[r.ref])

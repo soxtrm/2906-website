@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus, Cat, Snowflake, UsersRound, HelpCircle } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus, HelpCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
@@ -2976,31 +2976,6 @@ function availChip(a?: Listing['availability']) {
            title: 'No clear date on file — treated as soon, never as "now"' }
 }
 
-// Compact facts live beside the favourite action. Unknown values draw nothing:
-// an absent answer must never look like a prohibition. A diagonal line is used
-// only when the listing explicitly says no.
-function CompactFactIcon({ state = true, label, icon: Icon, tone = '#8CCFE8' }: {
-  state?: boolean | null
-  label: string
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
-  tone?: string
-}) {
-  if (state !== true && state !== false) return null
-  const denied = state === false
-  return (
-    <span
-      className="crm-card-mini-fact"
-      data-card-fact={label.toLowerCase().replaceAll(' ', '-')}
-      title={denied ? `${label}: not allowed` : label}
-      aria-label={denied ? `${label}: not allowed` : label}
-      style={{ color: denied ? 'var(--crm-muted)' : tone }}
-    >
-      <Icon size={14} strokeWidth={1.8} />
-      {denied && <i aria-hidden />}
-    </span>
-  )
-}
-
 // ── download the photos ─────────────────────────────────────────────────────
 // For the agents who post to Facebook by hand. The order is the ranked order the
 // board already shows (Gemini best-first), so the first file is the one that
@@ -3339,7 +3314,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
             <div>
               <strong style={{ display: 'block', fontSize: 12, letterSpacing: '.03em' }}>Ready to progress · {progressCount} listings</strong>
               <span style={{ display: 'block', color: DTEXT_DIM, fontSize: 11, lineHeight: 1.45, marginTop: 3 }}>
-                “New listing” and “Updated” tell you what changed. “Viewing ready” means booking can start; “Check availability” means an owner reply still needs a quick review.
+                One property stays one post. “Now viewable” marks a confirmed viewing opportunity; “Check availability” means an owner reply still needs a quick review.
               </span>
             </div>
           </div>
@@ -3373,9 +3348,9 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           const bookable = !!r.bookingsPossible
           const createdTime = r.createdAt ? Date.parse(r.createdAt) : NaN
           const isNewListing = Number.isFinite(createdTime) && Date.now() - createdTime < 7 * 86400_000
-          const eventLabel = isNewListing ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
-          const eventColor = eventLabel === 'NEW LISTING' ? '#4D7CE0' : eventLabel === 'CONFIRMED' ? '#2F8E68' : '#96772C'
-          const progressLabel = needsAction ? 'CHECK AVAILABILITY' : bookable ? 'VIEWING READY' : null
+          const eventLabel = bookable ? 'NOW VIEWABLE' : isNewListing ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
+          const eventColor = eventLabel === 'NEW LISTING' ? '#4D7CE0' : (eventLabel === 'CONFIRMED' || eventLabel === 'NOW VIEWABLE') ? '#2F8E68' : '#96772C'
+          const progressLabel = needsAction ? 'CHECK AVAILABILITY' : null
           const market = !['rented', 'archived', 'not_available'].includes(r.availableStatus || '')
           const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE NOW'
             : r.availability?.kind === 'date' ? `FREE ${r.availability.label}` : 'DATE UNCLEAR'
@@ -4182,7 +4157,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             moved again. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
           <PhotoDownload r={r} />
-          <button onClick={handleCopyLink} disabled={copyBusy} title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
+          <button onClick={handleCopyLink} disabled={copyBusy} data-copy-listing-link={r.ref} aria-label="Copy listing link" title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
             <Copy size={14} />
           </button>
           <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
@@ -4238,13 +4213,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <div style={{ fontSize: 9.5, color: DTEXT_FAINT }}>
               Last owner update · {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : r.updatedAt ? ago(r.updatedAt) : 'not recorded'}
             </div>
-            {isAdmin && (
-              <button onClick={() => guardedFutureAction('Still available check', () => askStillAvailable(false, false, true))}
-                className="crm-card-still-available"
-                style={{ ...stillAvailableBtn(dark), ...futureActionStyle, justifyContent: 'center' }}>
-                Review future check
-              </button>
-            )}
+            <button onClick={() => c.canAsk && askStillAvailable(false)}
+              disabled={!c.canAsk || avBusy}
+              className="crm-card-still-available"
+              title={c.reason || 'Check availability; a far-future date is confirmed before contact'}
+              style={{ ...stillAvailableBtn(dark), opacity: c.canAsk ? (avBusy ? .7 : 1) : .45, justifyContent: 'center' }}>
+              {avBusy ? 'Checking…' : 'Still available?'}
+            </button>
           </div>
         ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -4429,7 +4404,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             block right before `isUpcoming` above. Facebook stays inside "..."
             exactly where it already is (still under menuSection "Tools"). */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-          <div className="crm-card-favourite-facts">
+          <div>
             <button
               className="crm-card-action-button"
               data-favourite={r.ref}
@@ -4447,21 +4422,16 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             >
               <StarGlyph filled={starStepOf(r) > 0} color={starStepOf(r) === 2 ? HOT : A} size={16} />
             </button>
-            {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let') || r.availableUntil) && (
-              <CompactFactIcon icon={Snowflake} label="Winter let" />
-            )}
-            <CompactFactIcon icon={Cat} state={r.petFriendly} label="Pets" tone="var(--crm-success)" />
-            <CompactFactIcon icon={UsersRound} state={r.sharing} label="Sharing" tone="var(--crm-success)" />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
           <button
             className="crm-card-action-button"
             data-ask-btn={r.ref}
-            onClick={() => c.canQuestion && guardedFutureAction(r.isMine ? 'Ask owner' : 'Ask agent', onAsk)}
-            disabled={!c.canQuestion || (futureLocked && !isAdmin)}
+            onClick={() => c.canQuestion && onAsk()}
+            disabled={!c.canQuestion}
             aria-label={r.isMine ? 'Ask owner' : 'Ask listing agent'}
             title={c.questionReason || 'Ask a question — approve the exact wording before it sends'}
-            style={{ ...trayPrimaryBtn(dark), ...futureActionStyle, opacity: c.canQuestion ? 1 : .42 }}>
+            style={{ ...trayPrimaryBtn(dark), opacity: c.canQuestion ? 1 : .42 }}>
             <HelpCircle size={17} />
           </button>
           <button className="crm-card-action-button" onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
@@ -4517,10 +4487,10 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <div style={menuSection(dark)}>Talk to</div>
             <div style={menuGrid}>
               <button
-                onClick={() => { if (c.canQuestion) guardedFutureAction(r.isMine ? 'Ask owner' : 'Ask agent', () => { onAsk(); setMenuOpen(false) }) }}
-                disabled={!c.canQuestion || (futureLocked && !isAdmin)}
+                onClick={() => { if (c.canQuestion) { onAsk(); setMenuOpen(false) } }}
+                disabled={!c.canQuestion}
                 title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
-                style={{ ...menuGridBtn(dark), ...futureActionStyle, color: c.canQuestion ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
+                style={{ ...menuGridBtn(dark), color: c.canQuestion ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
                 {r.isMine ? 'Ask Owner' : 'Ask Agent'}
               </button>
               {(() => {

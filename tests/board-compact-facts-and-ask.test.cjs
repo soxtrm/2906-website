@@ -10,6 +10,7 @@ const { launch, openPage, defaultFixtures, listing } = require('./helpers/crm-mo
     availableUntil: '2027-04-30',
     petFriendly: false,
     sharing: false,
+    contact: { mode: 'owner', reachesName: 'Owner', canAsk: true, reason: null, questionsUsed: 5, questionsPerDay: 2, canQuestion: true, questionReason: null },
   })]
 
   const browser = await launch()
@@ -17,30 +18,27 @@ const { launch, openPage, defaultFixtures, listing } = require('./helpers/crm-mo
     const page = await openPage(browser, { width: 390, height: 844, theme: 'dark', fixtures })
     await page.waitForSelector('[data-ref="2906-COMPACT"]')
 
-    const facts = await page.$$eval('[data-ref="2906-COMPACT"] [data-card-fact]', nodes => nodes.map(node => ({
-      key: node.getAttribute('data-card-fact'),
-      label: node.getAttribute('aria-label'),
-      slashed: !!node.querySelector('i'),
-    })))
-    assert.deepEqual(facts, [
-      { key: 'winter-let', label: 'Winter let', slashed: false },
-      { key: 'pets', label: 'Pets: not allowed', slashed: true },
-      { key: 'sharing', label: 'Sharing: not allowed', slashed: true },
-    ])
+    const facts = await page.$$('[data-ref="2906-COMPACT"] [data-card-fact]')
+    assert.equal(facts.length, 0, 'the action tray must not duplicate facts already shown by the property card')
 
     const tray = await page.$eval('[data-ref="2906-COMPACT"] .crm-card-action-tray', node => ({
       scrollWidth: node.scrollWidth,
       clientWidth: node.clientWidth,
     }))
     assert.ok(tray.scrollWidth <= tray.clientWidth + 1, 'the compact action tray must not overflow horizontally')
+    assert.ok(await page.$('[data-copy-listing-link="2906-COMPACT"]'), 'the existing card exposes its persistent listing link')
+    const avButton = await page.$('[data-ref="2906-COMPACT"] .crm-card-still-available:not([disabled])')
+    assert.ok(avButton, 'availability remains usable on future listings')
+    const askButton = await page.$('[data-ask-btn="2906-COMPACT"]:not([disabled])')
+    assert.ok(askButton, 'ASK stays usable after the old daily counter is exceeded')
 
-    await page.click('[data-ask-btn="2906-COMPACT"]')
+    await askButton.click()
     await page.waitForFunction(() => [...document.querySelectorAll('h2')].some(node => /Ask a question/i.test(node.textContent || '')))
     const composer = await page.$('textarea[placeholder*="pets ok"]')
     assert.ok(composer, 'ASK is directly reachable from every actionable card')
 
     assert.deepEqual(page.consoleErrors, [])
-    console.log('compact winter/rule facts and always-visible ASK action passed')
+    console.log('clean action tray and always-visible ASK action passed')
   } finally {
     await browser.close()
   }
