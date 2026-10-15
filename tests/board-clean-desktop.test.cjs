@@ -73,8 +73,10 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.ok(layout.topRail.y===0 && layout.topRail.h<=60,'board controls stay inside the global top rail')
   assert.ok(layout.scope.y>=58 && layout.scope.x>=layout.content.x,'village filters begin directly below the top rail')
   assert.equal(layout.visibleFilterIcons,8,'all property filter icons remain available on desktop')
-  assert.equal(layout.argusDisplay,'none','mobile ARGUS island is not duplicated on desktop')
+  assert.equal(layout.argusDisplay,'flex','ARGUS search stays available in the desktop top rail')
   assert.equal(layout.smartDisplay,'none','mobile smart island is not duplicated on desktop')
+  assert.equal(await page.$$('input[aria-label="Search by reference, village, owner, agent or property type"]').then(nodes=>nodes.length),1,'desktop top rail exposes the inventory search field')
+  assert.equal(await page.$eval('.crm-board-legacy-filter-row',node=>getComputedStyle(node).display),'none','legacy text filters never create a second desktop row')
   assert.equal(new Set(layout.cards.map(c=>Math.round(c.y))).size,1,'three cards share first row')
   assert.equal(new Set(layout.cards.map(c=>Math.round(c.x))).size,3,'three columns visible')
   assert.ok(layout.cards.every(card=>card.w>=490),'wider cards give property photography more room')
@@ -114,12 +116,18 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     bottomNav:getComputedStyle(document.querySelector('.crm-bottom-nav')).display,
     workspaceLabels:[...document.querySelectorAll('.crm-smart-island [data-label]')].map(node=>node.dataset.label),
   }))
-  assert.equal(mobile.desktopRail,'none','desktop controls are hidden on mobile')
+  assert.ok(['none','missing'].includes(mobile.desktopRail),'desktop controls are hidden on mobile')
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
   assert.equal(mobile.sidebar,'none','desktop sidebar remains hidden on mobile')
   assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains available')
   assert.deepEqual(mobile.workspaceLabels,['Map','Favourites','More'],'mobile workspace island has exactly three distinct actions')
   assert.equal(await page.$$('.crm-smart-island [data-label="Profile"]') .then(nodes=>nodes.length),0,'profile is not duplicated in the floating island')
+
+  await page.$eval('.crm-filter-island [aria-label="Open price filters"]',button=>button.click())
+  await page.waitForSelector('#crm-mobile-filter-panel')
+  assert.equal(await page.$eval('#crm-mobile-filter-panel',node=>getComputedStyle(node).display!=='none'),true,'a filter icon opens its section with one click')
+  await page.$eval('#crm-mobile-filter-panel [aria-label="Close filters"]',button=>button.click())
+  await page.waitForSelector('#crm-mobile-filter-panel',{hidden:true})
 
   await page.$eval('.crm-smart-island [data-label="Favourites"]',button=>button.click())
   await new Promise(resolve=>setTimeout(resolve,700))

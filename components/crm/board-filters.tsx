@@ -245,6 +245,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const [islandFocus, setIslandFocus] = useState<string | null>(null)
   const [compactMobile, setCompactMobile] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [desktopMode, setDesktopMode] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const prefersReducedMotion = useReducedMotion()
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -253,6 +254,14 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const ref = useRef<HTMLDivElement>(null)
 
   const mobilePlaceholders = ['Reference', 'Village', 'Owner or agent', 'Property type']
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 761px)')
+    const syncDesktopMode = () => setDesktopMode(desktopQuery.matches)
+    syncDesktopMode()
+    desktopQuery.addEventListener('change', syncDesktopMode)
+    return () => desktopQuery.removeEventListener('change', syncDesktopMode)
+  }, [])
 
   useEffect(() => {
     if (!smartPickerOpen && !filterPickerOpen) {
@@ -389,27 +398,11 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       return
     }
     setOpen(null)
-    const otherSurfaceOpen = panel === 'smart'
-      ? searchOpen || mobilePanel === 'filters' || filterPickerOpen
-      : searchOpen || mobilePanel === 'smart' || smartPickerOpen
-    if (otherSurfaceOpen) {
-      closeIslandSurfaces()
-      return
-    }
+    // Feature icons are direct controls. Requiring one click to prime the
+    // island and a second click to open the requested section made working
+    // controls look broken, especially on desktop where every icon is already
+    // visible. Open the requested panel in the same interaction.
     setSearchOpen(false)
-    if (panel === 'smart' && !smartPickerOpen && mobilePanel !== 'smart') {
-      setMobilePanel(null)
-      setIslandFocus(null)
-      setSmartPickerOpen(true)
-      return
-    }
-    if (panel === 'filters' && !filterPickerOpen && mobilePanel !== 'filters') {
-      setMobilePanel(null)
-      setIslandFocus(null)
-      setFilterPickerOpen(true)
-      return
-    }
-    if (!islandReady) return
     setSmartPickerOpen(panel === 'smart')
     setFilterPickerOpen(panel === 'filters')
     setIslandFocus(target)
@@ -529,11 +522,11 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
       >
         <motion.div className={cn('crm-argus-orbit flex min-w-0 items-center rounded-[18px] border border-[var(--crm-border)] bg-[var(--crm-surface)] p-1.5', searchOpen && 'is-searching')}>
           <AnimatePresence mode="popLayout" initial={false}>
-            {searchOpen ? (
+            {searchOpen || desktopMode ? (
               <motion.form key="search-field" layout initial={{ opacity: 0, scaleX: .9, scaleY: .97 }} animate={{ opacity: 1, scaleX: 1, scaleY: 1 }} exit={{ opacity: 0, scaleX: .92, scaleY: .98 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 360, damping: 32, mass: .62 }} className="relative flex min-w-0 flex-1 items-center" onSubmit={event => { event.preventDefault(); setSearchOpen(false); searchInputRef.current?.blur() }}>
                 <Search className="pointer-events-none absolute left-3 h-4 w-4 text-[var(--crm-muted)]" />
                 <input ref={searchInputRef} type="search" enterKeyHint="search" autoComplete="off" value={value.q} onChange={event => onChange({ q: event.target.value })} onKeyDown={event => { if (event.key === 'Escape') setSearchOpen(false) }} placeholder={mobilePlaceholders[placeholderIndex]} aria-label="Search by reference, village, owner, agent or property type" className="h-10 w-full min-w-0 rounded-[13px] border-0 bg-[var(--crm-raised)] pl-9 pr-9 text-[13px] text-[var(--crm-text)] outline-none placeholder:text-[var(--crm-faint)]" />
-                <button type="button" onClick={() => value.q ? onChange({ q: '' }) : setSearchOpen(false)} aria-label={value.q ? 'Clear search' : 'Close search'} className="absolute right-1 grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-[var(--crm-muted)]"><X className="h-4 w-4" /></button>
+                <button type="button" onClick={() => value.q ? onChange({ q: '' }) : !desktopMode && setSearchOpen(false)} aria-label={value.q ? 'Clear search' : 'Close search'} className="absolute right-1 grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-[var(--crm-muted)]"><X className="h-4 w-4" /></button>
               </motion.form>
             ) : (
               <motion.button key="search-trigger" layout type="button" onClick={() => { setCompactMobile(false); setOpen(null); setMobilePanel(null); setSmartPickerOpen(false); setFilterPickerOpen(false); setIslandFocus(null); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 340, damping: 34, mass: .65 }}>
@@ -650,7 +643,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         )}
       </AnimatePresence>
 
-      <div className="hidden w-full gap-2 lg:flex lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
+      <div className="crm-board-legacy-filter-row hidden w-full gap-2">
 
         {/* Search — ref, town or area. The board's own listings are local, so
             this filters instantly rather than round-tripping. */}

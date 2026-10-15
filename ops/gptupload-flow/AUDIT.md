@@ -13,3 +13,11 @@ Audited against `/opt/2906-system/backend` on 2026-10-13 before editing.
 - Production has `GEMINI_API_KEY` and `@google/genai`, but no `OPENAI_API_KEY`. The configured editor is therefore `gemini-3.1-flash-image`; the vision audit uses `gemini-2.5-flash`. Both are configurable by environment variables.
 
 The processor edits at most ten images, keeps ordering stable, uploads and records every original separately, falls back per image, and uses an edited-image hash to recover the original source before a rerun.
+
+## 2026-10-15 cross-session command repair
+
+Production receives the same WhatsApp group message once per connected WAHA session. The webhook already chose the first session that observed an upload command, but `handlers/upload.js` repeated the selection with the raw provider message id and without the observing session. A command could therefore pass the webhook claim and then be silently rejected inside the upload handler. Other group commands such as `!ask`, `!av`, `!book`, and their confirmation replies still used session-specific deduplication and could run more than once.
+
+All actionable group commands now derive the same session-independent key from the group id, provider timestamp, and normalized command text. The webhook uses that key for both the observing-session claim and Redis deduplication; the upload handler reuses the same key and keeps the session that actually received the message. Ordinary group conversation is excluded from this logical-command key.
+
+The production files were syntax checked, the command, Ask, availability, booking, and session-stickiness suites passed with all external sends mocked, and the backend health check passed after restart. The pre-hotfix rollback is stored at `/opt/2906-system/backend/.rollback/group-command-20261015-prehotfix`.

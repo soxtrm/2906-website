@@ -147,8 +147,8 @@ async function pickUploadSession() {
 // it. Falls back to the live (uncached) pick on any Redis hiccup or when no
 // messageId is available — never worse than before, only stickier when it
 // can be.
-async function pickUploadSessionSticky(messageId) {
-  if (!messageId) return pickUploadSession()
+async function pickUploadSessionSticky(messageId, observedSession = null) {
+  if (!messageId) return observedSession || pickUploadSession()
   const key = `groupgate:winner:${messageId}`
   try {
     const cached = await redis.get(key)
@@ -156,7 +156,7 @@ async function pickUploadSessionSticky(messageId) {
   } catch (err) {
     log.warn('pickUploadSessionSticky: redis get failed, resolving live', { err: err.message })
   }
-  const winner = await pickUploadSession()
+  const winner = observedSession || await pickUploadSession()
   try {
     // NX: only the first caller's resolution is stored. Re-read afterwards so
     // BOTH the winner (whose value got stored) and any concurrent caller (who
@@ -2491,7 +2491,13 @@ async function handleWebhookMessage({ payload, session, text, isGroup, chatId, s
   // the exact incident. Sticky by messageId closes that.
   // DMs / Notes-to-self are unaffected (isGroup === false).
   const messageId = payload?.id || payload?.key?.id || null
-  if (isGroup && session !== (await pickUploadSessionSticky(messageId))) {
+  const groupLogicalId = isGroup ? gptUploadCommand.groupCommandDedupKey({
+    chatId,
+    actorId: realSenderJid(payload, true) || payload?.participant || payload?.author,
+    timestamp: payload?.timestamp,
+    text: t,
+  }) : null
+  if (isGroup && session !== (await pickUploadSessionSticky(groupLogicalId || messageId, session))) {
     log.debug('upload: ignoring group command on non-primary session', { session, cmd: t.slice(0, 20) })
     return false
   }

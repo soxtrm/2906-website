@@ -1,0 +1,22 @@
+--- routes/webhook.js
++++ routes/webhook.js
+@@
+-    const uploadLogicalId = isGroup ? gptUploadCommand.uploadEventDedupKey({
++    const groupLogicalId = isGroup ? gptUploadCommand.groupCommandDedupKey({
+       chatId: groupId || payload.from,
++      actorId: senderJid || phone,
+       timestamp,
+       text,
+     }) : null
+     const activeGroupSession = isGroup
+-      ? await uploadHandler.pickUploadSessionSticky(uploadLogicalId || messageId, session)
++      ? await uploadHandler.pickUploadSessionSticky(groupLogicalId || messageId, session)
+       : null
+@@
+-    if (messageId || uploadLogicalId) {
+-      const dedupKey = uploadLogicalId
+-        ? `processed:${uploadLogicalId}`
++    if (messageId || groupLogicalId) {
++      const dedupKey = groupLogicalId
++        ? `processed:${groupLogicalId}`
+         : `processed:${messageId}:${session}`

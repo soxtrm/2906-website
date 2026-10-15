@@ -308,9 +308,11 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-board-islands{display:flex;align-items:center;gap:7px;width:100%;height:48px}
   .crm-board-islands-handle{display:none}
   .crm-argus-orbit,.crm-nav-island{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;height:44px;min-width:0;padding:5px!important;border:1px solid var(--crm-border)!important;border-radius:17px!important;background:linear-gradient(145deg,color-mix(in srgb,var(--crm-surface) 97%,white 3%),var(--crm-surface));color:var(--crm-muted);box-shadow:0 6px 18px rgba(4,10,24,.06),inset 0 1px 0 rgba(255,255,255,.045);overflow:visible;will-change:flex-basis;transition:flex-basis .55s cubic-bezier(.16,1,.3,1),max-width .55s cubic-bezier(.16,1,.3,1),color .24s ease,border-color .24s ease,transform .4s cubic-bezier(.16,1,.3,1),box-shadow .3s ease}
-  .crm-mobile-immersive .crm-argus-orbit,.crm-mobile-immersive .crm-smart-island{display:none}
+  .crm-mobile-immersive .crm-smart-island{display:none}
+  .crm-mobile-immersive .crm-argus-orbit{display:flex;flex:1 1 154px;max-width:230px}
   .crm-mobile-immersive .crm-filter-island{flex:0 0 auto;height:48px;padding:0!important;border:0!important;border-radius:0!important;background:transparent;box-shadow:none}
-  .crm-mobile-immersive .crm-filter-icons{width:auto;overflow:visible}
+  .crm-mobile-immersive .crm-filter-icons{width:auto;gap:2px;overflow:visible}
+  .crm-mobile-immersive .crm-filter-icons .crm-island-feature{flex-basis:31px;width:31px;max-width:31px}
   .crm-mobile-immersive .crm-filter-island .crm-island-label{display:none}
   .crm-nav-island{height:40px;border-radius:15px!important}
   .crm-argus-orbit{flex:0 0 126px;max-width:420px}.crm-smart-island{flex:0 0 188px}.crm-filter-island{flex:0 0 330px}
@@ -336,6 +338,7 @@ html:not([data-crm-theme="dark"]) .crm-root [class~="text-green-400"] { color: #
   .crm-price-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.crm-price-fields label{display:grid;gap:5px}.crm-price-fields label>span{color:var(--crm-faint);font-size:9px;font-weight:700}.crm-price-fields input{width:100%;min-width:0!important;height:42px;padding:0 11px;border:1px solid var(--crm-border)!important;border-radius:12px;background:var(--crm-raised);color:var(--crm-text)}.crm-room-sections{gap:10px}.crm-room-sections>div{border-color:var(--crm-border);background:var(--crm-raised)}
   .crm-tenancy-grid{display:grid;gap:8px}.crm-tenancy-grid>div{display:grid;grid-template-columns:minmax(70px,1fr) 1.1fr 1.1fr;gap:6px;align-items:center}.crm-tenancy-grid strong{font-size:10px}.crm-tenancy-grid button,.crm-sublet-choice{min-height:36px;padding:6px;border:1px solid var(--crm-border);border-radius:10px;background:var(--crm-raised);color:var(--crm-muted);font-size:9px;font-weight:700}.crm-tenancy-grid button[aria-pressed=true]{border-color:var(--crm-accent);background:var(--crm-accent-soft);color:var(--crm-accent)}.crm-sublet-choice{display:flex;align-items:center;gap:8px;padding-inline:10px}.crm-mobile-extra{display:flex;flex-wrap:wrap;gap:7px}.crm-mobile-extra :is(select,button){min-height:38px!important;border:1px solid var(--crm-border)!important;border-radius:11px!important;background:var(--crm-raised)!important;color:var(--crm-text)!important;font-size:10px!important}
   .crm-mobile-filter-panel>footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:14px}.crm-mobile-filter-panel>footer button{min-height:42px;padding:8px 16px;border-radius:13px;font-size:11px;font-weight:800}.crm-clear-filters{border:1px solid var(--crm-border);background:var(--crm-raised);color:var(--crm-muted)}.crm-show-results{display:flex;align-items:center;gap:8px;border:1px solid var(--crm-accent);background:var(--crm-action);color:var(--crm-inverse)}.crm-show-results svg{width:16px}
+  .crm-board-legacy-filter-row{display:none!important}
   .crm-board-content{width:100%;max-width:1580px;margin:0 auto;padding:18px 0 22px!important}.crm-listing-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;margin-top:8px!important}
   .crm-board-scope-rail{gap:6px;margin-bottom:10px}
   .crm-board-scope-rail .crm-horizon-chip,.crm-board-scope-rail .crm-city-chip{min-height:28px!important;padding:4px 9px!important;font-size:9.5px!important}

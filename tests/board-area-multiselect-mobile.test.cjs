@@ -106,7 +106,7 @@ const archivedListing = {
   assert.equal(await page.$eval('.crm-listing-card', card => card.getAttribute('aria-label').includes('2906-9129')), true, 'exact reference lookup bypasses stale area filters')
 
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
-  const desktopSearchVisible = await page.$eval('input[aria-label="Search properties by reference, town or area"]', input => {
+  const desktopSearchVisible = await page.$eval('input[aria-label="Search by reference, village, owner, agent or property type"]', input => {
     const rect = input.getBoundingClientRect()
     const style = getComputedStyle(input)
     return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden'
