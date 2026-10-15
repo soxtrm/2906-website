@@ -1,6 +1,6 @@
 # Pietà neighbourhood edition — source dossier
 
-Status: RESEARCH DRAFT — editorial boundary, source set and hero asset verified; the public page does not yet exist.
+Status: NOINDEX PREVIEW — editorial boundary, source set and hero asset verified; mobile/desktop validation and release work remain open.
 
 Research date: 15 October 2026.
 
@@ -114,7 +114,7 @@ Source: https://commons.wikimedia.org/wiki/File:Malta_-_Pieta_-_Triq_San_Girgor_
 ## Release gates
 
 1. Completed: exact Commons original, hashes, proportional WebP and full-frame visual review recorded above.
-2. Build a distinct English noindex draft that gives lower Pietà and higher Guardamangia equal editorial weight and uses a click-to-load OSM overview.
+2. Completed: distinct English noindex draft gives lower Pietà and higher Guardamangia equal editorial weight and uses a click-to-load OSM overview.
 3. Check mobile and desktop layout, image decode/framing, lazy map behaviour, outbound sources and horizontal overflow.
 4. Recheck operator and official sources; then add one canonical, matching Open Graph metadata and one BreadcrumbList, plus exactly one marketplace link and sitemap URL.
 5. Run the production build, publish through the established Git/Vercel path and verify the exact live page, asset, index and sitemap.
