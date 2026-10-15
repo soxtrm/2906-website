@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Eighteen English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann and Birkirkara. The older `swieqi-preview.html` is retained
+Status: Twenty English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat and Pietà. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -52,3 +52,7 @@ San Ġwann is published independently at https://www.2906.estate/link-marketplac
 Birkirkara is published independently at https://www.2906.estate/link-marketplace/areas/birkirkara.html (release commit `666332e`, production HTTP 200 verified on 14 October 2026). Its sourced dossier is `birkirkara-research.md`; the edition separates the older core, Valley Road and mixed edge labels from neighbouring localities and draws no invented boundary, historic-rail promise or generic walking route.
 
 Birżebbuġa is published independently at https://www.2906.estate/link-marketplace/areas/birzebbuga.html (release commit `0cf9d25`, production HTTP 200 verified on 14 October 2026). Its sourced dossier is `birzebbuga-research.md`; the edition separates Pretty Bay, Qajjenza, inland heritage valleys and port-facing edges, records the dated Borġ in-Nadur closure notice, and draws no invented boundary, harbour shortcut, ferry line or generic walking route.
+
+Rabat is published independently at https://www.2906.estate/link-marketplace/areas/rabat.html (release commit `9ffcf14`, production HTTP 200 verified on 15 October 2026). Its sourced dossier is `rabat-research.md`; the edition separates the historic centre, the distinct city of Mdina, newer residential pockets and the wider rural territory and draws no invented boundary, property route or generic journey time.
+
+Pietà is published independently at https://www.2906.estate/link-marketplace/areas/pieta.html (release commit `1a20777`, production HTTP 200 verified on 15 October 2026). Its sourced dossier is `pieta-research.md`; the edition gives lower Pietà and higher Guardamangia equal weight, keeps neighbouring localities separate and draws no invented boundary, harbour shortcut, ferry line or generic walking route.
