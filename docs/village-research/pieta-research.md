@@ -1,6 +1,6 @@
 # Pietà neighbourhood edition — source dossier
 
-Status: RESEARCH DRAFT — editorial boundary and source set verified; image download and public page do not yet exist.
+Status: RESEARCH DRAFT — editorial boundary, source set and hero asset verified; the public page does not yet exist.
 
 Research date: 15 October 2026.
 
@@ -89,7 +89,11 @@ Selected candidate: `Malta - Pietà - Triq Marina - Marsamxett Harbour 01.jpg` b
 
 Required caption: author, Commons source, CC BY-SA 4.0 link, capture date and modification note, plus a clear statement that this dated lower-Pietà view is not evidence of a listed home's outlook, proximity, access or present waterfront conditions.
 
-The candidate has strong horizontal resolution and a clearly documented location and licence. Exact original download, byte/hash verification, proportional WebP conversion and visual inspection remain separate gates. The page must balance this waterfront image with explicit Guardamangia context rather than presenting all seven current listings as marina homes.
+The exact Commons original was downloaded and verified as a 7086 × 3032 JPEG with 20,571,847 bytes and SHA-256 `F1022C0C6A704C31267EB32DEFE7D6D51DEB79FBC690DDBC6ACA93C7E599F81E`. A resize-only 1800 × 770 RGB WebP was created at `public/link-marketplace/assets/pieta-triq-marina-marsamxett-txllxt.webp`; it is 240,224 bytes with SHA-256 `ACE04805AB1D4E7F0555CE516BD78BBF7837F92987FAF901A4FB4C553947B758`. No crop, retouching or generated content was applied, and embedded metadata was removed from the derivative.
+
+Visual review confirms a sharp wide harbour scene with marina water, small craft, the waterfront edge, the historic arched structure and the opposite tree-covered slope. People and vehicles are present only as small contextual details and no person is individually prominent. The image is suitable for lower-Pietà waterfront context, but its 2017 capture date must remain visible and it cannot establish present conditions, a listing's view, proximity or access. Any later responsive CSS crop must preserve the harbour and built-edge context and be rechecked at the final mobile and desktop layouts. The page must balance this waterfront image with explicit Guardamangia context rather than presenting all seven current listings as marina homes.
+
+The downloaded JPEG remains an unversioned evidence file under `artifacts/`; only the verified WebP is intended for the repository.
 
 Alternative retained for a later inset rather than the hero: `Malta - Pieta - Triq San Girgor - 2.jpg` by Pygar1954, photographed 9 May 2022, 2448 × 3264, CC BY-SA 4.0. It documents a residential street view from Triq id-Duluri and could help counterbalance the waterfront, but no second image is required for the first release.
 
@@ -109,7 +113,7 @@ Source: https://commons.wikimedia.org/wiki/File:Malta_-_Pieta_-_Triq_San_Girgor_
 
 ## Release gates
 
-1. Download and verify the exact Commons original, then create a proportional local WebP with recorded hashes and visible attribution.
+1. Completed: exact Commons original, hashes, proportional WebP and full-frame visual review recorded above.
 2. Build a distinct English noindex draft that gives lower Pietà and higher Guardamangia equal editorial weight and uses a click-to-load OSM overview.
 3. Check mobile and desktop layout, image decode/framing, lazy map behaviour, outbound sources and horizontal overflow.
 4. Recheck operator and official sources; then add one canonical, matching Open Graph metadata and one BreadcrumbList, plus exactly one marketplace link and sitemap URL.
