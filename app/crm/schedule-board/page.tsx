@@ -1700,8 +1700,8 @@ function Board() {
                 ? 'Order the rented list'
                 : 'Order the board'}
               className="appearance-none pl-3 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded
-                         text-sm text-navy/70 hover:text-navy transition-all
-                         focus:outline-none focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
+                         text-sm text-navy/70 hover:text-navy transition-[background-color,color,box-shadow,transform]
+                         focus:ring-1 focus:ring-gold/50 disabled:opacity-40"
             >
               {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
@@ -1714,7 +1714,7 @@ function Board() {
             <button
               onClick={() => setOnlyConfirmed(v => !v)}
               title="Only listings an agent has confirmed as available"
-              className={`px-3 py-2 rounded text-xs whitespace-nowrap transition-all ${
+              className={`px-3 py-2 rounded text-xs whitespace-nowrap transition-[background-color,color,box-shadow,transform] ${
                 onlyConfirmed
                   ? 'bg-gold/10 ring-1 ring-gold/50 text-navy font-medium'
                   : 'bg-white shadow-sm shadow-navy/5 text-navy/60 hover:text-navy hover:shadow-navy/10'}`}
@@ -1732,8 +1732,8 @@ function Board() {
                 onChange={e => setAvail(e.target.value)}
                 title="Filter by when the property becomes free"
                 className="appearance-none pl-3 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded
-                           text-sm text-navy/70 hover:text-navy transition-all
-                           focus:outline-none focus:ring-1 focus:ring-gold/50"
+                           text-sm text-navy/70 hover:text-navy transition-[background-color,color,box-shadow,transform]
+                           focus:ring-1 focus:ring-gold/50"
               >
                 <option value="">Free — any</option>
                 <option value="now">Free now</option>

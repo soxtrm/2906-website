@@ -26,7 +26,7 @@ import { TOWNS, townKey, spread } from '@/lib/crm/towns'
 
 const FIELD =
   'w-full px-3 py-2 bg-off-white border-0 rounded text-sm text-navy ' +
-  'placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50'
+  'placeholder:text-navy/40 focus:ring-1 focus:ring-gold/50'
 const PRIMARY =
   'px-3 py-2 rounded bg-navy text-white text-xs font-semibold hover:bg-navy-light ' +
   'transition-colors disabled:opacity-40 disabled:cursor-not-allowed'

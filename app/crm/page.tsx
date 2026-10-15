@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Presentation } from 'lucide-react'
+import Link from 'next/link'
+import { Brain, Presentation } from 'lucide-react'
 import { crmFetch } from '@/lib/crm/api'
 import {
-  CrmProvider, CrmShell, A, AD, AB, F, FM, fmtDate, useCrm,
-  DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
+  CrmProvider, CrmShell, F, FM, fmtDate, useCrm, glowFor,
 } from '@/lib/crm/ui'
 
 export default function DashboardPage() {
@@ -27,37 +27,33 @@ function Dashboard() {
 
   return (
     <CrmShell title="Dashboard" subtitle={me ? `Welcome back, ${me.name || me.username}` : undefined} onAdd={() => router.push('/property/new')} dark>
-      <div style={{ padding: 26, fontFamily: F }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14 }}>
-          {cards.map((c, i) => {
+      <div className="crm-dashboard" style={{ fontFamily: F }}>
+        <div className="crm-dashboard-stats">
+          {cards.map(c => {
             const g = glowFor(c.label)
             return (
-              <div key={c.label} style={{
-                background: DCARD, borderRadius: 14, padding: '18px 20px',
-                border: `1px solid ${DCARD_BORDER}`,
-                boxShadow: `0 0 0 1px rgba(255,255,255,0.02), 0 16px 40px -22px ${g.glow}`,
-              }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: DTEXT, letterSpacing: '-0.02em' }}>{c.value}</div>
-                <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 4 }}>{c.label}</div>
+              <div key={c.label} className="crm-dashboard-stat" style={{ '--dashboard-glow': g.glow } as React.CSSProperties}>
+                <div className="crm-dashboard-value">{c.value}</div>
+                <div className="crm-dashboard-label">{c.label}</div>
               </div>
             )
           })}
         </div>
 
-        <div style={{ marginTop: 26, background: DCARD, borderRadius: 14, padding: '18px 22px', border: `1px solid ${DCARD_BORDER}` }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: DTEXT_FAINT, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 12 }}>Recent activity feed</div>
-          {(!s || !s.recent?.length) && <div style={{ fontSize: 12, color: DTEXT_FAINT }}>No activity yet.</div>}
+        <section className="crm-dashboard-panel" aria-labelledby="recent-activity-title">
+          <h2 id="recent-activity-title" className="crm-dashboard-eyebrow">Recent activity feed</h2>
+          {(!s || !s.recent?.length) && <div className="crm-dashboard-empty">No activity yet.</div>}
           {s?.recent?.map((a: any, i: number) => (
-            <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${DBORDER}`, fontSize: 12 }}>
-              <span style={{ fontFamily: FM, fontSize: 10, color: DTEXT_FAINT, minWidth: 120 }}>{fmtDate(a.when)}</span>
-              <span style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{a.who || '—'}</span>
-              <span style={{ color: DTEXT_DIM }}>
-                <strong style={{ color: DTEXT }}>{a.ref}</strong> · {a.town} — {(a.type || '').replace(/_/g, ' ')}
+            <div key={i} className="crm-dashboard-activity">
+              <time style={{ fontFamily: FM }}>{fmtDate(a.when)}</time>
+              <span className="crm-dashboard-person">{a.who || '—'}</span>
+              <span className="crm-dashboard-description">
+                <strong>{a.ref}</strong> · {a.town} — {(a.type || '').replace(/_/g, ' ')}
               </span>
-              {a.significant && <span style={{ marginLeft: 'auto', fontSize: 9, color: A }}>●</span>}
+              {a.significant && <span className="crm-dashboard-signal" aria-label="Significant activity">●</span>}
             </div>
           ))}
-        </div>
+        </section>
 
         {/* ARGUS/Outreach moved into the sidebar nav (admin-only) —
             Kev, 2026-09-11: "outreach kann auch ins crm tab, halt nur für
@@ -65,26 +61,29 @@ function Dashboard() {
             than duplicated. */}
 
         {me?.role === 'admin' && (
-          <div onClick={() => router.push('/pitch')} style={{ marginTop: 18, background: 'linear-gradient(135deg,rgba(184,149,63,.12),rgba(53,214,196,.06),var(--crm-surface))', borderRadius: 18, padding: '18px 20px', border: `1px solid ${AB}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ display: 'grid', placeItems: 'center', width: 42, height: 42, borderRadius: 13, background: AD, color: A }}><Presentation size={20} /></span>
+          <Link href="/crm/pitch" className="crm-dashboard-link crm-dashboard-link-featured">
+            <div className="crm-dashboard-link-copy">
+              <span className="crm-dashboard-link-icon"><Presentation size={20} aria-hidden /></span>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 750, color: DTEXT }}>Argus System · Ben Estates presentation</div>
-                <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 3 }}>Live product story: agent workflow, distribution, outreach, assistants and Nexus Link.</div>
+                <strong>Argus System · Ben Estates presentation</strong>
+                <p>Live product story: agent workflow, distribution, outreach, assistants and Nexus Link.</p>
               </div>
             </div>
-            <span style={{ fontSize: 12, color: A, whiteSpace: 'nowrap' }}>Present →</span>
-          </div>
+            <span className="crm-dashboard-link-action">Present <span aria-hidden>→</span></span>
+          </Link>
         )}
 
         {me?.role === 'admin' && (
-          <div onClick={() => router.push('/crm/admin/ml-learning')} style={{ marginTop: 18, background: DCARD, borderRadius: 14, padding: '14px 20px', border: `1px solid ${DCARD_BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT }}>🧠 Learning Overview</div>
-              <div style={{ fontSize: 11, color: DTEXT_FAINT, marginTop: 2 }}>See what the style-learning system has actually picked up, in plain language.</div>
+          <Link href="/crm/admin/ml-learning" className="crm-dashboard-link">
+            <div className="crm-dashboard-link-copy">
+              <span className="crm-dashboard-link-icon"><Brain size={19} aria-hidden /></span>
+              <div>
+                <strong>Learning Overview</strong>
+                <p>See what the style-learning system has actually picked up, in plain language.</p>
+              </div>
             </div>
-            <span style={{ fontSize: 12, color: A }}>Open →</span>
-          </div>
+            <span className="crm-dashboard-link-action">Open <span aria-hidden>→</span></span>
+          </Link>
         )}
 
         <div style={{ marginTop: 18, fontSize: 11, color: DTEXT_FAINT }}>Earnings, commissions and admin tools arrive in Phase 2.</div>

@@ -31,22 +31,24 @@ export default function CrmLogin() {
         <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--crm-accent)', letterSpacing: '-0.03em', lineHeight: 1 }}>2906</div>
         <div style={{ fontSize: 10, color: '#BBB', marginTop: 6, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Estate · Agent CRM</div>
 
-        <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input value={id} onChange={e => setId(e.target.value)} placeholder="Email or username"
+        <form onSubmit={event => { event.preventDefault(); submit() }} style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <label className="sr-only" htmlFor="crm-login-identity">Email or username</label>
+          <input id="crm-login-identity" name="identity" value={id} onChange={e => setId(e.target.value)} placeholder="Email or username" autoComplete="username"
             onKeyDown={e => e.key === 'Enter' && submit()}
             style={inp} autoFocus />
           <div style={{ position: 'relative' }}>
-          <input value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" aria-label="Password"
+          <label className="sr-only" htmlFor="crm-login-password">Password</label>
+          <input id="crm-login-password" name="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" type={showPassword ? 'text' : 'password'} autoComplete="current-password"
             onKeyDown={e => e.key === 'Enter' && submit()}
             style={{ ...inp, width: '100%', boxSizing: 'border-box', paddingRight: 48 }} />
           <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} style={{ position: 'absolute', right: 2, top: 0, bottom: 0, width: 44, display: 'grid', placeItems: 'center', border: 0, borderRadius: 8, background: 'transparent', color: '#59616A', cursor: 'pointer' }}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button>
           </div>
           {err && <div style={{ color: '#B91C1C', fontSize: 12, fontWeight: 600 }}>{err}</div>}
-          <button onClick={submit} disabled={loading || !id || !pw}
+          <button type="submit" disabled={loading || !id || !pw}
             style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 10, padding: '13px', fontSize: 13, fontWeight: 700, fontFamily: F, cursor: loading ? 'wait' : 'pointer', letterSpacing: '0.03em', opacity: (!id || !pw) ? 0.5 : 1, marginTop: 4 }}>
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
-        </div>
+        </form>
         <div style={{ marginTop: 17, display: 'flex', justifyContent: 'center', gap: 8, fontSize: 11 }}>
           <a href="/board-login" style={{ color: '#667085', textDecoration: 'none' }}>Board sign-in</a>
           <span style={{ color: '#D2CEC5' }}>·</span>

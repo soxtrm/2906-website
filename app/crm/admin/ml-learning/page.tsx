@@ -28,7 +28,15 @@ function MlLearning() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    crmGet('admin/ml-learning').then(d => { setData(d); setError('') }).catch(e => setError(e?.message || 'Failed to load')).finally(() => setLoading(false))
+    crmGet('admin/ml-learning').then(raw => {
+      const source = raw && typeof raw === 'object' ? raw : {}
+      setData({
+        summary: Array.isArray(source.summary) ? source.summary : [],
+        pendingApprovals: Array.isArray(source.pendingApprovals) ? source.pendingApprovals : [],
+        recent: source.recent && typeof source.recent === 'object' && !Array.isArray(source.recent) ? source.recent : {},
+      })
+      setError('')
+    }).catch(e => setError(e?.message || 'Failed to load')).finally(() => setLoading(false))
   }, [])
 
   if (me && me.role !== 'admin') {

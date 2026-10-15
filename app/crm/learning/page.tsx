@@ -26,7 +26,25 @@ function Learning() {
   const [data, setData] = useState<Data | null>(null)
   const [days, setDays] = useState(30)
   const [error, setError] = useState('')
-  const load = useCallback(() => crmFetch(`admin/learning-ledger?days=${days}`).then(setData).catch(e => setError(e?.message || 'Could not load learning data')), [days])
+  const load = useCallback(() => crmFetch(`admin/learning-ledger?days=${days}`).then(raw => {
+    const source = raw && typeof raw === 'object' ? raw : {}
+    setData({
+      windowDays: Number(source.windowDays) || days,
+      totals: {
+        total: Number(source.totals?.total) || 0,
+        reviewed: Number(source.totals?.reviewed) || 0,
+        corrected: Number(source.totals?.corrected) || 0,
+        avg_confidence: source.totals?.avg_confidence ?? null,
+      },
+      fields: Array.isArray(source.fields) ? source.fields : [],
+      patterns: Array.isArray(source.patterns) ? source.patterns : [],
+      versions: Array.isArray(source.versions) ? source.versions : [],
+      examples: Array.isArray(source.examples) ? source.examples : [],
+      modes: Array.isArray(source.modes) ? source.modes : [],
+      draftDesk: Array.isArray(source.draftDesk) ? source.draftDesk : [],
+    })
+    setError('')
+  }).catch(e => setError(e?.message || 'Could not load learning data')), [days])
   useEffect(() => { load() }, [load])
   if (me && me.role !== 'admin') return <CrmShell title="Learning Desk" dark><p className="p-6 text-sm text-white/45">Admins only.</p></CrmShell>
   const max = Math.max(1, ...(data?.fields.map(x => x.corrections) || [1]))

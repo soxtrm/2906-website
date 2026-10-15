@@ -1,0 +1,471 @@
+{
+  "version": 1,
+  "project": {
+    "name": "ARGUS · 2906 Estate",
+    "productType": "internal real-estate operations CRM",
+    "stack": [
+      "nextjs",
+      "react",
+      "shadcn",
+      "tailwind-v4"
+    ]
+  },
+  "sources": {
+    "tokens": [
+      "app/crm/crm.css",
+      "app/globals.css",
+      "styles/globals.css"
+    ],
+    "components": [
+      "components/ui"
+    ],
+    "assets": [],
+    "instructions": [
+      "Preserve the current information architecture and route structure.",
+      "Use the CRM semantic tokens and support light and dark modes.",
+      "Prefer restrained transform/opacity motion with reduced-motion fallbacks.",
+      "Keep every operational control keyboard accessible and resilient to empty API responses."
+    ]
+  },
+  "design": {
+    "colorMode": "light-and-dark",
+    "colors": {
+      "--accent-letting": {
+        "value": "#C41E7A",
+        "source": "app/globals.css"
+      },
+      "--accent-aesthetics": {
+        "value": "#B8953F",
+        "source": "app/globals.css"
+      },
+      "--accent-commercial": {
+        "value": "#4CAF50",
+        "source": "app/globals.css"
+      },
+      "--accent-sales": {
+        "value": "#F5C518",
+        "source": "app/globals.css"
+      },
+      "--accent-logotype": {
+        "value": "#87CEEB",
+        "source": "app/globals.css"
+      },
+      "--background": {
+        "value": "oklch(0.145 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--card-foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--popover-foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--primary": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--primary-foreground": {
+        "value": "oklch(0.205 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--secondary": {
+        "value": "oklch(0.269 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--secondary-foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--muted": {
+        "value": "oklch(0.269 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--muted-foreground": {
+        "value": "oklch(0.708 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--accent": {
+        "value": "oklch(0.269 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--accent-foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--destructive": {
+        "value": "oklch(0.396 0.141 25.723)",
+        "source": "styles/globals.css"
+      },
+      "--destructive-foreground": {
+        "value": "oklch(0.637 0.237 25.331)",
+        "source": "styles/globals.css"
+      },
+      "--border": {
+        "value": "oklch(0.269 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--ring": {
+        "value": "oklch(0.439 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--color-background": {
+        "value": "var(--background)",
+        "source": "styles/globals.css"
+      },
+      "--color-foreground": {
+        "value": "var(--foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-card": {
+        "value": "var(--card)",
+        "source": "styles/globals.css"
+      },
+      "--color-card-foreground": {
+        "value": "var(--card-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-popover": {
+        "value": "var(--popover)",
+        "source": "styles/globals.css"
+      },
+      "--color-popover-foreground": {
+        "value": "var(--popover-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-primary": {
+        "value": "var(--primary)",
+        "source": "styles/globals.css"
+      },
+      "--color-primary-foreground": {
+        "value": "var(--primary-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-secondary": {
+        "value": "var(--secondary)",
+        "source": "styles/globals.css"
+      },
+      "--color-secondary-foreground": {
+        "value": "var(--secondary-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-muted": {
+        "value": "var(--muted)",
+        "source": "styles/globals.css"
+      },
+      "--color-muted-foreground": {
+        "value": "var(--muted-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-accent": {
+        "value": "var(--accent)",
+        "source": "styles/globals.css"
+      },
+      "--color-accent-foreground": {
+        "value": "var(--accent-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-destructive": {
+        "value": "var(--destructive)",
+        "source": "styles/globals.css"
+      },
+      "--color-destructive-foreground": {
+        "value": "var(--destructive-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-border": {
+        "value": "var(--border)",
+        "source": "styles/globals.css"
+      },
+      "--color-input": {
+        "value": "var(--input)",
+        "source": "styles/globals.css"
+      },
+      "--color-ring": {
+        "value": "var(--ring)",
+        "source": "styles/globals.css"
+      },
+      "--color-navy": {
+        "value": "var(--navy)",
+        "source": "app/globals.css"
+      },
+      "--color-navy-light": {
+        "value": "var(--navy-light)",
+        "source": "app/globals.css"
+      },
+      "--color-gold": {
+        "value": "var(--gold)",
+        "source": "app/globals.css"
+      },
+      "--color-gold-light": {
+        "value": "var(--gold-light)",
+        "source": "app/globals.css"
+      },
+      "--color-off-white": {
+        "value": "var(--off-white)",
+        "source": "app/globals.css"
+      },
+      "--chart-1": {
+        "value": "oklch(0.488 0.243 264.376)",
+        "source": "styles/globals.css"
+      },
+      "--chart-2": {
+        "value": "oklch(0.696 0.17 162.48)",
+        "source": "styles/globals.css"
+      },
+      "--chart-3": {
+        "value": "oklch(0.769 0.188 70.08)",
+        "source": "styles/globals.css"
+      },
+      "--chart-4": {
+        "value": "oklch(0.627 0.265 303.9)",
+        "source": "styles/globals.css"
+      },
+      "--chart-5": {
+        "value": "oklch(0.645 0.246 16.439)",
+        "source": "styles/globals.css"
+      },
+      "--sidebar-foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--sidebar-primary": {
+        "value": "oklch(0.488 0.243 264.376)",
+        "source": "styles/globals.css"
+      },
+      "--sidebar-primary-foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--sidebar-accent": {
+        "value": "oklch(0.269 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--sidebar-accent-foreground": {
+        "value": "oklch(0.985 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--sidebar-border": {
+        "value": "oklch(0.269 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--sidebar-ring": {
+        "value": "oklch(0.439 0 0)",
+        "source": "styles/globals.css"
+      },
+      "--color-chart-1": {
+        "value": "var(--chart-1)",
+        "source": "styles/globals.css"
+      },
+      "--color-chart-2": {
+        "value": "var(--chart-2)",
+        "source": "styles/globals.css"
+      },
+      "--color-chart-3": {
+        "value": "var(--chart-3)",
+        "source": "styles/globals.css"
+      },
+      "--color-chart-4": {
+        "value": "var(--chart-4)",
+        "source": "styles/globals.css"
+      },
+      "--color-chart-5": {
+        "value": "var(--chart-5)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar": {
+        "value": "var(--sidebar)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar-foreground": {
+        "value": "var(--sidebar-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar-primary": {
+        "value": "var(--sidebar-primary)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar-primary-foreground": {
+        "value": "var(--sidebar-primary-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar-accent": {
+        "value": "var(--sidebar-accent)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar-accent-foreground": {
+        "value": "var(--sidebar-accent-foreground)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar-border": {
+        "value": "var(--sidebar-border)",
+        "source": "styles/globals.css"
+      },
+      "--color-sidebar-ring": {
+        "value": "var(--sidebar-ring)",
+        "source": "styles/globals.css"
+      }
+    },
+    "typography": {
+      "--font-sans": {
+        "value": "'Geist', 'Geist Fallback'",
+        "source": "styles/globals.css"
+      },
+      "--font-serif": {
+        "value": "var(--font-playfair), 'Playfair Display', Georgia, serif",
+        "source": "app/globals.css"
+      },
+      "--font-mono": {
+        "value": "'Geist Mono', 'Geist Mono Fallback'",
+        "source": "styles/globals.css"
+      }
+    },
+    "spacing": {},
+    "radius": {
+      "--radius": {
+        "value": "0.625rem",
+        "source": "styles/globals.css"
+      },
+      "--radius-sm": {
+        "value": "calc(var(--radius) - 4px)",
+        "source": "styles/globals.css"
+      },
+      "--radius-md": {
+        "value": "calc(var(--radius) - 2px)",
+        "source": "styles/globals.css"
+      },
+      "--radius-lg": {
+        "value": "var(--radius)",
+        "source": "styles/globals.css"
+      },
+      "--radius-xl": {
+        "value": "calc(var(--radius) + 4px)",
+        "source": "styles/globals.css"
+      }
+    },
+    "shadows": {},
+    "motion": {},
+    "density": "compact"
+  },
+  "components": {
+    "installed": [
+      "accordion",
+      "alert",
+      "alert-dialog",
+      "aspect-ratio",
+      "avatar",
+      "badge",
+      "breadcrumb",
+      "button",
+      "button-group",
+      "calendar",
+      "card",
+      "carousel",
+      "chart",
+      "checkbox",
+      "collapsible",
+      "command",
+      "context-menu",
+      "dialog",
+      "drawer",
+      "dropdown-menu",
+      "empty",
+      "field",
+      "form",
+      "hover-card",
+      "input",
+      "input-group",
+      "input-otp",
+      "item",
+      "kbd",
+      "label",
+      "menubar",
+      "navigation-menu",
+      "pagination",
+      "popover",
+      "progress",
+      "radio-group",
+      "resizable",
+      "scroll-area",
+      "select",
+      "separator",
+      "sheet",
+      "sidebar",
+      "skeleton",
+      "slider",
+      "sonner",
+      "spinner",
+      "switch",
+      "table",
+      "tabs",
+      "textarea",
+      "toast",
+      "toaster",
+      "toggle",
+      "toggle-group",
+      "tooltip",
+      "use-mobile",
+      "use-toast"
+    ],
+    "preferredPrimitives": [
+      "radix-ui"
+    ],
+    "patterns": []
+  },
+  "constraints": {
+    "must": [
+      "Preserve existing workflows and element order unless the task explicitly asks to change them.",
+      "Use --crm-* tokens for CRM surfaces, text, borders, focus, status and actions.",
+      "Provide visible focus states, empty states and reduced-motion behavior."
+    ],
+    "avoid": [
+      "Do not use transition-all.",
+      "Do not remove focus outlines without a visible focus-visible replacement.",
+      "Do not make div or span elements the only way to trigger navigation or actions."
+    ]
+  },
+  "decisions": [
+    "Desktop polish is applied through the shared CRM shell and semantic page classes before route-specific overrides.",
+    "Motion is functional and restrained; route transitions use opacity and controls use short transform feedback."
+  ],
+  "evidence": [
+    {
+      "fact": "components.installed",
+      "source": "components/ui"
+    },
+    {
+      "fact": "design.colorMode:light-and-dark",
+      "source": "app/globals.css, styles/globals.css"
+    },
+    {
+      "fact": "design.tokens",
+      "source": "app/globals.css"
+    },
+    {
+      "fact": "design.tokens",
+      "source": "styles/globals.css"
+    },
+    {
+      "fact": "project.stack:nextjs",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:react",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:shadcn",
+      "source": "components.json"
+    },
+    {
+      "fact": "project.stack:tailwind-v4",
+      "source": "package.json"
+    }
+  ],
+  "generatedAt": "2026-10-15T14:15:38.3091564Z"
+}

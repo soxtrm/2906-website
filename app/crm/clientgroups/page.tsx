@@ -42,7 +42,7 @@ const LOCATIONS_MESSAGES = {
 
 const FIELD =
   'w-full px-3 py-2 bg-white/5 border-0 rounded text-sm text-white ' +
-  'placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-gold/50'
+  'placeholder:text-white/40 focus:ring-1 focus:ring-gold/50'
 const LABEL = 'block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40 mb-1.5'
 const PRIMARY =
   'px-3 py-2 rounded bg-gold text-navy text-xs font-semibold hover:bg-gold-light ' +

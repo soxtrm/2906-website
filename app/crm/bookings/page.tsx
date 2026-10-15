@@ -151,7 +151,7 @@ function BookingsInner() {
           <div className="flex rounded-xl border border-white/10 bg-white/[.035] p-1">
             {(['all', 'me'] as const).map(key => (
               <button key={key} onClick={() => setScope(key)} data-scope={key}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${scope === key ? 'bg-[#7770FF] text-white shadow-lg shadow-[#5A50E5]/20' : 'text-[#9AA4B8] hover:bg-white/5 hover:text-white'}`}>
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,box-shadow,transform] ${scope === key ? 'bg-[#7770FF] text-white shadow-lg shadow-[#5A50E5]/20' : 'text-[#9AA4B8] hover:bg-white/5 hover:text-white'}`}>
                 {key === 'all' ? 'Whole team' : 'Mine'}
               </button>
             ))}
@@ -159,7 +159,7 @@ function BookingsInner() {
           <div className="flex rounded-xl border border-white/10 bg-white/[.035] p-1">
             {[7, 14, 30].map(value => (
               <button key={value} onClick={() => setDays(value)}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${days === value ? 'bg-white/12 text-white' : 'text-[#788398] hover:text-white'}`}>
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,box-shadow,transform] ${days === value ? 'bg-white/12 text-white' : 'text-[#788398] hover:text-white'}`}>
                 {value} days
               </button>
             ))}

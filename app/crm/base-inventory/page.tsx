@@ -365,7 +365,7 @@ function ReviewDrawer({ row, onClose, onChange, isAdmin }: { row: Row; onClose: 
             <div style={{ fontSize: 11, color: DTEXT_DIM, background: DCARD2, borderRadius: 8, padding: 10, maxHeight: 160, overflowY: 'auto' }}>{row.raw_source_text}</div>
             <div style={{ fontSize: 11, color: DTEXT_FAINT, margin: '12px 0 6px' }}>Source images ({row.source_images?.length || 0})</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4 }}>
-              {(row.source_images || []).slice(0, 12).map((u, i) => <img key={i} src={u} style={{ width: '100%', height: 60, objectFit: 'cover', borderRadius: 4 }} />)}
+              {(row.source_images || []).slice(0, 12).map((u, i) => <img key={i} src={u} alt={`Source image ${i + 1} for ${row.ref || 'listing'}`} loading="lazy" style={{ width: '100%', height: 60, objectFit: 'cover', borderRadius: 4 }} />)}
             </div>
           </div>
         )}
