@@ -93,13 +93,25 @@ const archivedListing = {
 
   // A known reference is a global lookup: it bypasses the selected North area
   // and active-only horizon, so an archived property can still be recovered.
-  await page.click('[aria-label="Open ARGUS search"]')
+  await page.$eval('[aria-label="Expand active ARGUS tools"]', button => {
+    if (getComputedStyle(button).pointerEvents !== 'none') button.click()
+  })
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.crm-board-islands')).pointerEvents !== 'none')
+  await page.$eval('[aria-label="Open ARGUS search"]', button => button.click())
   await new Promise(resolve => setTimeout(resolve, 250))
-  if (!await page.$('input[aria-label^="Search by reference"]')) await page.click('[aria-label="Open ARGUS search"]')
+  if (!await page.$('input[aria-label^="Search by reference"]')) await page.$eval('[aria-label="Open ARGUS search"]', button => button.click())
   await page.waitForSelector('input[aria-label^="Search by reference"]')
   await page.type('input[aria-label^="Search by reference"]', '9129')
   await page.waitForFunction(() => document.querySelectorAll('.crm-listing-card').length === 1 && document.body.innerText.includes('2906-9129'))
   assert.equal(await page.$eval('.crm-listing-card', card => card.getAttribute('aria-label').includes('2906-9129')), true, 'exact reference lookup bypasses stale area filters')
+
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
+  const desktopSearchVisible = await page.$eval('input[aria-label="Search properties by reference, town or area"]', input => {
+    const rect = input.getBoundingClientRect()
+    const style = getComputedStyle(input)
+    return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden'
+  })
+  assert.equal(desktopSearchVisible, true, 'desktop board exposes a visible property search field')
 
   await browser.close()
   console.log('mobile multi-area selection and persistent listing close passed')

@@ -536,7 +536,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 <button type="button" onClick={() => value.q ? onChange({ q: '' }) : setSearchOpen(false)} aria-label={value.q ? 'Clear search' : 'Close search'} className="absolute right-1 grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-[var(--crm-muted)]"><X className="h-4 w-4" /></button>
               </motion.form>
             ) : (
-              <motion.button key="search-trigger" layout type="button" onClick={() => { if (mobilePanel || smartPickerOpen || filterPickerOpen) { closeIslandSurfaces(); return }; setOpen(null); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 340, damping: 34, mass: .65 }}>
+              <motion.button key="search-trigger" layout type="button" onClick={() => { setCompactMobile(false); setOpen(null); setMobilePanel(null); setSmartPickerOpen(false); setFilterPickerOpen(false); setIslandFocus(null); setSearchOpen(true) }} aria-label={value.q ? 'Edit active search' : 'Open ARGUS search'} title={value.q ? `Search: ${value.q}` : 'Search inventory'} className="grid h-10 w-full place-items-center rounded-[13px] border-0 bg-transparent text-[var(--crm-text)]" initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .92 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 340, damping: 34, mass: .65 }}>
                 <span className="crm-argus-logo-window"><img src="/argus-logo-kevin.png" alt="ARGUS" style={{ filter: dark ? 'invert(1) brightness(1.18)' : 'none' }} />{value.q && <i className="crm-search-active-dot" aria-hidden />}</span>
               </motion.button>
             )}
@@ -650,7 +650,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         )}
       </AnimatePresence>
 
-      <div className="hidden w-full gap-2">
+      <div className="hidden w-full gap-2 lg:flex lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
 
         {/* Search — ref, town or area. The board's own listings are local, so
             this filters instantly rather than round-tripping. */}
@@ -658,6 +658,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-navy/30 pointer-events-none" />
           <input
             type="text"
+            aria-label="Search properties by reference, town or area"
             value={value.q}
             onChange={e => onChange({ q: e.target.value })}
             placeholder="Search ref, town or area…"
