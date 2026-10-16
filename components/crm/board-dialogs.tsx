@@ -31,7 +31,7 @@ import { useCrm, canCreateGroup } from '@/lib/crm/ui'
 // ── shared shell ────────────────────────────────────────────────────────────
 const FIELD =
   'w-full px-3 py-2 bg-off-white border-0 rounded text-sm text-navy ' +
-  'placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50'
+  'placeholder:text-navy/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60'
 const LABEL = 'block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/40 mb-1.5'
 const PRIMARY =
   'px-4 py-2.5 rounded bg-navy text-white text-sm font-semibold hover:bg-navy-light ' +
@@ -716,6 +716,9 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
       <motion.div {...fade} onClick={onClose} className="fixed inset-0 z-[199] bg-black/50 backdrop-blur-[3px]" />
       <motion.div
         {...rise}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="crm-owner-chat-title"
         className="crm-chat-dialog fixed z-[200] shadow-2xl flex flex-col overflow-hidden
                    inset-x-0 bottom-0 rounded-t-2xl h-[88dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.75rem)]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
@@ -746,7 +749,7 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
               <MessageCircle className="w-4 h-4 text-gold" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-bold tracking-tight text-white">
+              <h2 id="crm-owner-chat-title" className="truncate text-base font-bold tracking-tight text-white">
                 {state?.ownerLabel || 'Owner'}
               </h2>
               <p className="mt-0.5 truncate text-xs text-white/60">
@@ -800,7 +803,7 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
                   className={cn(
                     'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
                     ready && !already
-                      ? 'bg-[#B8953F]/10 text-[#E8CC82] border border-[#B8953F]/35 hover:bg-[#B8953F]/20'
+                      ? 'crm-chat-group-ready border hover:brightness-110'
                       : 'bg-transparent text-white/25 border border-dashed border-white/15 cursor-not-allowed',
                   )}>
                   <Users className="w-3 h-3" /> {already ? 'Group created' : open ? 'Waiting ★' : 'Create Group ★'}
@@ -867,18 +870,22 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
             lastScrollTop.current = el.scrollTop
             if (atBottom && unseen) setUnseen(0)
           }}
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions text"
+          aria-label={`Conversation about listing ${refId}`}
           className="crm-chat-timeline grow overflow-y-auto px-3.5 py-3 space-y-2 relative z-10"
         >
           {err && <ErrorLine text={err} />}
 
           {!state && !err && (
-            <div className="flex h-full items-center justify-center text-sm text-white/60">Loading…</div>
+            <div className="flex h-full items-center justify-center text-sm font-medium text-white/70" role="status">Loading conversation…</div>
           )}
 
           {state && timeline.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <MessageCircle className="w-8 h-8 text-white/10 mb-2" />
-              <p className="text-sm leading-relaxed text-white/65">
+              <MessageCircle className="mb-3 h-9 w-9 text-white/25" />
+              <p className="max-w-sm text-[15px] font-medium leading-6 text-white/75">
                 No conversation yet — just type below to start one, or use{' '}
                 <span className="font-semibold text-white/55">Ask</span> / <span className="font-semibold text-white/55">Book</span>{' '}
                 if you'd rather compose something first. Either way it goes straight to the owner.
@@ -905,16 +912,19 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
             return (
               <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                 <div className={cn(
-                  'crm-chat-bubble max-w-[88%] rounded-lg px-3 py-2 text-[15px] leading-relaxed whitespace-pre-wrap break-words sm:max-w-[78%] sm:text-sm',
+                  'crm-chat-bubble min-w-0 max-w-[91%] rounded-lg px-3.5 py-2.5 text-[15px] leading-[1.48] whitespace-pre-wrap break-words sm:max-w-[76%]',
                   mine ? 'crm-chat-bubble-outgoing' : 'crm-chat-bubble-incoming',
                 )}>
+                  <div className="crm-chat-message-sender mb-1 text-[11px] font-bold uppercase tracking-[0.08em]">
+                    {mine ? 'You' : state?.ownerLabel || 'Owner'}
+                  </div>
                   {m.redacted ? (
                     <div className="min-w-[112px] py-0.5" aria-label="Private message content hidden">
                       <div className="h-2 w-[88%] rounded-full bg-current opacity-25 blur-[2.5px]" />
                       <div className="mt-1.5 h-2 w-[62%] rounded-full bg-current opacity-20 blur-[2.5px]" />
                     </div>
                   ) : m.text}
-                  <div className="crm-chat-message-time mt-1 text-right text-[11px] font-medium">
+                  <div className="crm-chat-message-time mt-1.5 text-right text-[11px] font-semibold tabular-nums">
                     {timeOnly(m.at)}
                   </div>
                 </div>
@@ -938,7 +948,9 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
           <input ref={imageInput} type="file" accept="image/*" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
           <input ref={fileInput} type="file" multiple className="hidden" onChange={e => sendAttachments(e.target.files)} />
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-2">
+            <label htmlFor={`crm-owner-chat-input-${refId}`} className="sr-only">Message owner about listing {refId}</label>
             <textarea
+              id={`crm-owner-chat-input-${refId}`}
               ref={composerInput}
               value={draft}
               onChange={e => setDraft(e.target.value)}
@@ -951,8 +963,8 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
               disabled={closed || chatBusy}
               placeholder={closed ? 'Conversation closed' : chatBusy ? 'Another agent is chatting' : 'Message owner…'}
               className="crm-chat-input col-start-2 row-start-1 min-h-12 max-h-[120px] w-full resize-none overflow-y-auto rounded-3xl border border-white/15 bg-white/[0.07]
-                         px-4 py-3 text-base leading-6 text-white placeholder:text-white/55 focus:border-gold/50 focus:outline-none focus:ring-2
-                         focus:ring-gold/40 disabled:opacity-40 sm:min-h-11 sm:py-2.5"
+                         px-4 py-3 text-base leading-6 text-white placeholder:text-white/55 focus-visible:border-gold/60 focus-visible:outline-none focus-visible:ring-2
+                         focus-visible:ring-gold/60 disabled:opacity-40 sm:min-h-11 sm:py-2.5"
             />
             <div ref={attachmentMenu} className="relative col-start-1 row-start-1">
               <button type="button" onClick={() => setAttachmentMenuOpen(open => !open)} disabled={closed || uploading || chatBusy}
@@ -970,7 +982,7 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
                     exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
                     transition={{ duration: reduceMotion ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
                     className="absolute bottom-[calc(100%+0.6rem)] left-0 z-20 w-44 overflow-hidden rounded-2xl border border-white/15
-                               bg-[#171e31]/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                               crm-chat-attachment-menu p-1.5 shadow-2xl backdrop-blur-xl"
                   >
                     <button type="button" onClick={() => { setAttachmentMenuOpen(false); imageInput.current?.click() }}
                       className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-white/85 transition-colors hover:bg-white/10">

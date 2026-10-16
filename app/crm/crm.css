@@ -439,8 +439,13 @@ html[data-crm-theme="dark"] .crm-chat-dialog{--crm-wa-header:#202c33;--crm-wa-ca
 .crm-chat-bubble-incoming:before{left:-6px;clip-path:polygon(100% 0,100% 100%,0 0)}
 .crm-chat-bubble-outgoing:before{right:-6px;clip-path:polygon(0 0,100% 0,0 100%)}
 .crm-chat-message-time{color:#667781!important}
+.crm-chat-message-sender{color:#4b6675!important}
+.crm-chat-bubble-outgoing .crm-chat-message-sender{color:#28735f!important}
 html[data-crm-theme="dark"] .crm-chat-bubble{color:#e9edef!important}
 html[data-crm-theme="dark"] .crm-chat-message-time{color:#aebac1!important}
+html[data-crm-theme="dark"] .crm-chat-message-sender{color:#8fc8ba!important}
+.crm-chat-group-ready{border-color:color-mix(in srgb,var(--crm-accent) 42%,transparent)!important;background:var(--crm-accent-soft)!important;color:var(--crm-accent)!important}
+.crm-chat-attachment-menu{background:color-mix(in srgb,var(--crm-surface) 96%,transparent)!important}
 .crm-chat-dialog [class*="border-white"]{border-color:var(--crm-border)!important}
 .crm-chat-dialog [class*="bg-white/"]{background-color:var(--crm-raised)!important}
 .crm-chat-dialog [class*="bg-[#171e31]"]{background:color-mix(in srgb,var(--crm-surface) 94%,var(--crm-bg))!important}
@@ -454,6 +459,12 @@ html[data-crm-theme="dark"] .crm-chat-dialog textarea{color:#e9edef!important;ba
 .crm-chat-dialog textarea::placeholder{color:var(--crm-faint)!important}
 .crm-chat-send{background:var(--crm-wa-green)!important;color:#fff!important}
 .crm-chat-attach{border:0!important;background:transparent!important}
+.crm-chat-dialog :is(button,textarea):focus-visible{outline:2px solid var(--crm-accent)!important;outline-offset:2px}
+body:has(.crm-chat-dialog) .crm-bottom-nav{opacity:0!important;pointer-events:none!important;transform:translate3d(-50%,12px,0) scale(.9)!important}
+.crm-agent-chat-history{overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--crm-border) transparent}
+.crm-agent-chat-status-open{background:color-mix(in srgb,#22c55e 14%,var(--crm-surface));color:color-mix(in srgb,#16a34a 82%,var(--crm-text))}
+.crm-agent-chat-status-waiting{background:color-mix(in srgb,#eab308 16%,var(--crm-surface));color:color-mix(in srgb,#a16207 78%,var(--crm-text))}
+.crm-agent-chat-status-closed{background:var(--crm-raised);color:var(--crm-muted)}
 .crm-listing-card{cursor:pointer;outline:none}
 .crm-listing-card:focus-visible{outline:2px solid var(--crm-accent);outline-offset:3px}
 .crm-card-action-tray .crm-card-action-button{width:36px!important;height:36px!important;min-height:36px!important;flex:0 0 36px!important;padding:0!important;border-radius:10px!important;display:grid!important;place-items:center!important}

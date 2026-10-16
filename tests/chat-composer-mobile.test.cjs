@@ -11,7 +11,16 @@ const listing = {
   listedBy: { id: 1, displayName: 'Kevin', colorHex: '#4056e8' }, isMine: true, viewing: null,
   contact: { mode: 'owner', reachesName: 'Owner', canAsk: true, reason: null, questionsUsed: 0, questionsPerDay: 2, canQuestion: true, questionReason: null },
 }
-const relay = { open: true, ownerLabel: 'Owner 1234', persona: 'Argus', messages: [], events: [], otherActivity: [], privateDeviceChat: false, preferenceRules: [], presence: { state: 'idle', agentName: null } }
+const relay = {
+  open: true,
+  ownerLabel: 'Owner 1234',
+  persona: 'Argus',
+  messages: [
+    { id: 1, direction: 'owner_to_agent', text: 'Yes, the apartment is still available for a viewing.', at: new Date(Date.now() - 60000).toISOString() },
+    { id: 2, direction: 'agent_to_owner', text: 'Thank you. I will send the booking details now.', at: new Date().toISOString() },
+  ],
+  events: [], otherActivity: [], privateDeviceChat: false, preferenceRules: [], presence: { state: 'idle', agentName: null },
+}
 
 ;(async () => {
   const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../components/crm/board-dialogs.tsx'), 'utf8')
@@ -46,6 +55,35 @@ const relay = { open: true, ownerLabel: 'Owner 1234', persona: 'Argus', messages
   await page.setViewport({ width: 430, height: 860 })
   await page.goto('http://localhost:4174/crm/schedule-board?ref=2906-TEST&action=chat', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.crm-chat-dialog textarea[placeholder="Message owner…"]')
+  await page.waitForFunction(() => {
+    const nav = document.querySelector('.crm-bottom-nav')
+    return nav && Number.parseFloat(getComputedStyle(nav).opacity) < 0.01 && getComputedStyle(nav).pointerEvents === 'none'
+  })
+  await page.waitForSelector('.argus-intro', { hidden: true, timeout: 5000 })
+
+  const readability = await page.evaluate(() => {
+    const incoming = document.querySelector('.crm-chat-bubble-incoming')
+    const outgoing = document.querySelector('.crm-chat-bubble-outgoing')
+    const input = document.querySelector('.crm-chat-dialog textarea')
+    return {
+      incomingText: incoming?.textContent || '',
+      outgoingText: outgoing?.textContent || '',
+      incomingFontSize: Number.parseFloat(getComputedStyle(incoming).fontSize),
+      incomingLineHeight: Number.parseFloat(getComputedStyle(incoming).lineHeight),
+      inputLabel: input?.labels?.[0]?.textContent || '',
+      dialogRole: document.querySelector('.crm-chat-dialog')?.getAttribute('role'),
+      bottomNavOpacity: getComputedStyle(document.querySelector('.crm-bottom-nav')).opacity,
+      bottomNavPointerEvents: getComputedStyle(document.querySelector('.crm-bottom-nav')).pointerEvents,
+    }
+  })
+  assert.match(readability.incomingText, /Owner 1234/)
+  assert.match(readability.outgoingText, /You/)
+  assert.ok(readability.incomingFontSize >= 15, 'chat message text remains readable')
+  assert.ok(readability.incomingLineHeight >= 22, 'chat message line-height remains readable')
+  assert.match(readability.inputLabel, /Message owner about listing 2906-TEST/)
+  assert.equal(readability.dialogRole, 'dialog')
+  assert.equal(readability.bottomNavOpacity, '0')
+  assert.equal(readability.bottomNavPointerEvents, 'none')
 
   for (const width of [320, 360, 390, 430]) {
     await page.setViewport({ width, height: 820 })

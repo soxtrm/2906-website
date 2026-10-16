@@ -29,6 +29,7 @@
 // options the spec left open, and the one actually implemented here.
 // ============================================================================
 import { useEffect, useMemo, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { crmFetch } from '@/lib/crm/api'
 
@@ -43,17 +44,16 @@ type AgentChat = {
   messages: ChatMessage[]
 }
 
-const STATUS_MAP: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  relaying:          { bg: '#DCFCE7', text: '#15803D', dot: '#22C55E', label: 'Open' },
-  awaiting_details:  { bg: '#FEF9C3', text: '#A16207', dot: '#EAB308', label: 'Awaiting agent' },
-  closed:            { bg: '#F3F4F6', text: '#6B7280', dot: '#9CA3AF', label: 'Closed' },
+const STATUS_MAP: Record<string, { className: string; label: string }> = {
+  relaying:          { className: 'crm-agent-chat-status-open', label: 'Open' },
+  awaiting_details:  { className: 'crm-agent-chat-status-waiting', label: 'Awaiting agent' },
+  closed:            { className: 'crm-agent-chat-status-closed', label: 'Closed' },
 }
 function statusPill(status: string) {
-  const s = STATUS_MAP[status] || { bg: '#F3F4F6', text: '#6B7280', dot: '#9CA3AF', label: status }
+  const s = STATUS_MAP[status] || { className: 'crm-agent-chat-status-closed', label: status }
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
-      style={{ background: s.bg, color: s.text }}>
-      <span className="w-[5px] h-[5px] rounded-full" style={{ background: s.dot }} />{s.label}
+    <span className={`crm-agent-chat-status inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${s.className}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />{s.label}
     </span>
   )
 }
@@ -97,7 +97,7 @@ function ChatCard({ c, open, onToggle }: { c: AgentChat; open: boolean; onToggle
             <span className="text-xs font-medium text-[var(--crm-muted)]">↔ {c.ownerLabel}</span>
           </div>
           {last && (
-            <div className="mt-2 line-clamp-2 break-words text-[13px] leading-relaxed text-[var(--crm-muted)]">
+            <div className="mt-2 line-clamp-2 break-words text-sm leading-5 text-[var(--crm-muted)]">
               <span className="font-semibold text-[var(--crm-text)]">{last.direction === 'owner_to_agent' ? 'Owner: ' : `${c.agentName}: `}</span>
               {last.redacted ? <span className="inline-block h-2 w-24 rounded-full bg-current opacity-25 blur-[2.5px]" aria-label="Private message hidden" /> : last.text}
             </div>
@@ -106,18 +106,32 @@ function ChatCard({ c, open, onToggle }: { c: AgentChat; open: boolean; onToggle
         </div>
       </button>
       {open && (
-        <div className="max-h-[55dvh] overflow-y-auto border-t border-[var(--crm-border)] bg-[var(--crm-raised)] p-4 sm:max-h-96 sm:p-5">
+        <div className="border-t border-[var(--crm-border)] bg-[var(--crm-raised)]">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--crm-border)] px-4 py-3 sm:px-5">
+            <Link href={`/schedule-board?ref=${encodeURIComponent(c.ref)}`}
+              className="inline-flex min-h-10 items-center rounded-full border border-[var(--crm-border)] bg-[var(--crm-surface)] px-3.5 text-xs font-bold text-[var(--crm-text)] transition-colors hover:border-[var(--crm-accent)] hover:text-[var(--crm-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crm-accent)]">
+              Open property ↗
+            </Link>
+            {c.status === 'relaying' && (
+              <Link href={`/schedule-board?ref=${encodeURIComponent(c.ref)}&action=chat`}
+                className="inline-flex min-h-10 items-center rounded-full bg-[var(--crm-accent)] px-3.5 text-xs font-bold text-[var(--crm-inverse)] transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crm-accent)] focus-visible:ring-offset-2">
+                Open live chat
+              </Link>
+            )}
+          </div>
+          <div className="crm-agent-chat-history max-h-[55dvh] overflow-y-auto p-4 sm:max-h-96 sm:p-5" role="log" aria-label={`Messages for listing ${c.ref}`}>
           {c.messages.length === 0 && <div className="text-sm italic text-[var(--crm-muted)]">No messages logged for this thread.</div>}
           {c.messages.map((m, i) => (
-            <div key={i} className="mb-2.5 last:mb-0">
-              <div className="mb-1 text-xs font-medium text-[var(--crm-muted)]">
-                {m.direction === 'owner_to_agent' ? c.ownerLabel : c.agentName} · {fmtTime(m.at)}
-              </div>
-              <div className={`inline-block max-w-[92%] whitespace-pre-wrap break-words rounded-2xl border px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[78%] ${
+            <div key={i} className={`mb-3 flex last:mb-0 ${m.direction === 'owner_to_agent' ? 'justify-start' : 'justify-end'}`}>
+              <div className={`min-w-0 max-w-[94%] whitespace-pre-wrap break-words rounded-2xl border px-3.5 py-2.5 text-[15px] leading-[1.5] sm:max-w-[78%] ${
                 m.direction === 'owner_to_agent'
                   ? 'border-[var(--crm-border)] bg-[var(--crm-surface)] text-[var(--crm-text)]'
                   : 'border-[color-mix(in_srgb,var(--crm-accent)_35%,transparent)] bg-[var(--crm-accent-soft)] text-[var(--crm-text)]'
               }`}>
+                <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--crm-muted)]">
+                  <span>{m.direction === 'owner_to_agent' ? c.ownerLabel : c.agentName}</span>
+                  <time className="font-semibold normal-case tracking-normal text-[var(--crm-faint)]" dateTime={m.at}>{fmtTime(m.at)}</time>
+                </div>
                 {m.redacted ? (
                   <span className="block min-w-[118px] py-1" aria-label="Private message content hidden">
                     <span className="block h-2 w-28 rounded-full bg-current opacity-25 blur-[2.5px]" />
@@ -127,6 +141,7 @@ function ChatCard({ c, open, onToggle }: { c: AgentChat; open: boolean; onToggle
               </div>
             </div>
           ))}
+          </div>
         </div>
       )}
     </article>
@@ -179,7 +194,9 @@ function AgentChatsInner() {
         agent's own chat window — this is a monitor for agent activity, not an owner lookup.
       </p>
 
-      {err && <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm font-medium text-red-600 dark:text-red-300">{err}</div>}
+      <div aria-live="polite" aria-atomic="true">
+        {err && <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm font-medium text-red-600 dark:text-red-300">{err}</div>}
+      </div>
 
       {agentNames.length > 0 && (
         <div className="mb-5 flex flex-wrap gap-2" aria-label="Filter chats by agent">
@@ -197,7 +214,7 @@ function AgentChatsInner() {
       )}
 
       {loading ? (
-        <p className="text-sm text-[var(--crm-muted)]">Loading…</p>
+        <p className="text-sm font-medium text-[var(--crm-muted)]" role="status">Loading conversations…</p>
       ) : visible.length === 0 ? (
         <p className="text-sm text-[var(--crm-muted)]">No agent chats in the last 14 days{agentFilter !== 'all' ? ` for ${agentFilter}` : ''}.</p>
       ) : (
