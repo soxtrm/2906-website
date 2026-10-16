@@ -3,15 +3,14 @@
 // services/listingAgentNotify.js — Schedule-board WhatsApp fan-out
 //
 // PURPOSE
-//   When a board operator clicks "Request Availability" / "Request
-//   Viewing-Location" / "Comment" on a card that belongs to ANOTHER
-//   agent's listing (listed_by_agent_id IS NOT NULL), the system
-//   routes a WhatsApp message to that listing agent. This module owns
-//   the template text + WA send + agent-session resolution.
+//   When a board operator requests a viewing location or comments on a card
+//   that belongs to another agent, the system routes a WhatsApp message to
+//   that listing agent. This module owns the template text, WA send and
+//   agent-session resolution.
 //
-//   The opposite case (operator's own listing → Fall A) is a Copy-`!av`
-//   button that does NOT call any backend. The clipboard copy happens
-//   client-side in handlers/contactBoards.js.
+//   Availability is deliberately absent from this module. Every availability
+//   request goes through services/availability.js to the linked owner,
+//   regardless of listed_by_agent_id.
 //
 // INPUTS
 //   - operator: { email, name? } — the JWT/cookie holder
@@ -43,15 +42,6 @@ const MAX_NOTE_LEN = 1000
 
 // ── Template text builders ───────────────────────────────────────────────────
 // Each is a pure function so the operator can read them in isolation.
-
-function availabilityTemplate(operator, ref, note) {
-  const op = operator.name || operator.email?.split('@')[0] || 'an operator'
-  return `Hi — ${op} requested availability for #${ref}.` +
-         (note ? `
-Note: ${note}` : '') +
-         `
-Reply here with the next available viewing slot.`
-}
 
 function locationTemplate(operator, ref) {
   const op = operator.name || operator.email?.split('@')[0] || 'an operator'
@@ -145,16 +135,6 @@ async function sendToAgent({ agentRow, text, ref, requestedBy, source, note }) {
 }
 
 // ── Public API: 3 functions ────────────────────────────────────────────────
-async function requestAvailability({ operator, ref, note, agentRow }) {
-  const text = availabilityTemplate(operator, ref, note)
-  return sendToAgent({
-    agentRow, text, ref,
-    requestedBy: operator.email || 'schedule-board',
-    source: 'schedule-board-availability',
-    note,
-  })
-}
-
 async function requestLocation({ operator, ref, agentRow }) {
   const text = locationTemplate(operator, ref)
   return sendToAgent({
@@ -180,10 +160,8 @@ async function sendComment({ operator, ref, note, agentRow }) {
 
 module.exports = {
   resolveAgentSession,
-  availabilityTemplate,
   locationTemplate,
   commentTemplate,
-  requestAvailability,
   requestLocation,
   sendComment,
   // exports for unit testing

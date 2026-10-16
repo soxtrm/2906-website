@@ -282,6 +282,23 @@ type Listing = {
     canQuestion: boolean
     questionReason: string | null
   }
+  availabilityContact?: {
+    mode: 'owner'
+    reachesName: null
+    canAsk: boolean
+    reason: string | null
+    blockCode?: string | null
+    ownerBlocked?: boolean
+    ownerPauseUntil?: string | null
+    propertyPauseUntil?: string | null
+    lastContactAt?: string | null
+    lastContactKind?: string | null
+    lastContactStatus?: string | null
+    questionsUsed: number
+    questionsPerDay: number
+    canQuestion: boolean
+    questionReason: string | null
+  }
 }
 
 // An availability answer this agent asked for, not yet seen on the website
@@ -1181,7 +1198,7 @@ function Board() {
   // only the two one-click requests.
   async function act(kind: 'request-availability' | 'request-location', r: Listing) {
     const note: string | null = null
-    showToast('info', kind === 'request-availability' && r.isMine
+    showToast('info', kind === 'request-availability'
       ? `Contacting the owner of #${r.ref}…`
       : `Sending to ${r.listedBy.displayName || 'listing agent'}…`)
     try {
@@ -3695,6 +3712,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
     canAsk: true, reason: null, questionsUsed: 0, questionsPerDay: 2,
     canQuestion: true, questionReason: null,
   }
+  const avContact = r.availabilityContact || c
 
   // ── "Still Available" — Kev's redesign, 2026-09-11 ────────────────────────
   // "das ist der wichtigste Button": ONE smart action instead of the old split
@@ -4243,11 +4261,11 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <div style={{ fontSize: 9.5, color: DTEXT_FAINT }}>
               Last owner update · {r.lastConfirmedAvailableAt ? ago(r.lastConfirmedAvailableAt) : r.updatedAt ? ago(r.updatedAt) : 'not recorded'}
             </div>
-            <button onClick={() => c.canAsk && askStillAvailable(false)}
-              disabled={!c.canAsk || avBusy}
+            <button onClick={() => avContact.canAsk && askStillAvailable(false)}
+              disabled={!avContact.canAsk || avBusy}
               className="crm-card-still-available"
-              title={c.reason || 'Check availability; a far-future date is confirmed before contact'}
-              style={{ ...stillAvailableBtn(dark), opacity: c.canAsk ? (avBusy ? .7 : 1) : .45, justifyContent: 'center' }}>
+              title={avContact.reason || 'Check availability; a far-future date is confirmed before contact'}
+              style={{ ...stillAvailableBtn(dark), opacity: avContact.canAsk ? (avBusy ? .7 : 1) : .45, justifyContent: 'center' }}>
               {avBusy ? 'Checking…' : 'Still available?'}
             </button>
           </div>
@@ -4255,13 +4273,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             className="crm-card-still-available"
-            onClick={() => c.canAsk && askStillAvailable(false)}
-            disabled={!c.canAsk || avBusy}
-            title={c.reason || fresh.label}
+            onClick={() => avContact.canAsk && askStillAvailable(false)}
+            disabled={!avContact.canAsk || avBusy}
+            title={avContact.reason || fresh.label}
             style={{
               ...stillAvailableBtn(dark),
-              opacity: c.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
-              cursor: c.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
+              opacity: avContact.canAsk ? (avBusy ? 0.7 : 1) : 0.45,
+              cursor: avContact.canAsk ? (avBusy ? 'wait' : 'pointer') : 'not-allowed',
             }}>
             {fresh.tier === 'fresh' ? <CheckCircle2 size={14} /> : <CircleHelp size={14} />}
             {avBusy ? 'Checking…' : 'Still available?'}
@@ -4311,7 +4329,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           </div>
         )}
 
-        {isAdmin && !isUpcoming && !c.canAsk && (
+        {isAdmin && !isUpcoming && !avContact.canAsk && (
           <div data-contact-block-reason={r.ref} style={{
             marginTop: 7, padding: '8px 9px', borderRadius: 9,
             border: '1px solid rgba(226,155,155,.24)', background: 'rgba(185,28,28,.07)',
@@ -4320,7 +4338,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <ShieldAlert size={13} style={{ color: '#E29B9B', marginTop: 1 }} />
             <div style={{ minWidth: 0 }}>
               <div style={{ color: '#F0C1C1', fontSize: 10.5, fontWeight: 700 }}>Why this action is locked</div>
-              <div style={{ color: DTEXT_DIM, fontSize: 9.8, lineHeight: 1.4, marginTop: 2 }}>{c.reason}</div>
+              <div style={{ color: DTEXT_DIM, fontSize: 9.8, lineHeight: 1.4, marginTop: 2 }}>{avContact.reason}</div>
               {c.lastContactAt && (
                 <div style={{ color: DTEXT_FAINT, fontSize: 9.2, marginTop: 3 }}>
                   Last contact {ago(c.lastContactAt)}{c.lastContactKind ? ` · ${c.lastContactKind.replaceAll('_', ' ')}` : ''}{c.lastContactStatus ? ` · ${c.lastContactStatus}` : ''}
@@ -4988,16 +5006,16 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
                   </>
                 )}
                 <button
-                  onClick={() => d.contact?.canAsk !== false && onAct('request-availability', d)}
-                  disabled={d.contact?.canAsk === false}
-                  title={d.contact?.reason || undefined}
+                  onClick={() => d.availabilityContact?.canAsk !== false && onAct('request-availability', d)}
+                  disabled={d.availabilityContact?.canAsk === false}
+                  title={d.availabilityContact?.reason || undefined}
                   style={{
                     ...btn, border: 'none',
-                    background: d.contact?.canAsk === false ? '#F1EFEA' : (d.isMine ? GREEN : A),
-                    color: d.contact?.canAsk === false ? '#B5AFA2' : '#FFF',
-                    cursor: d.contact?.canAsk === false ? 'not-allowed' : 'pointer',
+                    background: d.availabilityContact?.canAsk === false ? '#F1EFEA' : GREEN,
+                    color: d.availabilityContact?.canAsk === false ? '#B5AFA2' : '#FFF',
+                    cursor: d.availabilityContact?.canAsk === false ? 'not-allowed' : 'pointer',
                   }}>
-                  {d.isMine ? 'Ask the owner' : 'Request availability'}
+                  Ask the owner
                 </button>
                 {!d.isMine && !d.hasViewingLocation && d.contact?.canAsk !== false && (
                   <button onClick={() => onAct('request-location', d)} style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }}>

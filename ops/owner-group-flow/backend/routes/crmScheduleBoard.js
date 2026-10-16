@@ -515,7 +515,8 @@ function contactState(row, isMine, questionsUsed) {
   const propertyPauseUntil = row.property_contact_paused_until
     ? String(row.property_contact_paused_until).slice(0, 10) : null
 
-  // Fall A — my own listing, the message reaches the owner directly.
+  // Owner path: used by general Ask on one's own listing and by availability
+  // on every listing. Ownership never changes the availability recipient.
   if (isMine) {
     let can = true, reason = null, blockCode = null
     if (!row.owner_has_phone)            { can = false; blockCode = 'NO_PHONE'; reason = 'No owner phone on file for this listing.' }
@@ -555,9 +556,8 @@ function contactState(row, isMine, questionsUsed) {
     }
   }
 
-  // Fall B — someone else's listing. The owner is never reachable from here;
-  // the request is relayed to the listing agent, so the wire is open only if
-  // there is an active listing agent on the other end.
+  // Listing-agent path for general Ask/comment/location on someone else's
+  // listing. Availability does not use this branch.
   let can = true, reason = null
   if (!row.listed_by_agent_id) { can = false; reason = 'No listing agent on this property — nobody to ask.' }
   else if (!row.agent_active)  { can = false; reason = `${agentName || 'The listing agent'} is inactive.` }
@@ -747,9 +747,12 @@ function shapeCard(row, meId, questionsUsed = 0) {
       displayName: row.agent_alias || row.agent_name || row.agent_username || null,
       colorHex: row.agent_color || null,
     },
-    // Drives the button set on the card. Fall A === my own listing.
+    // `contact` keeps the general Ask/comment destination. Availability is
+    // deliberately independent of listing ownership: every agent asks the
+    // linked owner through the guarded availability service.
     isMine,
     contact: contactState(row, isMine, questionsUsed),
+    availabilityContact: contactState(row, true, questionsUsed),
   }
 }
 
@@ -894,7 +897,14 @@ function appendWorkspaceBoardFilters(q, me, params, where, allowPrivateSearch = 
   const needle = String(q.q || '').trim().toLowerCase().slice(0, 120)
   if (needle) {
     params.push(`%${needle}%`)
-    where.push(`aw.${allowPrivateSearch ? 'private_search_text' : 'board_search_text'} LIKE $${params.length}`)
+    // Town/sub-location remain searchable even while the derived workspace
+    // index is missing or stale. The index is enrichment, never the only way
+    // to find a locality already stored on the property row.
+    where.push(`(
+      COALESCE(aw.${allowPrivateSearch ? 'private_search_text' : 'board_search_text'}, '') LIKE $${params.length}
+      OR lower(COALESCE(p.town, '')) LIKE $${params.length}
+      OR lower(COALESCE(p.sub_location, '')) LIKE $${params.length}
+    )`)
   }
 
   if (q.towns) {
@@ -1471,8 +1481,10 @@ async function relayToListingAgent({ res, kind, prop, me, note }) {
 }
 
 // ── POST /listings/:ref/request-availability ────────────────────────────────
-// The one button that branches. Own listing → message the owner. Someone
-// else's → relay to them.
+// Availability always asks the linked owner. `listed_by_agent_id` controls
+// listing stewardship, not who can verify whether the property is available.
+// The guarded availability service owns owner-source selection, DNC/pauses,
+// same-day dedupe and routing the answer back to the requesting agent.
 router.post('/listings/:ref/request-availability', auth, async (req, res) => {
   try {
     const loaded = await loadForAction(req, res)
@@ -1481,11 +1493,8 @@ router.post('/listings/:ref/request-availability', auth, async (req, res) => {
     // owner chat, so the listing carries the owner's latest word (2026-09-23).
     ownerFactEngine.rescanProperty(loaded.prop.id).catch(() => {})
     const { prop, me } = loaded
-    const note = req.body && req.body.note ? String(req.body.note).slice(0, 1000) : null
     // Kev, 2026-09-11 ("Still Available" escalation): the agent already got
-    // "already_checked_today" once and is deliberately asking again. Only
-    // meaningful on your own listing (Fall A) — relayToListingAgent below
-    // has no daily guard of its own to lift.
+    // "already_checked_today" once and is deliberately asking again.
     const force = req.body && req.body.force === true
     // Kev, 2026-09-14 (spec item 6): default GENERAL, no fabricated client
     // interest. An agent explicitly opts into URGENT wording from the board.
@@ -1495,11 +1504,6 @@ router.post('/listings/:ref/request-availability', auth, async (req, res) => {
     // and clicked CHECK ANYWAY.
     const confirmed = req.body && req.body.confirmed === true
 
-    const isMine = !!(prop.listed_by_agent_id && prop.listed_by_agent_id === me.id)
-
-    if (!isMine) return relayToListingAgent({ res, kind: 'availability', prop, me, note })
-
-    // ── Fall A ──────────────────────────────────────────────────────────
     const { requestOwnerAvailability } = require('../services/availability')
     const result = await requestOwnerAvailability({
       ref: prop.ref,
@@ -1521,7 +1525,7 @@ router.post('/listings/:ref/request-availability', auth, async (req, res) => {
       : ['already_checked_today', 'confirm_required', 'already_pending'].includes(result.status) ? 409 : 422
     return res.status(httpStatus).json({
       ...result,
-      mode: 'fall_a',
+      mode: 'owner',
       live: FALL_A_LIVE,
     })
   } catch (err) {
