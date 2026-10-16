@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Brain, Presentation } from 'lucide-react'
 import { crmFetch } from '@/lib/crm/api'
 import {
-  CrmProvider, CrmShell, F, FM, fmtDate, useCrm, glowFor,
+  CrmProvider, CrmShell, DTEXT_FAINT, F, FM, fmtDate, useCrm, glowFor,
 } from '@/lib/crm/ui'
 
 export default function DashboardPage() {
