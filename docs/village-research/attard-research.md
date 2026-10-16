@@ -1,6 +1,6 @@
 # Attard village edition research
 
-Status: VALIDATED PRIVATE NOINDEX PREVIEW — not published
+Status: RELEASE CANDIDATE — not yet live verified
 
 Checked: 16 October 2026
 
@@ -128,7 +128,6 @@ be used or published.
 
 - Recheck the council, health, shop, restaurant and San Anton works sources on
   release day.
-- Add canonical, Open Graph, BreadcrumbList, internal navigation and the
-  neighbourhood sitemap only after the preview passes review.
-- Keep the page unpublished and noindex until every gate above passes.
+- Run the production build, make a targeted release commit and verify the live
+  page, image, map, canonical, internal navigation and sitemap.
 
