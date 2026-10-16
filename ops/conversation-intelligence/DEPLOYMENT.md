@@ -79,3 +79,13 @@ git diff --check
 ## Known operational ambiguity
 
 Numbered-property questions must call `recordQuestionContext()` with the exact displayed property IDs. The new handler correctly scopes a later “None” to that stored set; any legacy sender that emits a numbered list without recording the context must be wired before relying on that reply form.
+
+## Production deployment — 2026-10-16 04:41 UTC
+
+- Re-read all six production baseline hashes before writing; each matched the reviewed baseline above.
+- Saved the original application files, environment file and pre-migration PostgreSQL schema under `/opt/2906-system/backend/.rollback/conversation-intelligence-20261016T0438Z`.
+- Paused `AUTOMATION_LIVE` while applying the additive migration and replacing the reviewed modules. No live WhatsApp message was sent by the deployment checks.
+- Production `node --check` passed for every replaced or added module. Module loading and redacted policy fixtures passed for property-scoped rented/withdrawn handling, account-scoped identity and compliance escalation.
+- Confirmed all five migration tables, restarted only the backend container for the final activation, restored `AUTOMATION_LIVE=1`, and left `AVAILABILITY_AUTO_REACHOUT=0` unchanged.
+- Backend health returned `ok`, the public schedule board loaded 72 listing cards with its reference/village search visible, and the browser console had no errors or warnings.
+- Application rollback is the timestamped directory above. The additive audit tables remain harmless with the previous code and should only be removed in a separately reviewed retention change.
