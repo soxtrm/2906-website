@@ -1,0 +1,29 @@
+--- a/waha.js
++++ b/waha.js
+@@
+-      events: ['message', 'message.reaction', 'session.status'],
++      events: ['message', 'message.any', 'message.reaction', 'session.status'],
+@@
+-  if (events.length !== 3 || events[0] !== 'message' || events[1] !== 'message.reaction' || events[2] !== 'session.status') return false
++  if (events.length !== 4 || events[0] !== 'message' || events[1] !== 'message.any' || events[2] !== 'message.reaction' || events[3] !== 'session.status') return false
+--- a/routes/webhook.js
++++ b/routes/webhook.js
+@@
+       const isGroupSelfCmd = payload.fromMe === true
+         && (payload.from || '').includes('@g.us')
++        && !waha.wasSentByBackend(payload.id)
+         && (/^!/i.test((payload.body || '').trim()) || CONFIRM_REPLY_RE.test((payload.body || '').trim()))
+--- a/services/adminCommands.js
++++ b/services/adminCommands.js
+@@
+-  const phone  = phoneFromJid(senderJid) || normalizePhone(senderJid)
++  let phone  = phoneFromJid(senderJid) || normalizePhone(senderJid)
+   let text   = (payload.body || '').trim()
+   const isGroup = !fromNotesChat && (payload.from || '').includes('@g.us')
++
++  // Group participants can arrive only as opaque LIDs. Resolve through WAHA
++  // before the existing admin check; unresolved identities remain denied.
++  if (!fromNotesChat && isGroup && /@lid$/i.test(String(senderJid || ''))) {
++    const resolvedPhone = await require('./contactTouch').resolvePhone(session, senderJid)
++    if (resolvedPhone) phone = resolvedPhone
++  }
