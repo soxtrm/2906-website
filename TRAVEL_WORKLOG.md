@@ -411,7 +411,7 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Der aktuelle Regierungsstand vom 01.08.2026 bestaetigt phasenweise Restaurierungsarbeiten in San Anton Gardens. Deshalb darf die spaetere Ausgabe keine durchgaengige Weg- oder Bereichsoeffnung versprechen und muss den Zugang am Nutzungstag pruefen lassen.
 - Commons-Kandidat `Malta - Attard - San Anton Gardens 03 ies.jpg` von Frank Vincentz (04.03.2013, 5616x3744, CC BY-SA 3.0/GFDL) eindeutig dokumentiert; fuer die spaetere Verwendung ist CC BY-SA 3.0 vorgesehen. Exakter Download, Hash und visuelle Freigabe bleiben offen. Noch keine Seite, Karte, Navigation, Sitemap, Produktion oder externe Backlinkaenderung; keine Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Aenderung.
 
-## 08:16 Malta, 16.10 — Attard-Hero nach Sichtpruefung korrigiert und freigegeben
+## 10:16 Malta, 16.10 — Attard-Hero nach Sichtpruefung korrigiert und freigegeben
 
 - Vor dem Schritt sauberer isolierter Worktree auf HEAD `a01f218` geprueft; Ausgangshashes Dossier `20F32D4B2B4AFA85C9084D654EB1271A10E2522FA3E1A02A6F87448336A525AE`, Worklog `E2A55C485DC3428035EB8D2D2F620214C8D83DA21F40F021711610C19C970761`. Die stark veraenderte bestehende Arbeitskopie blieb unangetastet.
 - Der zuerst dokumentierte Commons-Kandidat `San Anton Gardens 03` wurde nach exaktem Download verworfen: Das Bild wird von einem Schild mit identifizierbaren kommerziellen Kontaktdaten dominiert und ist kein brauchbarer Garten-Hero. Datei und abgeleitete Vorschauen wurden nicht uebernommen.
@@ -419,4 +419,15 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Resize-only ohne Crop, Retusche oder generative Aenderung als 1800x1200-WebP mit 589.956 Bytes unter `public/link-marketplace/assets/attard-san-anton-gardens-frank-vincentz.webp` erzeugt; SHA-256 `60AA47CBD823055064D3F6958CE6F70364CDBEC9E55BE0E907A29E4BDA90B698`.
 - Vollstaendige Pixelpruefung bestaetigt eine klare Gartenansicht mit Teich, Statue, Baeumen und Wegen; wenige Besucher bleiben kleine Kontextdetails, private Kontaktdaten sind nicht sichtbar. Das Bild ist ausschliesslich als datierter San-Anton-Gardens-Kontext freigegeben und belegt weder aktuellen Bauzustand noch Listingblick, Zugang oder Naehe.
 - Noch keine Attard-Seite, Karte, Navigation, Sitemap, Produktion oder externe Backlinkaenderung; keine Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Aenderung.
+
+## 11:12 Malta, 16.10 — Eigenstaendigen Attard-Noindex-Preview erstellt und validiert
+
+- Vor dem Edit isolierten Worktree auf HEAD `f205b42` und die dokumentierten Dossier-/Bildhashes geprueft; die stark veraenderte bestehende Arbeitskopie blieb unberuehrt.
+- `public/link-marketplace/areas/attard.html` als eigenstaendigen englischen Preview erstellt. Historischer Kern, Sant'Anton-Seite und aeussere Wohn-/Ta'-Qali-/Landwirtschaftskontexte sind getrennt; Balzan, Lija und Rabat werden nicht als Synonyme behandelt.
+- Das verifizierte 1800x1200-WebP traegt sichtbare Frank-Vincentz-/Commons-/CC-BY-SA-3.0-/Datums- und Resize-Attribution. Der Text beschraenkt das Motiv auf San Anton Gardens und behauptet weder aktuellen Bauzustand noch Listingblick, Zugang, Parken oder Naehe.
+- Primary HealthCare, MySupermarket Attard, The Food Coop, Villa Bologna Restaurant und die aktuelle Regierungsmitteilung zu phasenweisen San-Anton-Arbeiten erscheinen nur im belegten Umfang, ohne Rankings, feste Oeffnungszeiten oder vollstaendige Verzeichnisse.
+- Die 2D-OSM-Uebersicht laedt erst nach Klick und zeichnet keine Grenze, Luftlinie, Gehroute, Strassen-ETA, Busverbindung oder Faehre. Preview bleibt `noindex,nofollow`; kein Canonical, Open Graph, BreadcrumbList, Marketplace-Link oder Sitemap-Eintrag.
+- Headless-Chrome-Smoke bei 390x844 und 1440x1000 bestanden: jeweils HTTP 200, genau ein H1, korrekt `noindex,nofollow`, kein Canonical, kein horizontaler Overflow und vollstaendig dekodiertes 1800x1200-Hero. Visuelle Kontrolle bestaetigt lesbaren Mobile-Einspaltenfluss, sauberes Desktop-Raster und sichtbare Attribution ohne Ueberlagerung.
+- Karte bleibt initial ungeladen; nach Klick entsteht genau ein sichtbarer OSM-Frame, Button und Status wechseln korrekt, der Overflow bleibt null und es traten keine fehlgeschlagenen Seiten-, Bild- oder Kartenrequests auf. Belege liegen unversioniert unter `artifacts/attard-preview-{mobile,desktop}.png`.
+- Preview bleibt unveroeffentlicht. Finaler Quellen-Recheck, Release-Metadaten, interne Navigation, Sitemap, Produktionsbuild, gezielter Releasecommit und Livepruefung bleiben offen. Keine Produktion, externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Aenderung.
 

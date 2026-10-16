@@ -1,6 +1,6 @@
 # Attard village edition research
 
-Status: RESEARCH DRAFT — not published
+Status: VALIDATED PRIVATE NOINDEX PREVIEW — not published
 
 Checked: 16 October 2026
 
@@ -128,10 +128,6 @@ be used or published.
 
 - Recheck the council, health, shop, restaurant and San Anton works sources on
   release day.
-- Write an independent English edition with useful viewing questions and clear
-  separation from Balzan, Lija, Rabat and Ta' Qali.
-- Validate 390px and 1440px layouts, image decode, overflow and click-to-load
-  map behaviour.
 - Add canonical, Open Graph, BreadcrumbList, internal navigation and the
   neighbourhood sitemap only after the preview passes review.
 - Keep the page unpublished and noindex until every gate above passes.
