@@ -34,6 +34,11 @@ const { addJob, QUEUES } = require('../queues')
 const { buildPoolBatch } = require('./listBuilder')
 const { canContact, normalizePhone: cooldownNormalizePhone } = require('./cooldownRules')
 
+function conversationIntelligence() {
+  try { return require('./conversationIntelligence') } // production services directory
+  catch (_) { return require('../owner-group-flow/backend/services/conversationIntelligence') } // repository mirror
+}
+
 const MALTA_TZ = 'Europe/Malta'
 
 // ── Retry policy for a plan whose OWN assigned session is unhealthy at fire
@@ -147,8 +152,11 @@ async function syncAccountHealth(account, sessionStatus) {
     if (account.operational_status !== 'restricted') {
       return setAccountRestriction(account.id, { restricted: true, reason: `session_${status.toLowerCase()}`, sessionStatus: status, actor: 'health_check' })
     }
-  } else if (HEALTHY_SESSION_STATES.has(status) && account.operational_status === 'restricted' && account.restriction_until && new Date(account.restriction_until) <= new Date()) {
-    return setAccountRestriction(account.id, { restricted: false, reason: 'cooldown_elapsed_and_session_healthy', sessionStatus: status, actor: 'health_check' })
+  } else if (HEALTHY_SESSION_STATES.has(status) && account.operational_status === 'restricted'
+      && String(account.restriction_reason || '').startsWith('session_')) {
+    // A live healthy transport supersedes a transient automatic session
+    // restriction immediately. Manual/compliance restrictions are untouched.
+    return setAccountRestriction(account.id, { restricted: false, reason: 'session_recovered_live', sessionStatus: status, actor: 'health_check' })
   }
   return { ...account, last_session_status: status }
 }
@@ -520,13 +528,15 @@ async function prepareDueAccountPlans(now = new Date()) {
 // advances pool_cursors. Generated times/counts live on the plans, so reloads
 // show the exact same preparation instead of rolling fresh random values.
 async function autoPrepareAccount(accountId, { baseCount = null, message = null, actor = 'admin', now = new Date() } = {}) {
-  const account = (await db.query(`SELECT * FROM whatsapp_accounts WHERE id=$1 AND is_active=TRUE AND outreach_enabled=TRUE`, [accountId])).rows[0]
+  let account = (await db.query(`SELECT * FROM whatsapp_accounts WHERE id=$1 AND is_active=TRUE AND outreach_enabled=TRUE`, [accountId])).rows[0]
   if (!account) throw new Error(`account ${accountId} not found`)
   if (isSystemManagerSession(account.session_name, account.label)) {
     const err = new Error('system manager account cannot run outreach')
     err.code = 'system_manager_not_outreach'
     throw err
   }
+  const live = await waha.getSessionStatus(account.session_name).catch(() => null)
+  account = await syncAccountHealth(account, live?.status || 'UNKNOWN')
   if (account.operational_status === 'restricted' && (!account.restriction_until || new Date(account.restriction_until) > now)) {
     const err = new Error('account is restricted')
     err.code = 'account_restricted'
@@ -565,6 +575,37 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
 
   for (const plan of plans) {
     const full = await getPlanWithEntries(plan.id)
+    const refreshableAutoPlan = !plan.armed
+      && plan.source === 'auto_prepared'
+      && ['draft', 'saved'].includes(plan.status)
+      && plan.scheduled_at
+    if (refreshableAutoPlan) {
+      const savedTarget = Math.max(1, Math.min(limit, Number(plan.target_count) || resolvedBase))
+      try {
+        const generated = await generateList(plan.id, savedTarget, {
+          actor: 'auto-prepare-topup', topUp: true, previewCursor, excludedPhones,
+        })
+        previewCursor = generated.previewCursor
+        const refreshed = await getPlanWithEntries(plan.id)
+        for (const entry of refreshed?.entries || []) {
+          const phone = normPhone(entry.normalized_phone)
+          if (phone) excludedPhones.add(phone)
+        }
+        if (resolvedMessage && !String(plan.message_template || '').trim()) await setMessageTemplate(plan.id, resolvedMessage)
+        anchor = new Date(plan.scheduled_at)
+        results.push({
+          planId: plan.id, label: plan.label,
+          status: refreshed.stats.eligible >= savedTarget ? 'prepared' : 'pool_shortage',
+          scheduledAt: plan.scheduled_at, targetCount: savedTarget,
+          preparedCount: refreshed.stats.eligible,
+          missingCount: Math.max(0, savedTarget - refreshed.stats.eligible),
+        })
+      } catch (err) {
+        log.warn('outreachPlanner: auto plan top-up failed', { accountId, planId: plan.id, err: err.message })
+        results.push({ planId: plan.id, label: plan.label, status: 'failed', reason: err.code || err.message, scheduledAt: plan.scheduled_at, targetCount: savedTarget, preparedCount: plan.stats.eligible })
+      }
+      continue
+    }
     const untouched = !plan.armed
       && !['ready', 'running', 'completed', 'cancelled'].includes(plan.status)
       && plan.stats.total === 0
@@ -949,12 +990,15 @@ async function armPlan(planId, { time } = {}) {
   } catch (err) {
     log.debug('outreachPlanner: arm session health check failed', { planId, session: p.session_name, err: err.message })
   }
-  const accountRow = account.rows[0]
+  let accountRow = account.rows[0]
   if (RESTRICTED_SESSION_STATES.has(sessionStatus)) {
     const restricted = await setAccountRestriction(p.account_id, { restricted: true, reason: `session_${sessionStatus.toLowerCase()}`, sessionStatus, actor: 'arm_health_check' })
     return { ok: false, reason: 'account_restricted', restrictionUntil: restricted.restriction_until }
   }
-  if (accountRow?.operational_status === 'restricted' && (!accountRow.restriction_until || new Date(accountRow.restriction_until) > new Date())) {
+  if (HEALTHY_SESSION_STATES.has(sessionStatus)) accountRow = await syncAccountHealth(accountRow, sessionStatus)
+  if (accountRow?.operational_status === 'restricted'
+      && !String(accountRow.restriction_reason || '').startsWith('session_')
+      && (!accountRow.restriction_until || new Date(accountRow.restriction_until) > new Date())) {
     return { ok: false, reason: 'account_restricted', restrictionUntil: accountRow.restriction_until }
   }
 
@@ -1064,7 +1108,9 @@ async function runScheduledPlan(planId) {
     return
   }
   const accountRow = account.rows[0]
-  if (accountRow?.operational_status === 'restricted' && (!accountRow.restriction_until || new Date(accountRow.restriction_until) > new Date())) {
+  if (accountRow?.operational_status === 'restricted'
+      && !String(accountRow.restriction_reason || '').startsWith('session_')
+      && (!accountRow.restriction_until || new Date(accountRow.restriction_until) > new Date())) {
     await holdArmedPlansForAccount(plan.account_id, 'account_restricted')
     return
   }
@@ -1112,6 +1158,7 @@ async function runScheduledPlan(planId) {
     })
     return
   }
+  await syncAccountHealth(accountRow, sessionStatus)
 
   await logTransition(planId, plan.status, 'running', 'send_starting', 'system', { job_id: plan.job_id })
   await db.query(`UPDATE outreach_plans SET status = 'running', updated_at = NOW() WHERE id = $1`, [planId])
@@ -1158,6 +1205,22 @@ async function runScheduledPlan(planId) {
         continue
       }
     }
+    try {
+      const gate = await conversationIntelligence().preflightOutbound({
+        phone: e.normalized_phone, session: plan.session_name, draft: plan.message_template,
+      })
+      if (!gate.allow) {
+        await db.query(`UPDATE outreach_plan_entries SET eligibility_status='skip', skip_reason=$2, updated_at=NOW() WHERE id=$1`,
+          [e.id, `conversation_intelligence_${gate.reason}`])
+        await releaseReservationForEntry(e.id)
+        continue
+      }
+    } catch (err) {
+      log.warn('outreachPlanner: conversation preflight unavailable, holding entry', { planId, entryId: e.id, err: err.message })
+      await db.query(`UPDATE outreach_plan_entries SET eligibility_status='skip', skip_reason='conversation_preflight_unavailable', updated_at=NOW() WHERE id=$1`, [e.id])
+      await releaseReservationForEntry(e.id)
+      continue
+    }
     stillEligible.push(e)
   }
 
@@ -1177,7 +1240,7 @@ async function runScheduledPlan(planId) {
   // legacy admin session for the human-facing UX, but if none is currently
   // WORKING, self-notify through the plan's OWN (already confirmed healthy)
   // session/phone instead of aborting the run over a status message.
-  const { runDirectOutreach } = require('./adminCommands')
+  const { enqueueDirectOutreach } = require('./adminCommands')
   let replySession = await waha.pickActiveAdminSession().catch(() => null)
   let adminPhone = config.admin?.botNumber || (replySession ? (await waha.getSessionPhone(replySession).catch(() => null)) : null)
   if (!replySession || !adminPhone) {
@@ -1195,19 +1258,14 @@ async function runScheduledPlan(planId) {
     // / outreachRecovery.js. Fixes the exact plan-40 incident: a restart
     // mid-send left the plan stuck in 'running' forever even though the
     // underlying batch (resumed by outreachRecovery.js) completed correctly.
-    const outcome = await runDirectOutreach(adminPhone, replySession, plan.session_name, contacts, plan.message_template, { planId })
-    if (outcome && outcome.refused) {
-      // Identity guard (2026-09-24): nothing was sent. Say so on the plan
-      // instead of "completed, 0 of N".
-      await db.query(
-        `UPDATE outreach_plan_entries SET send_status='failed', skip_reason=$2, updated_at=NOW() WHERE plan_id=$1 AND send_status IS DISTINCT FROM 'sent'`,
-        [planId, outcome.refused])
-      for (const e of stillEligible) await releaseReservationForEntry(e.id)
-      await db.query(`UPDATE outreach_plans SET status = 'failed', armed = FALSE, updated_at = NOW() WHERE id = $1`, [planId])
-      await logTransition(planId, 'running', 'failed', `${outcome.refused}: ${outcome.why}`, 'system')
-      log.warn('outreachPlanner: plan refused by sender-identity guard', { planId, why: outcome.why })
-      return
-    }
+    const run = await enqueueDirectOutreach(adminPhone, replySession, plan.session_name, contacts, plan.message_template, {
+      planId,
+      source: 'website_plan',
+      triggerId: `${plan.idempotency_key || `plan-${planId}`}:execute`,
+      pacingType: require('./outreachRunEngine').DEFAULT_PACING_MODE,
+    })
+    await db.query(`UPDATE outreach_plans SET source='persistent_run', updated_at=NOW() WHERE id=$1`, [planId])
+    return { queued: true, runId: run.run_id }
   } catch (err) {
     log.error('outreachPlanner: runDirectOutreach crashed', { planId, err: err.message })
     const fresh = (await db.query(`SELECT * FROM outreach_plans WHERE id = $1`, [planId])).rows[0] || plan
@@ -1315,6 +1373,40 @@ async function reconcilePlanFromBatch(planId) {
   }
 }
 
+// Persistent run recipients are the transport source of truth. This avoids
+// inferring an accepted send solely from outreach_log when the process dies
+// between WAHA acceptance and the legacy log/checkpoint writes.
+async function reconcilePlanFromRun(planId, runId) {
+  const rows = (await db.query(
+    `SELECT e.id AS entry_id,r.state,r.sent_at,r.last_error
+       FROM outreach_plan_entries e
+       JOIN outreach_run_recipients r
+         ON r.run_id=$2 AND r.normalized_phone=e.normalized_phone
+      WHERE e.plan_id=$1`, [planId, runId])).rows
+  let unresolved = 0
+  let sent = 0
+  for (const row of rows) {
+    if (row.state === 'sent') {
+      sent++
+      await db.query(`UPDATE outreach_plan_entries SET send_status='sent',sent_at=COALESCE($2,NOW()),skip_reason=NULL,updated_at=NOW() WHERE id=$1`, [row.entry_id, row.sent_at])
+      await releaseReservationForEntry(row.entry_id)
+    } else if (['failed', 'skipped'].includes(row.state)) {
+      await db.query(`UPDATE outreach_plan_entries SET send_status=$2,skip_reason=$3,updated_at=NOW() WHERE id=$1`, [row.entry_id, row.state, row.last_error])
+      await releaseReservationForEntry(row.entry_id)
+    } else {
+      unresolved++
+    }
+  }
+  if (unresolved > 0) {
+    await db.query(`UPDATE outreach_plans SET status='running',armed=TRUE,updated_at=NOW() WHERE id=$1`, [planId])
+    return { status: 'running', unresolved, sent }
+  }
+  await releaseReservationsForPlan(planId, 'persistent_run_terminal')
+  await db.query(`UPDATE outreach_plans SET status='completed',armed=FALSE,executed_at=NOW(),updated_at=NOW() WHERE id=$1`, [planId])
+  await logTransition(planId, 'running', 'completed', `persistent_run:${runId}`, 'system', { sent })
+  return { status: 'completed', unresolved: 0, sent }
+}
+
 // ── Reconciliation / watchdog (2026-09-17 incident fix) ─────────────────────
 // A BullMQ delayed job is durable in Redis, but this closes the two gaps
 // that are NOT covered just by that: (1) a job whose worker process was
@@ -1412,7 +1504,7 @@ module.exports = {
   setMessageTemplate, addEntriesFromPaste, generateList, removeEntry, clearEntries, regenerate,
   saveDraft, armPlan, pausePlan, cancelPlan, runScheduledPlan,
   setAccountRestriction,
-  reconcileOverdueArmedPlans, reconcilePlanFromBatch,
+  reconcileOverdueArmedPlans, reconcilePlanFromBatch, reconcilePlanFromRun,
   checkDuplicatesGlobal, todayContactedSummary,
   listMessageTemplates, saveMessageTemplate, deleteMessageTemplate,
   OUTREACH_PLAN_MAX, starterBatchCount,

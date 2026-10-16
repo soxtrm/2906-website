@@ -1,4 +1,5 @@
 const { Router } = require('express')
+const crypto = require('crypto')
 const Redis  = require('ioredis')
 const router = Router()
 const log    = require('../logger')
@@ -16,6 +17,7 @@ const { resetNoReplyForPhone } = require('../services/outreachTracker')
 const waha                    = require('../waha')
 const uploadListing           = require('../handlers/uploadListing')
 const uploadHandler           = require('../handlers/upload')
+const gptUploadCommand        = require('../services/gptUploadCommand')
 const availability            = require('../services/availability')
 const fbGroupCommands         = require('../services/fbGroupCommands')
 const fbOwnerSave             = require('../services/fbOwnerSave')
@@ -359,7 +361,7 @@ router.post('/waha', async (req, res) => {
     // availability.sendTextAs), so echoes of them are skipped here. Groups, LIDs
     // without a phone and non-owners are no-ops. Fire-and-forget: this can never
     // delay or drop a message.
-    if ((event === 'message' || event === 'message.any') && !String(payload.from || '').includes('@g.us') && !String(payload.to || '').includes('@g.us')) {
+    if ((event === 'message' || event === 'message.any' || event === 'message.edited') && !String(payload.from || '').includes('@g.us') && !String(payload.to || '').includes('@g.us')) {
       try {
         const _ct = require('../services/contactTouch')
         if (payload.fromMe === true) {
@@ -385,7 +387,7 @@ router.post('/waha', async (req, res) => {
     // For message.any: only allow notes-chat self-messages through.
     // NOWEB never sets payload.to, so we identify self-messages by comparing
     // payload.from against the session's own phone/LID (fetched live on cache-miss).
-    if (event !== 'message') {
+    if (event !== 'message' && event !== 'message.edited') {
       if (event !== 'message.any') {
         if (!_loggedUnknownEvents.has(event)) {
           _loggedUnknownEvents.add(event)
@@ -779,7 +781,18 @@ router.post('/waha', async (req, res) => {
     // status flipped in between — observed live 2026-08-27 23:21–23:23,
     // Kevsecond then default both ran !upload2 for one message. Sticky-by-
     // messageId (handlers/upload.js) makes every redelivery agree.
-    const activeGroupSession = isGroup ? await uploadHandler.pickUploadSessionSticky(messageId) : null
+    // Claim the first session that actually observed this group message. A
+    // globally preferred healthy session may not belong to this group; using
+    // it here silently discarded commands seen by other connected accounts.
+    const groupLogicalId = isGroup ? gptUploadCommand.groupCommandDedupKey({
+      chatId: groupId || payload.from,
+      actorId: senderJid || phone,
+      timestamp,
+      text,
+    }) : null
+    const activeGroupSession = isGroup
+      ? await uploadHandler.pickUploadSessionSticky(groupLogicalId || messageId, session)
+      : null
     if (isGroup && session !== activeGroupSession) {
       log.debug('Group message ignored (not the active group session)', {
         session, activeGroupSession, group: groupId?.slice(0, 15),
@@ -794,8 +807,16 @@ router.post('/waha', async (req, res) => {
     // commands like !av never fire twice. Safe against the group multi-
     // session case too — non-default sessions' copies are already discarded
     // above, before this claim.
-    if (messageId) {
-      const claimed = await redisDedup.set(`processed:${messageId}:${session}`, '1', 'EX', 600, 'NX')
+    if (messageId || groupLogicalId) {
+      // Group commands use a cross-session logical id. Ordinary traffic keeps
+      // the existing provider-id + session behavior.
+      const editFingerprint = event === 'message.edited'
+        ? `:edit:${crypto.createHash('sha256').update(String(text || '')).digest('hex').slice(0, 16)}`
+        : ''
+      const dedupKey = groupLogicalId
+        ? `processed:${groupLogicalId}`
+        : `processed:${messageId}:${session}${editFingerprint}`
+      const claimed = await redisDedup.set(dedupKey, '1', 'EX', 600, 'NX')
       if (claimed === null) {
         log.debug('Duplicate message skipped', { messageId, session })
         return
@@ -999,12 +1020,27 @@ router.post('/waha', async (req, res) => {
       }
     }
 
+    // Central interpretation runs before any independent reply generator. It
+    // persists revisions and constraints, applies terminal property status,
+    // and may answer a direct identity question exactly once.
+    let intelligenceOutcome = null
+    if (!isGroup && !payload.fromMe && phone && text) {
+      try {
+        intelligenceOutcome = await require('../services/conversationIntelligence').handleInbound({
+          phone, chatId: payload.from, session, text, messageId: payload.id,
+          timestamp: payload.timestamp, event, payload,
+        })
+      } catch (e) {
+        log.warn('conversationIntelligence hook error', { err: e.message })
+      }
+    }
+
     // ── ARGUS dynamic facts (2026-09-23, services/ownerFactEngine.js) ────────
     // Every owner DM is read for every fact the CRM holds — pets, sharing,
     // subletting, price, available-from, contact pause, viewing windows /
     // viewings-from dates — and the newest statement overwrites the older one
     // with provenance. Fire-and-forget; never consumes.
-    if (!isGroup && !payload.fromMe && text) {
+    if (!isGroup && !payload.fromMe && text && !intelligenceOutcome?.suppressAutomation) {
       require('../services/ownerFactEngine').handleOwnerMessage({
         phone, chatId: payload.from, text, timestamp: payload.timestamp, messageId: payload.id,
       }).catch(e => log.warn('ownerFactEngine hook error', { err: e.message }))
@@ -1019,7 +1055,7 @@ router.post('/waha', async (req, res) => {
     // caption) -- previously required non-empty `text`, so 10 photos with
     // no caption never reached this file, and the bot went on to ask "do
     // you have pictures?" right after receiving them.
-    if (!isGroup && !payload.fromMe && phone && (text || _payloadHasMedia)) {
+    if (!isGroup && !payload.fromMe && phone && (text || _payloadHasMedia) && !intelligenceOutcome?.suppressAutomation) {
       try {
         const autoConvo = require('../services/autoOwnerConversation')
         // payload added (Kev, 2026-09-08, Owner-zu-Upload-Vollautomatisierung):
@@ -1082,7 +1118,7 @@ router.post('/waha', async (req, res) => {
     // instantly unless this exact chat has an ENABLED owner_assistant_state
     // row. Completely independent of the autoOwnerConversation.js hook a few
     // lines up — this records OG-1's own last_owner_message_at only.
-    if (!isGroup && !payload.fromMe && (text || _payloadHasMedia)) {
+    if (!isGroup && !payload.fromMe && (text || _payloadHasMedia) && !intelligenceOutcome?.suppressAutomation) {
       _ownerAssistant.handleOwnerMessage({ session, chatId: payload.from || '', text })
         .catch(e => log.warn('ownerAssistant inbound hook error', { err: e.message }))
     }
