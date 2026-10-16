@@ -1,6 +1,6 @@
 # Attard village edition research
 
-Status: RELEASE CANDIDATE — not yet live verified
+Status: PUBLISHED — live verified 16 October 2026
 
 Checked: 16 October 2026
 

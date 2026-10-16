@@ -441,3 +441,11 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Hashes: HTML `EC3A12942BC337ADD007FA4098BF6A2D9A3791F16D0321233A89D63C616BFA9E`; Index `D76AD8C14948203BC884E494BA8D1F5AAA0E4A7A393B6A391D342F567EAA9BE8`; Sitemap `0F1A786E9A445E4B29F7FB251874DE1BA112FA15540293B1EF7C0DBA0793BB65`; Dossier `D3A253E37C8AF1DBE1D4D2DE86F3CE96379131284AB19A37FCBCF9D8779CB8EB`; Bildasset unveraendert `60AA47CBD823055064D3F6958CE6F70364CDBEC9E55BE0E907A29E4BDA90B698`.
 - Noch nicht live behauptet: gezielter Releasecommit, Fast-Forward-Push und Produktionspruefung folgen. Keine externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Aenderung.
 
+## 12:10 Malta, 16.10 — Attard-Ausgabe veroeffentlicht und live geprueft
+
+- Releasecommit `3440df0` nach Fast-Forward-Pruefung auf `main` gepusht; der bestehende Git-/Vercel-Weg veroeffentlichte anschliessend `https://www.2906.estate/link-marketplace/areas/attard.html`.
+- Exakte oeffentliche URL und CRM-Kopie liefern HTTP 200 und identische 14.895-Byte-Seiten. Marketplace-Index, `neighbourhood-sitemap.xml` und das 589.956-Byte-WebP liefern HTTP 200 und enthalten jeweils genau den vorgesehenen Attard-Verweis beziehungsweise das verifizierte Asset.
+- Produktionsbrowser bei 390x844 und 1440x1000 bestaetigt ohne horizontalen Overflow genau ein H1, ein Self-Canonical, drei Open-Graph-Felder, einen BreadcrumbList-Block, kein noindex, ein vollstaendig dekodiertes 1800x1200-Hero, initial null iframes und nach Klick genau einen sichtbaren OSM-Frame. Es traten keine fehlgeschlagenen Seiten-, Bild- oder Kartenrequests auf.
+- Die Ausgabe trennt historischen Kern, Sant'Anton und die aeusseren Wohn-/Ta'-Qali-/Landwirtschaftskontexte. Sie behauptet weder eine Verwaltungsgrenze noch Propertyroute, Luftlinie, pauschale Gehzeit, Oeffnung, Parkmoeglichkeit, Aussicht oder Naehe; phasenweise San-Anton-Arbeiten bleiben ausdruecklich kenntlich.
+- Dossierstatus auf PUBLISHED gesetzt. Rollback erfolgt durch gezielten Revert von `3440df0` zusammen mit diesem abschliessenden Dokumentationscommit. Keine externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Aenderung.
+
