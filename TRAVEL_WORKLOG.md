@@ -411,3 +411,12 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Der aktuelle Regierungsstand vom 01.08.2026 bestaetigt phasenweise Restaurierungsarbeiten in San Anton Gardens. Deshalb darf die spaetere Ausgabe keine durchgaengige Weg- oder Bereichsoeffnung versprechen und muss den Zugang am Nutzungstag pruefen lassen.
 - Commons-Kandidat `Malta - Attard - San Anton Gardens 03 ies.jpg` von Frank Vincentz (04.03.2013, 5616x3744, CC BY-SA 3.0/GFDL) eindeutig dokumentiert; fuer die spaetere Verwendung ist CC BY-SA 3.0 vorgesehen. Exakter Download, Hash und visuelle Freigabe bleiben offen. Noch keine Seite, Karte, Navigation, Sitemap, Produktion oder externe Backlinkaenderung; keine Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Aenderung.
 
+## 08:16 Malta, 16.10 — Attard-Hero nach Sichtpruefung korrigiert und freigegeben
+
+- Vor dem Schritt sauberer isolierter Worktree auf HEAD `a01f218` geprueft; Ausgangshashes Dossier `20F32D4B2B4AFA85C9084D654EB1271A10E2522FA3E1A02A6F87448336A525AE`, Worklog `E2A55C485DC3428035EB8D2D2F620214C8D83DA21F40F021711610C19C970761`. Die stark veraenderte bestehende Arbeitskopie blieb unangetastet.
+- Der zuerst dokumentierte Commons-Kandidat `San Anton Gardens 03` wurde nach exaktem Download verworfen: Das Bild wird von einem Schild mit identifizierbaren kommerziellen Kontaktdaten dominiert und ist kein brauchbarer Garten-Hero. Datei und abgeleitete Vorschauen wurden nicht uebernommen.
+- Als Ersatz wurde `Malta - Attard - San Anton Gardens 38 ies.jpg` direkt ueber Wikimedia Commons verifiziert: Frank Vincentz, 04.03.2013 11:33:32, 5616x3744, 11.005.844 Bytes, CC BY-SA 3.0, Original-SHA-256 `01BCBDB3DC2F88EEDD6B6662963134F10D03D2646E42BF2251B4E509C1EE41F4`.
+- Resize-only ohne Crop, Retusche oder generative Aenderung als 1800x1200-WebP mit 589.956 Bytes unter `public/link-marketplace/assets/attard-san-anton-gardens-frank-vincentz.webp` erzeugt; SHA-256 `60AA47CBD823055064D3F6958CE6F70364CDBEC9E55BE0E907A29E4BDA90B698`.
+- Vollstaendige Pixelpruefung bestaetigt eine klare Gartenansicht mit Teich, Statue, Baeumen und Wegen; wenige Besucher bleiben kleine Kontextdetails, private Kontaktdaten sind nicht sichtbar. Das Bild ist ausschliesslich als datierter San-Anton-Gardens-Kontext freigegeben und belegt weder aktuellen Bauzustand noch Listingblick, Zugang oder Naehe.
+- Noch keine Attard-Seite, Karte, Navigation, Sitemap, Produktion oder externe Backlinkaenderung; keine Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Aenderung.
+

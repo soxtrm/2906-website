@@ -83,21 +83,34 @@ inventory statistic.
   - A future edition must flag works and require a current access check; it
     must not promise that every path or section is open.
 
-## Licensed hero candidate
+## Licensed hero
 
-Candidate: `Malta - Attard - San Anton Gardens 03 ies.jpg`
+Approved candidate: `Malta - Attard - San Anton Gardens 38 ies.jpg`
 
 - Wikimedia Commons file page:
-  https://commons.wikimedia.org/wiki/File:Malta_-_Attard_-_San_Anton_Gardens_03_ies.jpg
+  https://commons.wikimedia.org/wiki/File:Malta_-_Attard_-_San_Anton_Gardens_38_ies.jpg
 - Creator: Frank Vincentz
-- Capture date: 4 March 2013
-- Original dimensions: 5616 x 3744
-- Licences offered: CC BY-SA 3.0 and GFDL; use the CC BY-SA 3.0 option.
-- The candidate is context for San Anton Gardens only. It cannot stand for all
-  of Attard, a current works phase, a listing view, access or proximity.
+- Capture date: 4 March 2013, 11:33:32
+- Original dimensions: 5616 x 3744; 11,005,844 bytes
+- Original SHA-256:
+  `01BCBDB3DC2F88EEDD6B6662963134F10D03D2646E42BF2251B4E509C1EE41F4`
+- Licence selected: CC BY-SA 3.0.
+- Resize-only derivative: 1800 x 1200 WebP, 589,956 bytes, stored as
+  `public/link-marketplace/assets/attard-san-anton-gardens-frank-vincentz.webp`.
+- Derivative SHA-256:
+  `60AA47CBD823055064D3F6958CE6F70364CDBEC9E55BE0E907A29E4BDA90B698`
+- Full-pixel visual review confirms a clear garden scene with pond, statue,
+  trees and paving. A few visitors remain small contextual details. No private
+  contact information is visible.
+- The image is context for San Anton Gardens only. It cannot stand for all of
+  Attard, the current conservation phase, a listing view, access or proximity.
+  The visible caption must state the 2013 capture date, creator, Commons source,
+  CC BY-SA 3.0 licence and resize.
 
-The exact original still needs to be downloaded, hashed and visually checked
-before use. Any crop or resize must be disclosed in the visible caption.
+Rejected candidate: `Malta - Attard - San Anton Gardens 03 ies.jpg`. Exact-file
+inspection showed that it is dominated by a sign containing identifiable
+commercial contact information rather than a useful garden view. It must not
+be used or published.
 
 ## Map and route rules
 
@@ -113,8 +126,6 @@ before use. Any crop or resize must be disclosed in the visible caption.
 
 ## Release gates
 
-- Download and inspect the exact licensed hero; record original and derivative
-  hashes, dimensions and visible attribution.
 - Recheck the council, health, shop, restaurant and San Anton works sources on
   release day.
 - Write an independent English edition with useful viewing questions and clear
