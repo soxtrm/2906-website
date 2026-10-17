@@ -14,8 +14,9 @@ ACTUAL=$(md5sum $B/services/adminCommands.js | cut -d' ' -f1)
 [ "$ACTUAL" = "$EXPECTED" ] || { echo "ABORT: production adminCommands.js changed ($ACTUAL), rebase the fix first"; exit 1; }
 
 # Do not interrupt a batch that is sending right now.
-RUNNING=$(docker exec 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT count(*) FROM outreach_batches WHERE status=$$running$$"')
-[ "$RUNNING" = "0" ] || { echo "ABORT: $RUNNING outreach batch(es) running — deploy after they finish"; exit 1; }
+SQL="SELECT (SELECT count(*) FROM outreach_batches WHERE status = 'running') + (SELECT count(*) FROM outreach_runs WHERE status IN ('claimed','running'))"
+RUNNING=$(docker exec -e SQL="$SQL" 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "$SQL"')
+[ "$RUNNING" = "0" ] || { echo "ABORT: $RUNNING outreach batch/run(s) active — deploy after they finish"; exit 1; }
 
 mkdir -p $BK/services
 cp -p $B/services/adminCommands.js $BK/services/
