@@ -37,6 +37,7 @@ const { tryHandleCreateHotList, tryHandlePendingAnswer: tryHandleHotPendingAnswe
 const { incrementNoReplyForPhone } = require('./outreachTracker')
 const outreachIdentity = require('./outreachIdentity')
 const outreachApproval = require('./outreachApproval')
+const approvalStore = require('./outreachApprovalStore')
 
 // ── Running-batch registry (replaces the old global cancel flag) ──────
 // Kev, 2026-09-24: one process-wide boolean meant (a) every new batch's
@@ -1332,6 +1333,11 @@ ${noWaList}`, replySession)
     expiresAt: Date.now() + OUTREACH_TEXT_TTL_MS,
   })
   log.info('Outreach approval armed', { approvalId, admin: String(adminPhone).slice(-4), session: checkSession, contacts: contacts.length, noWhatsApp: noWhatsApp.length })
+  // Durable copy: survives a backend restart inside the approval window.
+  await approvalStore.savePending({
+    approvalId, adminPhone, replySession, sendingSession: outreachSession || replySession,
+    listType, contacts, messageText, fromNotesChat, expiresAt: Date.now() + OUTREACH_TEXT_TTL_MS,
+  })
   const forceCount = contacts.filter(c => c.force).length
   const lines = [
     `📨 Ready to send *${contacts.length}* ${listType !== 'unknown' ? listType : ''} outreach${contacts.length === 1 ? '' : 'es'}`.replace(/  +/g, ' '),
@@ -1559,14 +1565,23 @@ async function startMessageStep(adminPhone, session, contacts, outreachSession) 
 
 // ── handleOutreachStep — called for every admin DM mid-flow ────────
 async function handleOutreachStep(adminPhone, text, session) {
-  const state = manualOutreachState.get(adminPhone)
+  let state = manualOutreachState.get(adminPhone)
   const decision = outreachApproval.decisionOf(text)
+  if (!state) {
+    // After a restart the in-memory cache is empty — the durable preview is not.
+    const restored = await approvalStore.loadPending(adminPhone)
+    if (restored) {
+      manualOutreachState.set(adminPhone, restored)
+      state = restored
+      log.info('Outreach approval restored from store', { approvalId: restored.approvalId, admin: String(adminPhone).slice(-4) })
+    }
+  }
   if (!state) {
     // Nothing pending. "!yes"/"!no" are not commands — answer them instead of
     // "Unknown command". A plain YES only gets an answer right after an
     // approval this operator just made (repeated YES); otherwise plain words
     // keep flowing to the other YES handlers (match replies etc.).
-    const memo = outreachApproval.recall(adminPhone)
+    const memo = outreachApproval.recall(adminPhone) || (decision ? await approvalStore.lastDecision(adminPhone) : null)
     if (decision && String(text).trim().startsWith('!')) {
       await reply(adminPhone, outreachApproval.noPendingMessage(memo), session)
       return true
@@ -1586,6 +1601,7 @@ async function handleOutreachStep(adminPhone, text, session) {
     const wasApproval = /_confirm$/.test(state.step)
     log.info('Outreach approval expired', { step: state.step, approvalId: state.approvalId || null, admin: String(adminPhone).slice(-4), ageMs: Date.now() - (state.setAt || 0) })
     if (wasApproval) {
+      approvalStore.close(state.approvalId, 'EXPIRED')
       outreachApproval.remember(adminPhone, { outcome: 'expired' }, state.setAt || Date.now())
       if (decision) {
         await reply(adminPhone, outreachApproval.noPendingMessage(outreachApproval.recall(adminPhone)), session)
@@ -1643,18 +1659,29 @@ async function handleOutreachStep(adminPhone, text, session) {
       // pending state and gets the "already approved" answer, never a 2nd run.
       manualOutreachState.delete(adminPhone)
       const sendingSession = outreachSession || session
-      log.info('Outreach approval accepted', { approvalId: approvalId || null, admin: String(adminPhone).slice(-4), session: sendingSession, contacts: contacts.length })
+      // PENDING -> APPROVED in one conditional UPDATE: a second handler or a
+      // second backend instance loses here and never enqueues.
+      const claim = approvalId ? await approvalStore.claim(approvalId) : 'unavailable'
+      if (claim === 'already_decided' || claim === 'expired') {
+        log.info('Outreach approval: claim lost', { approvalId, claim })
+        const memo = outreachApproval.recall(adminPhone) || await approvalStore.lastDecision(adminPhone)
+        await reply(adminPhone, outreachApproval.noPendingMessage(claim === 'expired' ? { outcome: 'expired', at: state.setAt } : memo), session)
+        return true
+      }
+      log.info('Outreach approval accepted', { approvalId: approvalId || null, admin: String(adminPhone).slice(-4), session: sendingSession, contacts: contacts.length, claim })
       let run = null
       try {
         run = await enqueueDirectOutreach(adminPhone, session, sendingSession, contacts, messageText, { pacingType: listType, source: 'notes_outreach', triggerId: approvalId })
       } catch (err) {
         log.error('Outreach approval: enqueue failed', { approvalId: approvalId || null, err: err.message })
         outreachApproval.remember(adminPhone, { outcome: 'refused', why: err.message })
+        approvalStore.close(approvalId, 'REFUSED', err.message)
         await reply(adminPhone, `❌ Outreach NOT started — ${err.message}
 Nothing was sent.`, session)
         return true
       }
       outreachApproval.remember(adminPhone, { outcome: 'approved', count: contacts.length, session: sendingSession, runId: run?.run_id || null })
+      if (approvalId && run?.run_id) approvalStore.attachRun(approvalId, run.run_id)
       log.info('Outreach approval: run enqueued', { approvalId: approvalId || null, runId: run?.run_id || null, status: run?.status || null })
       await reply(adminPhone,
         `✅ Approved — ${contacts.length} message(s) will go out via *${sendingSession}*${run?.run_id ? ` (run ${String(run.run_id).slice(0, 8)})` : ''}. ` +
@@ -1677,6 +1704,7 @@ Nothing was sent.`, session)
     if (decision === 'stop') {
       manualOutreachState.delete(adminPhone)
       outreachApproval.remember(adminPhone, { outcome: 'cancelled' })
+      approvalStore.close(state.approvalId, 'CANCELLED')
       log.info('Outreach approval cancelled', { approvalId: state.approvalId || null, admin: String(adminPhone).slice(-4) })
       await reply(adminPhone, '❌ Outreach cancelled.', session)
       return true
@@ -1897,6 +1925,7 @@ async function cmdCancel(phone, session, args = '') {
   }
 
   manualOutreachState.delete(phone)
+  approvalStore.cancelPendingFor(phone)
   cancelPmPostPending(phone)
   let waiting = 0
   try {

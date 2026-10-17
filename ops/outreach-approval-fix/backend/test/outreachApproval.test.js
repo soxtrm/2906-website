@@ -15,7 +15,7 @@ const Module = require('module')
 const path = require('path')
 
 const SERVICES = path.join(__dirname, '..', 'services')
-const REAL = new Set([path.join(SERVICES, 'adminCommands.js'), path.join(SERVICES, 'outreachApproval.js')])
+const REAL = new Set(['adminCommands.js', 'outreachApproval.js', 'outreachApprovalStore.js'].map(file => path.join(SERVICES, file)))
 const NOTES_PHONE = '491772889021'
 const SESSION = 'Cedric'
 
@@ -33,9 +33,9 @@ function genericStub() {
   return new Proxy(fn, { get: (target, key) => (key === 'then' ? undefined : key in target ? target[key] : genericStub()) })
 }
 
-function harness({ onWhatsApp = () => true, sendError = null } = {}) {
+function harness({ onWhatsApp = () => true, sendError = null, sharedDb = null, sharedRuns = null } = {}) {
   const sent = []         // every WhatsApp text the bot would have sent
-  const runs = new Map()  // trigger_id → run (production: ON CONFLICT DO NOTHING)
+  const runs = sharedRuns || new Map()  // trigger_id → run (production: ON CONFLICT DO NOTHING)
   const logs = []
   const stubs = {
     '../waha': {
@@ -57,7 +57,7 @@ function harness({ onWhatsApp = () => true, sendError = null } = {}) {
       system: { active: true, outreachActive: true },
       gemini: {}, sheets: {}, telegram: {},
     },
-    '../db': { query: async sql => (/RETURNING/i.test(sql) ? { rows: [{ id: 1 }], rowCount: 1 } : { rows: [], rowCount: 0 }) },
+    '../db': sharedDb || { query: async sql => (/RETURNING/i.test(sql) ? { rows: [{ id: 1 }], rowCount: 1 } : { rows: [], rowCount: 0 }) },
     '../logger': new Proxy({}, { get: (_, level) => (msg, meta) => logs.push({ level, msg, meta }) }),
     './outreachRunEngine': {
       DEFAULT_PACING_MODE: 'mixed',
@@ -236,4 +236,94 @@ test('other WAHA send failures are reported as failed, not hidden', async t => {
   assert.equal(result.sent, 2)
   assert.equal(result.failed, 1)
   assert.match(h.sent.at(-1).text, /✅ \*Outreach complete:\*[\s\S]*- Sent: 2[\s\S]*- Failed: 1 \(send errors\)/)
+})
+
+// ── Durable approvals: restart / second instance ────────────────────────────
+// A tiny in-memory stand-in for Postgres that implements exactly the
+// statements outreachApprovalStore.js issues against outreach_pending_approvals
+// (conditional UPDATE … WHERE state='PENDING' is atomic per call, as in PG).
+function approvalDb() {
+  const rows = new Map()
+  const now = () => Date.now()
+  const pending = phone => [...rows.values()].find(r => r.admin_phone === phone && r.state === 'PENDING')
+  return {
+    rows,
+    query: async (sql, p = []) => {
+      if (!/outreach_pending_approvals/.test(sql)) return /RETURNING/i.test(sql) ? { rows: [{ id: 1 }] } : { rows: [] }
+      if (/SET state='SUPERSEDED'/.test(sql)) { const r = pending(p[0]); if (r) { r.state = 'SUPERSEDED'; r.decided_at = now() } return { rows: [] } }
+      if (/^\s*INSERT/.test(sql)) {
+        if (!rows.has(p[0])) rows.set(p[0], { approval_id: p[0], admin_phone: p[1], reply_session: p[2], sending_session: p[3], list_type: p[4], contacts: JSON.parse(p[5]), message_template: p[6], from_notes_chat: p[7], expires_at: p[8], created_at: new Date(now()), state: 'PENDING', run_id: null, decided_at: null })
+        return { rows: [] }
+      }
+      if (/SELECT \* FROM outreach_pending_approvals WHERE admin_phone/.test(sql)) { const r = pending(p[0]); return { rows: r ? [r] : [] } }
+      if (/SET state='APPROVED'/.test(sql)) {
+        const r = rows.get(p[0])
+        if (r && r.state === 'PENDING' && new Date(r.expires_at).getTime() > now()) { r.state = 'APPROVED'; r.decided_at = now(); return { rows: [{ approval_id: r.approval_id }] } }
+        return { rows: [] }
+      }
+      if (/SELECT state, expires_at <= NOW\(\) AS expired/.test(sql)) { const r = rows.get(p[0]); return { rows: r ? [{ state: r.state, expired: new Date(r.expires_at).getTime() <= now() }] : [] } }
+      if (/SET run_id=\$2/.test(sql)) { const r = rows.get(p[0]); if (r) r.run_id = p[1]; return { rows: [] } }
+      if (/SET state=\$2, refusal_reason/.test(sql)) { const r = rows.get(p[0]); if (r && r.state === 'PENDING') { r.state = p[1]; r.decided_at = now() } return { rows: [] } }
+      if (/SET state='CANCELLED', decided_at=NOW\(\) WHERE admin_phone/.test(sql)) { const r = pending(p[0]); if (r) { r.state = 'CANCELLED'; r.decided_at = now() } return { rows: [] } }
+      if (/ORDER BY decided_at DESC LIMIT 1/.test(sql)) {
+        const r = [...rows.values()].filter(x => x.admin_phone === p[0] && x.state !== 'PENDING' && x.decided_at && now() - x.decided_at < Number(p[1])).sort((a, b) => b.decided_at - a.decided_at)[0]
+        return { rows: r ? [{ state: r.state, run_id: r.run_id, decided_at: new Date(r.decided_at), created_at: r.created_at, count: r.contacts.length, sending_session: r.sending_session }] : [] }
+      }
+      throw new Error(`unexpected SQL in approvalDb fake: ${sql.slice(0, 80)}`)
+    },
+  }
+}
+
+test('restart between preview and YES: the approval survives and starts exactly once', async t => {
+  const clock = withClock(t)
+  const db = approvalDb(), runs = new Map()
+  const before = harness({ sharedDb: db, sharedRuns: runs })
+  await preview(before)
+  assert.equal([...db.rows.values()][0].state, 'PENDING')
+  // Process restart: fresh module, empty memory, same database.
+  const after = harness({ sharedDb: db, sharedRuns: runs })
+  clock.advance(30000)
+  await after.say('Yes')
+  assert.equal(runs.size, 1)
+  assert.match(after.lastReply(), /✅ Approved — 2 message\(s\)/)
+  const row = [...db.rows.values()][0]
+  assert.equal(row.state, 'APPROVED')
+  assert.equal(row.run_id, [...runs.values()][0].run_id)
+})
+
+test('restart after the run started: a late YES / !yes never re-executes it', async t => {
+  const clock = withClock(t)
+  const db = approvalDb(), runs = new Map()
+  const first = harness({ sharedDb: db, sharedRuns: runs })
+  await preview(first)
+  clock.advance(5000); await first.say('Yes')
+  const restarted = harness({ sharedDb: db, sharedRuns: runs })
+  clock.advance(20000); await restarted.say('!yes')
+  assert.equal(runs.size, 1)
+  assert.match(restarted.lastReply(), /Already approved/)
+})
+
+test('restart, then YES after expiry: explicit expiry answer, nothing starts', async t => {
+  const clock = withClock(t)
+  const db = approvalDb(), runs = new Map()
+  await preview(harness({ sharedDb: db, sharedRuns: runs }))
+  const restarted = harness({ sharedDb: db, sharedRuns: runs })
+  clock.advance(6 * 60 * 1000)
+  await restarted.say('Yes')
+  assert.equal(runs.size, 0)
+  assert.match(restarted.lastReply(), /expired after 5 minutes — nothing was sent/)
+})
+
+test('two backend instances receive the same YES: only one claims the approval', async t => {
+  const clock = withClock(t)
+  const db = approvalDb()
+  const enqueued = []
+  const a = harness({ sharedDb: db })
+  await preview(a)
+  const b = harness({ sharedDb: db })
+  clock.advance(5000)
+  // Instance B has no memory of the preview; it restores it from the store.
+  await Promise.all([a.say('Yes'), b.say('Yes')])
+  for (const h of [a, b]) enqueued.push(...h.runs.values())
+  assert.equal(enqueued.length, 1, 'exactly one instance enqueued a run')
 })
