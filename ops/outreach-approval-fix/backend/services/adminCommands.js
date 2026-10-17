@@ -3679,7 +3679,10 @@ async function handleCreateList(cmdPhone, session, requestedCount, targetSession
       return
     }
 
-    const header = `📋 ${list.length} owners ready (pool: ${result.pool}, cycle #${(result.cycle_count || 0) + 1})`
+    const reach = result.reachability || {}
+    const header = `📋 ${list.length} owners ready (pool: ${result.pool}, cycle #${(result.cycle_count || 0) + 1})` +
+      (reach.notRegistered ? `\n📵 ${reach.notRegistered} skipped — not on WhatsApp` : '') +
+      (reach.unverified ? `\n⚠️ ${reach.unverified} could not be checked right now — left in the pool` : '')
     await reply(cmdPhone, header, session)
 
     await sleep(1000)

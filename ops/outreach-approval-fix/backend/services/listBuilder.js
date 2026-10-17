@@ -438,6 +438,14 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
           SELECT 1 FROM outreach_reservations r
           WHERE r.normalized_phone = oc.phone_normalized AND r.released_at IS NULL
         )
+        -- Provider said "not on WhatsApp" recently (pool check below, or a
+        -- send that failed with no LID). Rechecked after 90 days.
+        AND NOT EXISTS (
+          SELECT 1 FROM outreach_unreachable u
+          WHERE u.phone = oc.phone_normalized
+            AND u.reason IN ('not_registered', 'no_lid')
+            AND u.last_seen_at > NOW() - INTERVAL '90 days'
+        )
       ORDER BY oc.id ASC
       LIMIT $2
     `
@@ -467,6 +475,14 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
           SELECT 1 FROM outreach_reservations r
           WHERE r.normalized_phone = oc.phone_normalized AND r.released_at IS NULL
         )
+        -- Provider said "not on WhatsApp" recently (pool check below, or a
+        -- send that failed with no LID). Rechecked after 90 days.
+        AND NOT EXISTS (
+          SELECT 1 FROM outreach_unreachable u
+          WHERE u.phone = oc.phone_normalized
+            AND u.reason IN ('not_registered', 'no_lid')
+            AND u.last_seen_at > NOW() - INTERVAL '90 days'
+        )
       ORDER BY oc.id DESC
       LIMIT $2
     `
@@ -494,24 +510,62 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
     return await buildPoolBatch(sessionName, requestedCount, { ...options, cursorOverride: newCursor, wrappedPreview: true })
   }
 
-  // Filter: same-account 20-day cooldown (NOT cross-account)
+  // Filter: same-account 20-day cooldown (NOT cross-account), then — new on
+  // 2026-10-17 — WhatsApp reachability with the sending session. Batch 276
+  // got 40 numbers none of which was on WhatsApp because nothing checked.
+  // Only VALID numbers enter the list. NOT_REGISTERED is remembered in
+  // outreach_unreachable (skipped by the query above for 90 days). A lookup
+  // that fails technically is never treated as "no WhatsApp": the number is
+  // left out of THIS list and stays in the pool. options.verifyWhatsApp=false
+  // restores the previous behaviour.
   const COOLDOWN_DAYS = 20
+  const verify = options.verifyWhatsApp !== false
+  const reachability = verify ? (options.reachability || require('./whatsappReachability')) : null
   const eligible = []
+  const skippedReach = { notRegistered: 0, unverified: 0 }
   let lastProcessedId = cursor
 
-  for (const c of candidates) {
-    lastProcessedId = c.id
-
+  const cooldownOk = async (c) => {
     const lastOutreach = await db.query(
       `SELECT last_outreach_at FROM owner_account_labels
        WHERE contact_id = $1 AND account_session = $2`,
       [c.id, sessionName]
     )
-
     const last = lastOutreach.rows[0]?.last_outreach_at
-    if (!last || (Date.now() - new Date(last).getTime()) > COOLDOWN_DAYS * 86400000) {
-      eligible.push(c)
-      if (eligible.length >= requestedCount) break
+    return !last || (Date.now() - new Date(last).getTime()) > COOLDOWN_DAYS * 86400000
+  }
+
+  let index = 0
+  scan: while (index < candidates.length && eligible.length < requestedCount) {
+    const chunk = []
+    while (index < candidates.length && chunk.length < 5) {
+      const c = candidates[index++]
+      if (await cooldownOk(c)) chunk.push(c)
+      else lastProcessedId = c.id
+    }
+    if (!chunk.length) continue
+    const statuses = verify
+      ? await reachability.classifyMany(sessionName, chunk.map(c => c.phone_normalized))
+      : chunk.map(() => ({ status: 'VALID' }))
+    for (let k = 0; k < chunk.length; k++) {
+      const c = chunk[k]
+      const status = statuses[k].status
+      if (status === 'VALID') {
+        // Full: leave this valid owner (and everything after it) for the next list.
+        if (eligible.length >= requestedCount) break scan
+        eligible.push(c)
+      } else if (status === 'NOT_REGISTERED') {
+        skippedReach.notRegistered++
+        db.query(
+          `INSERT INTO outreach_unreachable (phone, reason, notes, last_seen_at, occurrence_count)
+           VALUES ($1, 'not_registered', $2, NOW(), 1)
+           ON CONFLICT (phone, reason) DO UPDATE SET last_seen_at = NOW(), occurrence_count = outreach_unreachable.occurrence_count + 1`,
+          [c.phone_normalized, `pool check via ${sessionName}`]
+        ).catch(err => log.warn('listBuilder: could not record not_registered', { err: err.message }))
+      } else {
+        skippedReach.unverified++
+      }
+      lastProcessedId = c.id
     }
   }
 
@@ -527,6 +581,7 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
     pool,
     cursor_advanced_to: lastProcessedId,
     cycle_count: cycleCount,
+    reachability: skippedReach,
   }
 }
 
