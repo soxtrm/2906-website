@@ -90,7 +90,10 @@ function escapeRegExp(s) {
 // "Telgħet" added 2026-08-29 (#2906-upload): "Telgħet Birkirkara" survived a
 // pin line whole because it carries no recognised prefix — a real address,
 // not a landmark.
-const ST_MT = String.raw`triq|trejqa|sqaq|vjal|misra[ħh]|pjazza|wesg[ħh]a|telg[ħh]et`
+// "Rue" / "Strada" added 2026-10-17 (#2906-9481): "421 Rue D’Argens, Gżira" is a
+// real Gżira street written the French way and survived upload sanitizing
+// whole. ("Via" deliberately not: "via the coast road" is ordinary copy.)
+const ST_MT = String.raw`triq|trejqa|sqaq|vjal|misra[ħh]|pjazza|wesg[ħh]a|telg[ħh]et|rue|strada`
 // English street nouns, suffix form: "Sir Frederick Street".
 // Deliberately WITHOUT "close", "court" and "hill" — "Sliema close to the sea"
 // would read as an address and cost us the town, which is allowed to stay.
@@ -161,7 +164,9 @@ const GUARD_ONLY_ADDRESS = [
   // "📍 Luxor, 234" / "📍 Blue Harbour Residence, 17" — a suffix-less
   // building or residence name followed by a unit/house number. Restrict this
   // to pin lines so ordinary prose and measurements remain valid ad copy.
-  String.raw`📍\s*\p{L}[\p{L}'’\-]*(?:\s+\p{L}[\p{L}'’\-]*){0,3}\s*,\s*\d{1,4}\b`,
+  // A dash separates them as often as a comma ("📍 Gżira – 421 Rue …"); the
+  // formatter turns that dash into a comma, so both must be caught here.
+  String.raw`📍\s*\p{L}[\p{L}'’\-]*(?:\s+\p{L}[\p{L}'’\-]*){0,3}\s*[,–—-]\s*\d{1,4}\b`,
   // "📍 The Strand" — a suffix-less street name with NO number on a pin line.
   // Caught only on pin lines so ordinary prose ("close to The Point")
   // remains valid ad copy. One of these can hide an entire postcode.
@@ -245,6 +250,12 @@ function normQuotes(s) {
   return String(s || '').replace(/[’‘‛´`]/g, "'")
 }
 
+// "Gżira" in ad copy vs "Gzira" in the town column (2026-10-17, #2906-9481):
+// compare without diacritics so the town survives on a rewritten pin line.
+function foldTown(s) {
+  return normQuotes(s).normalize('NFD').replace(/\p{M}/gu, '').replace(/ħ/gi, 'h')
+}
+
 // Remove every address match, line by line, keeping the town.
 function stripAddresses(text, town) {
   const src = String(text || '')
@@ -277,23 +288,38 @@ function stripAddresses(text, town) {
 
     // 2) Any line may carry the broader "located on/in" address.
     re.lastIndex = 0
+    let streetCut = false
     if (re.test(cleaned)) {
       re.lastIndex = 0
       cleaned = cleaned.replace(re, ' ')
       modified = true
+      streetCut = true
     }
 
     if (!modified) { rows.push({ text: line, modified: false }); continue }
 
     cleaned = tidyLine(cleaned)
 
+    // "📍 Prime Rue D’Argens Location" → "📍 Prime": a lone leftover word
+    // after a street was cut out of a pin line says nothing. Treat it like an
+    // emptied line (keeps the town if the line had it, otherwise drops it).
+    const leftoverWords = (cleaned.match(/\p{L}[\p{L}'’\-]*/gu) || []).length
+    if (streetCut && /📍/.test(line) && leftoverWords === 1 &&
+        !(townStr && new RegExp(`\\b${escapeRegExp(foldTown(townStr))}\\b`, 'i').test(foldTown(cleaned)))) {
+      cleaned = cleaned.replace(/\p{L}[\p{L}'’\-]*/gu, '')
+    }
+
     if (!/\p{L}/u.test(cleaned)) {
       // Only punctuation left. If the line carried the town, keep just that —
       // "📍 66, Triq Sir Frederick" with no town has nothing worth keeping.
       if (townStr &&
-          new RegExp(`\\b${escapeRegExp(normQuotes(townStr))}\\b`, 'i').test(normQuotes(line))) {
+          new RegExp(`\\b${escapeRegExp(foldTown(townStr))}\\b`, 'i').test(foldTown(line))) {
         const prefix = (line.match(/^[^\p{L}\d]*/u) || [''])[0].replace(/[\s,;.]+$/, '')
-        rows.push({ text: `${prefix} ${townStr}`.trim(), modified: true })
+        // Keep the town as the ad spelled it ("Gżira"), not the column's "Gzira".
+        const asWritten = (line.match(/\p{L}[\p{L}'’\-]*(?:\s+\p{L}[\p{L}'’\-]*)*/gu) || [])
+          .flatMap(chunk => chunk.split(/\s+/).map((_, i, words) => words.slice(i, i + townStr.split(/\s+/).length).join(' ')))
+          .find(candidate => foldTown(candidate).toLowerCase() === foldTown(townStr).toLowerCase())
+        rows.push({ text: `${prefix} ${asWritten || townStr}`.trim(), modified: true })
       }
       continue
     }

@@ -22,7 +22,7 @@
 // street/apt right before sending. See categoryPublisher.js.
 // ============================================================================
 
-const { assertNoLeaks, findAddress, findMapsLink } = require('./sanitizer')
+const { assertNoLeaks, findAddress, findMapsLink, stripAddresses, stripMapsLinks } = require('./sanitizer')
 // Kev, 2026-09-09 (KANONISCHES PROPERTY-TEMPLATE spec, STIL-REGELN: "NIEMALS
 // Bindestriche/Gedankenstriche"). This filter already existed (STYLE-1) but
 // was only ever applied at conversational-send time (owner/client replies) --
@@ -189,9 +189,18 @@ function formatForCategoryGroup(publicPayload) {
   // Every channel renders through here, so this one line is what makes the
   // address firewall cover category groups, the website and Facebook equally —
   // rather than only whichever publisher remembered to re-check.
-  const addr = findAddress(message)
-  if (addr) {
-    throw new Error(`categoryFormatter: address "${addr}" in category group message`)
+  // 2026-10-17 (#2906-9481): an address that slipped past upload sanitizing
+  // used to throw here and take category groups, Facebook and auto-share
+  // down with it, for a line the stripper can remove. Redact it with the same
+  // stripper and only refuse if an address STILL survives. Privacy rule
+  // unchanged: no street or house number ever leaves this function.
+  let finalMessage = message
+  if (findAddress(finalMessage)) {
+    finalMessage = stripAddresses(finalMessage, p.town)
+    const addr = findAddress(finalMessage)
+    if (addr) {
+      throw new Error(`categoryFormatter: address "${addr}" in category group message`)
+    }
   }
   // Kev, 2026-09-10: same rule as the address above, extended to Google Maps
   // links / raw coordinates — a pin is exactly as precise as a street. This
@@ -199,12 +208,19 @@ function formatForCategoryGroup(publicPayload) {
   // description_social/public at upload time, but a listing uploaded before
   // this fix could still carry one baked into its frozen public_payload —
   // fail loudly here rather than let it reach the public package.
-  const mapsLink = findMapsLink(message)
-  if (mapsLink) {
-    throw new Error(`categoryFormatter: maps link "${mapsLink}" in category group message`)
+  // 2026-10-17: 9 such pre-09-10 listings could never be redistributed. Same
+  // redact-then-verify as the address above; the link itself still never
+  // reaches the group (it lives in Package 2 via public_payload.maps_links).
+  if (findMapsLink(finalMessage)) {
+    finalMessage = stripMapsLinks(finalMessage).text
+      .split('\n').filter(l => !/^\s*(?:🗺️?|📍)\s*:?\s*$/u.test(l)).join('\n')
+    const mapsLink = findMapsLink(finalMessage)
+    if (mapsLink) {
+      throw new Error(`categoryFormatter: maps link "${mapsLink}" in category group message`)
+    }
   }
 
-  return message
+  return finalMessage
 }
 
 // Compact availability label for Package 2 ("Now" / "Early/Mid/End <Month>")
