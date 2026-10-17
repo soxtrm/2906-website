@@ -36,6 +36,7 @@ const { tryHandleCreateColdList } = require('../handlers/createcoldlist')
 const { tryHandleCreateHotList, tryHandlePendingAnswer: tryHandleHotPendingAnswer } = require('../handlers/createhotlist')
 const { incrementNoReplyForPhone } = require('./outreachTracker')
 const outreachIdentity = require('./outreachIdentity')
+const outreachApproval = require('./outreachApproval')
 
 // ── Running-batch registry (replaces the old global cancel flag) ──────
 // Kev, 2026-09-24: one process-wide boolean meant (a) every new batch's
@@ -693,6 +694,9 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
   let failed = 0
   let ambiguous = 0
   let held = 0
+  let noWhatsApp = 0
+  let consecutiveNoWhatsApp = 0
+  const NO_WHATSAPP_STOP_AFTER = 5
   const lifecycle = opts.lifecycle || {}
   const progressReply = opts.suppressMirroredProgress ? async () => {} : reply
   const notifyRun = (text) => notifyOutreachRun(adminPhone, replySession, sendingSession, text, { mirror: !opts.suppressMirroredProgress })
@@ -1023,6 +1027,30 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
         continue
       }
       const unknown = lifecycle.transportOutcomeUnknown?.(err) === true
+      // GOWS answers "no LID found for <n>@s.whatsapp.net from server" when
+      // the number has no WhatsApp. That is not a transport fault: count it as
+      // skipped, remember it, and stop a batch whose first numbers all fail
+      // this way (batch 276 spent 50 minutes on 40 such numbers).
+      if (!unknown && /no LID found/i.test(String(err?.message || ''))) {
+        skipped++
+        noWhatsApp++
+        consecutiveNoWhatsApp++
+        skippedDetails.push({ phone, name, reason: 'not on WhatsApp' })
+        await checkpoint(phone, 'skipped', { skipReason: 'not_on_whatsapp', messageText: text })
+        await lifecycle.skipped?.(phone, 'not_on_whatsapp')
+        require('./outreachUnreachable').markUnreachable({ phone, reason: 'no_lid', notes: `batch ${batchId || '?'} via ${FROZEN.session}` })
+          .catch(markErr => log.warn('outreach: markUnreachable failed', { err: markErr.message }))
+        log.warn('Direct outreach skipped: not on WhatsApp', { batchId, phone: phone.slice(-4), session: FROZEN.session })
+        if (sent === 0 && consecutiveNoWhatsApp >= NO_WHATSAPP_STOP_AFTER && i < contacts.length - 1) {
+          log.error('Direct outreach stopped: first numbers are not on WhatsApp', { batchId, session: FROZEN.session, checked: i + 1 })
+          await notifyRun(`⚠️ Batch${batchId ? ` *#${batchId}*` : ''} stopped — the first ${consecutiveNoWhatsApp} numbers are not on WhatsApp and nothing could be delivered. ` +
+            `The rest of this list (${contacts.length - i - 1}) was not attempted. Check the list source.`)
+          await markCancelled()
+          break
+        }
+        continue
+      }
+      consecutiveNoWhatsApp = 0
       if (unknown) {
         ambiguous++
         skippedDetails.push({ phone, name, reason: `ambiguous transport result: ${err.message}` })
@@ -1051,11 +1079,16 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
 
   const durationMin = Math.max(1, Math.round((Date.now() - startedAt) / 60000))
   const lines = [
-    '✅ *Outreach complete:*',
+    sent > 0 ? '✅ *Outreach complete:*' : '⚠️ *Outreach finished — nothing was delivered:*',
     `- Sent: ${sent}`,
-    `- Skipped: ${skipped} (cooldown / not found / errors)`,
+    `- Skipped: ${skipped}${noWhatsApp ? ` (${noWhatsApp} not on WhatsApp)` : ''}`,
+    failed ? `- Failed: ${failed} (send errors)` : null,
+    ambiguous ? `- Unclear: ${ambiguous} (transport result unknown)` : null,
     `- Duration: ${durationMin}m`,
   ]
+  const reportLines = lines.filter(line => line !== null)
+  lines.length = 0
+  lines.push(...reportLines)
   if (skippedDetails.length > 0) {
     lines.push('')
     lines.push('*Skipped detail:*')
@@ -1235,7 +1268,43 @@ const OUTREACH_TEXT_TTL_MS = 5 * 60 * 1000 // 5 minutes
 // !foutreach's one-paste Path B land here — this is the ONE place that
 // arms the YES/EDIT/STOP gate, so nothing can send without it. Builds the
 // same preview + pacing estimate either way and never sends anything itself.
+// Which of these numbers can WhatsApp actually deliver to? Batch 276
+// (2026-10-17) armed 40 numbers none of which had WhatsApp; every send then
+// failed with "no LID found" for 50 minutes. Checked once here, at preview
+// time, so the operator approves what can really be sent. checkNumberStatus
+// is fail-open (an API error counts as reachable) — it never blocks a batch
+// because of a lookup problem.
+async function splitByWhatsApp(session, contacts) {
+  const results = new Array(contacts.length)
+  let next = 0
+  const worker = async () => {
+    while (next < contacts.length) {
+      const index = next++
+      results[index] = await waha.checkNumberStatus(session, contacts[index].phone)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(5, contacts.length) }, worker))
+  return {
+    reachable: contacts.filter((_, index) => results[index] !== false),
+    noWhatsApp: contacts.filter((_, index) => results[index] === false),
+  }
+}
+
 async function presentOutreachConfirm(adminPhone, replySession, outreachSession, contacts, messageText, listType = 'unknown', fromNotesChat = true) {
+  const checkSession = outreachSession || replySession
+  if (contacts.length > 3) await reply(adminPhone, `⏳ Checking which of the ${contacts.length} numbers are on WhatsApp…`, replySession)
+  const { reachable, noWhatsApp } = await splitByWhatsApp(checkSession, contacts)
+  const noWaList = noWhatsApp.slice(0, 10).map(c => `+${c.phone}${c.name ? ` ${c.name}` : ''}`).join(', ') + (noWhatsApp.length > 10 ? `, …+${noWhatsApp.length - 10}` : '')
+  if (!reachable.length) {
+    manualOutreachState.delete(adminPhone)
+    const why = `none of the ${contacts.length} numbers is on WhatsApp`
+    outreachApproval.remember(adminPhone, { outcome: 'refused', why })
+    log.warn('Outreach approval refused: no recipient on WhatsApp', { admin: String(adminPhone).slice(-4), session: checkSession, total: contacts.length })
+    await reply(adminPhone, `📵 Not armed — ${why}. Nothing will be sent.
+${noWaList}`, replySession)
+    return
+  }
+  contacts = reachable
   const firstName = (contacts[0]?.name || '').trim().split(/\s+/)[0]
   const preview = firstName
     ? messageText.replace(/\[name\]/gi, firstName)
@@ -1246,6 +1315,10 @@ async function presentOutreachConfirm(adminPhone, replySession, outreachSession,
   const avgSec = Math.round((pace.min + pace.max) / 2000)
   const estMin = Math.max(1, Math.ceil((contacts.length * avgSec) / 60))
 
+  // approvalId doubles as the run's triggerId: enqueueOutreachRun is
+  // ON CONFLICT (source, trigger_id) DO NOTHING, so one preview can never
+  // become two runs, however many YES messages arrive.
+  const approvalId = require('crypto').randomUUID()
   manualOutreachState.set(adminPhone, {
     step: 'awaiting_outreach_confirm',
     contacts,
@@ -1254,13 +1327,16 @@ async function presentOutreachConfirm(adminPhone, replySession, outreachSession,
     session: replySession,
     outreachSession,
     fromNotesChat,
+    approvalId,
     setAt: Date.now(),
     expiresAt: Date.now() + OUTREACH_TEXT_TTL_MS,
   })
+  log.info('Outreach approval armed', { approvalId, admin: String(adminPhone).slice(-4), session: checkSession, contacts: contacts.length, noWhatsApp: noWhatsApp.length })
   const forceCount = contacts.filter(c => c.force).length
   const lines = [
     `📨 Ready to send *${contacts.length}* ${listType !== 'unknown' ? listType : ''} outreach${contacts.length === 1 ? '' : 'es'}`.replace(/  +/g, ' '),
     forceCount ? `⚡ FORCE mode — ${forceCount} contact(s), cooldowns overridden` : null,
+    noWhatsApp.length ? `📵 ${noWhatsApp.length} number(s) without WhatsApp removed: ${noWaList}` : null,
     `Pacing: ${minSec}-${maxSec}s · est ~${estMin}m total`,
     '',
     'Preview (first owner):',
@@ -1484,16 +1560,45 @@ async function startMessageStep(adminPhone, session, contacts, outreachSession) 
 // ── handleOutreachStep — called for every admin DM mid-flow ────────
 async function handleOutreachStep(adminPhone, text, session) {
   const state = manualOutreachState.get(adminPhone)
-  if (!state) return false
-
-  // Expiry: drop stale state silently and let normal command routing run
-  if (state.expiresAt && Date.now() > state.expiresAt) {
-    manualOutreachState.delete(adminPhone)
+  const decision = outreachApproval.decisionOf(text)
+  if (!state) {
+    // Nothing pending. "!yes"/"!no" are not commands — answer them instead of
+    // "Unknown command". A plain YES only gets an answer right after an
+    // approval this operator just made (repeated YES); otherwise plain words
+    // keep flowing to the other YES handlers (match replies etc.).
+    const memo = outreachApproval.recall(adminPhone)
+    if (decision && String(text).trim().startsWith('!')) {
+      await reply(adminPhone, outreachApproval.noPendingMessage(memo), session)
+      return true
+    }
+    if (decision === 'yes' && memo && memo.outcome === 'approved' && Date.now() - memo.at < 2 * 60 * 1000) {
+      log.info('Outreach approval: repeated YES ignored', { admin: String(adminPhone).slice(-4), runId: memo.runId || null })
+      await reply(adminPhone, outreachApproval.noPendingMessage(memo), session)
+      return true
+    }
     return false
   }
 
-  // Suppress echo: bot reply fires a message.any webhook within ~4s
-  if (state.setAt && Date.now() - state.setAt < 4000) {
+  // Expiry: say so when the operator answers a dead preview — it used to be
+  // dropped silently, so a late YES looked like ARGUS ignoring the operator.
+  if (state.expiresAt && Date.now() > state.expiresAt) {
+    manualOutreachState.delete(adminPhone)
+    const wasApproval = /_confirm$/.test(state.step)
+    log.info('Outreach approval expired', { step: state.step, approvalId: state.approvalId || null, admin: String(adminPhone).slice(-4), ageMs: Date.now() - (state.setAt || 0) })
+    if (wasApproval) {
+      outreachApproval.remember(adminPhone, { outcome: 'expired' }, state.setAt || Date.now())
+      if (decision) {
+        await reply(adminPhone, outreachApproval.noPendingMessage(outreachApproval.recall(adminPhone)), session)
+        return true
+      }
+    }
+    return false
+  }
+
+  // Suppress echo: bot reply fires a message.any webhook within ~4s. A bare
+  // YES/EDIT/STOP is never an echo (the bot never sends one), so a fast human
+  // answer is no longer swallowed — the 2026-10-17 "Yes" 2 s after preview.
+  if (outreachApproval.isLikelyEcho(state, text)) {
     log.debug('Outreach echo suppressed', { step: state.step, ms: Date.now() - state.setAt })
     return true
   }
@@ -1532,17 +1637,31 @@ async function handleOutreachStep(adminPhone, text, session) {
 
   // ── Confirm step (notes-chat YES/EDIT/STOP) ──────────────────────
   if (state.step === 'awaiting_outreach_confirm') {
-    const upper = (text || '').trim().toUpperCase()
-    if (upper === 'YES' || upper === 'Y') {
-      const { contacts, messageText, listType, outreachSession } = state
+    if (decision === 'yes') {
+      const { contacts, messageText, listType, outreachSession, approvalId } = state
+      // Deleted before any await: a second YES arriving meanwhile finds no
+      // pending state and gets the "already approved" answer, never a 2nd run.
       manualOutreachState.delete(adminPhone)
-      enqueueDirectOutreach(adminPhone, session, outreachSession || session, contacts, messageText, { pacingType: listType, source: 'notes_outreach' }).catch(err => {
-        log.error('Direct outreach crashed', err)
-        reply(adminPhone, `❌ Outreach error: ${err.message}`, session)
-      })
+      const sendingSession = outreachSession || session
+      log.info('Outreach approval accepted', { approvalId: approvalId || null, admin: String(adminPhone).slice(-4), session: sendingSession, contacts: contacts.length })
+      let run = null
+      try {
+        run = await enqueueDirectOutreach(adminPhone, session, sendingSession, contacts, messageText, { pacingType: listType, source: 'notes_outreach', triggerId: approvalId })
+      } catch (err) {
+        log.error('Outreach approval: enqueue failed', { approvalId: approvalId || null, err: err.message })
+        outreachApproval.remember(adminPhone, { outcome: 'refused', why: err.message })
+        await reply(adminPhone, `❌ Outreach NOT started — ${err.message}
+Nothing was sent.`, session)
+        return true
+      }
+      outreachApproval.remember(adminPhone, { outcome: 'approved', count: contacts.length, session: sendingSession, runId: run?.run_id || null })
+      log.info('Outreach approval: run enqueued', { approvalId: approvalId || null, runId: run?.run_id || null, status: run?.status || null })
+      await reply(adminPhone,
+        `✅ Approved — ${contacts.length} message(s) will go out via *${sendingSession}*${run?.run_id ? ` (run ${String(run.run_id).slice(0, 8)})` : ''}. ` +
+        'The first one leaves within about a minute; you get the report when it finishes. *!cancel* stops it.', session)
       return true
     }
-    if (upper === 'EDIT' || upper === 'E') {
+    if (decision === 'edit') {
       manualOutreachState.set(adminPhone, {
         step: 'awaiting_outreach_text',
         contacts: state.contacts,
@@ -1555,8 +1674,10 @@ async function handleOutreachStep(adminPhone, text, session) {
       await reply(adminPhone, '✏️ What should I send instead?', session)
       return true
     }
-    if (upper === 'STOP' || upper === 'N' || upper === 'NO') {
+    if (decision === 'stop') {
       manualOutreachState.delete(adminPhone)
+      outreachApproval.remember(adminPhone, { outcome: 'cancelled' })
+      log.info('Outreach approval cancelled', { approvalId: state.approvalId || null, admin: String(adminPhone).slice(-4) })
       await reply(adminPhone, '❌ Outreach cancelled.', session)
       return true
     }
@@ -1569,8 +1690,7 @@ async function handleOutreachStep(adminPhone, text, session) {
   // ── !REACHOUTBATCH confirm — Kev, 2026-08-30. The one and only place a
   // real reachout batch can be sent: an explicit YES here, nothing else.
   if (state.step === 'awaiting_reachout_batch_confirm') {
-    const upper = (text || '').trim().toUpperCase()
-    if (upper === 'YES' || upper === 'Y') {
+    if (decision === 'yes') {
       manualOutreachState.delete(adminPhone)
       const availabilityReachout = require('./availabilityReachout')
       try {
@@ -1589,7 +1709,7 @@ async function handleOutreachStep(adminPhone, text, session) {
       }
       return true
     }
-    if (upper === 'STOP' || upper === 'N' || upper === 'NO') {
+    if (decision === 'stop') {
       manualOutreachState.delete(adminPhone)
       await reply(adminPhone, '🛑 Reachout batch cancelled — nothing sent.', session)
       return true
@@ -1602,8 +1722,7 @@ async function handleOutreachStep(adminPhone, text, session) {
   // ── !OUTREMINDER confirm — Kev, 2026-09-02. Same one-and-only-place-a-
   // real-send-happens shape as !reachoutbatch just above.
   if (state.step === 'awaiting_outreminder_confirm') {
-    const upper = (text || '').trim().toUpperCase()
-    if (upper === 'YES' || upper === 'Y') {
+    if (decision === 'yes') {
       manualOutreachState.delete(adminPhone)
       const reminderOutreach = require('./reminderOutreach')
       try {
@@ -1618,7 +1737,7 @@ async function handleOutreachStep(adminPhone, text, session) {
       }
       return true
     }
-    if (upper === 'STOP' || upper === 'N' || upper === 'NO') {
+    if (decision === 'stop') {
       manualOutreachState.delete(adminPhone)
       await reply(adminPhone, '🛑 Reminder follow-up cancelled — nothing sent.', session)
       return true
