@@ -22,10 +22,10 @@ Primary locality sources:
 
 ## Everyday life
 
-Primary HealthCare's current service material places Mġarr in the Rabat Health Centre catchment and lists a Mġarr Community Clinic at the Primary School on St Peter's Street. The eventual edition may name this as a practical public-service anchor, but must tell readers to confirm the current clinic timetable and available services before relying on it.
+Primary HealthCare's current community-clinics page lists Mġarr Community Clinic at the Primary School on Fisher Street under locations providing speech and language services. The eventual edition may name this as a practical public-service anchor only with that service scope, and must tell readers to confirm the current timetable and available services before relying on it.
 
 - Community clinics index: https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/
-- May 2026 Quality Service Charter: https://primaryhealthcare.gov.mt/wp-content/uploads/2026/05/May-2026-Quality-Service-Charter.pdf
+- May 2026 Quality Service Charter retained as background only: https://primaryhealthcare.gov.mt/wp-content/uploads/2026/05/May-2026-Quality-Service-Charter.pdf
 
 For a current retail example, Maypole's own outlet directory identifies its Żebbiegħ shop on Sir Temi Zammit Street, Mġarr. This can be used as an operator-backed everyday anchor while keeping Żebbiegħ distinct from the village centre. It is not a complete grocery directory or a claim about live stock or delivery.
 
