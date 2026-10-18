@@ -97,3 +97,15 @@ Do not draw a straight line as a walking route. Walking geometry, bus timetables
 8. Build and deploy only from the isolated worktree, verify public and CRM copies and retain a specific rollback commit.
 
 No page, image derivative, navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this research step.
+
+## Unpublished preview verification
+
+The first editorial implementation is `public/link-marketplace/areas/santa-venera.html`, 13,753 bytes, SHA256 `602B96380A7766DBFE173F1E6B94FFCB1ADB614667E48A20A9C579481F0F2178`. It remains an unpublished `noindex,nofollow` preview with no canonical, Open Graph metadata, JSON-LD, Marketplace navigation link or sitemap entry.
+
+The page keeps the three editorial contexts separate: residential streets, the aqueduct/Casa Leoni/Romeo Romano heritage-and-garden group and the busier road edges. Lidl, PANINA, House of Flavors and Romeo Romano are narrow operator-backed examples rather than rankings or property-proximity claims. The Primary HealthCare legacy Covid closure wording is disclosed and is not used as evidence of a current local clinic service.
+
+The selected 1800×1200 WebP is shown with visible credit to Frank Vincentz, Wikimedia Commons and CC BY-SA 3.0, its 30 April 2014 capture date and the proportional resize/format conversion. The on-page description limits it to dated locality context. The source pixels were not cropped, retouched or generatively altered.
+
+Real Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, `noindex,nofollow`, zero canonicals, zero Open Graph fields, zero JSON-LD blocks and no horizontal overflow. The 1800×1200 hero decoded completely and the full attribution remained readable. The page initially created no iframe; clicking the map control created exactly one visible OpenStreetMap iframe covering `14.458,35.878,14.493,35.899`, still without horizontal overflow. There were no failed page, stylesheet, image or map requests; only the repository-wide missing `/favicon.ico` returned 404. Mobile and desktop screenshots were inspected in full without clipping or overlap.
+
+Release metadata, Marketplace navigation, sitemap inclusion, build, deployment and public-production verification remain separate later gates.
