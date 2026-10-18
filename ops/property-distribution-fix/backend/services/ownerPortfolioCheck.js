@@ -206,19 +206,37 @@ function buildPrompt(items) {
   ].join('\n')
 }
 
+// 2026-10-18: every one of the first 5 live checks stayed 'awaiting_reply'.
+// Owners answer in sentences, not in the "1, 3, 6" the prompt suggests, and
+// all 12 replies were dropped as not_a_selection: "Nr 3 available only",
+// "Both are rented", "Nothing is available now", "it has been rented". The
+// strict shapes still parse exactly as before; these add the natural ones.
+// Anything still unclear is NOT guessed -- the caller hands it to Kev.
+const ALL_RE = /^(?:yes[,! ]*)?(?:all|both|every(?:one| one)?|alle|beide)(?:\s+(?:of them|are|is|still|available|free|on (?:the )?market|verfügbar|frei|noch|sind)){0,4}[.!]*$/i
+const NONE_RE = /^(?:(?:no|sorry|unfortunately|hello|hi)[,.! ]*)*(?:none|nothing|neither|keine?s?|nichts)(?:\s+(?:of them|is|are|available|left|free|now|anymore|any more|on (?:the )?market|mehr|frei|verfügbar)){0,5}[.!]*$/i
+const ALL_GONE_RE = /^(?:(?:no|sorry|unfortunately|hello|hi)[,.! ]*)*(?:all|both|they|everything|alle|beide)(?:\s+(?:of them|are|have|has|been|were|got|is|sind))*\s+(?:rented|taken|let|gone|sold|vermietet|weg)(?:\s+(?:out|already|now|unfortunately))*[.!]*$/i
+const ONE_GONE_RE = /^(?:(?:no|sorry|unfortunately|hello|hi)[,.! ]*)*(?:(?:it|it's|its|this|this one|that one|the (?:flat|apartment|property))\s+)?(?:(?:is|has|have|was|been|got|already)\s+)*(?:rented|taken|let|gone|sold|vermietet|weg)(?:\s+(?:out|already|now|unfortunately))*[.!]*$/i
+const FILLER = /\b(?:and|und|or|still|available|free|frei|verfügbar|on|the|market|numbers?|nr|nos?|only|just|nur|noch|ist|sind|is|are|left|one|ones|property|properties|flat|flats|apartments?|yes|ja|thanks|thank you|danke|please)\b/g
+
 function parseSelection(text, itemCount) {
   const raw = String(text || '').trim()
   if (!raw) return { ok: false, reason: 'empty' }
-  if (/^all(?:\s+(?:available|still available|on (?:the )?market))?[.!]?$/i.test(raw)) {
-    return { ok: true, numbers: Array.from({ length: itemCount }, (_, index) => index + 1), kind: 'all' }
-  }
-  if (/^(?:none|none available|none on (?:the )?market)[.!]?$/i.test(raw)) {
-    return { ok: true, numbers: [], kind: 'none' }
+  const all = Array.from({ length: itemCount }, (_, index) => index + 1)
+  // Judge the last non-empty line: "The links have expired\nBoth are rented".
+  const lines = raw.split(/\n+/).map(l => l.trim()).filter(Boolean)
+  for (const line of [raw, lines[lines.length - 1]]) {
+    if (ALL_RE.test(line)) return { ok: true, numbers: all, kind: 'all' }
+    if (NONE_RE.test(line) || ALL_GONE_RE.test(line)) return { ok: true, numbers: [], kind: 'none' }
+    // "it has been rented" names no number: only unambiguous with one listing.
+    if (ONE_GONE_RE.test(line)) {
+      return itemCount === 1 ? { ok: true, numbers: [], kind: 'none' } : { ok: false, reason: 'ambiguous_which' }
+    }
   }
   const cleaned = raw
     .toLowerCase()
-    .replace(/\b(?:and|und|still|available|on|the|market|numbers?|nr|no)\b/g, ' ')
-    .replace(/[.,;:+/&-]+/g, ' ')
+    .replace(/#/g, ' ')
+    .replace(FILLER, ' ')
+    .replace(/[.,;:+/&!?()-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
   if (!/^\d+(?:\s+\d+)*$/.test(cleaned)) return { ok: false, reason: 'not_a_selection' }
@@ -391,6 +409,16 @@ async function handleOwnerReply({ senderPhone, text, session, chatId = null, mes
       reason: parsed.reason,
       textPreview: String(text || '').slice(0, 160),
     }, 'owner')
+    // An unclear owner answer used to vanish into this audit row -- nobody was
+    // told, the check sat 'awaiting_reply' forever. Hand it to Kev with the
+    // numbered list so a human makes the call (never a guess here).
+    if (parsed.reason !== 'empty') {
+      const list = items.map(item => `${item.number}. #${item.ref}${item.town ? ` · ${item.town}` : ''}`).join('\n')
+      await require('/app/handlers/uploadListing').alertKev(
+        `❓ Portfolio check ${check.id} — owner ${owner.name || maskPhone(owner.phone_normalized)} replied, not understood (${parsed.reason}):\n` +
+        `"${String(text).slice(0, 300)}"\n\n${list}\n\nDecide in the CRM portfolio check, or ask the owner which numbers are still available.`
+      ).catch(err => log.warn('[portfolio-check] review alert failed', { checkId: check.id, err: err.message }))
+    }
     return { handled: true, understood: false, checkId: check.id }
   }
 
