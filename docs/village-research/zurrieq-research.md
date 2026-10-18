@@ -1,6 +1,6 @@
 # Żurrieq edition — sourced research draft
 
-Language: English. Status: local noindex preview verified; unpublished. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: release candidate; deployment pending. Checked 18 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -89,6 +89,6 @@ The separate English preview at `public/link-marketplace/areas/zurrieq.html` was
 
 No iframe exists before interaction. Pressing the explicit map button creates exactly one visible OpenStreetMap frame with the inland bbox `14.455,35.814,14.492,35.841`; the browser reported no failed page, image or map requests. The crop keeps Żurrieq town, Bubaqra, in-Nigret and the Xarolla direction in view without pulling in the Qrendi coast or drawing a route or administrative boundary. Mobile and desktop evidence images remain unversioned under `artifacts/`.
 
-The preview has no Marketplace navigation entry and no sitemap entry. Release metadata, discovery links, production build, deployment and external backlink remain separate gates.
+After the preview checks passed, the release candidate received its self-canonical, matching Open Graph fields, BreadcrumbList, one Marketplace navigation link and one neighbourhood-sitemap entry. The source pages were rechecked on 18 October 2026 immediately before this change: the Żurrieq council pages, Primary HealthCare clinic record, Maypole outlet, government garden release and MTA register remained consistent; Qrendi council's indexed page continued to place Wied iż-Żurrieq and Blue Grotto within Qrendi council limits. Deployment, production verification and any external backlink remain separate gates.
 
 The full Next.js 16.2.0 production build also passed from an isolated validation copy using the locked dependency set. The worktree's pre-existing `node_modules` junction points to the older mixed checkout and currently exposes Next.js 16.4.2, so it was not modified or used as release evidence.

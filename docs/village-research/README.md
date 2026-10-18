@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Twenty-two English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard and Mġarr. The older `swieqi-preview.html` is retained
+Status: Twenty-three English editions are release-ready: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr and Żurrieq. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -60,3 +60,5 @@ Pietà is published independently at https://www.2906.estate/link-marketplace/ar
 Attard is published independently at https://www.2906.estate/link-marketplace/areas/attard.html (release commit `3440df0`, production HTTP 200 verified on 16 October 2026). Its sourced dossier is `attard-research.md`; the edition separates the historic core, Sant'Anton side and outer residential, Ta' Qali and agricultural contexts and draws no invented boundary, property route or generic journey time.
 
 Mġarr is published independently at https://www.2906.estate/link-marketplace/areas/mgarr.html (release commit `3be16c2`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `mgarr-research.md`; the edition separates the village centre, Żebbiegħ and the wider agricultural and coastal context and draws no invented boundary, coastal shortcut, property route or generic journey time.
+
+Żurrieq is release-ready at `public/link-marketplace/areas/zurrieq.html`; its sourced dossier is `zurrieq-research.md`. The edition separates the main town, Bubaqra, in-Nigret and Ħal Millieri, explicitly keeps Wied iż-Żurrieq and Blue Grotto in the Qrendi council context, and draws no invented boundary, coast connection, property route or generic journey time. Production publication and verification remain pending.
