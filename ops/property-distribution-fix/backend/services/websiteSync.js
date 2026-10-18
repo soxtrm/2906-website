@@ -47,12 +47,14 @@ function statusFor(availableStatus) {
   return (availableStatus === 'available' || availableStatus === 'available_confirmed') ? 'available' : 'rented'
 }
 
+const WEBSITE_MAX_IMAGES = 10
+
 async function loadProperty(propertyId) {
   const r = await db.query(
     `SELECT id, ref, property_type, town, sub_location, bedrooms, bathrooms, size_sqm,
             longlet_price, sale_price, available_status, available_date,
             available_until, rental_modes, lease_type, shortlet,
-            description, public_payload, published, locality_id, feature_tags
+            description, public_payload, published, locality_id, feature_tags, image_ranking
        FROM properties WHERE id = $1`, [propertyId])
   return r.rows[0] || null
 }
@@ -87,7 +89,11 @@ async function syncPropertyToWebsite(propertyId) {
   const location = [prop.sub_location, prop.town].filter(Boolean).join(' / ') || prop.town || null
   const category = categoryFor({ propertyType: prop.property_type, isForSale, price })
   const featured = category === 'aesthetics' || category === 'letting'
-  const images = Array.isArray(prop.public_payload?.images) ? prop.public_payload.images : []
+  // Kev, 2026-10-18: the website shows at most 10 photos (#2906-9484 put all
+  // 32 online). The 10 best by the stored image ranking — the same order the
+  // Facebook share uses — upload order when the listing was never ranked.
+  // The property record and the property groups keep every photo.
+  const images = require('./imageRanker').orderedImageUrls(prop.public_payload, prop.image_ranking).slice(0, WEBSITE_MAX_IMAGES)
   const features = Array.isArray(prop.public_payload?.features) ? prop.public_payload.features : []
   const description = prop.public_payload?.description_public || prop.description || ''
   const title = buildWebsiteTitle({ location, price, bedrooms: prop.bedrooms, bathrooms: prop.bathrooms }) || `Property #${prop.ref}`
