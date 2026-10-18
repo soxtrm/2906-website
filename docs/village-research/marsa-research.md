@@ -1,6 +1,6 @@
 # Marsa edition — sourced research draft
 
-Language: English. Status: unpublished `noindex,nofollow` preview; no navigation entry or sitemap entry. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: RELEASE CANDIDATE; canonical, Open Graph, breadcrumb metadata, navigation and sitemap entry prepared; production verification pending. Checked 18 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -82,13 +82,15 @@ The future 2D map should be a click-to-load OpenStreetMap orientation frame cove
 
 No ferry is assumed for Marsa. If a future property-specific route reports one, it must come from the routing response's ferry evidence and must be labelled as an unverified schedule/price dependency until the relevant operator is checked.
 
-## Unpublished preview verification
+## Preview and release-candidate verification
 
 `public/link-marketplace/areas/marsa.html` now provides a substantial English preview separating the residential town, creek/port edge and Aldo Moro/Tiġrija sports corridor. It keeps the SportMalta construction/completion conflict visible, treats the Convenience Shop, Marsa Sports Club, Kulu and Putter's Inn only as operator-backed examples, and makes no ranking, permanent-hours or property-proximity claim.
 
-The preview retains exactly one `noindex,nofollow` directive and has no canonical, Open Graph metadata, JSON-LD, Marketplace link or sitemap entry. Its OpenStreetMap frame is absent until the user clicks; the broad bbox covers the town-to-sports context without a route, boundary, water crossing, ETA or ferry.
+The initial preview retained exactly one `noindex,nofollow` directive and had no canonical, Open Graph metadata, JSON-LD, Marketplace link or sitemap entry. After the source-hardening recheck passed, release metadata was added: one self-canonical, three matching Open Graph fields and one valid `BreadcrumbList`; the robots block and preview wording were removed. Marketplace navigation and the neighbourhood sitemap now contain exactly one Marsa URL. Its OpenStreetMap frame remains absent until the user clicks; the broad bbox covers the town-to-sports context without a route, boundary, water crossing, ETA or ferry.
 
 Headless Chromium checks at 390×844 and 1440×1000 returned HTTP 200, one H1, zero horizontal overflow, a fully decoded 1620×1080 hero, zero initial iframes and exactly one visible OSM frame after click. Page, stylesheet, image and map requests succeeded; only the project-wide absent favicon returned 404. The page SHA256 is `5DAB421CC36448A03E66AC998929EE568CA477DBB649F649E2E1718D8146E509` at 14,016 bytes.
+
+The release candidate passed the same two Chromium viewport checks after metadata and navigation were added: one H1, one self-canonical, three Open Graph fields, one valid breadcrumb block, no robots block, zero horizontal overflow, a decoded 1620×1080 hero, no initial iframe and one visible OSM frame after click. No page, image or map request failed. A full Next.js 16.4.2 Webpack production build completed all 52 static pages; project type validation remains disabled by the existing configuration.
 
 ## Release gates
 
@@ -97,8 +99,8 @@ Headless Chromium checks at 390×844 and 1440×1000 returned HTTP 200, one H1, z
 3. Select and verify one Commons original, record exact dimensions, bytes, SHA256, author, date and licence, then inspect the complete image.
 4. Write one substantial English edition that distinguishes residential, creek/industrial and sports contexts.
 5. Include only operator-backed everyday, activity and restaurant examples; no rankings or permanent-hours claims.
-6. Keep the initial HTML unpublished with `noindex,nofollow`, no canonical, no Open Graph metadata, no JSON-LD, no Marketplace link and no sitemap entry.
+6. Keep the initial HTML unpublished with `noindex,nofollow`, then add canonical, Open Graph, breadcrumb metadata and exactly one Marketplace/sitemap link only after source and browser checks pass.
 7. Verify mobile and desktop layout, image decode, attribution, zero horizontal overflow and lazy OSM loading before release metadata is added.
 8. Build and deploy only from the clean isolated worktree, then verify public and CRM copies and retain a specific rollback commit.
 
-No navigation, sitemap, production deployment, external backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this preview step.
+No production deployment, external backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of the release-candidate step.
