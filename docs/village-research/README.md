@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Twenty-five English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr, Żurrieq, Marsa and Santa Venera. The older `swieqi-preview.html` is retained
+Status: Twenty-six English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr, Żurrieq, Marsa, Santa Venera and Iklin. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -66,3 +66,5 @@ Mġarr is published independently at https://www.2906.estate/link-marketplace/ar
 Marsa is published independently at https://www.2906.estate/link-marketplace/areas/marsa.html (release commit `1efae55`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `marsa-research.md`; the edition separates the residential town, inner creek/port edge and Aldo Moro/Tiġrija sports corridor, retains the current SportMalta construction/completion source conflict, and draws no invented boundary, water shortcut, property route or generic journey time.
 
 Santa Venera is published independently at https://www.2906.estate/link-marketplace/areas/santa-venera.html (release commit `540b58c`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `santa-venera-research.md`; the edition separates residential streets, the aqueduct/Casa Leoni/Romeo Romano heritage-and-garden group and busier road edges, retains the Primary HealthCare legacy-content warning, and draws no invented boundary, property route, generic journey time or ferry.
+
+Iklin is published independently at https://www.2906.estate/link-marketplace/areas/iklin.html (release commit `143395c`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `iklin-research.md`; the edition separates Upper Iklin, the parish/civic centre and the Tal-Balal road edge, keeps Naxxar, Lija, Birkirkara and San Ġwann separate, and draws no invented boundary, property route, generic journey time or ferry.

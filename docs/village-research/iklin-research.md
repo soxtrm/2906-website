@@ -1,6 +1,6 @@
 # Iklin edition — sourced research draft
 
-Language: English. Status: release candidate prepared locally; not yet published.
+Language: English. Status: PUBLISHED at https://www.2906.estate/link-marketplace/areas/iklin.html and verified in production on 18 October 2026 (Europe/Malta); release commit `143395c`.
 
 ## Why this locality is next
 
@@ -125,3 +125,13 @@ Real Chromium release checks at 390×844 and 1440×1000 returned HTTP 200, exact
 Release-candidate hashes: HTML 14,443 bytes, SHA256 `65DA47BEEE3AAE1AC02B2924897EE83F1CBABAD27D772B62ED7150F0E218CD5E`; Marketplace index 8,283 bytes, SHA256 `948E02A105A41E444D84837BEF20086CC4189C65E9339CAF5CF2198E64C8656C`; neighbourhood sitemap 2,222 bytes, SHA256 `402EEBDDA48BE6A785B2A1F7943C0C987A472C958B10150C962FC257C2A90169`; hero unchanged at 255,444 bytes, SHA256 `E271F68E3F0ACC6F18FE2AE3AED2BAA8E59D18DADE314BB01CD44843FB3F1EA1`.
 
 The page is not yet claimed as live. Commit, push, deployment and production verification remain separate gates.
+
+## Production publication and verification
+
+Release commit `143395c` was pushed to `main` after a fresh fetch confirmed that the isolated worktree and `origin/main` both pointed to `040029323b5ae535cb4eafac4ba6a99dc3b5421c`. The existing Git/Vercel path then published the page at https://www.2906.estate/link-marketplace/areas/iklin.html.
+
+The public `www`, apex and CRM URLs each returned HTTP 200 and the exact 14,443-byte release HTML with SHA256 `65DA47BEEE3AAE1AC02B2924897EE83F1CBABAD27D772B62ED7150F0E218CD5E`. The public Marketplace index and neighbourhood sitemap matched their release hashes and each contained exactly one Iklin URL. The public hero matched the approved 255,444-byte derivative and SHA256 `E271F68E3F0ACC6F18FE2AE3AED2BAA8E59D18DADE314BB01CD44843FB3F1EA1`.
+
+Production Chromium checks at 390×844 and 1440×1000 confirmed one H1, no robots meta, one exact self-canonical, three Open Graph fields, one `BreadcrumbList`, zero horizontal overflow and a fully decoded 1600×1600 hero. The map still created no initial iframe and exactly one visible OpenStreetMap iframe after click, with no failed page, stylesheet, image or map requests.
+
+Rollback is a targeted revert of release commit `143395c` together with its publication-documentation commit. No external backlink, outreach, WhatsApp, backend, traffic or scheduler change was made.
