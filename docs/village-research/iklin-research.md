@@ -99,3 +99,15 @@ Do not draw a straight line as a walking route. Walking geometry, bus timetables
 8. Build and deploy only from the isolated worktree, verify public and CRM copies and retain a specific rollback commit.
 
 No page, image derivative, navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this research step.
+
+## Unpublished preview verification
+
+The first editorial implementation is `public/link-marketplace/areas/iklin.html`, 13,624 bytes, SHA256 `B1F5EC32A96A12A6AD7335DE638F92DDAD23AD11B2DDD62C86613DB131AF9E3E`. It remains an unpublished `noindex,nofollow` preview with no canonical, Open Graph metadata, JSON-LD, Marketplace navigation link or sitemap entry.
+
+The page keeps the three editorial contexts separate: Upper Iklin, the parish/civic centre and the Tal-Balal road edge. Primary HealthCare, two HealthAid stockist records, Il Cortile, Pjazza Ninu Cremona and two council-listed community groups are narrow authority- or operator-backed examples rather than rankings or property-proximity claims. Schedules, stock, menus, appointments, membership, prices, parking and accessibility remain `check directly` details.
+
+The selected 1600×1600 WebP is shown in its full square composition with visible credit to Continentaleurope, Wikimedia Commons and CC BY-SA 3.0, its 8 December 2015 capture date and the proportional resize/format conversion. The on-page description limits it to dated public-community context. The source pixels were not cropped, retouched or generatively altered.
+
+Real Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, `noindex,nofollow`, zero canonicals, zero Open Graph fields, zero JSON-LD blocks and no horizontal overflow. The 1600×1600 hero decoded completely, retained its square framing and kept the full attribution readable. The page initially created no iframe; clicking the map control created exactly one visible OpenStreetMap iframe covering `14.444,35.900,14.466,35.918`, still without horizontal overflow. There were no failed page, stylesheet, image or map requests. Full-page mobile and desktop screenshots were inspected without clipping or overlap.
+
+Release metadata, Marketplace navigation, sitemap inclusion, build, deployment and public-production verification remain separate later gates.
