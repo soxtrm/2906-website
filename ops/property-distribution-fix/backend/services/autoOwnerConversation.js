@@ -3193,6 +3193,35 @@ async function runAutoPublishJob(conversationId) {
     `✅ AUTO-PUBLISHED #${result.ref} (owner ${phone.slice(-4)}) — the ${minutes}-minute buffer ran out with no correction.\nWant to pull it back? Reply !undo ${result.ref}`
   ).catch(() => {})
   log.info('runAutoPublishJob: auto-published', { conversationId, ref: result.ref, propId: result.propId })
+
+  // 2026-10-18: createListing only writes the CRM row and queues the channel
+  // rows as 'pending' -- the actual distribution (FB page campaign, category
+  // groups, FB group share) lives in cmdUpload's handler, after its own
+  // createListing call. This job never ran it, so every auto-published
+  // listing AND every !upload5 that claimed an owner-checklist draft (cmdUpload
+  // routes those here) said "AUTO-PUBLISHED" and sat on category_groups=
+  // 'pending' forever (#2906-9453, 9350..9344, 9332, 9328, 9325, ... all with
+  // zero group posts). Same steps, same order, same per-step isolation as
+  // cmdUpload; runs detached so the job itself finishes immediately.
+  distributeAutoPublished({ upload, result, session, chatId: groupId, variant })
+    .catch(e => log.error('runAutoPublishJob: distribution crashed', { ref: result.ref, err: e.message }))
+}
+
+async function distributeAutoPublished({ upload, result, session, chatId, variant }) {
+  const { scheduleFacebookCampaign, postCountFrom } = require('./facebookCampaign')
+  const channels = result.channels || []
+  if (channels.includes('facebook')) {
+    try {
+      const camp = await scheduleFacebookCampaign(result.propId, postCountFrom(String(variant).replace(/^upload/, '')))
+      log.info('runAutoPublishJob: fb campaign', { ref: result.ref, scheduled: camp.scheduled, skipped: camp.skipped })
+    } catch (e) {
+      log.error('runAutoPublishJob: fb campaign scheduling failed', { ref: result.ref, err: e.message })
+    }
+  }
+  if (channels.includes('category_groups')) {
+    await upload.runCategoryDistribution(session, chatId, result.propId, result.ref)
+  }
+  await upload.autoShareToGroups({ created: [result], session, chatId, noAd: false })
 }
 
 async function writeDraftProperty(phone, checklist) {
