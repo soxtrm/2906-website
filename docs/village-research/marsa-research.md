@@ -56,14 +56,20 @@ The racing-club page records the Pegasus restaurant within the track, but that r
 
 Wikimedia Commons category: https://commons.wikimedia.org/wiki/Category:Marsa_(Malta)
 
-Two self-published Continentaleurope files were inspected locally as comparison candidates:
+Three self-published Continentaleurope street files were inspected locally as comparison candidates:
 
 - [`Marsa Malta 06.jpg`](https://commons.wikimedia.org/wiki/File:Marsa_Malta_06.jpg), 1620×1080 and 465,726 bytes, photographed 18 November 2017, CC BY-SA 4.0, exact-download SHA256 `84B9FD6958BD93771460271A793DF3423E5FBF5590635BDE2E5DAF0D00EF9C5E`;
-- [`Marsa Malta 07.jpg`](https://commons.wikimedia.org/wiki/File:Marsa_Malta_07.jpg), 1620×1080 and 455,569 bytes, photographed 18 November 2017, CC BY-SA 4.0, exact-download SHA256 `17861800DC386D2022C9AB7EBE4F09E98F34DB975F2A328978CF2937EA7E6388`.
+- [`Marsa Malta 07.jpg`](https://commons.wikimedia.org/wiki/File:Marsa_Malta_07.jpg), 1620×1080 and 455,569 bytes, photographed 18 November 2017, CC BY-SA 4.0, exact-download SHA256 `17861800DC386D2022C9AB7EBE4F09E98F34DB975F2A328978CF2937EA7E6388`;
+- [`Marsa Malta 20.jpg`](https://commons.wikimedia.org/wiki/File:Marsa_Malta_20.jpg), 1620×1080 and 494,046 bytes, photographed 18 November 2017, CC BY-SA 4.0, Commons SHA1 `8f5bd4b5be716b58826d715d73cedb7b2b87b550` and exact-download SHA256 `0D140D9197FDD90FC3E0E6EAD0043C883663DCAD6766F64FD61948B519F6FC5E`.
 
-Both are sharp exterior street records, but neither is approved as the hero: `06` is dominated by a bank facade and overhead cabling, while `07` is a tight corner-building view with vehicle and commercial signage. The exact originals remain unversioned under `artifacts/` for review.
+`06` is dominated by a bank facade and overhead cabling, while `07` is a tight corner-building view with vehicle and commercial signage; neither is approved as the hero. `20` is the preferred hero candidate after full-image inspection: it is a sharp 3:2 street perspective with a clear blue-sky area, mature trees and a legible mix of traditional and later facades. Several people, parked cars and overhead lines remain contextual details and must not be cropped or described as a current traffic, safety or demographic condition. No private contact detail is visible. The exact originals remain unversioned under `artifacts/` for review.
 
-The stronger next candidates are [`Kunsill Lokali Marsa.jpg`](https://commons.wikimedia.org/wiki/File:Kunsill_Lokali_Marsa.jpg) by Andrijko Z. (5152×3864, 30 March 2016, CC BY-SA 4.0) and [`Marsa bridge.jpg`](https://commons.wikimedia.org/wiki/File:Marsa_bridge.jpg) by Continentaleurope (8722×2346, 9 December 2016, CC BY-SA 4.0). Their Commons metadata is suitable, but neither is visually approved yet. The first risks a static civic-facade composition; the second spans the Qormi/Marsa edge and cannot be presented as the residential centre. An exact original download, SHA256 check, full-resolution visual review and a transparent crop/resize decision remain separate gates.
+Two higher-resolution alternatives were also downloaded exactly and inspected in full:
+
+- [`Kunsill Lokali Marsa.jpg`](https://commons.wikimedia.org/wiki/File:Kunsill_Lokali_Marsa.jpg) by Andrijko Z., photographed 30 March 2016, 5152×3864, 7,077,022 bytes, CC BY-SA 4.0, Commons SHA1 `e5e116b9999bfb5efcb38c39243f32da2681591b` and exact-download SHA256 `F396AE7C093F05D3151EB925F3D8770972246CFB26FC83570944CBC177009209`;
+- [`Marsa bridge.jpg`](https://commons.wikimedia.org/wiki/File:Marsa_bridge.jpg) by Continentaleurope, photographed 9 December 2016, 8722×2346, 8,044,553 bytes, CC BY-SA 4.0, Commons SHA1 `15313dee45a56c8e78d6dbecf4586a8605d076c4` and exact-download SHA256 `88F407A2162971DD48E6BFAC3D5AE859F058531A602BE4281E9F332052DE239C`.
+
+The council building is clean and unambiguous but too static for the lead composition. The bridge panorama has attractive trees and terraced landscaping, yet it is extremely wide and spans the Qormi/Marsa edge; it cannot represent the residential centre. Both remain verified secondary context only. The eventual public derivative should therefore use `Marsa Malta 20.jpg` proportionally, without retouching or generative alteration, and show Continentaleurope, Wikimedia Commons, CC BY-SA 4.0, the 18 November 2017 capture date and the resize in the visible attribution.
 
 No image may be described as a current property view, current traffic condition or proof of access, cleanliness, air quality, noise or redevelopment.
 
