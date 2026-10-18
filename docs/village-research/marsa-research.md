@@ -14,7 +14,7 @@ Marsa Local Council describes a locality formed around two creeks at the inner e
 
 1. the established residential town and exact street around a listing;
 2. the creek, port and industrial edge, which must not be generalised to every Marsa address;
-3. the Aldo Moro / sports and equestrian corridor, which is a destination area rather than proof that a home adjoins a particular facility.
+3. the Aldo Moro / sports corridor, which is a destination area rather than proof that a home adjoins a particular facility.
 
 The page must not draw an invented municipal boundary or treat the broad `Marsa` label as a promise of harbour view, sports access, quietness, parking, walkability or a short trip to Valletta. Qormi, Ħamrun, Floriana and Paola remain separate localities even where road and valley systems meet.
 
@@ -38,19 +38,20 @@ The current Primary HealthCare page lists Marsa within Floriana Health Centre's 
 
 - The Convenience Shop Marsa operator page: https://www.gard.com.mt/the-convenience-shop-marsa
 
-The operator page identifies an outlet at 118 Triq N. Isouard, Marsa and describes grocery and household categories. This is a useful address anchor, not a complete neighbourhood directory or a guarantee of permanent hours, stock, delivery coverage, parking or accessibility.
+The operator page identifies an outlet at 118 Triq N. Isourd, Marsa and describes grocery and household categories. This is a useful address anchor, not a complete neighbourhood directory or a guarantee of permanent hours, stock, delivery coverage, parking or accessibility.
 
 ### Sport and activity
 
 - SportMalta, Marsa Sports Complex: https://sportmalta.mt/facilities/marsa-sports-complex/
 - SportMalta completion announcement dated 19 January 2026: https://sportmalta.mt/all-works-at-the-marsa-sports-complex-officially-completed-another-quality-investment-in-athletes-and-the-future-of-sport-in-malta/
 - Marsa Sports Club disciplines: https://marsasportsclub.com/sports/
-- Malta Racing Club: https://www.maltaracingclub.com/
-- Malta Racing Club track overview: https://maltaracingclub.com/racetrack.php
+- Marsa Sports Club catering: https://marsasportsclub.com/catering/
 
-The sources establish a substantial sports/equestrian cluster around Aldo Moro and Triq it-Tiġrija, including the SportMalta complex, the member/visitor club and the race track. The current SportMalta facility page still says that the facility is undergoing construction even though SportMalta's January 2026 announcement says all three phases were completed. Because those official pages conflict, the edition must not publish a blanket `fully open` statement or evergreen opening hours; readers should confirm the exact facility and session directly.
+The sources establish a substantial sports cluster around Aldo Moro and Triq it-Tiġrija, including the SportMalta complex and the member/visitor club. The current SportMalta facility page still says that the facility is undergoing construction even though SportMalta's January 2026 announcement says all three phases were completed. Because those official pages conflict, the edition must not publish a blanket `fully open` statement or evergreen opening hours; readers should confirm the exact facility and session directly.
 
-The racing-club page records the Pegasus restaurant within the track, but that record is not a restaurant review and does not prove current opening, menu, booking availability or public access outside event arrangements. A publication-ready edition needs a direct current operator recheck before using it as a food example.
+The club's catering page says Kulu has operated its catering since 2020 and identifies Putter's Inn at the Royal Malta Golf Club. These are operator-backed venue examples, not independent reviews or proof of current opening, menu, booking availability, accessibility or public access.
+
+A public-browser recheck on 18 October 2026 loaded the Council, Primary HealthCare, retail and Marsa Sports Club sources. The Malta Racing Club track URL, `https://maltaracingclub.com/racetrack.php`, stopped at a Cloudflare security check; no attempt was made to solve or bypass it. The preview therefore omits the racing and Pegasus claims rather than treating the blocked page as current evidence.
 
 ## Image research
 
@@ -83,7 +84,7 @@ No ferry is assumed for Marsa. If a future property-specific route reports one, 
 
 ## Unpublished preview verification
 
-`public/link-marketplace/areas/marsa.html` now provides a substantial English preview separating the residential town, creek/port edge and Aldo Moro/Tiġrija sports corridor. It keeps the SportMalta construction/completion conflict visible, treats the Convenience Shop, Marsa Sports Club, Malta Racing Club and Pegasus only as operator-backed examples, and makes no ranking, permanent-hours or property-proximity claim.
+`public/link-marketplace/areas/marsa.html` now provides a substantial English preview separating the residential town, creek/port edge and Aldo Moro/Tiġrija sports corridor. It keeps the SportMalta construction/completion conflict visible, treats the Convenience Shop, Marsa Sports Club, Kulu and Putter's Inn only as operator-backed examples, and makes no ranking, permanent-hours or property-proximity claim.
 
 The preview retains exactly one `noindex,nofollow` directive and has no canonical, Open Graph metadata, JSON-LD, Marketplace link or sitemap entry. Its OpenStreetMap frame is absent until the user clicks; the broad bbox covers the town-to-sports context without a route, boundary, water crossing, ETA or ferry.
 
@@ -91,10 +92,10 @@ Headless Chromium checks at 390×844 and 1440×1000 returned HTTP 200, one H1, z
 
 ## Release gates
 
-1. Recheck all council, Primary HealthCare, retail, SportMalta, club and race-track sources immediately before drafting.
+1. Recheck all council, Primary HealthCare, retail, SportMalta and club sources immediately before drafting; use racing material only if its direct public source is available without a security challenge.
 2. Resolve or explicitly retain the SportMalta construction/completion conflict without inventing an operational conclusion.
 3. Select and verify one Commons original, record exact dimensions, bytes, SHA256, author, date and licence, then inspect the complete image.
-4. Write one substantial English edition that distinguishes residential, creek/industrial and sports/equestrian contexts.
+4. Write one substantial English edition that distinguishes residential, creek/industrial and sports contexts.
 5. Include only operator-backed everyday, activity and restaurant examples; no rankings or permanent-hours claims.
 6. Keep the initial HTML unpublished with `noindex,nofollow`, no canonical, no Open Graph metadata, no JSON-LD, no Marketplace link and no sitemap entry.
 7. Verify mobile and desktop layout, image decode, attribution, zero horizontal overflow and lazy OSM loading before release metadata is added.
