@@ -310,18 +310,41 @@ async function gatherContent(payload, session, chatId, isGroup, uploaderPhone, t
   try { msgs = await waha.getChatMessagesWithMedia(session, chatId, historyLimit) }
   catch (e) { log.warn('uploadListing: getChatMessages failed', { err: e.message }) }
 
-  const prior = msgs
+  const tsOf = m => m.timestamp || m._data?.t || 0
+  let prior = msgs
     .filter(m => {
       const mid = String(m.id || m.key?.id || '')
       if (mid && mid === cmdId) return false
-      const ts = m.timestamp || m._data?.t || 0
+      const ts = tsOf(m)
       if (!ts || ts <= windowStart || ts > triggerTs) return false
       const body = getMsgBody(m)
       if (body.startsWith('!')) return false             // commands aren't content
       if (looksLikeBotReply(body)) return false
       return sameSender(m)
     })
-    .sort((a, b) => (a.timestamp || a._data?.t || 0) - (b.timestamp || b._data?.t || 0))
+    .sort((a, b) => tsOf(a) - tsOf(b))
+
+  // Dividers end a block (Kev, 2026-10-18, #2906-9484): 24 forwarded photos,
+  // then his own "...", then 8 photos + the ad + !upload6 — and all 32 went
+  // into the listing, because only the 10-minute window bounded the gather.
+  // A block before a divider that carries no text of its own is not part of
+  // this listing and is left out. Blocks WITH text stay: that is the
+  // documented multi-property upload ("put a message containing only ....
+  // between properties"), which associateImages() splits positionally.
+  const isDivider = body => /^\s*[.…·]{2,}\s*$/.test(body)
+  const dividerTs = msgs
+    .filter(m => { const ts = tsOf(m); return ts > windowStart && ts <= triggerTs && isDivider(getMsgBody(m)) && sameSender(m) })
+    .map(tsOf).sort((a, b) => a - b)
+  if (dividerTs.length) {
+    const blockOf = m => dividerTs.filter(d => d < tsOf(m)).length   // 0 = before the first divider
+    const lastBlock = dividerTs.length
+    const textBlocks = new Set(prior.filter(m => { const b = getMsgBody(m); return b && !isDivider(b) }).map(blockOf))
+    const dropped = prior.filter(m => blockOf(m) < lastBlock && !textBlocks.has(blockOf(m)))
+    if (dropped.length) {
+      log.info('uploadListing: dropped image-only blocks before a divider', { chatId, dropped: dropped.length, dividers: dividerTs.length })
+      prior = prior.filter(m => !dropped.includes(m))
+    }
+  }
 
   // text: prior messages (chronological) + the command message's own inline text
   const parts = prior.map(getMsgBody).filter(Boolean)

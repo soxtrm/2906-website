@@ -220,6 +220,25 @@ async function cmdReturnToMarket({ session, chatId, senderPhone, agentId = null,
     changedBy: who ? 'agent' : 'system',
   })
   const out = await runBuilt(built)
+  if (!out.ok && out.reason === 'noop') {
+    // Already on the market (Kev, 2026-10-18): "!available" on a live listing
+    // is the agent saying "I just checked, it IS available" — record it the
+    // same way the board's confirm button does (available_confirmed, confirmed
+    // timestamp, updated_at, published) instead of answering "already
+    // available" and throwing the confirmation away.
+    try {
+      const done = await require('../services/killSwitch').confirmAvailable(prop.id, {
+        agentId: who, senderPhone, source: 'available_command',
+      })
+      if (!done?.skipped) {
+        await reply(session, chatId, `✅ #${prop.ref} AVAILABLE · UPDATED · CONFIRMED`)
+        return true
+      }
+    } catch (e) {
+      await reply(session, chatId, `❌ #${prop.ref} is available, but the confirmation could not be saved: ${e.message}`)
+      return true
+    }
+  }
   if (!out.ok) {
     await reply(session, chatId, out.reason === 'noop'
       ? `ℹ️ #${prop.ref} is already available.`
