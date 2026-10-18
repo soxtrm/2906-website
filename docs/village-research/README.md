@@ -1,6 +1,6 @@
 # Malta village editions — editorial checkpoint
 
-Status: Twenty-three English editions are release-ready: Sliema, St Julian's, Swieqi,
+Status: Twenty-three English editions are published: Sliema, St Julian's, Swieqi,
 Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr and Żurrieq. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
@@ -61,4 +61,4 @@ Attard is published independently at https://www.2906.estate/link-marketplace/ar
 
 Mġarr is published independently at https://www.2906.estate/link-marketplace/areas/mgarr.html (release commit `3be16c2`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `mgarr-research.md`; the edition separates the village centre, Żebbiegħ and the wider agricultural and coastal context and draws no invented boundary, coastal shortcut, property route or generic journey time.
 
-Żurrieq is release-ready at `public/link-marketplace/areas/zurrieq.html`; its sourced dossier is `zurrieq-research.md`. The edition separates the main town, Bubaqra, in-Nigret and Ħal Millieri, explicitly keeps Wied iż-Żurrieq and Blue Grotto in the Qrendi council context, and draws no invented boundary, coast connection, property route or generic journey time. Production publication and verification remain pending.
+Żurrieq is published independently at https://www.2906.estate/link-marketplace/areas/zurrieq.html (release commit `6b4f9b0`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `zurrieq-research.md`; the edition separates the main town, Bubaqra, in-Nigret and Ħal Millieri, explicitly keeps Wied iż-Żurrieq and Blue Grotto in the Qrendi council context, and draws no invented boundary, coast connection, property route or generic journey time.

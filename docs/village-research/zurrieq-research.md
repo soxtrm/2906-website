@@ -1,6 +1,6 @@
 # Żurrieq edition — sourced research draft
 
-Language: English. Status: release candidate; deployment pending. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: published and production-verified. Checked 18 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -89,6 +89,12 @@ The separate English preview at `public/link-marketplace/areas/zurrieq.html` was
 
 No iframe exists before interaction. Pressing the explicit map button creates exactly one visible OpenStreetMap frame with the inland bbox `14.455,35.814,14.492,35.841`; the browser reported no failed page, image or map requests. The crop keeps Żurrieq town, Bubaqra, in-Nigret and the Xarolla direction in view without pulling in the Qrendi coast or drawing a route or administrative boundary. Mobile and desktop evidence images remain unversioned under `artifacts/`.
 
-After the preview checks passed, the release candidate received its self-canonical, matching Open Graph fields, BreadcrumbList, one Marketplace navigation link and one neighbourhood-sitemap entry. The source pages were rechecked on 18 October 2026 immediately before this change: the Żurrieq council pages, Primary HealthCare clinic record, Maypole outlet, government garden release and MTA register remained consistent; Qrendi council's indexed page continued to place Wied iż-Żurrieq and Blue Grotto within Qrendi council limits. Deployment, production verification and any external backlink remain separate gates.
+After the preview checks passed, the release candidate received its self-canonical, matching Open Graph fields, BreadcrumbList, one Marketplace navigation link and one neighbourhood-sitemap entry. The source pages were rechecked on 18 October 2026 immediately before this change: the Żurrieq council pages, Primary HealthCare clinic record, Maypole outlet, government garden release and MTA register remained consistent; Qrendi council's indexed page continued to place Wied iż-Żurrieq and Blue Grotto within Qrendi council limits.
 
 The full Next.js 16.2.0 production build also passed from an isolated validation copy using the locked dependency set. The worktree's pre-existing `node_modules` junction points to the older mixed checkout and currently exposes Next.js 16.4.2, so it was not modified or used as release evidence.
+
+## Production publication
+
+Release commit `6b4f9b0` was pushed to `main` after verifying that `origin/main` still matched the reviewed base `49e19fe`. The existing Git/Vercel route published https://www.2906.estate/link-marketplace/areas/zurrieq.html; the www, apex and CRM copies returned HTTP 200 and the exact 15,433-byte release HTML (SHA256 `974C18BA0E2F2D7AD30414CFE471F83BFF942BD947D436CA9B4A3FA169F12BB6`). The production image, Marketplace index and neighbourhood sitemap matched their release hashes, with exactly one Żurrieq discovery link in each relevant listing.
+
+Production browser checks at 390×844 and 1440×1000 confirmed one H1, the self-canonical, three Open Graph fields, one BreadcrumbList, no `noindex`, no horizontal overflow, the fully decoded 1800×1200 hero and a click-to-load OSM map that creates exactly one real iframe without failed page, image or map requests. Visual review found no overlap or clipping. Rollback is a targeted revert of release commit `6b4f9b0` plus the later documentation-only publication record.
