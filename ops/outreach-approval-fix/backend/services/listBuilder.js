@@ -410,6 +410,9 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
   const cycleCount = curRow.rows[0].cycle_count
 
   const buffer = Math.max(requestedCount * 3, 30)
+  // Rotation windows (see the candidate query). options.* only for tests.
+  const RECYCLE_DAYS = options.recycleDays ?? 25
+  const REPLY_HOLD_DAYS = options.replyHoldDays ?? 30
 
   const candidatesQuery = pool === 'top'
     ? `
@@ -418,21 +421,28 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
       WHERE oc.id > $1
         AND COALESCE(oc.do_not_contact, FALSE) = FALSE
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
-        -- Pool scans are for untouched leads. Once any account has spoken
-        -- with this owner, keep them in the relationship/conversation flow.
+        -- 2026-10-18 (Kev): the pool is a ROTATION — every owner comes round
+        -- again every ~25 days. "Contacted ever" excluded them for good, so a
+        -- pass left only the never-delivered dead numbers (379 of 7 581) and
+        -- Cedric/Gabriela kept drawing the same ones. Now: nobody wrote to this
+        -- owner from ANY account within RECYCLE_DAYS, and the owner is not in
+        -- a live conversation (replied within REPLY_HOLD_DAYS).
         AND NOT EXISTS (
           SELECT 1 FROM owner_account_labels oal
           WHERE oal.contact_id = oc.id
-            AND (oal.last_outreach_at IS NOT NULL OR oal.last_reply_at IS NOT NULL OR oal.last_we_sent_at IS NOT NULL)
+            AND (oal.last_outreach_at > NOW() - make_interval(days => $3)
+                 OR oal.last_we_sent_at > NOW() - make_interval(days => $3)
+                 OR oal.last_reply_at > NOW() - make_interval(days => $4))
         )
         AND NOT EXISTS (
           SELECT 1 FROM contact_account_history cah
           WHERE cah.contact_id = oc.id
-            AND (COALESCE(cah.total_messages_we_sent, 0) > 0 OR COALESCE(cah.total_messages_they_sent, 0) > 0)
+            AND (cah.last_message_we_sent_at > NOW() - make_interval(days => $3)
+                 OR cah.last_message_they_sent_at > NOW() - make_interval(days => $4))
         )
         AND NOT EXISTS (
           SELECT 1 FROM owner_account_labels
-          WHERE contact_id = oc.id AND label = 'dnc'
+          WHERE contact_id = oc.id AND label IN ('dnc', 'angry')
         )
         AND NOT EXISTS (
           SELECT 1 FROM outreach_reservations r
@@ -455,21 +465,28 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
       WHERE oc.id < $1
         AND COALESCE(oc.do_not_contact, FALSE) = FALSE
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
-        -- Pool scans are for untouched leads. Once any account has spoken
-        -- with this owner, keep them in the relationship/conversation flow.
+        -- 2026-10-18 (Kev): the pool is a ROTATION — every owner comes round
+        -- again every ~25 days. "Contacted ever" excluded them for good, so a
+        -- pass left only the never-delivered dead numbers (379 of 7 581) and
+        -- Cedric/Gabriela kept drawing the same ones. Now: nobody wrote to this
+        -- owner from ANY account within RECYCLE_DAYS, and the owner is not in
+        -- a live conversation (replied within REPLY_HOLD_DAYS).
         AND NOT EXISTS (
           SELECT 1 FROM owner_account_labels oal
           WHERE oal.contact_id = oc.id
-            AND (oal.last_outreach_at IS NOT NULL OR oal.last_reply_at IS NOT NULL OR oal.last_we_sent_at IS NOT NULL)
+            AND (oal.last_outreach_at > NOW() - make_interval(days => $3)
+                 OR oal.last_we_sent_at > NOW() - make_interval(days => $3)
+                 OR oal.last_reply_at > NOW() - make_interval(days => $4))
         )
         AND NOT EXISTS (
           SELECT 1 FROM contact_account_history cah
           WHERE cah.contact_id = oc.id
-            AND (COALESCE(cah.total_messages_we_sent, 0) > 0 OR COALESCE(cah.total_messages_they_sent, 0) > 0)
+            AND (cah.last_message_we_sent_at > NOW() - make_interval(days => $3)
+                 OR cah.last_message_they_sent_at > NOW() - make_interval(days => $4))
         )
         AND NOT EXISTS (
           SELECT 1 FROM owner_account_labels
-          WHERE contact_id = oc.id AND label = 'dnc'
+          WHERE contact_id = oc.id AND label IN ('dnc', 'angry')
         )
         AND NOT EXISTS (
           SELECT 1 FROM outreach_reservations r
@@ -487,10 +504,13 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
       LIMIT $2
     `
 
-  const candidates = (await db.query(candidatesQuery, [cursor, buffer])).rows
+  const candidates = (await db.query(candidatesQuery, [cursor, buffer, RECYCLE_DAYS, REPLY_HOLD_DAYS])).rows
 
   // EXHAUSTED — auto-cycle restart
   if (candidates.length === 0) {
+    // Already wrapped once in this request: nothing left anywhere — stop
+    // instead of recursing (an empty pool used to wrap forever).
+    if (options._wrapped) return { list: [], pool, cursor_advanced_to: cursor, cycle_count: cycleCount, reachability: { notRegistered: 0, unverified: 0 } }
     const maxId = await db.query('SELECT COALESCE(MAX(id), 0) AS m FROM owner_contacts')
     const newCursor = pool === 'top' ? 0 : (maxId.rows[0].m + 1)
     if (advanceCursor) {
@@ -504,10 +524,10 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
         [newCursor, pool]
       )
       log.info('pool exhausted, cycle restarted', { pool, new_cycle: cycleCount + 1 })
-      return await buildPoolBatch(sessionName, requestedCount, options)
+      return await buildPoolBatch(sessionName, requestedCount, { ...options, _wrapped: true })
     }
     if (options.wrappedPreview) return { list: [], pool, cursor_advanced_to: cursor, cycle_count: cycleCount }
-    return await buildPoolBatch(sessionName, requestedCount, { ...options, cursorOverride: newCursor, wrappedPreview: true })
+    return await buildPoolBatch(sessionName, requestedCount, { ...options, cursorOverride: newCursor, wrappedPreview: true, _wrapped: true })
   }
 
   // Filter: same-account 20-day cooldown (NOT cross-account), then — new on
@@ -524,6 +544,7 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
   const eligible = []
   const skippedReach = { notRegistered: 0, unverified: 0 }
   let lastProcessedId = cursor
+  const seen = new Set()
 
   const cooldownOk = async (c) => {
     const lastOutreach = await db.query(
@@ -540,6 +561,10 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
     const chunk = []
     while (index < candidates.length && chunk.length < 5) {
       const c = candidates[index++]
+      seen.add(c.id)
+      // After a wrap, owners already looked at in this same request are not
+      // checked (or listed) a second time.
+      if (options._seen?.has(c.id)) { lastProcessedId = c.id; continue }
       if (await cooldownOk(c)) chunk.push(c)
       else lastProcessedId = c.id
     }
@@ -574,6 +599,28 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
       'UPDATE pool_cursors SET cursor_id = $1, updated_at = NOW() WHERE pool = $2',
       [lastProcessedId, pool]
     )
+  }
+
+  // End of the pool reached with the list still short (CRM: "only 8/15
+  // eligible found"): it used to stop and only wrap on the NEXT request. Wrap
+  // now — start the next cycle from the other end — and fill the rest once.
+  const sideExhausted = candidates.length < buffer && index >= candidates.length
+  if (eligible.length < requestedCount && sideExhausted && !options._wrapped) {
+    const maxId = (await db.query('SELECT COALESCE(MAX(id), 0) AS m FROM owner_contacts')).rows[0].m
+    const wrapCursor = pool === 'top' ? 0 : maxId + 1
+    if (advanceCursor) {
+      await db.query(
+        `UPDATE pool_cursors SET cursor_id = $1, cycle_count = cycle_count + 1, cycle_started_at = NOW(), updated_at = NOW()
+          WHERE pool = $2`, [wrapCursor, pool])
+      log.info('pool end reached mid-list, cycle restarted', { pool, new_cycle: cycleCount + 1, have: eligible.length, want: requestedCount })
+    }
+    const taken = new Set(eligible.map(c => c.id))
+    const rest = await buildPoolBatch(sessionName, requestedCount - eligible.length,
+      { ...options, cursorOverride: advanceCursor ? undefined : wrapCursor, _wrapped: true, _seen: seen })
+    for (const c of rest.list) if (!taken.has(c.id)) eligible.push(c)
+    skippedReach.notRegistered += rest.reachability?.notRegistered || 0
+    skippedReach.unverified += rest.reachability?.unverified || 0
+    return { list: eligible, pool, cursor_advanced_to: rest.cursor_advanced_to, cycle_count: rest.cycle_count, wrapped: true, reachability: skippedReach }
   }
 
   return {

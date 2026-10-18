@@ -15,6 +15,7 @@ function load(candidates) {
     query: async (sql, params = []) => {
       if (/FROM whatsapp_accounts WHERE session_name/.test(sql)) return { rows: [{ pool: 'top' }] }
       if (/SELECT cursor_id, cycle_count FROM pool_cursors/.test(sql)) return { rows: [{ cursor_id: cursor.top, cycle_count: 3 }] }
+      if (/MAX\(id\)/.test(sql)) return { rows: [{ m: Math.max(0, ...candidates.map(c => c.id)) }] }
       if (/FROM owner_contacts oc/.test(sql)) return { rows: candidates.filter(c => c.id > params[0]).slice(0, params[1]) }
       if (/SELECT last_outreach_at FROM owner_account_labels/.test(sql)) return { rows: [] }
       if (/UPDATE pool_cursors SET cursor_id/.test(sql)) { cursor.top = params[0]; return { rows: [] } }
