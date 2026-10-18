@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Twenty English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat and Pietà. The older `swieqi-preview.html` is retained
+Status: Twenty-two English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard and Mġarr. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -56,3 +56,7 @@ Birżebbuġa is published independently at https://www.2906.estate/link-marketpl
 Rabat is published independently at https://www.2906.estate/link-marketplace/areas/rabat.html (release commit `9ffcf14`, production HTTP 200 verified on 15 October 2026). Its sourced dossier is `rabat-research.md`; the edition separates the historic centre, the distinct city of Mdina, newer residential pockets and the wider rural territory and draws no invented boundary, property route or generic journey time.
 
 Pietà is published independently at https://www.2906.estate/link-marketplace/areas/pieta.html (release commit `1a20777`, production HTTP 200 verified on 15 October 2026). Its sourced dossier is `pieta-research.md`; the edition gives lower Pietà and higher Guardamangia equal weight, keeps neighbouring localities separate and draws no invented boundary, harbour shortcut, ferry line or generic walking route.
+
+Attard is published independently at https://www.2906.estate/link-marketplace/areas/attard.html (release commit `3440df0`, production HTTP 200 verified on 16 October 2026). Its sourced dossier is `attard-research.md`; the edition separates the historic core, Sant'Anton side and outer residential, Ta' Qali and agricultural contexts and draws no invented boundary, property route or generic journey time.
+
+Mġarr is published independently at https://www.2906.estate/link-marketplace/areas/mgarr.html (release commit `3be16c2`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `mgarr-research.md`; the edition separates the village centre, Żebbiegħ and the wider agricultural and coastal context and draws no invented boundary, coastal shortcut, property route or generic journey time.

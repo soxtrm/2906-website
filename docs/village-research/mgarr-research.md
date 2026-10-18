@@ -1,6 +1,9 @@
-# Mġarr edition — sourced research draft
+# Mġarr edition — sourced research record
 
-Language: English. Status: release candidate. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: PUBLISHED. Checked and production-verified 18 October 2026 (Europe/Malta).
+
+Public URL: https://www.2906.estate/link-marketplace/areas/mgarr.html
+Release commit: `3be16c2`
 
 ## Why this locality is next
 
@@ -22,7 +25,7 @@ Primary locality sources:
 
 ## Everyday life
 
-Primary HealthCare's current community-clinics page lists Mġarr Community Clinic at the Primary School on Fisher Street under locations providing speech and language services. The eventual edition may name this as a practical public-service anchor only with that service scope, and must tell readers to confirm the current timetable and available services before relying on it.
+Primary HealthCare's current community-clinics page lists Mġarr Community Clinic at the Primary School on Fisher Street under locations providing speech and language services. The published edition names this as a practical public-service anchor only with that service scope and tells readers to confirm the current timetable and available services before relying on it.
 
 - Community clinics index: https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/
 - May 2026 Quality Service Charter retained as background only: https://primaryhealthcare.gov.mt/wp-content/uploads/2026/05/May-2026-Quality-Service-Charter.pdf
@@ -50,7 +53,7 @@ Heritage Malta identifies Ta' Ħaġrat in the heart/eastern edge of Mġarr and S
 - Heritage Malta feature on Ta' Ħaġrat and its relationship to the Mġarr community: https://heritagemalta.mt/news/a-community-affair-ta-hagrat-megalithic-site/
 - Skorba official site page: https://heritagemalta.mt/explore/skorba-temples/
 
-The council and VisitMalta identify Ġnejna and Għajn Tuffieħa as coastal places associated with the wider Mġarr locality. The later edition may introduce them as separate coast trips from the village context, but may not claim a walkable route, short transfer, parking availability, safe access, lifeguard cover or current sea conditions.
+The council and VisitMalta identify Ġnejna and Għajn Tuffieħa as coastal places associated with the wider Mġarr locality. The published edition introduces them as separate coast trips from the village context without claiming a walkable route, short transfer, parking availability, safe access, lifeguard cover or current sea conditions.
 
 - Mġarr Local Council whereabouts: https://mgarrlc.com/sites/
 - VisitMalta sea overview naming Għajn Tuffieħa Bay, Mġarr: https://www.visitmalta.com/en/experience-the-sea/
@@ -85,4 +88,4 @@ Fallback candidate: `Malta Mgarr Parish Church.jpg`, Medullaoblongata Projekt, 1
 7. Release only from a clean worktree based on current `origin/main`; the older mixed checkout is missing published editions and is not a safe deployment source.
 8. After deployment, verify the exact public and CRM URLs, image asset, metadata, lazy map and rollback commit.
 
-No page, navigation, sitemap, backlink or deployment is part of this research step.
+All eight release gates passed. The public, apex-domain and CRM copies returned the exact 14,132-byte release HTML with SHA-256 `AA4ED025F5FEA893F98DEA3ADE243864CACF3B80FC94D030BFC1BC8F19737568`; the index and sitemap contain one Mġarr reference each, and the licensed WebP matches the documented 363,584-byte asset. Production Chromium checks passed at 390×844 and 1440×1000 with the lazy OSM map. No external backlink was published.
