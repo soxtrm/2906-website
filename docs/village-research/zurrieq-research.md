@@ -1,6 +1,6 @@
 # Żurrieq edition — sourced research draft
 
-Language: English. Status: research and image candidate verified. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: local noindex preview verified; unpublished. Checked 18 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -66,6 +66,8 @@ The original was downloaded through the Commons API and visually reviewed. It is
 
 The exact original is retained only as an unversioned verification artefact at `artifacts/zurrieq-xarolla-windmill-frank-vincentz-original.jpg`. Any derived web image must preserve the visible subject, be documented as resized or cropped, and carry visible Frank Vincentz, Commons, CC BY-SA 3.0 and capture-date attribution.
 
+The approved derivative is `public/link-marketplace/assets/zurrieq-xarolla-windmill-frank-vincentz.webp`: 1800 × 1200, 156,152 bytes, SHA-256 `5E7B3723A4B61AA2FAB559FF930412CCBA13E906EB122A884A903BFBCCF77470`. It is a proportional resize and WebP conversion of the exact Commons original without crop, retouching or generative alteration. The visible preview caption states the author, source, licence, date and transformation.
+
 A second reviewed Commons image, `The Xarolla Windmill 01.jpg` by Kritzolina (28 November 2019, 5472 × 3648, CC BY-SA 4.0), shows a wider residential streetscape but leaves the windmill partly obscured by buildings, utility lines, trees and road signs. It is retained unversioned as an audit comparison and is not the preferred hero.
 
 ## Release gates
@@ -80,3 +82,13 @@ A second reviewed Commons image, `The Xarolla Windmill 01.jpg` by Kritzolina (28
 8. Build and deploy only from the current clean worktree, then verify public and CRM copies and retain a specific rollback commit.
 
 No page, navigation, sitemap, backlink or deployment is part of this research step.
+
+## Local preview verification
+
+The separate English preview at `public/link-marketplace/areas/zurrieq.html` was checked locally on 18 October 2026 at 390 × 844 and 1440 × 1000. Both layouts have exactly one H1, `noindex,nofollow`, no canonical, no Open Graph metadata, no JSON-LD and zero horizontal overflow. The 1800 × 1200 hero decoded at both sizes and its full attribution remained visible.
+
+No iframe exists before interaction. Pressing the explicit map button creates exactly one visible OpenStreetMap frame with the inland bbox `14.455,35.814,14.492,35.841`; the browser reported no failed page, image or map requests. The crop keeps Żurrieq town, Bubaqra, in-Nigret and the Xarolla direction in view without pulling in the Qrendi coast or drawing a route or administrative boundary. Mobile and desktop evidence images remain unversioned under `artifacts/`.
+
+The preview has no Marketplace navigation entry and no sitemap entry. Release metadata, discovery links, production build, deployment and external backlink remain separate gates.
+
+The full Next.js 16.2.0 production build also passed from an isolated validation copy using the locked dependency set. The worktree's pre-existing `node_modules` junction points to the older mixed checkout and currently exposes Next.js 16.4.2, so it was not modified or used as release evidence.
