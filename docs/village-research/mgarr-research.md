@@ -66,7 +66,9 @@ Preferred first candidate: `Malta - Mgarr + Triq is-Santi 01 ies.jpg` by Frank V
 - File page: https://commons.wikimedia.org/wiki/File:Malta_-_Mgarr_%2B_Triq_is-Santi_01_ies.jpg
 - Intended licence for the derived web image: CC BY-SA 3.0, with author, source, licence link, date and modification note shown beside the image.
 
-The candidate shows an agricultural/village skyline context with the parish church. It still requires exact original download, checksum, full-pixel visual inspection and a crop/resize decision. It must not be described as a current property view, as the view from any listing, or as proof of present traffic, agricultural activity or construction conditions.
+The exact original was downloaded through the Wikimedia Commons API and visually reviewed. It is a 5616 × 3744 JPEG of 15,864,124 bytes with SHA-256 `697B5D9B5EDAF8A21A7746DD9803ECCFB294C9028211BAF5EC9DD30DA5DA5264` (Commons SHA-1 `91b87a7f4802371a4ced6cae14299885cab0c8dc`). The image is sharp and clearly shows an agricultural foreground, the village skyline and parish church under a large clean sky. No identifiable foreground person or private contact detail is visible. The broad 3:2 frame can support a responsive hero without inventing content, but the final crop/resize still needs to preserve both the rural foreground and church rather than presenting a church-only close-up. It must not be described as a current property view, as the view from any listing, or as proof of present traffic, agricultural activity or construction conditions.
+
+The exact original is retained only as an unversioned verification artefact at `artifacts/mgarr-triq-is-santi-frank-vincentz-original.jpg`. No derived public asset has been created yet.
 
 Fallback candidate: `Malta Mgarr Parish Church.jpg`, Medullaoblongata Projekt, 10 September 2013, 3968 × 2976, CC BY-SA 4.0:
 
@@ -74,7 +76,7 @@ Fallback candidate: `Malta Mgarr Parish Church.jpg`, Medullaoblongata Projekt, 1
 
 ## Release gates
 
-1. Download and verify the exact licensed image file; record original and derived SHA-256 hashes.
+1. Produce a proportionally resized public WebP from the verified original and record its SHA-256 hash; document any crop if one is used.
 2. Create a separate `noindex,nofollow` preview with visible attribution and no public discovery links.
 3. Verify mobile 390×844 and desktop 1440×1000 layouts, image crop, readable captions and zero horizontal overflow.
 4. Confirm the map is absent before interaction and that one real OSM iframe loads only after a click, with a fallback link.
