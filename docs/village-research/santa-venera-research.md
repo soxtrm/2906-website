@@ -75,6 +75,10 @@ The Romeo Romano image provides an attractive secondary green-space view with ma
 
 All exact originals remain unversioned under `artifacts/santa-venera/` for audit. A later web derivative must preserve the selected subject, record dimensions, bytes and SHA256, state any resize or format conversion, and visibly credit the author, Wikimedia Commons, the applicable CC BY-SA licence and capture date. No retouching or generative alteration is approved.
 
+The approved web derivative is `public/link-marketplace/assets/santa-venera-aqueduct-frank-vincentz.webp`: an uncropped proportional resize from 5616×3744 to 1800×1200 and RGB WebP conversion, 242,726 bytes, SHA256 `7491EA3629AD8D03E8FDD5ECB7BB0EE1603218824ED9FC68FA170CFEA6FFFE96`. Full-image inspection confirms that the aqueduct arches, town-hall context, tree canopy, sky, street, vehicles and small parking sign remain intact. There was no retouching or generative alteration.
+
+Any use must visibly credit Frank Vincentz, Wikimedia Commons and CC BY-SA 3.0, state the 30 April 2014 capture date and disclose the proportional resize/format conversion. The derivative remains under CC BY-SA 3.0 and may only be described as dated locality context.
+
 ## Map and routing guardrails
 
 Use a fast click-to-load OpenStreetMap orientation frame covering Santa Venera's residential centre and the aqueduct/Casa Leoni/Romeo Romano group without drawing a municipal boundary or route. Neighbouring Birkirkara, Ħamrun and Qormi may appear only as orientation context.
@@ -84,7 +88,7 @@ Do not draw a straight line as a walking route. Walking geometry, bus timetables
 ## Release gates
 
 1. Recheck the council, Primary HealthCare, Parks in Malta, Lidl, PANINA and House of Flavors sources immediately before drafting; retain the health-page legacy-content warning.
-2. Create a proportional WebP derivative from the selected exact original and verify its complete pixels, dimensions, bytes, hash and visible attribution.
+2. Use the verified WebP derivative with complete visible attribution; do not crop, retouch or generatively alter it.
 3. Write a substantial English edition that distinguishes residential streets, the heritage-and-garden group and the busier road edges while keeping neighbouring towns separate.
 4. Include only operator-backed everyday, food and activity examples; no rankings, permanent hours, fixed prices or property-proximity claims.
 5. Start with an unpublished `noindex,nofollow` preview containing no canonical, social metadata, structured data, Marketplace link or sitemap entry.
