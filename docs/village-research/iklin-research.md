@@ -77,6 +77,10 @@ The street image has a brighter residential view and limestone façades, but it 
 
 The exact originals, API metadata and contact sheet remain unversioned under `artifacts/iklin/`. A later web derivative must preserve the selected subject, record dimensions, bytes and SHA256, state any resize or format conversion, and visibly credit Continentaleurope, Wikimedia Commons, CC BY-SA 3.0 and the capture date. No retouching, plate alteration, generative alteration or inferred current-condition claim is approved.
 
+The approved web derivative is `public/link-marketplace/assets/iklin-parish-centre-continentaleurope.webp`: an uncropped proportional resize from 1936×1936 to 1600×1600 and RGB WebP conversion, 255,444 bytes, SHA256 `E271F68E3F0ACC6F18FE2AE3AED2BAA8E59D18DADE314BB01CD44843FB3F1EA1`. Full-image inspection confirms that the square composition, blue sky, olive tree, cross, flags, parish signage, entrance and pavement remain intact. There was no crop, retouching, plate alteration or generative change, and no person, private phone number or private email address is visible.
+
+Any use must visibly credit Continentaleurope, Wikimedia Commons and CC BY-SA 3.0, state the 8 December 2015 capture date and disclose the proportional resize/format conversion. The derivative remains under CC BY-SA 3.0 and may only be described as dated public-community locality context; it does not establish present access, services, religious programme, traffic, parking, safety, accessibility or the view from any listing.
+
 ## Map and routing guardrails
 
 Use a fast click-to-load OpenStreetMap orientation frame covering Upper Iklin, the parish/civic centre and the Tal-Balal edge without drawing a municipal boundary or route. Neighbouring Naxxar, Lija, Birkirkara and San Ġwann may appear only as orientation context.
@@ -86,7 +90,7 @@ Do not draw a straight line as a walking route. Walking geometry, bus timetables
 ## Release gates
 
 1. Recheck the council, Primary HealthCare, Parks in Malta, HealthAid, Il Cortile and sports-club sources immediately before drafting.
-2. Prepare only an uncropped proportional derivative of the parish-centre original, inspect every pixel again and document dimensions, bytes, hash and visible attribution before page work.
+2. Use the verified uncropped 1600×1600 WebP derivative with complete visible attribution; do not crop, retouch or generatively alter it.
 3. Write a substantial English edition that distinguishes Upper Iklin, the central residential/parish context and the bypass/Tal-Balal edge while keeping neighbouring towns separate.
 4. Include only operator- or authority-backed everyday, food and activity examples; no rankings, permanent hours, fixed prices or property-proximity claims.
 5. Start with an unpublished `noindex,nofollow` preview containing no canonical, social metadata, structured data, Marketplace link or sitemap entry.
