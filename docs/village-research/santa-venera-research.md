@@ -1,6 +1,6 @@
 # Santa Venera edition — sourced research draft
 
-Language: English. Status: research only; no public page, navigation, sitemap or deployment change. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: PUBLISHED at https://www.2906.estate/link-marketplace/areas/santa-venera.html and verified in production on 18 October 2026 (Europe/Malta); release commit `540b58c`.
 
 ## Why this locality is next
 
@@ -120,4 +120,12 @@ Release-candidate hashes are: HTML 14,612 bytes, SHA256 `88D0DA17CE3FEADD4A1B284
 
 `next build --webpack` completed with Next.js 16.4.2 and generated all 52 static pages; the repository's existing type-validation skip remained in effect. Real Chromium checks at 390×844 and 1440×1000 confirmed HTTP 200, one H1, the exact self-canonical, three Open Graph fields, one `BreadcrumbList`, no robots block, zero horizontal overflow, a fully decoded 1800×1200 hero, no initial iframe and exactly one visible OpenStreetMap iframe after the click. There were no failed page, stylesheet, image or map requests. Full-page mobile and desktop screenshots were inspected without clipping or overlap.
 
-The release candidate is technically ready but is not yet claimed live. A fast-forward release commit, deployment and public checks across the production hosts remain required.
+At this checkpoint the release candidate was technically ready but not yet claimed live; the subsequent production verification is recorded below.
+
+## Production verification
+
+Release commit `540b58c` was fast-forwarded from `985d006` to `main` and deployed through the existing Git/Vercel path. The `www`, apex-domain and CRM copies each returned HTTP 200 and the exact 14,612-byte release HTML with SHA256 `88D0DA17CE3FEADD4A1B284349F25F54D7CE59C027E0F4122CF7786E2B46EC4B`. The public Marketplace index and neighbourhood sitemap returned their release hashes and each contained exactly one Santa Venera URL. The production hero matched the documented 242,726-byte WebP and SHA256.
+
+Production Chromium checks at 390×844 and 1440×1000 confirmed one H1, the exact self-canonical, three Open Graph fields, one `BreadcrumbList`, no robots block, zero horizontal overflow, a fully decoded 1800×1200 hero, no initial iframe and exactly one visible OpenStreetMap iframe after the click. No page, stylesheet, image or map request failed. Full-page production screenshots were visually inspected without clipping or overlap.
+
+Rollback is a targeted revert of release commit `540b58c`; the prior public `main` commit was `985d006`. No external backlink, outreach, WhatsApp, backend, traffic or scheduler change was made.

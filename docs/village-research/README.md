@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Twenty-four English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr, Żurrieq and Marsa. The older `swieqi-preview.html` is retained
+Status: Twenty-five English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr, Żurrieq, Marsa and Santa Venera. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -64,3 +64,5 @@ Mġarr is published independently at https://www.2906.estate/link-marketplace/ar
 Żurrieq is published independently at https://www.2906.estate/link-marketplace/areas/zurrieq.html (release commit `6b4f9b0`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `zurrieq-research.md`; the edition separates the main town, Bubaqra, in-Nigret and Ħal Millieri, explicitly keeps Wied iż-Żurrieq and Blue Grotto in the Qrendi council context, and draws no invented boundary, coast connection, property route or generic journey time.
 
 Marsa is published independently at https://www.2906.estate/link-marketplace/areas/marsa.html (release commit `1efae55`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `marsa-research.md`; the edition separates the residential town, inner creek/port edge and Aldo Moro/Tiġrija sports corridor, retains the current SportMalta construction/completion source conflict, and draws no invented boundary, water shortcut, property route or generic journey time.
+
+Santa Venera is published independently at https://www.2906.estate/link-marketplace/areas/santa-venera.html (release commit `540b58c`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `santa-venera-research.md`; the edition separates residential streets, the aqueduct/Casa Leoni/Romeo Romano heritage-and-garden group and busier road edges, retains the Primary HealthCare legacy-content warning, and draws no invented boundary, property route, generic journey time or ferry.
