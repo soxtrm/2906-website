@@ -67,6 +67,25 @@ const redisDedup = new Redis({
 })
 redisDedup.on('error', (err) => log.warn('Redis dedup error', err.message))
 
+// Inbound catch-up after a session comes back (see the session.status branch).
+// Waits 60 s first: WAHA itself redelivers part of the backlog on reconnect,
+// and those live deliveries must land (and move last_owner_message_at) before
+// the recovery decides what was missed.
+const _lastCatchUp = new Map()
+const CATCH_UP_EVERY_MS = 10 * 60 * 1000
+function catchUpAfterReconnect(sessionName) {
+  const now = Date.now()
+  if (now - (_lastCatchUp.get(sessionName) || 0) < CATCH_UP_EVERY_MS) return false
+  _lastCatchUp.set(sessionName, now)
+  setTimeout(() => {
+    require('../services/historySync').recoverActiveOwnerConversations()
+      .then(r => log.info('Reconnect inbound catch-up done', { session: sessionName, ...r }))
+      .catch(err => log.warn('Reconnect inbound catch-up failed', { session: sessionName, err: err.message }))
+  }, 60_000).unref?.()
+  return true
+}
+router._catchUpAfterReconnect = catchUpAfterReconnect   // test access
+
 // Cache group configs briefly to avoid a DB hit per message
 const groupConfigCache = new Map()
 const CACHE_TTL_MS = 60_000
@@ -286,6 +305,13 @@ router.post('/waha', async (req, res) => {
           .catch(err => log.warn('Reconnect file-queue flush failed', { err: err.message }))
         sessionRouter.flushWaitingDeliveries()
           .catch(err => log.warn('Reconnect delivery-queue flush failed', { err: err.message }))
+        // 2026-10-18: the reconnect flushed every OUTBOUND queue but nothing
+        // read what owners sent while the account was down -- that waited for
+        // the 04:00/07:15/22:00 cron. Same recovery the cron runs (only owner
+        // messages newer than last_owner_message_at are replayed, so a
+        // message already handled live is never answered twice), now also on
+        // reconnect, at most once per session per 10 min (QR loops flap).
+        catchUpAfterReconnect(name || session)
       }
       return
     }
