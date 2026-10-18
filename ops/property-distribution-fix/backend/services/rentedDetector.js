@@ -313,6 +313,24 @@ async function markRented(propertyId, ref, senderPhone, session, lookupRow, extr
   // listing) and removes any queued FB jobs.
   const result = await cancelAllPending(propertyId, 'marked_rented_via_group_reaction')
 
+  // ── Tell the category groups (2026-10-18) ─────────────────────────────
+  // The AV paths (availability.js onRented / applyRentedVerdictFromOwnerChat)
+  // put 😡 on every stored listing message and reply "now rented" under it.
+  // This path -- !rented, a group 😡, a quoted "rented" -- flipped the status
+  // silently, so every OTHER group the listing went to (and with !rented, all
+  // of them) kept showing it as a live offer. Same two calls, same wording;
+  // a failure here must never undo the status flip above.
+  let groups = { total: 0, reacted: 0 }, groupText = { total: 0, replied: 0 }
+  try {
+    const av = require('./availability')
+    groups = await av.reactAngryInPropertyGroups(propertyId)
+    groupText = await av.replyUnderListing(propertyId,
+      withPropertyLink(`🔴 #${ref} — now rented. No longer available.`, ref))
+  } catch (err) {
+    log.warn('markRented: group notice failed', { propertyId, err: err.message })
+  }
+  log.info('markRented: groups notified', { propertyId, ref, groups, groupText })
+
   // ── Privacy-respecting admin alert ────────────────────────────────────
   // Only the public ref + a count of cancellations. NEVER owner phone,
   // email, street, or apartment number.
@@ -321,7 +339,8 @@ async function markRented(propertyId, ref, senderPhone, session, lookupRow, extr
     config.admin.botNumber,
     withPropertyLink(`🔴 #${ref} marked as RENTED\n` +
       `${result.cancelledFb || 0} pending Facebook posts cancelled\n` +
-      (result.unpublishedWeb ? 'Website listing unpublished' : 'No website listing to unpublish'), ref),
+      (result.unpublishedWeb ? 'Website listing unpublished' : 'No website listing to unpublish') + '\n' +
+      `Groups: 😡 ${groups.reacted}/${groups.total} · reply ${groupText.replied}/${groupText.total}`, ref),
   )
 
   // Fire-and-forget sheet sync — errors logged inside.
