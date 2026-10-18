@@ -1,6 +1,6 @@
 # Mġarr edition — sourced research draft
 
-Language: English. Status: research draft. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: release candidate. Checked 18 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
