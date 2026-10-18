@@ -17,7 +17,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
-import { BoardFilters, type BoardFilterValue, type BoardLocationArea, UPDATED_MAX_MS } from '@/components/crm/board-filters'
+import { BoardFilters, type BoardFilterValue, type BoardLocationArea, type QuickKey, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
@@ -254,6 +254,12 @@ type Listing = {
   images: string[]; imageCount: number
   listedBy: { id: number | null; displayName: string | null; colorHex: string | null }
   isMine: boolean
+  // Returned by GET /schedule-board/listings (shapeCard); read by the quick
+  // filters and the strict seafront discovery chip.
+  categoryGroups?: string[] | null
+  latestPriceChangeAt?: string | null
+  latestPriceOld?: number | null
+  latestPriceNew?: number | null
   // The public site's own listing category ('letting' | 'aesthetics' | 'commercial'
   // | 'sales') — 'aesthetics' is the site's existing Luxury collection. Reused
   // here as-is rather than inventing a parallel classification field.
@@ -328,7 +334,23 @@ type AgentRequestGroup = {
 type Filters = BoardFilterValue
 const EMPTY: Filters = {
   q: '', beds: [], baths: [], min: '', max: '', type: '', towns: [],
-  pets: '', sharing: '', sublet: false, updated: '', rental: '',
+  pets: '', sharing: '', sublet: false, updated: '', rental: '', quick: [],
+}
+const QUICK_KEYS: QuickKey[] = ['seafront', 'price_drop', 'viewing', 'hot', 'mine']
+
+// Search text as agents actually type it (2026-10-18 audit against the live
+// listings endpoint): "#2906-9478" — the ref exactly as every WhatsApp post
+// prints it — found nothing; "gżira" found 10 of Gżira's 24 cards; "st.
+// julian’s" found 0 while "st julians" found 9. Fold to the plain form the
+// board's search text matches on.
+function normalizeBoardSearch(raw: string): string {
+  return raw
+    .replace(/#/g, ' ')
+    .replace(/[żŻ]/g, 'z').replace(/[ħĦ]/g, 'h').replace(/[ġĠ]/g, 'g').replace(/[ċĊ]/g, 'c')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/['’‘`.]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 // Newest-first is the default because it is what the board is for: the listing
@@ -460,6 +482,7 @@ function Board() {
       ? params.get('updated') : '') as Filters['updated'],
     rental: (['long_let', 'winter_let', 'short_let'].includes(params.get('rental') || '')
       ? params.get('rental') : '') as Filters['rental'],
+    quick: (params.get('quick') || '').split(',').filter((k): k is QuickKey => QUICK_KEYS.includes(k as QuickKey)),
   }))
   const [rect, setRect] = useState<Rect | null>(() => parseRect(params.get('rect')))
   const [circ, setCirc] = useState<Circ | null>(() => parseCirc(params.get('circ')))
@@ -761,6 +784,7 @@ function Board() {
       if (f.sublet) q.set('sublet', '1')
       if (f.updated) q.set('updated', f.updated)
       if (f.rental) q.set('rental', f.rental)
+      if (f.quick.length) q.set('quick', f.quick.join(','))
       if (rect) q.set('rect', rectToParam(rect))
       if (circ) q.set('circ', circToParam(circ))
       if (sort !== DEFAULT_SORT) q.set('sort', sort)
@@ -809,7 +833,7 @@ function Board() {
   useEffect(() => {
     let alive = true
     setLoading(true)
-    const search = deferredQuery.trim()
+    const search = normalizeBoardSearch(deferredQuery)
     const exactRef = exactPropertyRef(search)
     const q = new URLSearchParams()
     if (!search && f.beds.length) q.set('beds', f.beds.join(','))
@@ -1062,13 +1086,13 @@ function Board() {
     // Free text matches ref, town or sub-location. Applied here rather than in
     // SQL because the whole result set is already local — typing filters at
     // keystroke speed instead of a round trip per character.
-    const needle = deferredQuery.trim().toLowerCase()
+    const needle = normalizeBoardSearch(deferredQuery).toLowerCase()
     return positioned.filter(r => {
       // The search field is global. It must be able to recover a known ref or
       // locality even while stale Area, map or feature filters are selected.
       if (needle) {
         if (needle !== loadedQuery) {
-          const hay = [r.ref, r.town, r.subLocation, r.type, r.description, r.listedBy?.displayName, r.contact?.reachesName].filter(Boolean).join(' ').toLowerCase()
+          const hay = normalizeBoardSearch([r.ref, r.town, r.subLocation, r.localityLabel, r.type, r.description, r.listedBy?.displayName, r.contact?.reachesName].filter(Boolean).join(' ')).toLowerCase()
           if (!hay.includes(needle)) return false
         }
         return true
@@ -1085,7 +1109,10 @@ function Board() {
           const touched = Date.parse(r.updatedAt || r.createdAt || '')
           if (!r.isHotProperty && !r.isFavourite && (!Number.isFinite(touched) || Date.now() - touched > 10 * 86_400_000)) return false
         }
-        if (discovery.includes('seafront') && !/(sea\s*front|seafront|waterfront|frontline)/i.test(copy)) return false
+        // The backend's strict seafront call (categoryClassifier: an explicit
+        // claim, never "waterfront"/"close to the sea"); the old copy regex
+        // counted exactly the phrases that classifier rejects.
+        if (discovery.includes('seafront') && !(r.categoryGroups || []).includes('seafront')) return false
         const selectedBeds = discovery.filter(key => key.startsWith('beds-')).map(key => Number(key.slice(-1)))
         if (selectedBeds.length && (r.beds == null || !selectedBeds.includes(r.beds))) return false
         const selectedTypes = discovery.filter(key => key === 'apartments' || key === 'villas')
@@ -1113,6 +1140,18 @@ function Board() {
       // picked one (a winter + short let shows under both). Modes come derived from
       // the backend, so unclassified listings still land under Long / Winter / Short.
       if (f.rental && !(r.rentalModes || []).includes(f.rental)) return false
+      // Quick filters — every one reads a field the card already carries.
+      if (f.quick.length) {
+        if (f.quick.includes('seafront') && !(r.categoryGroups || []).includes('seafront')) return false
+        if (f.quick.includes('price_drop')) {
+          const at = Date.parse(r.latestPriceChangeAt || '')
+          if (!Number.isFinite(at) || Date.now() - at > 14 * 86_400_000) return false
+          if (!(Number(r.latestPriceNew) < Number(r.latestPriceOld))) return false
+        }
+        if (f.quick.includes('viewing') && !r.viewingDate && !r.viewing) return false
+        if (f.quick.includes('hot') && !r.isHotProperty) return false
+        if (f.quick.includes('mine') && !r.isMine) return false
+      }
       // Recency filter (Kev, 2026-08-28): createdAt is bumped by both a fresh
       // !upload and a deliberate !price repost, so "updated in last N" reads
       // as a cheap "still on the market" proxy. No createdAt on file is
@@ -1144,7 +1183,7 @@ function Board() {
       }
       return true
     })
-  }, [positioned, f.towns, deferredQuery, loadedQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ, view, horizon, discovery])
+  }, [positioned, f.towns, deferredQuery, loadedQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, f.quick, rect, circ, view, horizon, discovery])
 
   // Mount the board in small, scroll-driven batches. A normal inventory can
   // contain hundreds of cards; constructing every card (and every hook/ref)
@@ -1155,7 +1194,7 @@ function Board() {
   const loadMoreRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     setRenderLimit(pageSize)
-  }, [pageSize, view, horizon, discovery, f.towns, deferredQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, rect, circ])
+  }, [pageSize, view, horizon, discovery, f.towns, deferredQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, f.quick, rect, circ])
   useEffect(() => {
     const target = loadMoreRef.current
     if (!target || renderLimit >= visible.length) return

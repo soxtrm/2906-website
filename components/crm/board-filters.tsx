@@ -13,7 +13,7 @@
 // inputs in inline styles — which is what made it read as bolted on.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, Menu, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Star, X } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, Cat, ChevronDown, Euro, Menu, Map as MapIcon, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Sparkles, Star, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -56,7 +56,22 @@ export type BoardFilterValue = {
   // Rental mode tab (2026-09-21): '' = all. A listing with several modes shows
   // under each of them; filtered client-side on the card's rentalModes.
   rental: '' | 'long_let' | 'winter_let' | 'short_let'
+  // Quick toggles (2026-10-18 board audit): facts every card already carries,
+  // which agents asked for but could only find by reading cards. AND-ed.
+  quick: QuickKey[]
 }
+
+export type QuickKey = 'seafront' | 'price_drop' | 'viewing' | 'hot' | 'mine'
+// seafront reads the backend's own strict classification (categoryGroups,
+// services/categoryClassifier.js: "waterfront"/"close to the sea" are NOT
+// seafront), never the card text.
+export const QUICK_OPTIONS: [QuickKey, string][] = [
+  ['seafront', 'Seafront'],
+  ['price_drop', 'Price dropped · 14 days'],
+  ['viewing', 'Viewing booked'],
+  ['hot', 'Hot'],
+  ['mine', 'My listings'],
+]
 
 export const UPDATED_OPTIONS: [BoardFilterValue['updated'], string][] = [
   ['24h', '24h'], ['48h', '48h'], ['5d', '5 Days'], ['10d', '10 Days'], ['3w', '3 Weeks'],
@@ -356,7 +371,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     (value.towns.length ? 1 : 0) + (value.beds.length ? 1 : 0) + (value.baths.length ? 1 : 0) +
     (value.type ? 1 : 0) + (value.min || value.max ? 1 : 0) +
     (value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0) +
-    (value.updated ? 1 : 0) + (value.rental ? 1 : 0)
+    (value.updated ? 1 : 0) + (value.rental ? 1 : 0) + (value.quick.length ? 1 : 0)
   const hasActiveIslandSelection = activeCount > 0 || smartBadgeCount > 0 || value.q.trim().length > 0
 
   const typeLabel = value.type
@@ -619,6 +634,11 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 <label className="crm-sublet-choice"><input type="checkbox" checked={value.sublet} onChange={event => onChange({ sublet: event.target.checked })} /><span>Subletting allowed</span></label>
               </div>
               <p className="crm-filter-hint">Unknown rules stay unknown and are never treated as “not allowed”.</p>
+            </div>
+
+            <div id="crm-filter-quick" className="crm-filter-section">
+              <div className="crm-filter-section-title"><Sparkles /><span>Quick filters</span></div>
+              <div className="crm-filter-choice-row">{QUICK_OPTIONS.map(([key, label]) => <button key={key} type="button" data-testid={`quick-filter-${key}`} aria-pressed={value.quick.includes(key)} onClick={() => onChange({ quick: value.quick.includes(key) ? value.quick.filter(k => k !== key) : [...value.quick, key] })}>{label}</button>)}</div>
             </div>
 
             <div id="crm-filter-property-type" data-island-focus={islandFocus === 'crm-filter-property-type'} className="crm-filter-section">
