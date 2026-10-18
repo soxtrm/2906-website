@@ -1,6 +1,6 @@
 # Marsa edition — sourced research draft
 
-Language: English. Status: research draft; no public page, navigation entry or sitemap entry. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: unpublished `noindex,nofollow` preview; no navigation entry or sitemap entry. Checked 18 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -81,6 +81,14 @@ The future 2D map should be a click-to-load OpenStreetMap orientation frame cove
 
 No ferry is assumed for Marsa. If a future property-specific route reports one, it must come from the routing response's ferry evidence and must be labelled as an unverified schedule/price dependency until the relevant operator is checked.
 
+## Unpublished preview verification
+
+`public/link-marketplace/areas/marsa.html` now provides a substantial English preview separating the residential town, creek/port edge and Aldo Moro/Tiġrija sports corridor. It keeps the SportMalta construction/completion conflict visible, treats the Convenience Shop, Marsa Sports Club, Malta Racing Club and Pegasus only as operator-backed examples, and makes no ranking, permanent-hours or property-proximity claim.
+
+The preview retains exactly one `noindex,nofollow` directive and has no canonical, Open Graph metadata, JSON-LD, Marketplace link or sitemap entry. Its OpenStreetMap frame is absent until the user clicks; the broad bbox covers the town-to-sports context without a route, boundary, water crossing, ETA or ferry.
+
+Headless Chromium checks at 390×844 and 1440×1000 returned HTTP 200, one H1, zero horizontal overflow, a fully decoded 1620×1080 hero, zero initial iframes and exactly one visible OSM frame after click. Page, stylesheet, image and map requests succeeded; only the project-wide absent favicon returned 404. The page SHA256 is `5DAB421CC36448A03E66AC998929EE568CA477DBB649F649E2E1718D8146E509` at 14,016 bytes.
+
 ## Release gates
 
 1. Recheck all council, Primary HealthCare, retail, SportMalta, club and race-track sources immediately before drafting.
@@ -92,4 +100,4 @@ No ferry is assumed for Marsa. If a future property-specific route reports one, 
 7. Verify mobile and desktop layout, image decode, attribution, zero horizontal overflow and lazy OSM loading before release metadata is added.
 8. Build and deploy only from the clean isolated worktree, then verify public and CRM copies and retain a specific rollback commit.
 
-No public page, navigation, sitemap, production deployment, external backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this research step.
+No navigation, sitemap, production deployment, external backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this preview step.
