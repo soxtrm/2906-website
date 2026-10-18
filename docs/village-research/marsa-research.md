@@ -1,6 +1,6 @@
 # Marsa edition — sourced research draft
 
-Language: English. Status: RELEASE CANDIDATE; canonical, Open Graph, breadcrumb metadata, navigation and sitemap entry prepared; production verification pending. Checked 18 October 2026 (Europe/Malta).
+Language: English. Status: PUBLISHED at https://www.2906.estate/link-marketplace/areas/marsa.html and verified in production on 18 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -82,15 +82,17 @@ The future 2D map should be a click-to-load OpenStreetMap orientation frame cove
 
 No ferry is assumed for Marsa. If a future property-specific route reports one, it must come from the routing response's ferry evidence and must be labelled as an unverified schedule/price dependency until the relevant operator is checked.
 
-## Preview and release-candidate verification
+## Preview, release and production verification
 
-`public/link-marketplace/areas/marsa.html` now provides a substantial English preview separating the residential town, creek/port edge and Aldo Moro/Tiġrija sports corridor. It keeps the SportMalta construction/completion conflict visible, treats the Convenience Shop, Marsa Sports Club, Kulu and Putter's Inn only as operator-backed examples, and makes no ranking, permanent-hours or property-proximity claim.
+`public/link-marketplace/areas/marsa.html` provides a substantial English edition separating the residential town, creek/port edge and Aldo Moro/Tiġrija sports corridor. It keeps the SportMalta construction/completion conflict visible, treats the Convenience Shop, Marsa Sports Club, Kulu and Putter's Inn only as operator-backed examples, and makes no ranking, permanent-hours or property-proximity claim.
 
 The initial preview retained exactly one `noindex,nofollow` directive and had no canonical, Open Graph metadata, JSON-LD, Marketplace link or sitemap entry. After the source-hardening recheck passed, release metadata was added: one self-canonical, three matching Open Graph fields and one valid `BreadcrumbList`; the robots block and preview wording were removed. Marketplace navigation and the neighbourhood sitemap now contain exactly one Marsa URL. Its OpenStreetMap frame remains absent until the user clicks; the broad bbox covers the town-to-sports context without a route, boundary, water crossing, ETA or ferry.
 
 Headless Chromium checks at 390×844 and 1440×1000 returned HTTP 200, one H1, zero horizontal overflow, a fully decoded 1620×1080 hero, zero initial iframes and exactly one visible OSM frame after click. Page, stylesheet, image and map requests succeeded; only the project-wide absent favicon returned 404. The page SHA256 is `5DAB421CC36448A03E66AC998929EE568CA477DBB649F649E2E1718D8146E509` at 14,016 bytes.
 
 The release candidate passed the same two Chromium viewport checks after metadata and navigation were added: one H1, one self-canonical, three Open Graph fields, one valid breadcrumb block, no robots block, zero horizontal overflow, a decoded 1620×1080 hero, no initial iframe and one visible OSM frame after click. No page, image or map request failed. A full Next.js 16.4.2 Webpack production build completed all 52 static pages; project type validation remains disabled by the existing configuration.
+
+Release commit `1efae55` was pushed to `main` after verifying that `origin/main` still matched the reviewed base `22f1550`. The existing Git/Vercel route published the edition; www, apex and CRM returned HTTP 200 and the exact 14,778-byte release HTML with SHA256 `B71FB2F851CF33CD112035573270FF588155C2768507BA2DC753663B06B26080`. The production hero, Marketplace index and neighbourhood sitemap matched their release hashes, and the two production-browser viewports repeated the metadata, layout, image and lazy-map checks without a failed request.
 
 ## Release gates
 
@@ -103,4 +105,4 @@ The release candidate passed the same two Chromium viewport checks after metadat
 7. Verify mobile and desktop layout, image decode, attribution, zero horizontal overflow and lazy OSM loading before release metadata is added.
 8. Build and deploy only from the clean isolated worktree, then verify public and CRM copies and retain a specific rollback commit.
 
-No production deployment, external backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of the release-candidate step.
+Rollback is the targeted revert of release commit `1efae55` together with the publication-documentation commit. No external backlink, outreach, WhatsApp, backend, traffic or scheduler change was made.
