@@ -68,7 +68,7 @@ Preferred first candidate: `Malta - Mgarr + Triq is-Santi 01 ies.jpg` by Frank V
 
 The exact original was downloaded through the Wikimedia Commons API and visually reviewed. It is a 5616 × 3744 JPEG of 15,864,124 bytes with SHA-256 `697B5D9B5EDAF8A21A7746DD9803ECCFB294C9028211BAF5EC9DD30DA5DA5264` (Commons SHA-1 `91b87a7f4802371a4ced6cae14299885cab0c8dc`). The image is sharp and clearly shows an agricultural foreground, the village skyline and parish church under a large clean sky. No identifiable foreground person or private contact detail is visible. The broad 3:2 frame can support a responsive hero without inventing content, but the final crop/resize still needs to preserve both the rural foreground and church rather than presenting a church-only close-up. It must not be described as a current property view, as the view from any listing, or as proof of present traffic, agricultural activity or construction conditions.
 
-The exact original is retained only as an unversioned verification artefact at `artifacts/mgarr-triq-is-santi-frank-vincentz-original.jpg`. No derived public asset has been created yet.
+The exact original is retained only as an unversioned verification artefact at `artifacts/mgarr-triq-is-santi-frank-vincentz-original.jpg`. A resize-only 1800 × 1200 RGB WebP has been prepared at `public/link-marketplace/assets/mgarr-triq-is-santi-frank-vincentz.webp`. It is 363,584 bytes with SHA-256 `AC52F7F17C0349185E8027E6F4BE92CC2808C295374016B78288169E75FEE38D`. The complete 3:2 frame is preserved without crop, retouching or generative alteration. Any page using it must visibly credit Frank Vincentz, link the Commons source and CC BY-SA 3.0 licence, show the 1 May 2014 capture date and state that the file was resized.
 
 Fallback candidate: `Malta Mgarr Parish Church.jpg`, Medullaoblongata Projekt, 10 September 2013, 3968 × 2976, CC BY-SA 4.0:
 
@@ -76,14 +76,13 @@ Fallback candidate: `Malta Mgarr Parish Church.jpg`, Medullaoblongata Projekt, 1
 
 ## Release gates
 
-1. Produce a proportionally resized public WebP from the verified original and record its SHA-256 hash; document any crop if one is used.
-2. Create a separate `noindex,nofollow` preview with visible attribution and no public discovery links.
-3. Verify mobile 390×844 and desktop 1440×1000 layouts, image crop, readable captions and zero horizontal overflow.
-4. Confirm the map is absent before interaction and that one real OSM iframe loads only after a click, with a fallback link.
-5. Recheck every current operator, council, Heritage Malta and health source immediately before release.
-6. Add the self-canonical, Open Graph fields and BreadcrumbList only after the preview passes.
-7. Add exactly one Marketplace navigation link and one neighbourhood-sitemap entry, then run the production build.
-8. Release only from a clean worktree based on current `origin/main`; the older mixed checkout is missing published editions and is not a safe deployment source.
-9. After deployment, verify the exact public and CRM URLs, image asset, metadata, lazy map and rollback commit.
+1. Create a separate `noindex,nofollow` preview with visible attribution and no public discovery links.
+2. Verify mobile 390×844 and desktop 1440×1000 layouts, image framing, readable captions and zero horizontal overflow.
+3. Confirm the map is absent before interaction and that one real OSM iframe loads only after a click, with a fallback link.
+4. Recheck every current operator, council, Heritage Malta and health source immediately before release.
+5. Add the self-canonical, Open Graph fields and BreadcrumbList only after the preview passes.
+6. Add exactly one Marketplace navigation link and one neighbourhood-sitemap entry, then run the production build.
+7. Release only from a clean worktree based on current `origin/main`; the older mixed checkout is missing published editions and is not a safe deployment source.
+8. After deployment, verify the exact public and CRM URLs, image asset, metadata, lazy map and rollback commit.
 
 No page, navigation, sitemap, backlink or deployment is part of this research step.
