@@ -76,6 +76,10 @@ The two Continentaleurope images centre a construction site and include a compan
 
 The exact originals and contact sheet remain unversioned under `artifacts/bahar-ic-caghaq/`. A later web derivative must preserve the selected composition, record dimensions, bytes and SHA256, state any resize or format conversion, and visibly credit Justlettersandnumbers, Wikimedia Commons, CC BY-SA 4.0 and the capture date. No crop, retouching, plate alteration or generative change has been approved.
 
+The approved web derivative is `public/link-marketplace/assets/bahar-ic-caghaq-malta-0476-justlettersandnumbers.webp`: an uncropped proportional resize from 4032×3024 to 1800×1350 and RGB WebP conversion, 389,408 bytes, SHA256 `CDDBCC6B71226E09E43241B185184DBE8C6ED1D9251194EC464295022D1EB5E1`. Full-image inspection confirms that the complete 4:3 composition remains visible, including the foreground fields and rubble walls, settlement, both coastal edges, sea, boat and sky. No crop, retouching, plate alteration or generative change was made; no identifiable person, readable private phone number, private email address or prominent vehicle registration is visible.
+
+Any use must visibly credit Justlettersandnumbers, Wikimedia Commons and CC BY-SA 4.0, state the 3 November 2016 capture date and disclose the proportional resize/format conversion. The derivative remains under CC BY-SA 4.0 and may only be described as a dated broad locality view; it does not establish current development, land use, traffic, access, bathing conditions, outlook or the view from any listing.
+
 ## Map and routing guardrails
 
 Use a fast click-to-load OpenStreetMap orientation frame that makes the inland core, Coast Road edge and Qalet Marku context legible without drawing a municipal boundary or route. Neighbouring places may appear only as orientation context.
@@ -85,7 +89,7 @@ Do not draw a straight line as a walking route. Walking geometry, bus timetables
 ## Release gates
 
 1. Recheck the authority and operator sources immediately before drafting.
-2. Create a proportional web derivative of `Malta 0476.jpg`, inspect every visible edge and record its dimensions, bytes, hash and exact transformation.
+2. Use the verified uncropped 1800×1350 WebP derivative with complete visible attribution; do not crop, retouch or generatively alter it.
 3. Write a substantial English edition that separates the residential core, Coast Road/bathing/open-space context and Qalet Marku edge while keeping neighbouring localities distinct.
 4. Include only authority- or operator-backed everyday, food and activity examples; no rankings, permanent hours, fixed prices or property-proximity claims.
 5. Start with an unpublished `noindex,nofollow` preview containing no canonical, social metadata, structured data, Marketplace link or sitemap entry.
