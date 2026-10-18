@@ -16,7 +16,7 @@ if docker logs 2906_backend --since 3m 2>&1 | grep -qE "categoryPublisher|upload
 sed -i -e 's/\r$//' $SRC/$F
 mkdir -p $BK/services && cp -p $B/$F $BK/services/ && echo "backup: $BK"
 cp $SRC/$F $B/$F
-docker exec 2906_backend node -e "require('/app/$F')" || { cp -p $BK/$F $B/$F; echo "ABORT: load failed, restored"; exit 1; }
+docker exec 2906_backend node --check /app/$F || { cp -p $BK/$F $B/$F; echo "ABORT: load failed, restored"; exit 1; }
 md5sum $B/$F
 docker restart 2906_backend
 for i in $(seq 1 30); do docker logs 2906_backend --since 60s 2>&1 | grep -q "HTTP server listening" && break; sleep 2; done
