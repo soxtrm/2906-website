@@ -1,6 +1,6 @@
 # Iklin edition — sourced research draft
 
-Language: English. Status: research only; no page, public image derivative or release metadata exists.
+Language: English. Status: release candidate prepared locally; not yet published.
 
 ## Why this locality is next
 
@@ -111,3 +111,17 @@ The selected 1600×1600 WebP is shown in its full square composition with visibl
 Real Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, `noindex,nofollow`, zero canonicals, zero Open Graph fields, zero JSON-LD blocks and no horizontal overflow. The 1600×1600 hero decoded completely, retained its square framing and kept the full attribution readable. The page initially created no iframe; clicking the map control created exactly one visible OpenStreetMap iframe covering `14.444,35.900,14.466,35.918`, still without horizontal overflow. There were no failed page, stylesheet, image or map requests. Full-page mobile and desktop screenshots were inspected without clipping or overlap.
 
 Release metadata, Marketplace navigation, sitemap inclusion, build, deployment and public-production verification remain separate later gates.
+
+## Release-candidate verification
+
+All authority and operator sources used in the page were rechecked immediately before release preparation on 18 October 2026. Council geography/history and sports-club pages, Primary HealthCare community-clinic and catchment pages, Parks in Malta, HealthAid and Il Cortile remained reachable and continued to support only the narrow statements already used. No claim was expanded.
+
+The preview gate passed, so `noindex,nofollow` and unpublished wording were removed. The page now has one self-canonical, three matching Open Graph fields and one valid `BreadcrumbList`. Its navigation leads to the Marketplace index, and the Marketplace index and neighbourhood sitemap each contain exactly one Iklin URL.
+
+`next build --webpack` completed successfully with Next.js 16.4.2 and generated 52/52 static pages. The repository's existing type-validation skip remained unchanged, and the build-generated `next-env.d.ts` change was restored.
+
+Real Chromium release checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, no robots meta, one exact self-canonical, three Open Graph fields, one `BreadcrumbList`, zero horizontal overflow and a fully decoded 1600×1600 hero. The page initially created no iframe; clicking the map control created exactly one visible OpenStreetMap iframe for `14.444,35.900,14.466,35.918`, still without overflow. There were no failed page, stylesheet, image or map requests. Full-page mobile and desktop screenshots were visually inspected without clipping, overlap or altered image framing.
+
+Release-candidate hashes: HTML 14,443 bytes, SHA256 `65DA47BEEE3AAE1AC02B2924897EE83F1CBABAD27D772B62ED7150F0E218CD5E`; Marketplace index 8,283 bytes, SHA256 `948E02A105A41E444D84837BEF20086CC4189C65E9339CAF5CF2198E64C8656C`; neighbourhood sitemap 2,222 bytes, SHA256 `402EEBDDA48BE6A785B2A1F7943C0C987A472C958B10150C962FC257C2A90169`; hero unchanged at 255,444 bytes, SHA256 `E271F68E3F0ACC6F18FE2AE3AED2BAA8E59D18DADE314BB01CD44843FB3F1EA1`.
+
+The page is not yet claimed as live. Commit, push, deployment and production verification remain separate gates.
