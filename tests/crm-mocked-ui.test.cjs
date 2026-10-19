@@ -42,17 +42,21 @@ test('CRM mocked UI', { timeout: 600000 }, async t => {
   await t.test('client navigation renders without the splash', async () => {
     const page = await openPage(browser, { width: 1280, height: 800 })
     await page.waitForFunction(() => !document.querySelector('.argus-intro'), { timeout: 8000 })
-    const link = await page.$('.crm-sidebar a.crm-nav-item[href*="profile"], .crm-sidebar a.crm-nav-item:not([aria-current])')
-    assert.ok(link, 'a sidebar link exists')
+    // The board's navigation lives in the header since the 2026-10-19
+    // ARGUS layout (the sidebar holds the filter column there).
+    const link = await page.$(':is(.crm-sidebar, .crm-header-nav) a.crm-nav-item[href*="profile"], :is(.crm-sidebar, .crm-header-nav) a.crm-nav-item:not([aria-current])')
+    assert.ok(link, 'a navigation link exists')
     await link.click()
     await sleep(250)
     assert.equal(await page.$('.argus-intro'), null, 'no intro after an in-app page change')
     await page.close()
   })
 
-  await t.test('dark mode: sidebar ARGUS wordmark is inverted, not dark-on-dark', async () => {
+  await t.test('dark mode: ARGUS wordmark is inverted, not dark-on-dark', async () => {
     const page = await openPage(browser, { theme: 'dark', width: 1280, height: 800 })
-    const filter = await page.$eval('.crm-brand img', el => getComputedStyle(el).filter)
+    // Board desktop: the wordmark is the ARGUS island (the sidebar brand
+    // became the 2906 mark in the header).
+    const filter = await page.$eval('.crm-argus-orbit img[alt=ARGUS], .crm-brand img', el => getComputedStyle(el).filter)
     assert.match(filter, /invert/)
     await page.close()
   })

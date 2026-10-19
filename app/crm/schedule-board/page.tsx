@@ -17,7 +17,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
-import { BoardFilters, type BoardFilterValue, type BoardLocationArea, type QuickKey, UPDATED_MAX_MS } from '@/components/crm/board-filters'
+import { BoardFilters, type BoardFilterValue, type BoardLocationArea, type MarketKey, type QuickKey, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
@@ -460,7 +460,9 @@ function Board() {
   // Kevin's desktop reference is deliberately light and editorial. Keep the
   // established mobile default untouched while an explicit viewer preference
   // remains authoritative on either layout.
-  const isDark = isMobile ? theme !== 'light' : theme === 'dark'
+  // Light-first on every device (founder brief 2026-10-19); dark blue stays
+  // one tap away in the header and is remembered per browser.
+  const isDark = theme === 'dark'
 
   // Filters initialise from the URL so a shared link restores the search.
   const [f, setF] = useState<Filters>(() => ({
@@ -1710,7 +1712,43 @@ function Board() {
     window.dispatchEvent(new CustomEvent('crm-board-tool-picked'))
   }, [updatesMode, view])
 
+  const mobileBoardActions = <div className="crm-mobile-smart-body">
+    <div className="crm-mobile-smart-copy"><strong>Board tools</strong><span>These actions belong to the property board. Every workspace and profile stays in the navigation above.</span></div>
+    <div className="crm-mobile-smart-divider"><span>Smart combinations</span></div>
+    <div id="crm-smart-collections" className="crm-mobile-smart-grid" aria-label="Smart property filters">
+      {DISCOVERY_ITEMS.map(item => {
+        const Icon = item.icon
+        const on = discovery.includes(item.key)
+        return <button key={item.key} type="button" aria-pressed={on} onClick={() => toggleDiscovery(item.key)}><Icon /><span>{item.label}</span>{on && <Check aria-hidden />}</button>
+      })}
+    </div>
+    <div className="crm-mobile-smart-divider"><span>Board actions</span></div>
+    <div className="crm-mobile-quick-grid">
+      <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()); setTagSelectionMode(false) }}><LayoutGrid /><span>Active board</span></button>
+      <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()); setTagSelectionMode(false) }}><House /><span>Rented</span></button>
+      <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
+      <button type="button" aria-pressed={updatesMode} onClick={() => { setUpdatesMode(true); setTagSelectionMode(false) }}><Clock3 /><span>Recent updates</span></button>
+      <button id="crm-smart-tags" type="button" disabled={!visible.length} aria-pressed={tagSelectionMode} onClick={() => setTagSelectionMode(current => !current)}><AtSign /><span>{tagSelectionMode ? 'Finish selecting' : 'Select for WATag'}</span></button>
+      <button type="button" onClick={() => setSwipePanelOpen(true)}><Link2 /><span>Swipe Links</span></button>
+      {isAdmin && <button type="button" onClick={openAgentRequests}><MessageCircle /><span>Requests</span></button>}
+      <button type="button" onClick={() => setBoardSettingsOpen(true)}><MoreHorizontal /><span>Collection settings</span></button>
+    </div>
+    <div className="crm-mobile-smart-divider"><span>Views &amp; maps</span></div>
+    <div className="crm-mobile-quick-grid">
+      <button type="button" aria-pressed={!updatesMode && view === 'favourites'} onClick={toggleFavouritesWorkspace}><Star /><span>Favourites{favCount > 0 ? ` · ${favCount}` : ''}</span></button>
+      <button type="button" aria-pressed={openToCheck} onClick={() => setOpenToCheck(true)}><Settings /><span>Open to check</span></button>
+      <button type="button" onClick={() => { setIntelligenceOpen(true); requestAnimationFrame(() => document.getElementById('board-intelligence-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }}><MapIcon /><span>Smart map &amp; traffic</span></button>
+      <a href="/nexus-map" className="crm-tools-link"><Link2 /><span>Nexus Map</span></a>
+    </div>
+    <div className="crm-tools-reachout"><ReachoutSwitch /></div>
+  </div>
+
+
   // ── filter bar ────────────────────────────────────────────────────────────
+  // Market switch (founder mockup 2026-10-19). Only Residential Rent has a
+  // board today; the other markets stay disabled until their BEN boards exist,
+  // so nothing here ever fabricates sales / commercial / short-stay listings.
+  const [market, setMarket] = useState<MarketKey>('residential_rent')
   const filterBar = (
     <BoardFilters
       value={f}
@@ -1732,6 +1770,10 @@ function Board() {
       favouritesActive={!updatesMode && view === 'favourites'}
       onMapToggle={toggleMapWorkspace}
       onFavouritesOpen={toggleFavouritesWorkspace}
+      market={market}
+      onMarketChange={setMarket}
+      railTargetId="crm-board-filter-rail"
+      tools={mobileBoardActions}
       extra={
         <>
           {/* Sort. Newest-first is the default and the reason the board reads
@@ -1826,29 +1868,6 @@ function Board() {
     />
   )
 
-  const mobileBoardActions = <div className="crm-mobile-smart-body">
-    <div className="crm-mobile-smart-copy"><strong>Board tools</strong><span>These actions belong to the property board. Every workspace and profile stays in the navigation above.</span></div>
-    <div className="crm-mobile-smart-divider"><span>Smart combinations</span></div>
-    <div id="crm-smart-collections" className="crm-mobile-smart-grid" aria-label="Smart property filters">
-      {DISCOVERY_ITEMS.map(item => {
-        const Icon = item.icon
-        const on = discovery.includes(item.key)
-        return <button key={item.key} type="button" aria-pressed={on} onClick={() => toggleDiscovery(item.key)}><Icon /><span>{item.label}</span>{on && <Check aria-hidden />}</button>
-      })}
-    </div>
-    <div className="crm-mobile-smart-divider"><span>Board actions</span></div>
-    <div className="crm-mobile-quick-grid">
-      <button type="button" aria-pressed={!updatesMode && view === 'board'} onClick={() => { setView('board'); setUpdatesMode(false); setSelected(new Set()); setTagSelectionMode(false) }}><LayoutGrid /><span>Active board</span></button>
-      <button type="button" aria-pressed={!updatesMode && view === 'rented'} onClick={() => { setView('rented'); setUpdatesMode(false); setSelected(new Set()); setTagSelectionMode(false) }}><House /><span>Rented</span></button>
-      <button type="button" onClick={() => router.push('/crm/property/new')}><Plus /><span>Add property</span></button>
-      <button type="button" aria-pressed={updatesMode} onClick={() => { setUpdatesMode(true); setTagSelectionMode(false) }}><Clock3 /><span>Recent updates</span></button>
-      <button id="crm-smart-tags" type="button" disabled={!visible.length} aria-pressed={tagSelectionMode} onClick={() => setTagSelectionMode(current => !current)}><AtSign /><span>{tagSelectionMode ? 'Finish selecting' : 'Select for WATag'}</span></button>
-      <button type="button" onClick={() => setSwipePanelOpen(true)}><Link2 /><span>Swipe Links</span></button>
-      {isAdmin && <button type="button" onClick={openAgentRequests}><MessageCircle /><span>Requests</span></button>}
-      <button type="button" onClick={() => setBoardSettingsOpen(true)}><MoreHorizontal /><span>Collection settings</span></button>
-    </div>
-  </div>
-
   return (
     <CrmShell
       title="Schedule Board"
@@ -1857,13 +1876,17 @@ function Board() {
       mobileActions={mobileBoardActions}
       dark={isDark}
       mobileImmersive
+      sidebar={<div id="crm-board-filter-rail" className="crm-board-filter-rail-slot" />}
     >
       <div className="crm-board-content" style={{ padding: isMobile ? 14 : 18 }}>
         {err && <Notice text={err} />}
 
         {/* Two primary workspaces, then compact utility views. Rented stays
             available for restoring a listing without competing with daily work. */}
-        {!isMobile && <div className="crm-board-desktop-rail" aria-label="Board controls">
+        {/* Superseded on desktop by the Market · Map · Tools controls and the
+            left filter column; kept (hidden by CSS) only for its tab logic
+            used by older tests. */}
+        {!isMobile && <div className="crm-board-desktop-rail" aria-label="Board controls" hidden>
           <details className="board-tools-menu crm-board-controls-menu">
             <summary className="crm-board-top-link"><List size={13} />Board controls</summary>
             <div className="board-tools-popover">

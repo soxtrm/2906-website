@@ -1254,24 +1254,33 @@ export function AvDateDialog({ refId, propertyId, town, currentAvailable, curren
   const [availableDate, setAvailableDate] = useState(toInputDate(currentAvailable))
   const [viewingDate, setViewingDate] = useState(toInputDate(currentViewing))
   const [untilDate, setUntilDate] = useState(toInputDate(currentUntil))
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<'save' | 'repost' | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  // One request at a time, even on a double tap before React re-renders —
+  // a second Save & Repost would queue a second group post.
+  const inFlight = useRef(false)
 
   const changed = availableDate !== toInputDate(currentAvailable)
     || viewingDate !== toInputDate(currentViewing)
     || untilDate !== toInputDate(currentUntil)
-  const canSend = !busy && changed
+  const canSave = !busy && changed
+  const canRepost = !busy
 
-  async function submit() {
-    if (!canSend) return
+  // Kev, 2026-10-19 (ARGUS functional UI): Save and Save & Repost are two
+  // separate actions. Save = CRM (+ website sync the PATCH already does),
+  // never a group post. Save & Repost = the same save first, then exactly
+  // one av-date-confirm repost.
+  async function submit(repost: boolean) {
+    if (inFlight.current || (repost ? !canRepost : !canSave)) return
+    inFlight.current = true
     setErr(null)
-    setBusy(true)
+    setBusy(repost ? 'repost' : 'save')
     try {
       // 1. Save all three dates — same field the full property editor and the €
       // price-edit button already write (routes/crm.js PATCH
       // /properties/:id, EDITABLE includes available_date/viewing_date/
       // available_until). No new save path.
-      await crmFetch(`properties/${propertyId}`, {
+      if (changed) await crmFetch(`properties/${propertyId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -1280,6 +1289,11 @@ export function AvDateDialog({ refId, propertyId, town, currentAvailable, curren
           available_until: untilDate || null,
         }),
       })
+      if (!repost) {
+        onDone(`#${refId} dates saved — no repost.`, refId)
+        onClose()
+        return
+      }
       // 2. Repost + "still on market" confirmation into the property's
       // category group — same distribution pipeline !upload/!price use
       // (routes/crmScheduleBoard.js POST .../av-date-confirm).
@@ -1289,21 +1303,27 @@ export function AvDateDialog({ refId, propertyId, town, currentAvailable, curren
       onClose()
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not update the dates.')
-      setBusy(false)
+      setBusy(null)
+    } finally {
+      inFlight.current = false
     }
   }
 
   return (
     <Sheet
       title="Update availability"
-      sub={`#${refId}${town ? ` · ${town}` : ''} — confirms + reposts to its group`}
+      sub={`#${refId}${town ? ` · ${town}` : ''} — Save updates the CRM only; Save & Repost also posts once to its group`}
       onClose={onClose}
       footer={
         <>
           <button onClick={onClose} className={GHOST}>Cancel</button>
-          <button onClick={submit} disabled={!canSend} className={PRIMARY}>
-            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Save &amp; repost
+          <button onClick={() => submit(false)} disabled={!canSave} className={GHOST} data-testid="av-save">
+            {busy === 'save' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Save
+          </button>
+          <button onClick={() => submit(true)} disabled={!canRepost} className={PRIMARY} data-testid="av-save-repost">
+            {busy === 'repost' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Save &amp; Repost
           </button>
         </>
       }

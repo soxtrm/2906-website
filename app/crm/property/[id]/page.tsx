@@ -1,5 +1,5 @@
 'use client'
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, Masked, Pill, Bar, Heart, LocationSelect, AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useCrm, describe } from '@/lib/crm/ui'
@@ -81,8 +81,18 @@ function Detail({ id }: { id: number }) {
   // save time so "unknown" round-trips as null, never as a false negative.
   const triState = (v: string) => (v === 'true' ? true : v === 'false' ? false : null)
 
-  async function save() {
+  // Kev, 2026-10-19 (ARGUS functional UI): "Save" only writes the CRM (and
+  // the website sync the PATCH already performs) — it never posts to a
+  // WhatsApp group. "Save & Repost" saves first and then asks the backend
+  // for exactly one repost (the same av-date-confirm path the board's
+  // calendar uses, admin only). The ref blocks a double tap from queueing two.
+  const saveInFlight = useRef(false)
+  const [reposting, setReposting] = useState(false)
+  async function save(repost = false) {
+    if (saveInFlight.current) return
+    saveInFlight.current = true
     setSaving(true); setMsg('')
+    if (repost) setReposting(true)
     try {
       const { rental_modes: pickedModes, ...restForm } = form
       const modesChanged = JSON.stringify([...(pickedModes || [])].sort()) !== JSON.stringify([...initModes].sort())
@@ -105,10 +115,19 @@ function Detail({ id }: { id: number }) {
           ? ` · NOT published to the website yet — ${r.website.detail}`
           : ' · website sync failed, check with Kev'
       }
-      setMsg(`Saved · ${r.activitiesLogged} activity entr${r.activitiesLogged === 1 ? 'y' : 'ies'} logged · completeness ${r.completeness}%${webNote}`)
+      let repostNote = ''
+      if (repost && p?.ref) {
+        try {
+          const d = await crmJson(`schedule-board/listings/${encodeURIComponent(p.ref)}/av-date-confirm`, 'POST', {})
+          repostNote = ` · ${d?.message || 'repost queued'}`
+        } catch (e: any) {
+          repostNote = ` · saved, but the repost failed: ${e?.data?.error || e?.message || 'unknown error'}`
+        }
+      }
+      setMsg(`Saved · ${r.activitiesLogged} activity entr${r.activitiesLogged === 1 ? 'y' : 'ies'} logged · completeness ${r.completeness}%${webNote}${repostNote}`)
       await load()
     } catch (e: any) { setMsg(e?.message || 'Save failed') }
-    finally { setSaving(false) }
+    finally { setSaving(false); setReposting(false); saveInFlight.current = false }
   }
   // Manual category override (Phase 1, 2026-09-17) — a ROUTING decision
   // only: which WhatsApp group this listing posts to. Never touches
@@ -270,7 +289,8 @@ function Detail({ id }: { id: number }) {
                   {form.is_exclusive && <input style={{ ...inp, width: 160 }} type="date" value={form.exclusive_until} onChange={e => set('exclusive_until', e.target.value)} />}
                 </div>
                 <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
-                  <button onClick={save} disabled={saving} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: saving ? 'wait' : 'pointer' }}>{saving ? 'Saving…' : 'Save changes'}</button>
+                  <button data-testid="property-save" onClick={() => save(false)} disabled={saving} style={{ background: '#0F0F0F', color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: saving ? 'wait' : 'pointer' }}>{saving && !reposting ? 'Saving…' : 'Save'}</button>
+                  {isAdmin && p?.ref && <button data-testid="property-save-repost" onClick={() => save(true)} disabled={saving} title="Save, then post this listing once to its WhatsApp category group" style={{ background: A, color: '#FFF', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: saving ? 'wait' : 'pointer' }}>{reposting ? 'Saving & reposting…' : 'Save & Repost'}</button>}
                   <button onClick={notifyClients} disabled={notifying} style={{ background: AD, color: 'var(--crm-accent)', border: `1px solid ${AB}`, borderRadius: 9, padding: '11px 16px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: notifying ? 'wait' : 'pointer' }}>{notifying ? 'Checking…' : '📤 Notify matching clients'}</button>
                   {(me?.role === 'admin' || p.listingAgents?.includes(me?.name)) && <button onClick={del} style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: 9, padding: '11px 16px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>Delete</button>}
                 </div>

@@ -46,6 +46,8 @@ function defaultFixtures() {
 }
 
 function respond(fixtures, path, method, body, search = new URLSearchParams()) {
+  // Per-test overrides: fixtures.routes = [[/regex/, 'METHOD' | null, (body, search) => json]]
+  for (const [re, m, fn] of fixtures.routes || []) if (re.test(path) && (!m || m === method)) return fn(body, search)
   if (path === 'me') return fixtures.me
   if (path === 'schedule-board/favourites') return { listings: fixtures.favourites }
   if (path === 'schedule-board/listings') return { listings: search.get('status') === 'rented' ? fixtures.rented : fixtures.listings }
