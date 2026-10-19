@@ -1,6 +1,6 @@
 # Baħar iċ-Ċagħaq edition — sourced research draft
 
-Language: English. Status: research only; no page, image derivative or release asset has been published.
+Language: English. Status: PUBLISHED at https://www.2906.estate/link-marketplace/areas/bahar-ic-caghaq.html and verified in production on 19 October 2026 (Europe/Malta); release commit `6a063cb`.
 
 ## Why this locality is next
 
@@ -121,4 +121,6 @@ The same authority and operator sources were rechecked before the release gate o
 
 Release Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, the exact self-canonical, three Open Graph fields, one `BreadcrumbList`, no robots block and no horizontal overflow. The 1800×1350 hero decoded completely. The page initially created no iframe; the map control created exactly one visible OpenStreetMap iframe for `14.447,35.922,14.492,35.959`. No page, stylesheet, image or map request failed; the only 404 remained the project-wide missing `/favicon.ico`. Full-page mobile and desktop screenshots were inspected without clipping, overlap or altered image framing.
 
-Release artifacts: HTML 14,946 bytes, SHA256 `069D76DECAD74E3D341EB2DC63AE677963B231E398AD8EFB5E0C461D69AB021C`; Marketplace index 8,377 bytes, SHA256 `221294E12BBEE181DD215E2D20CBCF013B6B6CEA1F980F0F8292CAA7ADD229B9`; neighbourhood sitemap 2,311 bytes, SHA256 `25F052D4DA76F61F068A117713D203F1CABF385A1C4BA5D24138300A9EED14AE`; hero unchanged at 389,408 bytes, SHA256 `CDDBCC6B71226E09E43241B185184DBE8C6ED1D9251194EC464295022D1EB5E1`. Public deployment and production verification remain the final gate.
+Release artifacts: HTML 14,946 bytes, SHA256 `069D76DECAD74E3D341EB2DC63AE677963B231E398AD8EFB5E0C461D69AB021C`; Marketplace index 8,377 bytes, SHA256 `221294E12BBEE181DD215E2D20CBCF013B6B6CEA1F980F0F8292CAA7ADD229B9`; neighbourhood sitemap 2,311 bytes, SHA256 `25F052D4DA76F61F068A117713D203F1CABF385A1C4BA5D24138300A9EED14AE`; hero unchanged at 389,408 bytes, SHA256 `CDDBCC6B71226E09E43241B185184DBE8C6ED1D9251194EC464295022D1EB5E1`.
+
+Release commit `6a063cb` was fast-forwarded to `main`. The www, apex and CRM hostnames returned byte-identical 14,946-byte HTML with the expected release hash. The public index, sitemap and hero also matched the release hashes and each discovery surface contained exactly one edition link. Production Chromium checks at 390×844 and 1440×1000 repeated the metadata, responsive-layout, complete-image and click-to-load-map assertions with no failed page, stylesheet, image or map request. The published edition is therefore production-verified; rollback is a targeted revert of `6a063cb` together with its documentation follow-up.
