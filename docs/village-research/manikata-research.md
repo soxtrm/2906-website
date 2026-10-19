@@ -1,6 +1,6 @@
 # Manikata edition — sourced research draft
 
-Language: English. Status: validated `noindex,nofollow` source preview with an approved public image derivative; no release metadata, Marketplace link or sitemap entry has been published.
+Language: English. Status: production-accessible `noindex,nofollow` source preview with an approved public image derivative; no release metadata, Marketplace link or sitemap entry has been published.
 
 ## Editorial priority
 
@@ -92,11 +92,13 @@ No straight line may be presented as walking geometry. Walking, bus, current roa
 
 ## Validated source preview
 
-`public/link-marketplace/areas/manikata.html` is the unpublished English source preview. It keeps the village/parish, agricultural/cooperative and outer-road/coast-facing contexts separate, uses the health catchment, two church contexts, cooperative programme and MTA-licensed restaurant as narrow sourced examples, and makes no ranking, proximity or permanent-opening claim.
+`public/link-marketplace/areas/manikata.html` is the English source preview, available directly at `https://www.2906.estate/link-marketplace/areas/manikata.html` but still excluded from discovery and indexing. It keeps the village/parish, agricultural/cooperative and outer-road/coast-facing contexts separate, uses the health catchment, two church contexts, cooperative programme and MTA-licensed restaurant as narrow sourced examples, and makes no ranking, proximity or permanent-opening claim.
 
 The preview has `noindex,nofollow`, no canonical, Open Graph fields, JSON-LD, Marketplace link or sitemap entry. Its 2D map starts with no iframe and loads a broad OpenStreetMap frame for `14.334,35.925,14.373,35.958` only after a click. The frame is centred around the OSM `Il-Manikata` village node and draws no boundary, route, venue pin, coastal shortcut or journey time.
 
 Chromium validation at 390×844 and 1440×1000 found one H1, zero horizontal overflow, a fully decoded 1800×1200 hero and one visible OSM iframe only after interaction. The complete image and attribution remained visible at both widths. There were no failed page, stylesheet, image or map requests; the repository-wide missing `/favicon.ico` is outside the page-specific gate. The 13,920-byte preview has SHA256 `65A5102F44E9AAD0E229B9932173F7934BD7AEED8D9224FC069A70650B5E66FE`.
+
+Source-preview commit `6b1c644` was pushed to `main` after verifying that `origin/main` still matched the reviewed base `1a56d8c`. The existing Git/Vercel path served the exact 13,920-byte HTML and 464,574-byte hero on the www production host. Production Chromium repeated the mobile, desktop, metadata, complete-image and lazy-map checks. Rollback is the targeted revert of `6b1c644`; the separately reviewed image asset remains in commit `bb219d8`.
 
 ## Release gates
 
