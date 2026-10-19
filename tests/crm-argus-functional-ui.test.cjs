@@ -162,9 +162,23 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     assert.equal(await page.$$eval('[data-testid=board-filter-rail] .crm-rail-toggle[aria-expanded=true]', els => els.length), 0)
     // Rule icons beside the star: winter + crossed-out sharing on 9104.
     assert.deepEqual(await page.$$eval('[data-ref="2906-9104"] .crm-card-rule-icons i', els => els.map(e => e.dataset.rule + (e.dataset.no ? ':no' : ''))), ['winter', 'pets', 'sharing:no'])
-    // Photo runs down to the action tray.
-    const gap = await page.$eval('[data-ref="2906-9101"]', card => card.querySelector('.crm-card-action-tray').getBoundingClientRect().top - card.querySelector('.crm-listing-photo').getBoundingClientRect().bottom)
-    assert.ok(Math.abs(gap) <= 2, `photo meets the tray (gap ${gap}px)`)
+    // The modern card uses a stable landscape photo above the property facts.
+    const photoLayout = await page.$eval('[data-ref="2906-9101"]', card => {
+      const photo = card.querySelector('.crm-listing-photo').getBoundingClientRect()
+      const body = card.querySelector('.crm-listing-card-body').getBoundingClientRect()
+      const box = card.getBoundingClientRect()
+      return { gap: body.top - photo.bottom, widthGap: box.width - photo.width, ratio: photo.width / photo.height }
+    })
+    assert.ok(Math.abs(photoLayout.gap) <= 2, `photo meets the property facts (gap ${photoLayout.gap}px)`)
+    assert.ok(Math.abs(photoLayout.widthGap) <= 2 && photoLayout.ratio > 1.5, `photo is full-width landscape (${JSON.stringify(photoLayout)})`)
+    assert.equal(await page.$eval('[data-ref="2906-9101"] .crm-card-availability', el => el.textContent.trim()), 'Available')
+    assert.doesNotMatch(await page.$eval('[data-ref="2906-9101"]', el => el.textContent), /\bON MARKET\b|\bFree\b/i)
+    await page.click('[data-rail=types] .crm-rail-toggle')
+    const typeLabels = await page.$$eval('[data-rail=types] .crm-rail-body button', els => els.map(el => el.textContent.trim()))
+    for (const expected of ['Apartment', 'Penthouse', 'Maisonette', 'Townhouse', 'House of Character', 'Detached Villa', 'Farmhouse']) {
+      assert.ok(typeLabels.includes(expected), `property type rail includes ${expected}`)
+    }
+    await page.click('[data-rail=types] .crm-rail-toggle')
     // Rail and results share the state.
     await page.click('[data-rail=beds] .crm-rail-toggle')
     await page.waitForSelector('[data-rail=beds] .crm-rail-body')

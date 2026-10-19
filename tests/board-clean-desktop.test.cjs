@@ -42,27 +42,27 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     const filter=document.querySelector('.crm-filterbar')?.getBoundingClientRect()
     return header && filter && Math.abs(header.y-filter.y)<5
   })
-  // 2026-10-19 founder layout: 2906 · ARGUS group over the results · labelled
-  // nav ending at the results' right edge · theme. Filter column on the left,
-  // results centred, three columns, never stretched edge to edge.
+  // 2026-10-19 founder layout: 2906 · ARGUS group over the results · quiet
+  // text navigation · theme. Filter column on the left, a wide four-column
+  // working canvas, and the page scroller at the far browser edge.
   await page.waitForSelector('[data-testid=board-filter-rail]')
   const layout=await page.evaluate(()=>{
     const r=sel=>{const n=document.querySelector(sel);if(!n)return null;const b=n.getBoundingClientRect();return {x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height),r:Math.round(b.right)}}
-    const cards=[...document.querySelectorAll('.crm-listing-card')].slice(0,3).map(n=>n.getBoundingClientRect()).map(b=>({x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),r:Math.round(b.right)}))
+    const cards=[...document.querySelectorAll('.crm-listing-card')].slice(0,4).map(n=>n.getBoundingClientRect()).map(b=>({x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height),r:Math.round(b.right)}))
+    const photo=document.querySelector('.crm-listing-photo')?.getBoundingClientRect()
     return {viewport:innerWidth,brand:r('.crm-agency-brand'),argus:r('.crm-argus-orbit'),tools:r('[data-testid=board-tools-button]'),nav:r('.crm-header-nav'),actions:r('.crm-header-actions'),rail:r('[data-testid=board-filter-rail]'),filter:r('.crm-filterbar'),header:r('.crm-header'),
       navLabels:[...document.querySelectorAll('.crm-header-nav > .crm-nav-item')].map(n=>n.textContent.trim()),
       railKeys:[...document.querySelectorAll('[data-testid=board-filter-rail] section')].map(n=>n.dataset.rail),
       railOpen:document.querySelectorAll('[data-testid=board-filter-rail] .crm-rail-toggle[aria-expanded=true]').length,
       filterIsland:getComputedStyle(document.querySelector('.crm-filter-island')).display,
       oldRail:getComputedStyle(document.querySelector('.crm-board-desktop-rail')||document.body).display,
-      theme:document.documentElement.dataset.crmTheme,cards}
+      theme:document.documentElement.dataset.crmTheme,cards,content:r('.crm-content'),photo:photo&&{w:Math.round(photo.width),h:Math.round(photo.height)}}
   })
   assert.equal(layout.theme,'light','desktop board defaults to the light theme')
   assert.ok(Math.abs(layout.header.y-layout.filter.y)<5 && layout.filter.h<=60,'ARGUS group lives in the top bar')
   assert.ok(layout.brand.x<=40,'2906 mark anchors the left of the top bar')
   assert.ok(layout.brand.r<layout.argus.x && layout.tools.r<layout.nav.x && layout.nav.r<=layout.actions.x,'order: 2906 · ARGUS group · nav · utilities')
   assert.ok(Math.abs(layout.argus.x-layout.cards[0].x)<=2,'ARGUS starts over the results column')
-  assert.ok(Math.abs(layout.nav.r-layout.cards[2].r)<=24,'nav ends over the results right edge')
   assert.deepEqual(layout.navLabels,['Dashboard','Inventory','Board','Bookings','Outreach','Profile'],'labelled primary navigation')
   assert.deepEqual(layout.railKeys,['location','price','booking','beds','baths','types','specials','season'],'filter column sections')
   assert.equal(layout.railOpen,0,'filter sections start collapsed')
@@ -70,21 +70,26 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(layout.filterIsland,'none','the phone filter island is not duplicated on desktop')
   assert.equal(layout.oldRail,'none','the old top board rail is gone')
   assert.ok(layout.actions.r>layout.viewport-24,'utility buttons align right')
-  assert.equal(new Set(layout.cards.map(c=>c.y)).size,1,'three cards share the first row')
-  assert.ok(layout.cards[0].x-(layout.viewport-layout.cards[2].r)>=0 && layout.cards[2].r<layout.viewport-100,'results are a centred canvas, not edge to edge')
+  assert.equal(new Set(layout.cards.map(c=>c.y)).size,1,'four cards share the first row')
+  assert.equal(new Set(layout.cards.map(c=>c.h)).size,1,'listing cards keep one stable height')
+  assert.ok(layout.photo.w/layout.photo.h>1.55,'listing photos use a landscape frame')
+  assert.ok(layout.cards[0].x<layout.viewport/4 && layout.cards[3].r<layout.viewport-100,'results use a left-shifted wide canvas')
+  assert.equal(layout.content.r,layout.viewport,'the page scrollbar lives at the far browser edge')
   assert.equal(await page.$eval('.crm-board-legacy-filter-row',node=>getComputedStyle(node).display),'none','legacy text filters never create a second desktop row')
   const firstPhoto=await page.$('.crm-listing-photo')
   await firstPhoto.hover()
-  await new Promise(resolve=>setTimeout(resolve,1200))
-  assert.equal(await page.$eval('.crm-listing-photo',node=>node.dataset.photoIndex),'0','hover never auto-advances listing photos')
+  await new Promise(resolve=>setTimeout(resolve,100))
+  const hoveredIndex=Number(await page.$eval('.crm-listing-photo',node=>node.dataset.photoIndex))
+  await new Promise(resolve=>setTimeout(resolve,1100))
+  assert.equal(Number(await page.$eval('.crm-listing-photo',node=>node.dataset.photoIndex)),hoveredIndex,'hover never auto-advances listing photos')
   await page.click('.crm-listing-card:first-child .crm-photo-arrow-next')
-  await page.waitForFunction(()=>document.querySelector('.crm-listing-photo')?.dataset.photoIndex==='1',{timeout:3000})
+  await page.waitForFunction(expected=>Number(document.querySelector('.crm-listing-photo')?.dataset.photoIndex)===expected,{timeout:3000},(hoveredIndex+1)%4)
   const hoverGallery=await page.evaluate(()=>({
     index:Number(document.querySelector('.crm-listing-photo')?.dataset.photoIndex),
     arrows:[...document.querySelectorAll('.crm-listing-card:first-child .crm-photo-arrow')].map(node=>getComputedStyle(node).opacity),
     segments:document.querySelectorAll('.crm-listing-card:first-child .crm-photo-progress i').length,
   }))
-  assert.equal(hoverGallery.index,1,'manual next arrow advances exactly one photo')
+  assert.equal(hoverGallery.index,(hoveredIndex+1)%4,'manual next arrow advances exactly one photo')
   assert.deepEqual(hoverGallery.arrows,['1','1'],'photo navigation appears on hover')
   assert.equal(hoverGallery.segments,4,'photo progress exposes the available images')
   await page.screenshot({path:path.join(os.tmpdir(),'board-clean-desktop.png'),fullPage:false})

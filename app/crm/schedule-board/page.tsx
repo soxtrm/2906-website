@@ -377,6 +377,34 @@ function normalizeBoardSearch(raw: string): string {
     .trim()
 }
 
+// Keep free-text search useful even while a newer server request is still in
+// flight. Only facts already shown on the card are indexed here; protected
+// owner data never becomes browser-searchable by accident.
+function boardSearchText(r: Listing): string {
+  const availability = r.availability?.kind === 'now'
+    ? 'available available now'
+    : r.availability?.kind === 'date'
+      ? `available ${r.availability.label || ''} ${r.availability.date || ''}`
+      : 'date unclear availability unclear'
+  const petTerms = r.petFriendly === true
+    ? 'pet friendly pets allowed'
+    : r.petFriendly === false ? 'no pets pets not allowed' : 'pets unknown'
+  const sharingTerms = r.sharing === true
+    ? 'sharing allowed'
+    : r.sharing === false ? 'no sharing sharing not allowed' : 'sharing unknown'
+  const subletTerms = r.subletting === true
+    ? 'subletting allowed sublet allowed'
+    : r.subletting === false ? 'no subletting sublet not allowed' : 'subletting unknown'
+  return normalizeBoardSearch([
+    r.ref, r.town, r.subLocation, r.localityLabel, r.streetName, r.type,
+    r.description, r.category, ...(r.categoryGroups || []), ...(r.rentalModes || []),
+    r.listedBy?.displayName, r.contact?.reachesName, availability,
+    petTerms, sharingTerms, subletTerms,
+    r.beds != null ? `${r.beds} bed bedroom` : '',
+    r.baths != null ? `${r.baths} bath bathroom` : '',
+  ].filter(Boolean).join(' ')).toLowerCase()
+}
+
 // Newest-first is the default because it is what the board is for: the listing
 // that just came in is the one being asked about. The backend owns the actual
 // ORDER BY (routes/crmScheduleBoard.js SORTS) — these are the options it
@@ -1120,7 +1148,7 @@ function Board() {
       // locality even while stale Area, map or feature filters are selected.
       if (needle) {
         if (needle !== loadedQuery) {
-          const hay = normalizeBoardSearch([r.ref, r.town, r.subLocation, r.localityLabel, r.type, r.description, r.listedBy?.displayName, r.contact?.reachesName].filter(Boolean).join(' ')).toLowerCase()
+          const hay = boardSearchText(r)
           if (!hay.includes(needle)) return false
         }
         return true
@@ -2803,7 +2831,7 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
   // circle/box tool; the "Hide map" toggle above covers the rest.
   const mapSize: React.CSSProperties = isMobile
     ? { aspectRatio: '16 / 9' }
-    : { height: 320 }
+    : { height: 410 }
 
   if (loadErr === 'no-key') {
     return (
@@ -3494,9 +3522,8 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
           const eventLabel = bookable ? 'NOW VIEWABLE' : isNewListing ? 'NEW LISTING' : touch?.kind === 'Confirmed' ? 'CONFIRMED' : 'UPDATED'
           const eventColor = eventLabel === 'NEW LISTING' ? '#4D7CE0' : (eventLabel === 'CONFIRMED' || eventLabel === 'NOW VIEWABLE') ? '#2F8E68' : '#96772C'
           const progressLabel = needsAction ? 'CHECK AVAILABILITY' : null
-          const market = !['rented', 'archived', 'not_available'].includes(r.availableStatus || '')
-          const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE NOW'
-            : r.availability?.kind === 'date' ? `FREE ${r.availability.label}` : 'DATE UNCLEAR'
+          const availabilityText = r.availability?.kind === 'now' ? 'AVAILABLE'
+            : r.availability?.kind === 'date' ? (fmtDateDots(r.availability.date) || 'DATE UNCLEAR') : 'DATE UNCLEAR'
           return <div key={r.ref}>
             {showDay && <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '9px 14px', background: 'linear-gradient(180deg, var(--crm-surface) 60%, transparent)', color: DTEXT_FAINT }}><span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 999, padding: '5px 11px', boxShadow: '0 3px 12px rgba(0,0,0,.18)', fontSize: 9, fontWeight: 850, letterSpacing: '.08em', textTransform: 'uppercase' }}>{dayLabel}</span></div>}
             <article style={{
@@ -3518,8 +3545,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
                 </span>
                 <strong style={{ display: 'block', marginTop: 6, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.town || 'Malta'} · {r.type || 'Property'}{r.price ? ` · €${r.price.toLocaleString('en-GB')}` : ''}</strong>
                 <span style={{ display: 'flex', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
-                  <em style={feedPill(market ? 'rgba(77,124,224,.14)' : 'rgba(120,125,135,.16)', market ? '#78A0F1' : DTEXT_FAINT)}>{market ? 'ON MARKET' : 'OFF MARKET'}</em>
-                  <em style={feedPill(r.availability?.kind === 'now' ? 'rgba(47,142,104,.17)' : 'rgba(150,119,44,.15)', r.availability?.kind === 'now' ? '#58B88F' : '#C2A75E')}>{availabilityText}</em>
+                  <em style={feedPill(r.availability?.kind === 'now' ? 'rgba(228,198,79,.18)' : 'rgba(232,163,74,.17)', r.availability?.kind === 'now' ? '#D7B72D' : '#E8A34A')}>{availabilityText}</em>
                   {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let')) && <em style={feedPill('rgba(126,200,227,.15)', '#7EC8E3')}>WINTER</em>}
                 </span>
               </button>
@@ -3804,7 +3830,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   // Older cached responses predate the contact block; default to "usable" so a
   // stale payload degrades to the previous behaviour instead of a dead card.
   const c = r.contact || {
-    mode: r.isMine ? 'owner' : 'agent', reachesName: r.listedBy.displayName,
+    mode: r.isMine ? 'owner' : 'agent', reachesName: r.listedBy?.displayName || 'Agent',
     canAsk: true, reason: null, questionsUsed: 0, questionsPerDay: 2,
     canQuestion: true, questionReason: null,
   }
@@ -3965,10 +3991,10 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         boxShadow: focused ? '0 6px 16px rgba(212,137,26,0.28)' : (frame?.glow || '0 1px 3px rgba(0,0,0,0.35)'),
         transition: 'box-shadow 0.18s, border-color 0.18s',
         display: 'grid',
-        gridTemplateColumns: isMobile ? '116px minmax(0, 1fr)' : 'minmax(190px, 38%) minmax(0, 1fr)',
-        gridTemplateRows: 'minmax(0, 1fr) auto auto',
+        gridTemplateColumns: isMobile ? '116px minmax(0, 1fr)' : 'minmax(0, 1fr)',
+        gridTemplateRows: isMobile ? 'minmax(0, 1fr) auto auto' : '190px minmax(0, 1fr) auto auto',
         contentVisibility: menuOpen ? 'visible' : 'auto',
-        containIntrinsicSize: isMobile ? '260px' : '290px',
+        containIntrinsicSize: isMobile ? '260px' : '620px',
         // A grid item's default min-width is `auto`, i.e. "as wide as my
         // widest un-shrinkable child" — a row of nowrap buttons could push
         // the card past its own column and clip against the next one. 0 makes
@@ -3999,14 +4025,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           // Keep every listing photo in one predictable frame. Previously
           // height:100% let verbose cards stretch their image far beyond the
           // standard-sized #2906-9340 card.
-          // Kev, 2026-10-19: the photo now runs from the top of the card down
-          // to the action tray instead of stopping at a fixed 230px and
-          // leaving an empty strip under it. The minimum keeps short cards
-          // from shrinking the photo.
-          minHeight: isMobile ? 142 : 230,
+          // Desktop uses a stable landscape band above the details; mobile
+          // keeps the compact side-by-side card. The minimum prevents short
+          // records from collapsing either photo frame.
+          minHeight: isMobile ? 142 : 190,
           alignSelf: 'stretch',
           flexShrink: 0, background: '#111', gridColumn: 1,
-          gridRow: isMobile ? 1 : '1 / 3', touchAction: 'pan-y',
+          gridRow: 1, touchAction: 'pan-y',
         }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
@@ -4167,7 +4192,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           Available and the tray below it read as dead space — bottom
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
-      <div style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gridColumn: 2, gridRow: 1 }}>
+      <div className="crm-listing-card-body" style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gridColumn: isMobile ? 2 : 1, gridRow: isMobile ? 1 : 2 }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
@@ -4211,13 +4236,10 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
               .filter(Boolean).join(' - ')}
           </span>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: 9, color: offMarket ? '#E29B9B' : '#58C894', letterSpacing: '0.07em', fontWeight: 850 }}>
-              {offMarket || r.availableStatus === 'not_available' ? 'OFF MARKET' : 'ON MARKET'}
-            </div>
-            <div style={{ fontSize: 10.5, color: r.availability?.kind === 'soon' ? DTEXT_DIM : '#FFB14A', fontFamily: FM, fontWeight: 750, marginTop: 3, textShadow: r.availability?.kind === 'soon' ? 'none' : '0 0 13px rgba(255,145,36,.55)' }}>
-              {r.availability?.kind === 'now' ? 'Available now'
-                : r.availability?.kind === 'date' ? `Free ${fmtDateDots(r.availability.date)}`
-                : 'Move-in date unclear'}
+            <div className="crm-card-availability" data-kind={r.availability?.kind || 'soon'}>
+              {r.availability?.kind === 'now' ? 'Available'
+                : r.availability?.kind === 'date' ? fmtDateDots(r.availability.date)
+                : 'Date unclear'}
             </div>
             {/* Kev, 2026-09-16 (WINTER tag, spec item 1): "until April" right
                 under Available — same r.availableUntil the WINTER badge
@@ -4525,10 +4547,10 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           is the SAME one the previous three-row layout used; only where it
           lives changed. */}
       {!!r.bookings?.length && (
-        <div data-card-bookings={r.ref} style={{
+        <div className="crm-card-bookings" data-card-bookings={r.ref} style={{
           padding: '7px 12px', borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
           background: dark ? DCARD : CARD, display: 'flex', flexDirection: 'column', gap: 3,
-          gridColumn: isMobile ? '1 / -1' : 2, gridRow: 2,
+          gridColumn: isMobile ? '1 / -1' : 1, gridRow: isMobile ? 2 : 3,
         }}>
           {r.bookings.slice(0, 2).map(b => (
             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: dark ? DTEXT_DIM : LTEXT_DIM, minWidth: 0 }}>
@@ -4545,7 +4567,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
       )}
       <div className="crm-card-action-tray" style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: '9px 11px', position: 'relative', gridColumn: '1 / -1', gridRow: 3,
+        padding: '9px 11px', position: 'relative', gridColumn: '1 / -1', gridRow: isMobile ? 3 : 4,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
             to live here moved up above the Still Available button — see the

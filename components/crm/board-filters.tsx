@@ -95,8 +95,11 @@ export const UPDATED_MAX_MS: Record<Exclude<BoardFilterValue['updated'], ''>, nu
 }
 
 const TYPES: [string, string][] = [
-  ['apartment', 'Apartment'], ['penthouse', 'Penthouse'], ['house', 'House'],
-  ['maisonette', 'Maisonette'], ['townhouse', 'Townhouse'], ['villa', 'Villa'],
+  ['apartment', 'Apartment'], ['penthouse', 'Penthouse'], ['duplex penthouse', 'Duplex Penthouse'],
+  ['studio', 'Studio'], ['maisonette', 'Maisonette'], ['townhouse', 'Townhouse'],
+  ['terraced house', 'Terraced House'], ['house of character', 'House of Character'],
+  ['detached villa', 'Detached Villa'], ['semi-detached villa', 'Semi-detached Villa'],
+  ['villa', 'Villa'], ['farmhouse', 'Farmhouse'], ['house', 'House'],
 ]
 // '4+' is the open-ended top tier — everything below it means "exactly this
 // many", not "this many or more" (Kev, 2026-08-20). The '+' rides in the
@@ -300,7 +303,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const filterScrollFrameRef = useRef(0)
   const ref = useRef<HTMLDivElement>(null)
 
-  const mobilePlaceholders = ['Reference', 'Village', 'Owner or agent', 'Property type']
+  const mobilePlaceholders = ['Reference', 'Street or village', 'Pet friendly', 'Owner or agent', 'Property type']
 
   useEffect(() => {
     const desktopQuery = window.matchMedia('(min-width: 761px)')
@@ -633,7 +636,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
             {searchOpen ? (
               <motion.form key="search-field" layout initial={{ opacity: 0, scaleX: .9, scaleY: .97 }} animate={{ opacity: 1, scaleX: 1, scaleY: 1 }} exit={{ opacity: 0, scaleX: .92, scaleY: .98 }} transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 360, damping: 32, mass: .62 }} className="relative flex min-w-0 flex-1 items-center" onSubmit={event => { event.preventDefault(); setSearchOpen(false); searchInputRef.current?.blur() }}>
                 <Search className="pointer-events-none absolute left-3 h-4 w-4 text-[var(--crm-muted)]" />
-                <input ref={searchInputRef} type="search" enterKeyHint="search" autoComplete="off" value={value.q} onChange={event => onChange({ q: event.target.value })} onKeyDown={event => { if (event.key === 'Escape') setSearchOpen(false) }} placeholder={mobilePlaceholders[placeholderIndex]} aria-label="Search by reference, village, owner, agent or property type" className="h-10 w-full min-w-0 rounded-[13px] border-0 bg-[var(--crm-raised)] pl-9 pr-9 text-[13px] text-[var(--crm-text)] outline-none placeholder:text-[var(--crm-faint)]" />
+                <input ref={searchInputRef} type="search" enterKeyHint="search" autoComplete="off" value={value.q} onChange={event => onChange({ q: event.target.value })} onKeyDown={event => { if (event.key === 'Escape') setSearchOpen(false) }} placeholder={mobilePlaceholders[placeholderIndex]} aria-label="Search all property details, including reference, street, village, rules, owner, agent and property type" className="h-10 w-full min-w-0 rounded-[13px] border-0 bg-[var(--crm-raised)] pl-9 pr-9 text-[13px] text-[var(--crm-text)] outline-none placeholder:text-[var(--crm-faint)]" />
                 <button type="button" onClick={() => value.q ? onChange({ q: '' }) : setSearchOpen(false)} aria-label={value.q ? 'Clear search' : 'Close search'} className="absolute right-1 grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-[var(--crm-muted)]"><X className="h-4 w-4" /></button>
               </motion.form>
             ) : (
@@ -767,10 +770,10 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-navy/30 pointer-events-none" />
           <input
             type="text"
-            aria-label="Search properties by reference, town or area"
+            aria-label="Search all property details"
             value={value.q}
             onChange={e => onChange({ q: e.target.value })}
-            placeholder="Search ref, town or area…"
+            placeholder="Search ref, street, rules or property type…"
             className="w-full pl-8 pr-7 py-2 bg-white shadow-sm shadow-navy/5 border-0 rounded text-sm text-navy
                        placeholder:text-navy/40 focus:outline-none focus:ring-1 focus:ring-gold/50"
           />
