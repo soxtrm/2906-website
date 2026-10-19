@@ -54,3 +54,12 @@ Stopped a 44-day-old `until docker exec … clientAssistant.js` loop on the VPS 
 
 ## Next bounded assignment
 T2 in `REPAIR_BACKLOG.md`: apply migration `20261017_outreach_pending_approvals.sql` + deploy store/listBuilder/whatsappReachability/adminCommands with the md5-guarded deploy script, then live-test A10 (restart) and `!createlist 5`.
+
+### 2026-10-19 ARGUS functional UI repair (Claude)
+Changed (frontend, branch `claude/argus-functional-ui`, commits c16309a + 9bae046, on top of the board-search audit): components/crm/board-filters.tsx, app/crm/schedule-board/page.tsx, lib/crm/ui.tsx (CrmShell `sidebar` slot + header nav + 2906 mark), components/crm/board-dialogs.tsx (AvDateDialog), app/crm/property/[id]/page.tsx, app/crm/crm.css, tests.
+Changed (backend mirror, branch `claude/av-repost-dedupe`, commit f9a3245): ops/owner-group-flow/backend/routes/crmScheduleBoard.js — av-date-confirm 10-min cooldown (activity row) + in-flight lock claimed before the first await. Prod md5 before change b427eaaba0a22d3e4e617cc847455277 (= mirror); new md5 80452c441e9da98ba3dcddfe132e0b62.
+Why: founder mockups (argusnew/qwerta/arfgzuuss). Save & Repost had no dedupe — two taps or a retry queued two full category-group reposts + two "still on the market" lines (reproduced by the new test against the old file: 2/3 fail).
+Tests: `node --test ops/owner-group-flow/backend/test/avDateConfirm.dedupe.test.js` → 3/3 (old code 1/3). `CRM_MOCK_BASE=http://localhost:3109 node --test tests/crm-argus-functional-ui.test.cjs` → 10/10 (x3), crm-mocked-ui 7/7, crm-board-search 7/7, board-compact-facts 1/1, agency-board-admin-tools 3/3, future-property-lock 1/1, `tsc --noEmit` clean. board-clean-desktop.test.cjs asserts the replaced Workspaces/top-rail layout (superseded). board-area-multiselect-mobile + chat-composer-mobile are hard-wired to :4174 (not run).
+Deployed: no (frontend not merged to main; backend route not deployed — needs operator OK).
+Not verified / risks: no live CRM session used (mocked backend only); real Vercel build not run; desktop 761-1000px only checked by CSS, not screenshot; Smart combinations moved into Tools; !available threaded-reply change NOT prepared.
+Next: operator review of screenshots in docs/argus-ui-2026-10-19 → merge `claude/argus-functional-ui`; then deploy crmScheduleBoard.js with deploy-file.sh (md5 guard b427eaab…).
