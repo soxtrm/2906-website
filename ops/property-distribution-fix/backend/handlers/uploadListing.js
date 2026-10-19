@@ -425,7 +425,7 @@ RULES — ABSOLUTE:
 - An email (anything@anything.tld) is OWNER CONTACT.
 - A bare name (just letters + optional spaces, no numbers, looks like a human name e.g. 'Joseph Cassar', 'Maria Borg') is OWNER NAME.
 - Bedroom/bathroom counts (3BR, 2 beds, "2 Double Bedrooms", "3 Single Beds", etc.) go to property.beds/baths — the count is the NUMBER even when a descriptive word (Double/Single/Master/Twin) sits between it and "bedroom(s)".
-- Price (€2500/mo, €450000, EUR 1800) goes to property.longlet_price or property.sale_price. A short-let monthly rate (e.g. "€1,500/month" on a listing also marked short-let) still goes to property.longlet_price — it is the only rent-amount field this schema has, regardless of lease length.
+- Price (€2500/mo, €450000, EUR 1800) goes to property.longlet_price or property.sale_price. Any price under €20,000 is a MONTHLY RENT → property.longlet_price, even when the ad calls it "asking price" or "price" without "/month"; sale_price is only for prices of €20,000 and above. A short-let monthly rate (e.g. "€1,500/month" on a listing also marked short-let) still goes to property.longlet_price — it is the only rent-amount field this schema has, regardless of lease length.
 - Malta locations (Sliema, Valletta, St Julian's, Mellieha, Swieqi, etc.) go to property.location.
 - A SPECIFIC street-level address — a house/building number or named building plus a street (e.g. "45 Tower Road", "Fawwara Court, Triq il-Kbira", "Block 3, Flat 12, Manoel Dimech Street") — goes to property.street. A bare town/area name alone ("Sliema", "St Julian's") is NOT a street address — leave property.street empty in that case.
 - Available date goes to property.available_date in ISO format YYYY-MM-DD. TODAY is ${todayStr} — a bare day/month with no year ("Available from 1st December", "from Dec 1") means the NEXT occurrence of that date on or after TODAY (e.g. if today is in September 2026, "1st December" is 2026-12-01, never a past or training-data year). A date that has already passed this year means next year's occurrence. An explicit year in the text always wins.
@@ -622,6 +622,9 @@ function sanitizeCount(rawValue, text, labelRe) {
   return { value: null, confidence: 'conflicting', evidence: quoted.join(' | ') }
 }
 
+// Below this a "sale" price is a monthly rent (see the guard in the insert path).
+const SALE_PRICE_FLOOR = 20000
+
 function guardPropertyCounts(property, sourceText) {
   const price = Number(property.longlet_price) || Number(property.sale_price) || 0
   const priceIsLow = price > 0 && price < SUSPICIOUS_PRICE_CEILING
@@ -662,7 +665,7 @@ function deterministicListingFallback(cleanedText) {
   const type = text.match(/\b(penthouse|maisonette|apartment|flat|house|villa|studio|commercial|office|retail|warehouse)\b/i)?.[1]?.toLowerCase() || ''
   const euro = [...text.matchAll(/(?:€|EUR\s*)([\d,.]+)/gi)].map(m => Number(m[1].replace(/,/g, ''))).filter(Number.isFinite)
   const price = euro[0] || 0
-  const sale = /\b(?:for sale|sale price|selling)\b/i.test(text) || price >= 50000
+  const sale = (/\b(?:for sale|sale price|selling)\b/i.test(text) && price >= SALE_PRICE_FLOOR) || price >= 50000
   const location = lineValue('location|locality|town|area')
   const ownerName = lineValue('owner|contact(?: name)?|landlord')
   const email = text.match(/[\w.+-]+@[\w.-]+\.\w+/)?.[0] || ''
@@ -898,8 +901,12 @@ async function processUpload({ payload, session, chatId, text, agent, senderPhon
   const beds  = Number(p.beds)  > 0 ? Math.round(Number(p.beds))  : null
   const baths = Number(p.baths) > 0 ? Math.round(Number(p.baths)) : null
   const sqm   = Number(p.sqm)   > 0 ? Number(p.sqm)               : null
-  const longlet = Number(p.longlet_price) > 0 ? Number(p.longlet_price) : null
-  const sale    = Number(p.sale_price)    > 0 ? Number(p.sale_price)    : null
+  let longlet = Number(p.longlet_price) > 0 ? Number(p.longlet_price) : null
+  let sale    = Number(p.sale_price)    > 0 ? Number(p.sale_price)    : null
+  // Kev, 2026-10-19 (#2906-9502, Olga: "3500€ asking price" → stored as a
+  // €3,500 SALE). Nothing in Malta sells for under €20,000 — a "sale" price that
+  // low is a monthly rent, whatever word the ad used ("asking price").
+  if (sale && sale < SALE_PRICE_FLOOR && !longlet) { longlet = sale; sale = null }
   const shortlet = !!p.shortlet_available
   // Kev, 2026-09-16: lease_type derived from shortlet_available at write
   // time — this used to only exist as a one-time backfill (migration
