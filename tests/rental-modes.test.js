@@ -72,29 +72,29 @@ async function run() {
     await page.goto(`${BASE}/schedule-board?q=ZZWIN`, { waitUntil: 'domcontentloaded', timeout: 120000 })
     await page.waitForFunction(() => document.body.innerText.includes('ZZWIN-1'), { timeout: 60000 }).catch(() => {})
     await sleep(1500)
-    // Board cards do not print the ref (only the brand mark), so the three throwaway cards are found by
-    // content: the innermost block holding a photo placeholder, Sliema and the €1.400 price. With the
-    // free-text filter on ZZWIN there are exactly three, told apart by which tags they carry.
-    const cards = await page.evaluate(() => {
-      const isCard = el => { const t = el.innerText || ''; return t.includes('no photo') && t.includes('Sliema') && /1[.,]400/.test(t) && t.length < 500 }
-      const all = [...document.querySelectorAll('div')].filter(isCard)
-      const inner = all.filter(el => !all.some(o => o !== el && el.contains(o)))
-      return inner.map(el => {
-        const winter = el.querySelector('[data-testid="badge-winter"]'), short = el.querySelector('[data-testid="badge-short"]'), until = el.querySelector('[data-testid="until-line"]')
-        const nextToTown = !!winter && (() => { const kids = [...winter.parentElement.children]; const ti = kids.findIndex(k => /Sliema/.test(k.innerText || '')); return ti >= 0 && ti < kids.indexOf(winter) })()
-        return { winter: !!winter, short: !!short, until: until ? until.innerText.trim() : null, nextToTown }
-      })
-    })
+    // 2026-10-19 (ARGUS UI): the WINTER / SHORT tag moved from beside the
+    // locality to the icon row beside the star (same rule: winter mode OR a Bis
+    // date). Cards carry data-ref, so the three throwaway cards are found by ref.
+    const cards = await page.evaluate(() => [...document.querySelectorAll('[data-ref^="ZZWIN-"]')].map(el => {
+      const until = el.querySelector('[data-testid="until-line"]')
+      return {
+        ref: el.dataset.ref,
+        winter: !!el.querySelector('.crm-card-rule-icons [data-rule="winter"]'),
+        short: !!el.querySelector('.crm-card-rule-icons [data-rule="short"]'),
+        besideStar: !!el.querySelector('[data-favourite] + .crm-card-rule-icons'),
+        until: until ? until.innerText.trim() : null,
+      }
+    }))
     cards.length === 3 ? ok('board: exactly the three test cards render', `${cards.length}`) : no('board: three test cards', `found ${cards.length}`)
     const winterOnly = cards.filter(c => c.winter && !c.short), both = cards.filter(c => c.winter && c.short), plain = cards.filter(c => !c.winter && !c.short)
-    winterOnly.length === 1 && winterOnly[0].nextToTown && winterOnly[0].until === 'until April'
-      ? ok('card with a Bis date (ZZWIN-1): WINTER tag sits NEXT TO the locality, "until April" under Available') : no('winter card', JSON.stringify(winterOnly))
-    both.length === 1 && both[0].nextToTown && both[0].until === 'until April'
-      ? ok('card winter + short let (ZZWIN-3): WINTER and SHORT tags, "until April"') : no('winter+short card', JSON.stringify(both))
+    winterOnly.length === 1 && winterOnly[0].besideStar && winterOnly[0].until === 'until April'
+      ? ok('card with a Bis date (ZZWIN-1): ❄ icon beside the star, "until April" under Available') : no('winter card', JSON.stringify(winterOnly))
+    both.length === 1 && both[0].besideStar && both[0].until === 'until April'
+      ? ok('card winter + short let (ZZWIN-3): ❄ and ☀ icons, "until April"') : no('winter+short card', JSON.stringify(both))
     plain.length === 1 && plain[0].until == null
-      ? ok('card WITHOUT a Bis date (ZZWIN-2): no tag, no until line — unchanged') : no('plain card must show nothing extra', JSON.stringify(plain))
+      ? ok('card WITHOUT a Bis date (ZZWIN-2): no winter/short icon, no until line — unchanged') : no('plain card must show nothing extra', JSON.stringify(plain))
     // the map block sits above the cards: bring the cards into view so the tags are IN the screenshot
-    await page.evaluate(() => { const el = document.querySelector('[data-testid="badge-winter"]'); if (el) el.scrollIntoView({ block: 'center' }) })
+    await page.evaluate(() => { const el = document.querySelector('.crm-card-rule-icons [data-rule="winter"]'); if (el) el.scrollIntoView({ block: 'center' }) })
     await sleep(400)
     await page.screenshot({ path: path.join(SHOTS, 'rental-board-cards.png') })
     ok('screenshot', 'tests/screenshots/rental-board-cards.png')

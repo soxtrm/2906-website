@@ -33,7 +33,7 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     if(url.includes('reachout-settings'))return json({mode:'off'})
     return json({})
   })
-  await page.goto('http://localhost:4174/crm/schedule-board',{waitUntil:'domcontentloaded'})
+  await page.goto(`${process.env.CRM_MOCK_BASE||'http://localhost:4174'}/crm/schedule-board`,{waitUntil:'domcontentloaded'})
   await page.waitForSelector('.crm-listing-card')
   await page.waitForFunction(()=>document.querySelectorAll('.crm-listing-card').length>=6)
   await page.evaluate(()=>document.fonts.ready)
@@ -42,44 +42,37 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     const filter=document.querySelector('.crm-filterbar')?.getBoundingClientRect()
     return header && filter && Math.abs(header.y-filter.y)<5
   })
+  // 2026-10-19 founder layout: 2906 · ARGUS group over the results · labelled
+  // nav ending at the results' right edge · theme. Filter column on the left,
+  // results centred, three columns, never stretched edge to edge.
+  await page.waitForSelector('[data-testid=board-filter-rail]')
   const layout=await page.evaluate(()=>{
-    const content=document.querySelector('.crm-board-content').getBoundingClientRect()
-    const header=document.querySelector('.crm-header').getBoundingClientRect()
-    const filter=document.querySelector('.crm-filterbar').getBoundingClientRect()
-    const brand=document.querySelector('.crm-brand').getBoundingClientRect()
-    const brandImage=document.querySelector('.crm-brand img').getBoundingClientRect()
-    const sidebar=document.querySelector('.crm-sidebar').getBoundingClientRect()
-    const topRail=document.querySelector('.crm-board-desktop-rail').getBoundingClientRect()
-    const headerActions=document.querySelector('.crm-header-actions').getBoundingClientRect()
-    const mapButton=document.querySelector('.crm-board-map-link').getBoundingClientRect()
-    const scope=document.querySelector('.crm-board-scope-rail').getBoundingClientRect()
-    const visibleFilterIcons=[...document.querySelectorAll('.crm-filter-island .crm-island-feature')].filter(node=>getComputedStyle(node).display!=='none').length
-    const argusDisplay=getComputedStyle(document.querySelector('.crm-argus-orbit')).display
-    const smartDisplay=getComputedStyle(document.querySelector('.crm-smart-island')).display
-    const cards=[...document.querySelectorAll('.crm-listing-card')].slice(0,3).map(n=>n.getBoundingClientRect()).map(r=>({x:r.x,y:r.y,w:r.width}))
-    return {viewport:innerWidth,content:{x:content.x,w:content.width},header:{x:header.x,y:header.y,w:header.width,h:header.height},filter:{x:filter.x,y:filter.y,w:filter.width,h:filter.height},brand:{x:brand.x,y:brand.y,w:brand.width,h:brand.height},brandImage:{x:brandImage.x,w:brandImage.width,h:brandImage.height},sidebar:{x:sidebar.x,w:sidebar.width},topRail:{x:topRail.x,y:topRail.y,h:topRail.height},headerActions:{x:headerActions.x,w:headerActions.width},mapButton:{x:mapButton.x,w:mapButton.width},scope:{x:scope.x,y:scope.y},visibleFilterIcons,argusDisplay,smartDisplay,theme:document.documentElement.dataset.crmTheme,cards}
+    const r=sel=>{const n=document.querySelector(sel);if(!n)return null;const b=n.getBoundingClientRect();return {x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height),r:Math.round(b.right)}}
+    const cards=[...document.querySelectorAll('.crm-listing-card')].slice(0,3).map(n=>n.getBoundingClientRect()).map(b=>({x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),r:Math.round(b.right)}))
+    return {viewport:innerWidth,brand:r('.crm-agency-brand'),argus:r('.crm-argus-orbit'),tools:r('[data-testid=board-tools-button]'),nav:r('.crm-header-nav'),actions:r('.crm-header-actions'),rail:r('[data-testid=board-filter-rail]'),filter:r('.crm-filterbar'),header:r('.crm-header'),
+      navLabels:[...document.querySelectorAll('.crm-header-nav > .crm-nav-item')].map(n=>n.textContent.trim()),
+      railKeys:[...document.querySelectorAll('[data-testid=board-filter-rail] section')].map(n=>n.dataset.rail),
+      railOpen:document.querySelectorAll('[data-testid=board-filter-rail] .crm-rail-toggle[aria-expanded=true]').length,
+      filterIsland:getComputedStyle(document.querySelector('.crm-filter-island')).display,
+      oldRail:getComputedStyle(document.querySelector('.crm-board-desktop-rail')||document.body).display,
+      theme:document.documentElement.dataset.crmTheme,cards}
   })
-  assert.ok(layout.content.w<=1581 && layout.content.w>=1450,'wider centered board canvas')
-  assert.ok(Math.abs(layout.header.y-layout.filter.y)<5,'header actions share top rail')
-  assert.ok(layout.filter.h<=60,'compact top rail')
-  assert.equal(layout.theme,'light','desktop board defaults to reference light theme')
-  assert.ok(layout.brand.x<=40 && layout.brand.y===0,'ARGUS wordmark anchors the global top bar')
-  assert.ok(layout.brandImage.w>=100 && layout.brandImage.h>0,'the supplied ARGUS logo asset is visible')
-  assert.ok(layout.headerActions.x>layout.viewport-layout.headerActions.w-24,'global utility buttons align right')
-  assert.ok(Math.abs(layout.mapButton.x+layout.mapButton.w/2-layout.viewport/2)<=1,'Map is centered over the viewport')
-  assert.ok(layout.mapButton.x-(layout.filter.x+layout.filter.w)<70,'filter icons finish beside the centred Map control')
-  assert.ok(layout.topRail.x-(layout.mapButton.x+layout.mapButton.w)<70,'board actions start beside the centred Map control')
-  assert.ok(layout.sidebar.x>50 && layout.sidebar.w<=165,'Facebook-like navigation rail sits beside the wider centered board')
-  assert.ok(layout.topRail.y===0 && layout.topRail.h<=60,'board controls stay inside the global top rail')
-  assert.ok(layout.scope.y>=58 && layout.scope.x>=layout.content.x,'village filters begin directly below the top rail')
-  assert.equal(layout.visibleFilterIcons,8,'all property filter icons remain available on desktop')
-  assert.equal(layout.argusDisplay,'flex','ARGUS search stays available in the desktop top rail')
-  assert.equal(layout.smartDisplay,'none','mobile smart island is not duplicated on desktop')
-  assert.equal(await page.$$('input[aria-label="Search by reference, village, owner, agent or property type"]').then(nodes=>nodes.length),1,'desktop top rail exposes the inventory search field')
+  assert.equal(layout.theme,'light','desktop board defaults to the light theme')
+  assert.ok(Math.abs(layout.header.y-layout.filter.y)<5 && layout.filter.h<=60,'ARGUS group lives in the top bar')
+  assert.ok(layout.brand.x<=40,'2906 mark anchors the left of the top bar')
+  assert.ok(layout.brand.r<layout.argus.x && layout.tools.r<layout.nav.x && layout.nav.r<=layout.actions.x,'order: 2906 · ARGUS group · nav · utilities')
+  assert.ok(Math.abs(layout.argus.x-layout.cards[0].x)<=2,'ARGUS starts over the results column')
+  assert.ok(Math.abs(layout.nav.r-layout.cards[2].r)<=24,'nav ends over the results right edge')
+  assert.deepEqual(layout.navLabels,['Dashboard','Inventory','Board','Bookings','Outreach','Profile'],'labelled primary navigation')
+  assert.deepEqual(layout.railKeys,['location','price','booking','beds','baths','types','specials','season'],'filter column sections')
+  assert.equal(layout.railOpen,0,'filter sections start collapsed')
+  assert.ok(layout.rail.r<=layout.cards[0].x,'filters left of the results')
+  assert.equal(layout.filterIsland,'none','the phone filter island is not duplicated on desktop')
+  assert.equal(layout.oldRail,'none','the old top board rail is gone')
+  assert.ok(layout.actions.r>layout.viewport-24,'utility buttons align right')
+  assert.equal(new Set(layout.cards.map(c=>c.y)).size,1,'three cards share the first row')
+  assert.ok(layout.cards[0].x-(layout.viewport-layout.cards[2].r)>=0 && layout.cards[2].r<layout.viewport-100,'results are a centred canvas, not edge to edge')
   assert.equal(await page.$eval('.crm-board-legacy-filter-row',node=>getComputedStyle(node).display),'none','legacy text filters never create a second desktop row')
-  assert.equal(new Set(layout.cards.map(c=>Math.round(c.y))).size,1,'three cards share first row')
-  assert.equal(new Set(layout.cards.map(c=>Math.round(c.x))).size,3,'three columns visible')
-  assert.ok(layout.cards.every(card=>card.w>=490),'wider cards give property photography more room')
   const firstPhoto=await page.$('.crm-listing-photo')
   await firstPhoto.hover()
   await new Promise(resolve=>setTimeout(resolve,1200))
@@ -105,8 +98,8 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.ok(Math.abs(compactDesktop.rows[0]-compactDesktop.rows[1])<=5,'compact desktop keeps two cards in its first row')
   assert.ok(compactDesktop.rows[2]-compactDesktop.rows[1]>40,'compact desktop wraps the third card cleanly')
 
-  // Guard the phone shell explicitly: sidebar hidden, the three mobile
-  // islands present, and no desktop rail.
+  // Guard the phone shell explicitly: sidebar hidden; ARGUS · ⌂ · map · ☰ ·
+  // filter island present; no desktop rail.
   await page.setViewport({width:390,height:844,deviceScaleFactor:1})
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.crm-sidebar')).display==='none')
   const mobile=await page.evaluate(()=>({
@@ -114,14 +107,15 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     islands:getComputedStyle(document.querySelector('.crm-board-islands')).display,
     sidebar:getComputedStyle(document.querySelector('.crm-sidebar')).display,
     bottomNav:getComputedStyle(document.querySelector('.crm-bottom-nav')).display,
-    workspaceLabels:[...document.querySelectorAll('.crm-smart-island [data-label]')].map(node=>node.dataset.label),
+    orbs:[...document.querySelectorAll('.crm-board-orb')].map(node=>node.dataset.testid),
+    filterIcons:document.querySelectorAll('.crm-filter-island .crm-island-feature').length,
   }))
   assert.ok(['none','missing'].includes(mobile.desktopRail),'desktop controls are hidden on mobile')
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
   assert.equal(mobile.sidebar,'none','desktop sidebar remains hidden on mobile')
   assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains available')
-  assert.deepEqual(mobile.workspaceLabels,['Map','Favourites','More'],'mobile workspace island has exactly three distinct actions')
-  assert.equal(await page.$$('.crm-smart-island [data-label="Profile"]') .then(nodes=>nodes.length),0,'profile is not duplicated in the floating island')
+  assert.deepEqual(mobile.orbs,['board-market-button','board-map-button','board-tools-button'],'Market · Map · Tools')
+  assert.equal(mobile.filterIcons,8,'all eight filter icons on the phone island')
 
   await page.$eval('.crm-filter-island [aria-label="Open price filters"]',button=>button.click())
   await page.waitForSelector('#crm-mobile-filter-panel')
@@ -129,22 +123,11 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   await page.$eval('#crm-mobile-filter-panel [aria-label="Close filters"]',button=>button.click())
   await page.waitForSelector('#crm-mobile-filter-panel',{hidden:true})
 
-  await page.$eval('.crm-smart-island [data-label="Favourites"]',button=>button.click())
-  await new Promise(resolve=>setTimeout(resolve,700))
-  await page.$eval('.crm-smart-island [data-label="Favourites"]',button=>button.click())
-  await page.waitForFunction(()=>document.querySelector('.crm-smart-island [data-label="Favourites"]')?.getAttribute('aria-pressed')==='true')
-  await page.$eval('.crm-smart-island [data-label="Map"]',button=>button.click())
-  await new Promise(resolve=>setTimeout(resolve,700))
-  await page.$eval('.crm-smart-island [data-label="Map"]',button=>button.click())
-  await page.waitForFunction(()=>document.querySelector('.crm-smart-island [data-label="Map"]')?.getAttribute('aria-pressed')==='true' && document.querySelector('.crm-smart-island [data-label="Favourites"]')?.getAttribute('aria-pressed')==='false')
-  await page.$eval('.crm-smart-island [data-label="More"]',button=>button.click())
-  await new Promise(resolve=>setTimeout(resolve,700))
-  await page.$eval('.crm-smart-island [data-label="More"]',button=>button.click())
-  await page.waitForSelector('[role="dialog"] .crm-mobile-menu-actions')
-  assert.equal(await page.$$eval('[role="dialog"] .crm-nav-item',nodes=>nodes.filter(node=>node.textContent.includes('Profile')).length),1,'profile appears once in shared navigation')
+  await page.$eval('[data-testid=board-tools-button]',button=>button.click())
+  await page.waitForSelector('[data-testid=board-tools-panel]')
   await page.$eval('#crm-smart-tags',button=>button.click())
   await page.waitForSelector('.crm-selection-help')
-  await page.waitForSelector('[role="dialog"]',{hidden:true})
+  await page.waitForSelector('[data-testid=board-tools-panel]',{hidden:true})
   assert.match(await page.$eval('.crm-selection-help',node=>node.textContent),/Nothing is picked automatically/)
   await page.screenshot({path:path.join(os.tmpdir(),'board-clean-mobile.png'),fullPage:false})
   const motionRecorder=process.env.RECORD_MOTION
