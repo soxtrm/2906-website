@@ -14,7 +14,7 @@
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bath, BedDouble, Building2, CalendarDays, Cat, Check, ChevronDown, Euro, House, Lock, Map as MapIcon, Menu, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Sparkles, Wrench, X } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, Cat, Check, ChevronDown, Euro, House, Lock, Map as MapIcon, Menu, MapPin, RotateCcw, Search, Snowflake, Sparkles, Wrench, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -657,28 +657,68 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         </div>
 
         <motion.div
+          layout
           role="group"
           aria-busy={filterPickerOpen && !islandReady}
           aria-label={`Property filters${activeCount ? `, ${activeCount} active` : ''}`}
+          data-expanded={filterPickerOpen}
           className={cn('crm-nav-island crm-filter-island', (mobilePanel === 'filters' || filterPickerOpen) && 'is-active')}
-          onClick={event => { if (!(event.target as Element).closest('.crm-island-feature')) primeFilterIsland() }}
+          transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 310, damping: 28, mass: .72 }}
         >
-          {/* Smart Filters island (founder mockup 2026-10-19): the full icon set,
-              each icon jumps to its section; the panel keeps all filters. */}
-          <span className="crm-island-icons crm-filter-icons">
-            {([
-              ['price', 'Open price filters', 'crm-filter-price', <Euro key="i" aria-hidden />, !!(value.min || value.max)],
-              ['availability', 'Open availability filters', 'crm-filter-availability', <CalendarDays key="i" aria-hidden />, false],
-              ['beds', 'Open bedroom filters', 'crm-filter-bedrooms', <BedDouble key="i" aria-hidden />, value.beds.length > 0],
-              ['baths', 'Open bathroom filters', 'crm-filter-bathrooms', <Bath key="i" aria-hidden />, value.baths.length > 0],
-              ['types', 'Open property types', 'crm-filter-property-type', <Building2 key="i" aria-hidden />, !!value.type],
-              ['tenancy', 'Open pets and tenancy filters', 'crm-filter-tenancy', <Cat key="i" aria-hidden />, rulesActive || value.quick.length > 0],
-              ['updated', 'Open updated filters', 'crm-filter-updated', <SlidersHorizontal key="i" aria-hidden />, !!value.updated],
-              ['rental', 'Open rental filters', 'crm-filter-rental', <Snowflake key="i" aria-hidden />, !!value.rental],
-            ] as const).map(([key, label, target, icon, selected]) => (
-              <button key={key} type="button" className="crm-island-feature" data-testid={`island-${key}`} aria-label={label} aria-expanded={mobilePanel === 'filters'} aria-controls="crm-mobile-filter-panel" data-selected={selected} data-active={mobilePanel === 'filters' && islandFocus === target} onClick={() => openIslandFeature('filters', target)}>{icon}</button>
-            ))}
-          </span>
+          <AnimatePresence initial={false} mode="popLayout">
+            {!filterPickerOpen ? (
+              <motion.button
+                key="filter-cloud-trigger"
+                layout
+                type="button"
+                className="crm-filter-cloud-trigger"
+                data-testid="island-filter-trigger"
+                aria-label={`Expand property filters${activeCount ? `, ${activeCount} active` : ''}`}
+                aria-expanded="false"
+                onClick={primeFilterIsland}
+                initial={{ opacity: 0, scale: .8, rotate: -8 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                exit={{ opacity: 0, scale: .72, rotate: 10 }}
+                transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 430, damping: 27 }}
+              >
+                <Sparkles aria-hidden />
+                {activeCount > 0 && <span className="crm-island-count" aria-hidden>{activeCount}</span>}
+              </motion.button>
+            ) : (
+              <motion.span
+                key="filter-shortcuts"
+                layout
+                className="crm-island-icons crm-filter-icons"
+                initial="closed"
+                animate="open"
+                exit="closed"
+                variants={{ closed: { opacity: 0, scale: .86 }, open: { opacity: 1, scale: 1 } }}
+                transition={prefersReducedMotion ? { duration: .01 } : { staggerChildren: .045, delayChildren: .035 }}
+              >
+                {([
+                  ['location', 'Open village filters', 'crm-filter-location', <MapPin key="i" aria-hidden />, value.towns.length > 0 || locationAreasSelected.length > 0],
+                  ['price', 'Open price filters', 'crm-filter-price', <Euro key="i" aria-hidden />, !!(value.min || value.max)],
+                  ['rooms', 'Open bedroom and bathroom filters', 'crm-filter-rooms', <span key="i" className="crm-rooms-filter-icon" aria-hidden><BedDouble /><Bath /></span>, value.beds.length > 0 || value.baths.length > 0],
+                  ['more', 'Open all property filters', 'crm-filter-location', <ChevronDown key="i" aria-hidden />, !!(value.type || rulesActive || value.quick.length || value.updated || value.rental)],
+                ] as const).map(([key, label, target, icon, selected]) => (
+                  <motion.button
+                    key={key}
+                    type="button"
+                    className="crm-island-feature"
+                    data-testid={`island-${key}`}
+                    aria-label={label}
+                    aria-expanded={mobilePanel === 'filters'}
+                    aria-controls="crm-mobile-filter-panel"
+                    data-selected={selected}
+                    data-active={mobilePanel === 'filters' && islandFocus === target}
+                    onClick={() => openIslandFeature('filters', target)}
+                    variants={{ closed: { opacity: 0, y: 7, scale: .72 }, open: { opacity: 1, y: 0, scale: 1 } }}
+                    transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 420, damping: 25 }}
+                  >{icon}</motion.button>
+                ))}
+              </motion.span>
+            )}
+          </AnimatePresence>
           <span className="crm-island-label">Filters</span>
         </motion.div>
       </motion.div>
@@ -723,7 +763,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
               {priceFields}
             </div>
 
-            <div className="crm-filter-section crm-room-sections">
+            <div id="crm-filter-rooms" data-island-focus={islandFocus === 'crm-filter-rooms'} className="crm-filter-section crm-room-sections">
               <div id="crm-filter-bedrooms" data-island-focus={islandFocus === 'crm-filter-bedrooms'}>{bedsField}</div>
               <div id="crm-filter-bathrooms" data-island-focus={islandFocus === 'crm-filter-bathrooms'}>{bathsField}</div>
             </div>
@@ -754,7 +794,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
             <footer>
               <button type="button" className="crm-clear-filters" onClick={onReset} disabled={activeCount === 0}>Clear all</button>
-              <button type="button" className="crm-show-results" onClick={() => setMobilePanel(null)} disabled={loading}><Search />{loading ? 'Loading…' : `Show ${count} result${count === 1 ? '' : 's'}`}</button>
+              <button type="button" className="crm-show-results" onClick={closeIslandSurfaces} disabled={loading}><Search />{loading ? 'Loading…' : `Show ${count} result${count === 1 ? '' : 's'}`}</button>
             </footer>
           </motion.section>
         )}

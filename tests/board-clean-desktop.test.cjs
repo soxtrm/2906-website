@@ -56,7 +56,7 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
       railOpen:document.querySelectorAll('[data-testid=board-filter-rail] .crm-rail-toggle[aria-expanded=true]').length,
       filterIsland:getComputedStyle(document.querySelector('.crm-filter-island')).display,
       oldRail:getComputedStyle(document.querySelector('.crm-board-desktop-rail')||document.body).display,
-      theme:document.documentElement.dataset.crmTheme,cards,content:r('.crm-content'),photo:photo&&{w:Math.round(photo.width),h:Math.round(photo.height)}}
+      theme:document.documentElement.dataset.crmTheme,cards,content:r('.crm-content'),body:r('.crm-listing-card-body'),overlay:document.querySelector('.crm-card-overlay-meta')?.textContent?.trim(),photo:photo&&{w:Math.round(photo.width),h:Math.round(photo.height)}}
   })
   assert.equal(layout.theme,'light','desktop board defaults to the light theme')
   assert.ok(Math.abs(layout.header.y-layout.filter.y)<5 && layout.filter.h<=60,'ARGUS group lives in the top bar')
@@ -73,7 +73,9 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(new Set(layout.cards.map(c=>c.y)).size,1,'four cards share the first row')
   assert.equal(new Set(layout.cards.map(c=>c.h)).size,1,'listing cards keep one stable height')
   assert.ok(layout.photo.w/layout.photo.h>1.55,'listing photos use a landscape frame')
-  assert.ok(layout.cards[0].x<layout.viewport/4 && layout.cards[3].r<layout.viewport-100,'results use a left-shifted wide canvas')
+  assert.ok(Math.abs(layout.rail.x-(layout.viewport-layout.cards[3].r))<=20,'filter rail and listing edge form one centred canvas')
+  assert.ok(layout.rail.y>=layout.cards[0].y+50,'the desktop filter rail starts clearly below the listing header')
+  assert.ok(layout.cards[0].h<460 && layout.body.h<210,`listing cards stay dense (${layout.cards[0].h}px card, ${layout.body.h}px body)`)
   assert.equal(layout.content.r,layout.viewport,'the page scrollbar lives at the far browser edge')
   assert.equal(await page.$eval('.crm-board-legacy-filter-row',node=>getComputedStyle(node).display),'none','legacy text filters never create a second desktop row')
   const firstPhoto=await page.$('.crm-listing-photo')
@@ -114,17 +116,27 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     bottomNav:getComputedStyle(document.querySelector('.crm-bottom-nav')).display,
     orbs:[...document.querySelectorAll('.crm-board-orb')].map(node=>node.dataset.testid),
     filterIcons:document.querySelectorAll('.crm-filter-island .crm-island-feature').length,
+    filterTrigger:!!document.querySelector('[data-testid=island-filter-trigger]'),
   }))
   assert.ok(['none','missing'].includes(mobile.desktopRail),'desktop controls are hidden on mobile')
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
   assert.equal(mobile.sidebar,'none','desktop sidebar remains hidden on mobile')
   assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains available')
   assert.deepEqual(mobile.orbs,['board-market-button','board-map-button','board-tools-button'],'Market · Map · Tools')
-  assert.equal(mobile.filterIcons,8,'all eight filter icons on the phone island')
+  assert.equal(mobile.filterIcons,0,'the phone filter cloud starts calm and collapsed')
+  assert.equal(mobile.filterTrigger,true,'the collapsed phone filter cloud has one clear trigger')
 
+  const filterWidthBefore=await page.$eval('.crm-filter-island',node=>node.getBoundingClientRect().width)
+  await page.$eval('[data-testid=island-filter-trigger]',button=>button.click())
+  await page.waitForSelector('[data-testid=island-price]')
+  await new Promise(resolve=>setTimeout(resolve,600))
+  assert.equal(await page.$('#crm-mobile-filter-panel'),null,'expanding the cloud does not pick a filter')
+  const filterWidthAfter=await page.$eval('.crm-filter-island',node=>node.getBoundingClientRect().width)
+  assert.ok(filterWidthAfter>filterWidthBefore+25,`filter cloud grows before selection (${filterWidthBefore} → ${filterWidthAfter})`)
+  assert.deepEqual(await page.$$eval('.crm-filter-icons .crm-island-feature',nodes=>nodes.map(node=>node.dataset.testid)),['island-location','island-price','island-rooms','island-more'],'only the four useful mobile entries are exposed')
   await page.$eval('.crm-filter-island [aria-label="Open price filters"]',button=>button.click())
   await page.waitForSelector('#crm-mobile-filter-panel')
-  assert.equal(await page.$eval('#crm-mobile-filter-panel',node=>getComputedStyle(node).display!=='none'),true,'a filter icon opens its section with one click')
+  assert.equal(await page.$eval('#crm-mobile-filter-panel',node=>getComputedStyle(node).display!=='none'),true,'a shortcut opens its section after the cloud expands')
   await page.$eval('#crm-mobile-filter-panel [aria-label="Close filters"]',button=>button.click())
   await page.waitForSelector('#crm-mobile-filter-panel',{hidden:true})
 

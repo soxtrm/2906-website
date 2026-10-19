@@ -1013,3 +1013,60 @@ html[data-crm-theme="dark"] .crm-content::-webkit-scrollbar-thumb{background:#3d
   .crm-has-sidebar-slot .crm-filterbar{left:272px}
   .crm-has-sidebar-slot .crm-listing-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 }
+
+/* Mobile filter cloud: one calm control first, then the three frequent
+   shortcuts plus a route into the full sheet. The sheet still owns every
+   filter; this only removes visual noise from the always-visible header. */
+.crm-filter-cloud-trigger{position:relative;display:grid;width:36px;height:36px;min-height:36px!important;padding:0!important;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--crm-text);cursor:pointer;transition:transform var(--crm-motion-panel) var(--crm-ease-settle),background-color var(--crm-motion-tap) ease,color var(--crm-motion-tap) ease}
+.crm-filter-cloud-trigger>svg{width:16px;height:16px;stroke-width:1.7}
+.crm-filter-cloud-trigger:active{transform:scale(.88)}
+.crm-filter-cloud-trigger .crm-island-count{top:-2px;right:-3px}
+.crm-rooms-filter-icon{position:relative;display:block;width:18px;height:17px}
+.crm-rooms-filter-icon>svg:first-child{position:absolute;left:0;top:1px;width:15px;height:15px;stroke-width:1.7}
+.crm-rooms-filter-icon>svg:last-child{position:absolute;right:-3px;bottom:-2px;width:10px;height:10px;padding:1px;border-radius:50%;background:var(--crm-surface);stroke-width:2}
+@media (max-width:760px){
+  .crm-board-islands .crm-filter-island{flex:0 0 42px;justify-content:center;overflow:visible;transition:flex-basis .56s cubic-bezier(.16,1,.3,1),background-color .25s ease,box-shadow .4s cubic-bezier(.16,1,.3,1),transform .4s cubic-bezier(.16,1,.3,1)}
+  .crm-board-islands .crm-filter-island[data-expanded=true]{flex:1 1 auto;background:color-mix(in srgb,var(--crm-surface) 92%,var(--crm-accent) 8%);box-shadow:0 10px 28px rgba(4,10,24,.12),inset 0 1px 0 rgba(255,255,255,.48)}
+  .crm-board-islands .crm-filter-island[data-expanded=false] .crm-filter-cloud-trigger{animation:crm-filter-cloud-breathe 4.8s ease-in-out infinite}
+  .crm-board-islands .crm-filter-island[data-expanded=true] .crm-filter-icons{width:100%;justify-content:space-around;gap:1px;overflow:visible}
+  .crm-board-islands .crm-filter-island[data-expanded=true] .crm-filter-icons>.crm-island-feature{flex:0 1 28px;width:28px;max-width:28px;overflow:visible}
+  .crm-board-islands .crm-filter-island[data-expanded=true] .crm-filter-icons>.crm-island-feature:hover{transform:translateY(-2px) scale(1.06)}
+  .crm-board-islands .crm-filter-island[data-expanded=true] .crm-filter-icons>.crm-island-feature[data-active=true] svg:last-child{transform:rotate(180deg)}
+  .crm-board-islands .crm-filter-island[data-expanded=true] .crm-filter-icons>.crm-island-feature>svg{transition:transform .42s cubic-bezier(.16,1,.3,1)}
+}
+@keyframes crm-filter-cloud-breathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1px) scale(1.035)}}
+@media (prefers-reduced-motion:reduce){.crm-filter-cloud-trigger{animation:none!important;transition-duration:.01ms!important}.crm-board-islands .crm-filter-island{transition-duration:.01ms!important}}
+
+/* 2026-10-19 compact desktop pass: centre the filter + listing canvas and
+   remove the artificial equal-row height that left large blank card bodies. */
+.crm-card-overlay-meta>i,.crm-card-overlay-meta>time{display:grid;height:20px;min-width:20px;place-items:center;margin:0;padding:0 6px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(8,12,19,.58);color:#fff;font:700 8px var(--font-jetbrains);font-style:normal;white-space:nowrap;backdrop-filter:blur(8px)}
+.crm-card-overlay-meta>i[data-rule=winter]{color:#9ddcff}
+.crm-card-overlay-meta>i[data-rule=short]{color:#ffd07b}
+.crm-card-contact-lock{display:flex;min-width:0;align-items:center;gap:5px;margin-top:5px;padding:5px 7px;border:1px solid color-mix(in srgb,var(--crm-danger) 20%,var(--crm-border));border-radius:8px;background:color-mix(in srgb,var(--crm-danger) 5%,transparent);color:var(--crm-muted);font-size:9px;line-height:1.2}
+.crm-card-contact-lock>svg{flex:0 0 auto;color:var(--crm-danger)}
+.crm-card-contact-lock>strong{flex:0 0 auto;color:var(--crm-text);font-size:9px}
+.crm-card-contact-lock>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (min-width:761px){
+  .crm-workspace.crm-mobile-immersive.crm-has-sidebar-slot{grid-template-columns:180px minmax(0,1500px);justify-content:center;gap:16px;padding-left:16px;padding-right:16px}
+  .crm-has-sidebar-slot .crm-sidebar{padding-top:174px}
+  .crm-has-sidebar-slot .crm-filterbar{left:calc(max(16px,(100vw - 1696px)/2) + 196px)}
+  .crm-has-sidebar-slot .crm-header-nav{right:max(112px,calc((100vw - 1696px)/2))}
+  .crm-has-sidebar-slot .crm-content{width:calc(100% + max(16px,(100vw - 1696px)/2))}
+  .crm-has-sidebar-slot .crm-board-content{width:100%;max-width:1500px;margin:0;padding-right:0!important}
+  .crm-has-sidebar-slot .crm-listing-grid{grid-auto-rows:auto;align-items:stretch}
+  .crm-has-sidebar-slot .crm-listing-card{height:auto}
+  .crm-has-sidebar-slot .crm-listing-card-body{min-height:0}
+  .crm-has-sidebar-slot .crm-card-action-tray{min-height:0}
+}
+@media (min-width:1200px){
+  .crm-workspace.crm-mobile-immersive.crm-has-sidebar-slot{grid-template-columns:200px minmax(0,1500px);justify-content:center;gap:22px;padding-left:20px;padding-right:20px}
+  .crm-has-sidebar-slot .crm-filterbar{left:calc(max(20px,(100vw - 1722px)/2) + 222px)}
+  .crm-has-sidebar-slot .crm-header-nav{right:max(112px,calc((100vw - 1722px)/2))}
+  .crm-has-sidebar-slot .crm-content{width:calc(100% + max(20px,(100vw - 1722px)/2))}
+}
+@media (min-width:1640px){
+  .crm-workspace.crm-mobile-immersive.crm-has-sidebar-slot{grid-template-columns:220px minmax(0,1500px);justify-content:center;gap:28px;padding-left:24px;padding-right:24px}
+  .crm-has-sidebar-slot .crm-filterbar{left:calc(max(24px,(100vw - 1748px)/2) + 248px)}
+  .crm-has-sidebar-slot .crm-header-nav{right:max(112px,calc((100vw - 1748px)/2))}
+  .crm-has-sidebar-slot .crm-content{width:calc(100% + max(24px,(100vw - 1748px)/2))}
+}

@@ -29,6 +29,9 @@ function fixtures() {
     listing(4, { town: 'Mosta', beds: 3, price: 2100, rentalModes: ['winter_let'], sharing: false }),
     listing(5, { town: 'Swieqi', beds: 2, price: 2500 }),
   ]
+  const pausedUntil = new Date(Date.now() + 30 * 86400000).toISOString()
+  const pausedContact = { ...f.listings[0].contact, canAsk: false, reason: 'No contact until the owner reopens viewings', ownerPauseUntil: pausedUntil }
+  f.listings[0] = { ...f.listings[0], contact: pausedContact, availabilityContact: pausedContact }
   // Beds / price run server-side; answer like the real handler would.
   f.routes = [[/^schedule-board\/listings$/, 'GET', (_, q) => ({
     listings: q.get('status') === 'rented' ? f.rented : f.listings.filter(l =>
@@ -55,7 +58,13 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     const order = await page.$$eval('.crm-board-islands > *', els => els.map(e => e.className.toString().split(' ').find(c => /crm-(argus-orbit|board-orbs|filter-island)/.test(c))).filter(Boolean))
     assert.deepEqual(order, ['crm-argus-orbit', 'crm-board-orbs', 'crm-filter-island'])
     assert.equal(await page.$eval('html', el => el.dataset.crmTheme), 'light', 'light-first with no stored preference')
-    assert.equal(await page.$$eval('.crm-filter-icons .crm-island-feature', els => els.map(e => e.dataset.testid).join(',')), 'island-price,island-availability,island-beds,island-baths,island-types,island-tenancy,island-updated,island-rental')
+    assert.ok(await page.$('[data-testid=island-filter-trigger]'), 'filter cloud is collapsed until the agent opens it')
+    assert.equal(await page.$$eval('.crm-filter-icons .crm-island-feature', els => els.length), 0)
+    await click(page, '[data-testid=island-filter-trigger]')
+    assert.equal(await page.$$eval('.crm-filter-icons .crm-island-feature', els => els.map(e => e.dataset.testid).join(',')), 'island-location,island-price,island-rooms,island-more')
+    assert.equal(await page.$('#crm-mobile-filter-panel'), null, 'first tap only expands the cloud')
+    const visualOrder = await page.$$eval('[data-ref]', els => [...new Set(els.map(el => el.dataset.ref))])
+    assert.equal(visualOrder.at(-1), '2906-9101', 'a listing paused for more than three weeks stays on the board but moves behind actionable homes')
     assert.ok(await page.$('.crm-bottom-nav'), 'bottom navigation island kept')
     assert.ok(await page.$('.crm-horizon-chip'), 'Active / +3 Months strip kept')
     await shot(page, 'mobile-board')
@@ -106,7 +115,9 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
   await t.test('mobile: filter state is shared — panel, results, and survives closing', async t2 => {
     const page = await open(t2, browser, { fixtures: fixtures() })
     await page.waitForSelector('[data-ref]')
-    await page.click('[data-testid=island-beds]')
+    await page.click('[data-testid=island-filter-trigger]')
+    await page.waitForSelector('[data-testid=island-rooms]')
+    await page.click('[data-testid=island-rooms]')
     await page.waitForSelector('#crm-mobile-filter-panel')
     await page.$$eval('#crm-filter-bedrooms button', els => els.find(e => e.textContent.trim() === '2').click())
     await page.waitForFunction(() => new Set([...document.querySelectorAll('[data-ref]')].map(e => e.dataset.ref)).size === 3)
@@ -117,7 +128,9 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     await page.waitForFunction(() => !document.querySelector('#crm-mobile-filter-panel'))
     await page.waitForFunction(() => document.querySelectorAll('[data-ref]').length > 0, { timeout: 10000 })
     assert.deepEqual(await cards(page), ['2906-9102', '2906-9103', '2906-9105'], 'closing the panel keeps the filter')
-    assert.equal(await page.$eval('[data-testid=island-beds]', el => el.dataset.selected), 'true')
+    await page.click('[data-testid=island-filter-trigger]')
+    await page.waitForSelector('[data-testid=island-rooms]')
+    assert.equal(await page.$eval('[data-testid=island-rooms]', el => el.dataset.selected), 'true')
     await page.click('[data-testid=island-price]')
     await page.waitForSelector('#crm-filter-price input', { visible: true })
     const pressed = await page.$$eval('#crm-filter-bedrooms button[aria-pressed=true]', els => els.map(e => e.textContent.trim()))
@@ -162,6 +175,9 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     assert.equal(await page.$$eval('[data-testid=board-filter-rail] .crm-rail-toggle[aria-expanded=true]', els => els.length), 0)
     // Rule icons beside the star: winter + crossed-out sharing on 9104.
     assert.deepEqual(await page.$$eval('[data-ref="2906-9104"] .crm-card-rule-icons i', els => els.map(e => e.dataset.rule + (e.dataset.no ? ':no' : ''))), ['winter', 'pets', 'sharing:no'])
+    assert.ok(await page.$('[data-ref="2906-9104"] .crm-card-overlay-meta [data-rule=winter]'), 'winter is an icon beside the agent')
+    assert.ok(await page.$('[data-ref="2906-9104"] .crm-card-overlay-meta time'), 'last update age sits beside the agent metadata')
+    assert.doesNotMatch(await page.$eval('[data-ref="2906-9104"] .crm-card-overlay-meta', el => el.textContent), /winter/i)
     // The modern card uses a stable landscape photo above the property facts.
     const photoLayout = await page.$eval('[data-ref="2906-9101"]', card => {
       const photo = card.querySelector('.crm-listing-photo').getBoundingClientRect()

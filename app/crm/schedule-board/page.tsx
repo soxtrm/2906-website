@@ -1143,7 +1143,7 @@ function Board() {
     // SQL because the whole result set is already local — typing filters at
     // keystroke speed instead of a round trip per character.
     const needle = normalizeBoardSearch(deferredQuery).toLowerCase()
-    return positioned.filter(r => {
+    const filtered = positioned.filter(r => {
       // The search field is global. It must be able to recover a known ref or
       // locality even while stale Area, map or feature filters are selected.
       if (needle) {
@@ -1240,6 +1240,14 @@ function Board() {
       }
       return true
     })
+    // Keep long contact/viewing waits on this same board, but move them behind
+    // the homes the team can act on now. The server order remains untouched
+    // inside both groups, so this is a work-queue nudge, not a hidden status.
+    if (view !== 'board' || horizon !== 'active') return filtered
+    return filtered
+      .map((row, index) => ({ row, index, deferred: boardDeferredForThreeWeeks(row) }))
+      .sort((a, b) => Number(a.deferred) - Number(b.deferred) || a.index - b.index)
+      .map(item => item.row)
   }, [positioned, f.towns, deferredQuery, loadedQuery, f.pets, f.sharing, f.sublet, f.updated, f.rental, f.quick, rect, circ, view, horizon, discovery])
 
   // Mount the board in small, scroll-driven batches. A normal inventory can
@@ -3107,6 +3115,23 @@ function isFarFuture(r: { availableStatus: string | null; availableDate: string 
   return targetDay > cutoff.getTime()
 }
 
+function boardDeferredForThreeWeeks(r: Pick<Listing, 'availableDate' | 'viewingDate' | 'viewingsFrom' | 'contact' | 'availabilityContact'>): boolean {
+  const threshold = Date.now() + 21 * 86_400_000
+  const gates = [
+    r.contact?.ownerPauseUntil,
+    r.contact?.propertyPauseUntil,
+    r.availabilityContact?.ownerPauseUntil,
+    r.availabilityContact?.propertyPauseUntil,
+    r.viewingsFrom,
+    r.viewingDate,
+    r.availableDate,
+  ]
+  return gates.some(value => {
+    const at = Date.parse(value || '')
+    return Number.isFinite(at) && at > threshold
+  })
+}
+
 // The photo-overlay pill (Kev, 2026-08-22): "Uploaded X" until somebody
 // confirms it, then "Updated X" — whichever of the two actually happened
 // most recently is the one fact worth stating there.
@@ -4088,13 +4113,6 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             Viewable-row snowflake below, which is desktop-only) — a
             winter/short-let card needs to read as "special/time-limited" at
             a glance everywhere, not just on desktop. */}
-        {(r.leaseType === 'winter_let' || r.leaseType === 'short_let' || (!r.leaseType && r.shortlet)) && (
-          <span
-            title="Time-limited — winter/short-let, excluded from normal !match search"
-            style={{ position: 'absolute', top: 10, right: 10, background: '#1B3A4B', color: '#7EC8E3', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5 }}>
-            ❄️ {r.leaseType === 'winter_let' ? 'Winter' : 'Short'}
-          </span>
-        )}
         {/* Kev, 2026-09-10: the "needs recheck" tab is gone — pending_check
             listings stay right here on the active board (sorted to the
             bottom server-side) with this watermark instead. Bottom-left: top
@@ -4110,9 +4128,9 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           </span>
         )}
 
-        {/* Responsible agent stays on the image. The update age now sits below
-            the reference at the foot of the card, where it reads as metadata. */}
-        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        {/* Responsible agent, seasonal mode and last-update age share one
+            compact scan line. A written WINTER badge used too much image. */}
+        <div className="crm-card-overlay-meta" style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
           {r.listedBy.displayName && (
             <span style={{
               background: r.listedBy.colorHex || HOT, color: '#FFF', fontSize: 9, fontWeight: 700,
@@ -4121,6 +4139,9 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
               {r.listedBy.displayName}
             </span>
           )}
+          {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let') || r.availableUntil) && <i title={r.availableUntil ? `Winter let · until ${fmtDateDots(r.availableUntil)}` : 'Winter let'} data-rule="winter"><Snowflake size={12} /></i>}
+          {(r.leaseType === 'short_let' || r.rentalModes?.includes('short_let') || (!r.leaseType && r.shortlet)) && <i title="Short let" data-rule="short"><Sun size={12} /></i>}
+          {latestTouch && <time dateTime={latestTouch.at} title={`${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}`}>{ago(latestTouch.at).replace(/ ago$/i, '')}</time>}
         </div>
 
         {/* Tag — batch pick, bottom-left. Same action as before
@@ -4192,7 +4213,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           Available and the tray below it read as dead space — bottom
           padding cut way down so the button sits right against the tray
           boundary instead of floating above it. */}
-      <div className="crm-listing-card-body" style={{ padding: isMobile ? '10px 11px 2px' : '13px 15px 4px', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gridColumn: isMobile ? 2 : 1, gridRow: isMobile ? 1 : 2 }}>
+      <div className="crm-listing-card-body" style={{ padding: isMobile ? '10px 11px 2px' : '10px 12px 3px', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gridColumn: isMobile ? 2 : 1, gridRow: isMobile ? 1 : 2 }}>
         {/* ── town + price ──────────────────────────────────────────────────
             Kev's redesign, 2026-08-30: plain text, no status dot / pin — the
             status colour still lives on the star and the confirm/mark-rented
@@ -4266,14 +4287,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
 
         {/* ── description preview ──────────────────────────────────────────── */}
         {r.description && !isMobile && (
-          <div title="Click to read the full listing" style={{ marginTop: 9 }}>
+          <div title="Click to read the full listing" style={{ marginTop: 5 }}>
             <p style={{
-              fontSize: 11.5, color: DTEXT_DIM, lineHeight: 1.5, margin: 0,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              fontSize: 11, color: DTEXT_DIM, lineHeight: 1.35, margin: 0,
+              display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>
               {r.description}
             </p>
-            <span style={{ fontSize: 11.5, color: DTEXT_FAINT, letterSpacing: '0.08em' }}>···</span>
           </div>
         )}
 
@@ -4281,7 +4301,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             for a second stat row alongside Still Available/Confirmed, which
             now live at the bottom of the body, right above the tray. */}
         {!isMobile && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 9.5, color: DTEXT_FAINT, letterSpacing: '0.02em' }}>Viewable</div>
               {/* Kev, 2026-09-08 (real bug, live on #2906-9193): this read
@@ -4318,14 +4338,14 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             slack itself, so the button sits flush against the tray on
             EVERY card regardless of how much is above it, not just the ones
             that happened to be tall enough already. */}
-        <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+        <div style={{ marginTop: isMobile ? 'auto' : 5, paddingTop: isMobile ? 12 : 3 }}>
         {/* Kev, 2026-09-16 ("die minicions vlt über das still available
             anheften, da ist ja garnix"): moved up from the tray below — this
             row above the button had nothing in it, and that's a better home
             for these than buried under Chat/Book/Tag. Facebook stays behind
             "..." exactly where it was; only download/copy/price/AV-date
             moved again. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 7 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
           <PhotoDownload r={r} />
           <button onClick={handleCopyLink} disabled={copyBusy} data-copy-listing-link={r.ref} aria-label="Copy listing link" title="Copy this listing's share link" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM), cursor: copyBusy ? 'wait' : 'pointer' }}>
             <Copy size={14} />
@@ -4343,7 +4363,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             title={latestTouch ? `${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}` : `Reference ${r.ref}`}
             style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto', color: isFreshlyUpdated ? A : DTEXT_FAINT, fontFamily: FM, fontSize: 8.5, whiteSpace: 'nowrap' }}
           >
-            <span>#{r.ref}</span><span aria-hidden style={{ opacity: .45 }}>·</span><span>{latestTouch ? ago(latestTouch.at) : '—'}</span>
+            <span>#{r.ref}</span>
           </div>
         </div>
         {/* Kev, 2026-09-14 (spec item 1): an owner-confirmed future date means
@@ -4452,21 +4472,14 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         )}
 
         {isAdmin && !isUpcoming && !avContact.canAsk && (
-          <div data-contact-block-reason={r.ref} style={{
-            marginTop: 7, padding: '8px 9px', borderRadius: 9,
-            border: '1px solid rgba(226,155,155,.24)', background: 'rgba(185,28,28,.07)',
-            display: 'grid', gridTemplateColumns: '15px 1fr', columnGap: 7, rowGap: 2,
-          }}>
-            <ShieldAlert size={13} style={{ color: '#E29B9B', marginTop: 1 }} />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ color: '#F0C1C1', fontSize: 10.5, fontWeight: 700 }}>Why this action is locked</div>
-              <div style={{ color: DTEXT_DIM, fontSize: 9.8, lineHeight: 1.4, marginTop: 2 }}>{avContact.reason}</div>
-              {c.lastContactAt && (
-                <div style={{ color: DTEXT_FAINT, fontSize: 9.2, marginTop: 3 }}>
-                  Last contact {ago(c.lastContactAt)}{c.lastContactKind ? ` · ${c.lastContactKind.replaceAll('_', ' ')}` : ''}{c.lastContactStatus ? ` · ${c.lastContactStatus}` : ''}
-                </div>
-              )}
-            </div>
+          <div
+            data-contact-block-reason={r.ref}
+            className="crm-card-contact-lock"
+            title={`${avContact.reason || 'Availability contact paused'}${c.lastContactAt ? ` · Last contact ${ago(c.lastContactAt)}` : ''}`}
+          >
+            <ShieldAlert size={12} />
+            <strong>Contact paused</strong>
+            <span>{avContact.reason}</span>
           </div>
         )}
 
@@ -4567,7 +4580,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
       )}
       <div className="crm-card-action-tray" style={{
         background: DTRAY, borderTop: `1px solid ${(dark ? DBORDER : LBORDER)}`,
-        padding: '9px 11px', position: 'relative', gridColumn: '1 / -1', gridRow: isMobile ? 3 : 4,
+        padding: isMobile ? '9px 11px' : '7px 10px', position: 'relative', gridColumn: '1 / -1', gridRow: isMobile ? 3 : 4,
       }} ref={menuRef}>
         {/* Kev, 2026-09-16: the download/copy/price/AV-date icon row that used
             to live here moved up above the Still Available button — see the
