@@ -119,6 +119,13 @@ function villageBelongsToArea(key: string, area: VillageArea): boolean {
 // spaces ("st julians"). Every TOWNS lookup goes through here — a direct
 // TOWNS[boardKey] silently dropped every multi-word village (St Julian's,
 // San Ġwann, St Paul's Bay, Ta' Xbiex, …) off the map (Kev, 2026-10-19).
+// The backend marks an owner's "it's rented" as pending_check with this reason
+// prefix instead of taking the listing off the board (services/availability.js
+// POSSIBLY_RENTED_PREFIX) — keep the two in sync.
+function isPossiblyRented(r: { availableStatus?: string | null; statusChangeReason?: string | null }) {
+  return r.availableStatus === 'pending_check' && /^Possibly rented/i.test(r.statusChangeReason || '')
+}
+
 function boardTown(key?: string | null) {
   if (!key) return undefined
   return TOWNS[key] || TOWNS[key.replace(/-/g, ' ')]
@@ -542,7 +549,9 @@ function Board() {
   // farFutureTier/CHECK-ANYWAY guardrail already uses. Defaults to 'active'
   // so a listing 6 months out never shows up mixed into the normal board by
   // accident — that's the whole point of the tab.
-  const [horizon, setHorizon] = useState<'active' | 'future'>('active')
+  // 'rented' = the "Rented?" view: listings an owner said are rented, waiting
+  // for an agent to confirm (Kev, 2026-10-19) — a client-side view over 'active'.
+  const [horizon, setHorizon] = useState<'active' | 'future' | 'rented'>('active')
   const [onlyConfirmed, setOnlyConfirmed] = useState(params.get('only_confirmed') === '1')
   // '' | 'now' | 'soon' | 'dated' | 'YYYY-MM'. The server owns what each means
   // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
@@ -876,7 +885,7 @@ function Board() {
     if (!search && discovery.length) q.set('discovery', discovery.join(','))
     if (!search && rect) q.set('rect', rectToParam(rect))
     if (!search && circ) q.set('circ', circToParam(circ))
-    if (!search && view === 'board') q.set('horizon', horizon)
+    if (!search && view === 'board') q.set('horizon', horizon === 'future' ? 'future' : 'active')
     q.set('sort', sort)
     if (!search && onlyConfirmed) q.set('only_confirmed', '1')
     if (!search && avail) q.set(/^[0-9]{4}-[0-9]{2}$/.test(avail) ? 'avail_from' : 'avail', avail)
@@ -1199,6 +1208,7 @@ function Board() {
         const farFuture = isFarFuture(r)
         if (horizon === 'active' && farFuture) return false
         if (horizon === 'future' && !farFuture) return false
+        if (horizon === 'rented' && !isPossiblyRented(r)) return false
       }
       return true
     })
@@ -1236,6 +1246,10 @@ function Board() {
   // Count for the +3 Months tab badge — always computed off the 'active'
   // set regardless of which horizon is currently selected, so the badge
   // does not read 0 the moment you're already looking at that tab.
+  const rentedQuestionCount = useMemo(
+    () => (view === 'board' ? positioned.filter(isPossiblyRented).length : 0),
+    [positioned, view],
+  )
   const futureCount = useMemo(
     () => (view === 'board' ? positioned.filter(isFarFuture).length : 0),
     [positioned, view])
@@ -1958,7 +1972,7 @@ function Board() {
         {view === 'board' && (
           <div className="crm-board-location-filter">
           <div className="crm-board-scope-rail crm-area-rail" aria-label="Availability and Malta areas">
-            {([['active', 'Active'], ['future', '🕓 +3 Months']] as const).map(([h, label]) => {
+            {([['active', 'Active'], ['future', '🕓 +3 Months'], ['rented', 'Rented?']] as const).map(([h, label]) => {
               const on = horizon === h
               return (
                 <button className="crm-horizon-chip" key={h} onClick={() => setHorizon(h)} style={{
@@ -1971,6 +1985,9 @@ function Board() {
                   {label}
                   {h === 'future' && futureCount > 0 && (
                     <span style={{ marginLeft: 5, fontFamily: FM, fontSize: 10, color: DTEXT_FAINT }}>{futureCount}</span>
+                  )}
+                  {h === 'rented' && rentedQuestionCount > 0 && (
+                    <span data-testid="rented-question-count" style={{ marginLeft: 5, fontFamily: FM, fontSize: 10, color: '#C98A1A', fontWeight: 700 }}>{rentedQuestionCount}</span>
                   )}
                 </button>
               )
@@ -4058,13 +4075,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             bottom server-side) with this watermark instead. Bottom-left: top
             is already Star + Hot/Yours (left) and freshness + agent (right). */}
         {r.availableStatus === 'pending_check' && (
-          <span title="The owner replied twice and the classifier still could not read it as a yes or a no — confirm it or take it off the board." style={{
+          <span data-testid={isPossiblyRented(r) ? 'rented-question-badge' : undefined} title={isPossiblyRented(r) ? `${r.statusChangeReason} — confirm with Rented, or mark it Still available.` : 'The owner replied twice and the classifier still could not read it as a yes or a no — confirm it or take it off the board.'} style={{
             position: 'absolute', bottom: 8, left: 8,
             background: 'rgba(201,138,26,0.92)', color: '#FFF', fontSize: 9, fontWeight: 700,
             letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 5,
             boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
           }}>
-            Needs recheck
+            {isPossiblyRented(r) ? 'Rented?' : 'Needs recheck'}
           </span>
         )}
 

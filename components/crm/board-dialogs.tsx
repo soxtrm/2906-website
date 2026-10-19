@@ -60,7 +60,7 @@ function Sheet({ title, sub, onClose, children, footer }: {
       <motion.div
         initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
         transition={SHEET_SPRING}
-        className="fixed z-[200] bg-white shadow-2xl flex flex-col
+        className="crm-sheet fixed z-[200] bg-white shadow-2xl flex flex-col
                    inset-x-0 bottom-0 rounded-t-2xl max-h-[88vh]
                    sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
                    sm:w-[480px] sm:rounded-xl sm:max-h-[86vh]"
@@ -1359,8 +1359,8 @@ export function AvDateDialog({ refId, propertyId, town, currentAvailable, curren
       </p>
 
       <p className="mt-3 text-[11px] text-navy/40 leading-relaxed">
-        Saving reposts this listing to its category group with the updated
-        date and a short &quot;still on market&quot; note underneath.
+        Save updates the CRM (and the website) only. Save &amp; Repost also posts
+        it once to its category group with a short &quot;still on market&quot; note.
       </p>
     </Sheet>
   )

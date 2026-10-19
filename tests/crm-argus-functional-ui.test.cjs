@@ -225,6 +225,40 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     assert.equal(reposts.length, 1, 'one repost request even on a double tap')
   })
 
+  await t.test('Rented?: an owner reply "rented" stays on the board behind the Rented? chip', async t2 => {
+    const f = fixtures()
+    f.listings[2] = { ...f.listings[2], availableStatus: 'pending_check', statusChangeReason: 'Possibly rented — owner said: "rented sorry"' }
+    f.listings[3] = { ...f.listings[3], availableStatus: 'pending_check', statusChangeReason: 'Owner replied twice but the classifier could not read it: "hm"' }
+    const page = await open(t2, browser, { fixtures: f, width: 1440, height: 900 })
+    await page.waitForSelector('[data-ref]')
+    assert.ok((await cards(page)).includes('2906-9103'), 'still on the Active board')
+    assert.equal(await page.$eval('[data-testid=rented-question-count]', el => el.textContent), '1')
+    await page.$$eval('.crm-horizon-chip', els => els.find(e => /Rented\?/.test(e.textContent)).click())
+    await page.waitForFunction(() => new Set([...document.querySelectorAll('[data-ref]')].map(e => e.dataset.ref)).size === 1)
+    assert.deepEqual(await cards(page), ['2906-9103'], 'only the possibly-rented listing')
+    assert.equal(await page.$eval('[data-ref="2906-9103"] [data-testid=rented-question-badge]', el => el.textContent), 'Rented?')
+    await shot(page, 'desktop-rented-question')
+  })
+
+  await t.test('phone: an open sheet pushes the bottom island down to its line', async t2 => {
+    const f = fixtures()
+    f.listings[0] = { ...f.listings[0], availableDate: '2026-11-01' }
+    const page = await open(t2, browser, { fixtures: f })
+    await page.waitForSelector('[data-ref="2906-9101"]')
+    await page.$eval('[data-ref="2906-9101"] button[title="Correct the available / viewing dates"]', el => el.click())
+    await page.waitForSelector('[data-testid=av-save-repost]')
+    await sleep(700)
+    const hit = await page.$eval('[data-testid=av-save-repost]', el => {
+      const b = el.getBoundingClientRect()
+      const top = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)
+      return !!top && (top === el || el.contains(top))
+    })
+    assert.ok(hit, 'Save & Repost is the top element at its own position')
+    const nav = await page.$eval('.crm-bottom-nav', el => el.getBoundingClientRect().height)
+    assert.ok(nav <= 24, `island collapsed to its line (${nav}px)`)
+    await shot(page, 'mobile-sheet-island-line')
+  })
+
   await t.test('property editor: Save vs Save & Repost (admin)', async t2 => {
     const f = fixtures()
     const prop = {

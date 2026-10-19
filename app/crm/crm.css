@@ -952,3 +952,12 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-filter-rail .crm-rail-body .crm-location-town-heading{flex-wrap:wrap}
   .crm-filter-rail .crm-rail-body .crm-location-choices{max-height:180px}
 }
+
+/* Kev, 2026-10-19: with a sheet or dialog open the bottom island used to sit on
+   top of its footer ("Save & repost" unreachable). While any sheet / dialog is
+   open the island shrinks to its handle line and drops behind the sheet. */
+@media (max-width:760px){
+  html:has(.crm-sheet, [role="dialog"][data-state="open"]) .crm-mobile-immersive .crm-bottom-nav{z-index:150!important;width:74px;height:18px;padding:0;border-radius:999px;opacity:.9;transform:translate3d(-50%,2px,0) scale(1)}
+  html:has(.crm-sheet, [role="dialog"][data-state="open"]) .crm-mobile-immersive .crm-bottom-nav :is(a,button):not(.crm-bottom-nav-handle){opacity:0;pointer-events:none;transform:translateY(12px) scale(.72)}
+  html:has(.crm-sheet, [role="dialog"][data-state="open"]) .crm-mobile-immersive .crm-bottom-nav-handle{opacity:1;pointer-events:none;transform:none}
+}
