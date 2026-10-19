@@ -1442,7 +1442,7 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
           return true
         }
         const { runAutoPublishJob } = require('../services/autoOwnerConversation')
-        await runAutoPublishJob(matched.id)
+        await runAutoPublishJob(matched.id, { explicitClaim: true })   // an explicit !upload claim of the draft
         // runAutoPublishJob's own alertKev confirmation lands in Kev's DM
         // (same place the automatic-timer path already sends it) — this
         // extra line just confirms in the chat where the command was

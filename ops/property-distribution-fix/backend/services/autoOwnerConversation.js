@@ -864,6 +864,14 @@ async function completeConversationAfterOperatorUpload({ ownerId = null, phone =
   }
   if (!normalized) return { closed: 0, reason: 'owner_phone_unknown' }
 
+  // The upload IS the listing. Every ref-less draft row this owner's chat
+  // collection left behind (is_staging, ref NULL) is taken over by it — before,
+  // each one stayed on the board as a second card for the same flat (Kev,
+  // 2026-10-19: "cards which get created for the property have to connect into
+  // the upload"). Runs whatever state the conversation is in.
+  const draftsTaken = await takeOverOwnerDrafts({ ownerId, phone: normalized, propertyId, ref })
+    .catch(err => { log.warn('autoOwnerConversation: draft take-over failed (non-fatal)', { err: err.message }); return 0 })
+
   const open = await db.query(
     `SELECT id, pending_job_id, checklist
        FROM owner_auto_conversations
@@ -876,7 +884,7 @@ async function completeConversationAfterOperatorUpload({ ownerId = null, phone =
     await cancelPendingJob(row.pending_job_id)
     await cancelPendingJob(row.checklist?._publish_job_id, 'owner-auto-publish')
   }
-  if (!open.rows.length) return { closed: 0, reason: 'no_open_collection' }
+  if (!open.rows.length) return { closed: 0, reason: 'no_open_collection', draftsTaken }
 
   const reason = `Operator upload completed${ref ? ` #${ref}` : ''}${propertyId ? ` (property ${propertyId})` : ''}; collection and draft delivery closed`
   const ids = open.rows.map(row => row.id)
@@ -897,7 +905,30 @@ async function completeConversationAfterOperatorUpload({ ownerId = null, phone =
   log.info('autoOwnerConversation: operator upload closed owner collection', {
     phone: normalized.slice(-4), propertyId, ref, conversations: ids,
   })
-  return { closed: ids.length, conversationIds: ids }
+  return { closed: ids.length, conversationIds: ids, draftsTaken }
+}
+
+// Archive the owner's ref-less draft rows in favour of the uploaded listing.
+async function takeOverOwnerDrafts({ ownerId = null, phone = null, propertyId = null, ref = null } = {}) {
+  const last9 = String(phone || '').replace(/\D/g, '').slice(-9) || null
+  if (!ownerId && !last9) return 0
+  const r = await db.query(
+    `UPDATE properties p
+        SET available_status = 'archived',
+            status_change_reason = $4,
+            internal_notes = TRIM(BOTH ' | ' FROM COALESCE(p.internal_notes,'') || ' | ' || $4),
+            updated_at = NOW()
+      WHERE p.ref IS NULL AND p.is_staging IS TRUE
+        AND COALESCE(p.available_status,'available') NOT IN ('archived','rented')
+        AND ($3::int IS NULL OR p.id <> $3)
+        AND (p.owner_id = $1
+             OR ($2::text IS NOT NULL AND p.owner_id IN (
+                   SELECT id FROM owner_contacts
+                    WHERE right(regexp_replace(COALESCE(phone_normalized,''), '\\D', '', 'g'), 9) = $2)))
+      RETURNING p.id`,
+    [ownerId, last9, propertyId, `Draft taken over by upload${ref ? ` #${ref}` : ''}`])
+  if (r.rows.length) log.info('autoOwnerConversation: upload took over owner drafts', { ref, propertyId, drafts: r.rows.map(x => x.id) })
+  return r.rows.length
 }
 
 // ── Referral forwarding (Prompt 3, Point A) ───────────────────────────────
@@ -2990,6 +3021,16 @@ async function armAutoPublish(conversationId, phone, checklist, { targetGroupId 
     return { posted: true, armed: false }
   }
 
+  // Kev, 2026-10-19: "the drafts SHOULD NEVER auto-upload a property". A
+  // finished owner checklist is a draft and stays one — it waits (ready_for_kev)
+  // until somebody uploads it, and that upload takes the draft over (see
+  // completeConversationAfterOperatorUpload). AUTO_PUBLISH_DRAFTS=1 would bring
+  // the old timer back; it is off unless someone sets it on purpose.
+  if (process.env.AUTO_PUBLISH_DRAFTS !== '1') {
+    log.info('armAutoPublish: drafts never auto-publish — waiting for an upload', { phone: phone.slice(-4) })
+    return { posted: true, armed: false }
+  }
+
   const minutes = config.automation.autoPublishTimerMinutes
   const job = await addJob('owner-auto-publish', { conversationId }, { delay: minutes * 60_000 })
   await db.query(
@@ -3008,10 +3049,21 @@ async function armAutoPublish(conversationId, phone, checklist, { targetGroupId 
 // Everything here is re-verified from scratch rather than trusted from
 // arm-time -- minutes have passed, and a race against a late correction or
 // an emergency stop is exactly the scenario this whole buffer exists for.
-async function runAutoPublishJob(conversationId) {
+async function runAutoPublishJob(conversationId, { explicitClaim = false } = {}) {
   const r = await db.query(`SELECT * FROM owner_auto_conversations WHERE id = $1`, [conversationId])
   const convo = r.rows[0]
   if (!convo) { log.warn('runAutoPublishJob: conversation not found', { conversationId }); return }
+
+  // Drafts never auto-publish (Kev, 2026-10-19). A timer armed before this
+  // change only parks the draft for a human; an explicit !upload claim of the
+  // draft (handlers/upload.js passes explicitClaim) still publishes it.
+  if (!explicitClaim && process.env.AUTO_PUBLISH_DRAFTS !== '1') {
+    if (convo.status === 'awaiting_auto_publish') {
+      await db.query(`UPDATE owner_auto_conversations SET status = 'ready_for_kev', updated_at = NOW() WHERE id = $1 AND status = 'awaiting_auto_publish'`, [conversationId])
+    }
+    log.info('runAutoPublishJob: drafts never auto-publish — parked for an upload', { conversationId })
+    return
+  }
 
   // Stale-job guards: a late correction or a kill switch may have already
   // moved this conversation on, or armed a NEWER job with a different id
@@ -4077,6 +4129,7 @@ module.exports = {
   sendGate, // test-only: HARD STOP acceptance tests assert on gate reasons directly
   hasAlreadySentExactText, // test-only: exact-message dedup at the final gate
   completeConversationAfterOperatorUpload, // called by handlers/upload.js after a successful operator upload
+  takeOverOwnerDrafts,
   processingLockTTLMs: 2 * 60 * 1000, // test-only: mirrors the SQL literal above
   logLearningIfActive, // called from routes/webhook.js for every owner-inbound DM
   optionalFieldEligible, // test-only
