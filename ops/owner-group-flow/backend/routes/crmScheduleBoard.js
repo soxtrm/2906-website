@@ -3264,6 +3264,13 @@ router.post('/listings/:ref/fb-repost', auth, async (req, res) => {
 // a new pipeline, only a new trigger for the existing one — same shape as
 // !price's cmdPrice(). Admin only, no agent/"mine" exception (Kev: "kein
 // Agent-Zugriff").
+// Kev, 2026-10-19 (ARGUS functional UI): Save & Repost must publish once.
+// A double tap, two agents' tabs or a retry within the cooldown used to queue
+// a second full category-group repost plus a second "still on the market"
+// line. The activity row below is the durable record (survives a restart);
+// the Set closes the gap between that check and the insert.
+const AV_REPOST_COOLDOWN_MIN = 10
+const avRepostInFlight = new Set()
 router.post('/listings/:ref/av-date-confirm', auth, async (req, res) => {
   try {
     const loaded = await loadForAction(req, res)
@@ -3284,20 +3291,45 @@ router.post('/listings/:ref/av-date-confirm', auth, async (req, res) => {
       return res.status(409).json({ error: `#${p.ref} has no public_payload yet — run !upload for it first.` })
     }
 
-    // Bump created_at, same reason !price does: the board's default "newest"
-    // sort is keyed on created_at, so a deliberate date confirmation moves
-    // the card back to the top and reads as a fresh listing, exactly like a
-    // repost should.
-    await db.query(`UPDATE properties SET created_at = NOW(), updated_at = NOW() WHERE id = $1`, [p.id])
-    await db.query(
-      `INSERT INTO property_activities (property_id, agent_id, activity_type, details, is_significant)
-       VALUES ($1, $2, 'available_date_confirmed', $3::jsonb, TRUE)`,
-      [p.id, me.id, JSON.stringify({
-        source: 'board', command: 'av-date-confirm',
-        available_date: p.available_date, viewing_date: p.viewing_date,
-        by: me.username || me.email,
-      })]
-    )
+    if (avRepostInFlight.has(p.id)) {
+      return res.status(409).json({ error: `#${p.ref} is already being reposted.`, deduped: true })
+    }
+    // Claim before the first await, so a simultaneous second tap sees it.
+    avRepostInFlight.add(p.id)
+    try {
+      const recent = await db.query(
+        `SELECT created_at FROM property_activities
+          WHERE property_id = $1 AND activity_type = 'available_date_confirmed'
+            AND details->>'command' = 'av-date-confirm'
+            AND created_at > NOW() - make_interval(mins => $2)
+          ORDER BY created_at DESC LIMIT 1`,
+        [p.id, AV_REPOST_COOLDOWN_MIN]
+      )
+      if (recent.rows.length) {
+        avRepostInFlight.delete(p.id)
+        return res.status(409).json({
+          error: `#${p.ref} was already reposted ${new Date(recent.rows[0].created_at).toISOString().slice(11, 16)} UTC — saved, not reposted again (${AV_REPOST_COOLDOWN_MIN} min cooldown).`,
+          deduped: true,
+        })
+      }
+      // Bump created_at, same reason !price does: the board's default "newest"
+      // sort is keyed on created_at, so a deliberate date confirmation moves
+      // the card back to the top and reads as a fresh listing, exactly like a
+      // repost should.
+      await db.query(`UPDATE properties SET created_at = NOW(), updated_at = NOW() WHERE id = $1`, [p.id])
+      await db.query(
+        `INSERT INTO property_activities (property_id, agent_id, activity_type, details, is_significant)
+         VALUES ($1, $2, 'available_date_confirmed', $3::jsonb, TRUE)`,
+        [p.id, me.id, JSON.stringify({
+          source: 'board', command: 'av-date-confirm',
+          available_date: p.available_date, viewing_date: p.viewing_date,
+          by: me.username || me.email,
+        })]
+      )
+    } catch (e) {
+      e.avRepostId = p.id
+      throw e
+    }
 
     res.json({ ok: true, message: `#${p.ref} dates confirmed — reposting to its category group now.` })
 
@@ -3341,8 +3373,9 @@ router.post('/listings/:ref/av-date-confirm', auth, async (req, res) => {
       }
     })().catch(e => {
       log.error('av-date-confirm: async repost crashed', { ref: p.ref, err: e.message })
-    })
+    }).finally(() => avRepostInFlight.delete(p.id))
   } catch (err) {
+    if (err.avRepostId) avRepostInFlight.delete(err.avRepostId)
     log.error('board av-date-confirm failed', { err: err.message, ref: req.params.ref })
     res.status(500).json({ error: err.message })
   }
