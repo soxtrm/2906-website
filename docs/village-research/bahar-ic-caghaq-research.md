@@ -98,3 +98,17 @@ Do not draw a straight line as a walking route. Walking geometry, bus timetables
 8. Build and deploy only from the isolated worktree, verify public and CRM copies and retain a specific rollback commit.
 
 No page, image derivative, navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this research step.
+
+## Unpublished preview verification
+
+All authority and operator sources used in the draft were rechecked immediately before implementation on 19 October 2026. The Address Registrar, Naxxar Local Council, Environmental Health, Government of Malta, Primary HealthCare and Elba pages remained reachable and continued to support only the narrow statements used. No live opening, property-distance, access or present bathing-condition claim was added.
+
+The first editorial implementation is `public/link-marketplace/areas/bahar-ic-caghaq.html`, 14,021 bytes, SHA256 `850AB8FBE4A5754371CBF31E8C4DB04D6648C45FCF9FB6200A80042231740193`. It remains an unpublished `noindex,nofollow` preview with no canonical, Open Graph metadata, JSON-LD, Marketplace navigation link or sitemap entry.
+
+The page keeps three viewing contexts separate: the residential core, Coast Road and official bathing/open-space edge, and Qalet Marku. The official B01 profile, Ġnien it-Tbissim, Mosta Health Centre catchment, Elba, the square/churches and coastal-defence record are authority- or operator-backed examples rather than rankings, generic coast promises or evidence about a listing. Current water notices, sea conditions, menus, appointments, access, parking, opening, property proximity and travel times remain details to check directly.
+
+The selected 1800×1350 WebP is shown in its complete 4:3 composition with visible credit to Justlettersandnumbers, Wikimedia Commons and CC BY-SA 4.0, its 3 November 2016 capture date and the proportional resize/format conversion. The on-page description limits it to dated broad locality context. The source pixels were not cropped, retouched or generatively altered.
+
+Real Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, `noindex,nofollow`, zero canonicals, zero Open Graph fields, zero JSON-LD blocks and no horizontal overflow. The 1800×1350 hero decoded completely and retained its full attribution. The page initially created no iframe; clicking the map control created exactly one visible OpenStreetMap iframe covering `14.447,35.922,14.492,35.959`, still without overflow. There were no failed page, stylesheet, image or map requests; only the project-wide missing `/favicon.ico` returned HTTP 404. Full-page mobile and desktop screenshots were inspected without clipping, overlap or altered image framing.
+
+Release metadata, Marketplace navigation, sitemap inclusion, build, deployment and public-production verification remain separate later gates.
