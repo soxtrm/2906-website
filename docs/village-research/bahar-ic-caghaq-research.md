@@ -112,3 +112,13 @@ The selected 1800×1350 WebP is shown in its complete 4:3 composition with visib
 Real Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, `noindex,nofollow`, zero canonicals, zero Open Graph fields, zero JSON-LD blocks and no horizontal overflow. The 1800×1350 hero decoded completely and retained its full attribution. The page initially created no iframe; clicking the map control created exactly one visible OpenStreetMap iframe covering `14.447,35.922,14.492,35.959`, still without overflow. There were no failed page, stylesheet, image or map requests; only the project-wide missing `/favicon.ico` returned HTTP 404. Full-page mobile and desktop screenshots were inspected without clipping, overlap or altered image framing.
 
 Release metadata, Marketplace navigation, sitemap inclusion, build, deployment and public-production verification remain separate later gates.
+
+## Release-candidate verification
+
+The same authority and operator sources were rechecked before the release gate on 19 October 2026; their support remains limited to the claims already recorded above. The preview robots block and preview labels were removed. The page now has exactly one self-canonical, three matching Open Graph fields and one valid `BreadcrumbList`; the Marketplace index and neighbourhood sitemap each contain exactly one Baħar iċ-Ċagħaq link.
+
+`npm run build -- --webpack` completed successfully with Next.js 16.4.2 and generated 52 of 52 static pages. Repository-wide type validation remains disabled by the project configuration; the generated `next-env.d.ts` change was restored so it does not enter this release.
+
+Release Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, the exact self-canonical, three Open Graph fields, one `BreadcrumbList`, no robots block and no horizontal overflow. The 1800×1350 hero decoded completely. The page initially created no iframe; the map control created exactly one visible OpenStreetMap iframe for `14.447,35.922,14.492,35.959`. No page, stylesheet, image or map request failed; the only 404 remained the project-wide missing `/favicon.ico`. Full-page mobile and desktop screenshots were inspected without clipping, overlap or altered image framing.
+
+Release artifacts: HTML 14,946 bytes, SHA256 `069D76DECAD74E3D341EB2DC63AE677963B231E398AD8EFB5E0C461D69AB021C`; Marketplace index 8,377 bytes, SHA256 `221294E12BBEE181DD215E2D20CBCF013B6B6CEA1F980F0F8292CAA7ADD229B9`; neighbourhood sitemap 2,311 bytes, SHA256 `25F052D4DA76F61F068A117713D203F1CABF385A1C4BA5D24138300A9EED14AE`; hero unchanged at 389,408 bytes, SHA256 `CDDBCC6B71226E09E43241B185184DBE8C6ED1D9251194EC464295022D1EB5E1`. Public deployment and production verification remain the final gate.
