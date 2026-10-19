@@ -90,6 +90,14 @@ Image records:
 - https://commons.wikimedia.org/wiki/File:Bugibba_square_Malta_1.jpg
 - https://commons.wikimedia.org/wiki/File:Bugibba_harbour_evening_Malta_1.jpg
 
+## Approved web derivative
+
+`public/link-marketplace/assets/bugibba-dawret-il-gzejjer-frank-vincentz.webp` is the approved web derivative of the Frank Vincentz original. The 5616×3744 RGB JPEG was proportionally resized to 1800×1200 and converted to RGB WebP at quality 84 with no crop, retouching, blur, identifier alteration or generative edit. The derivative is 374,944 bytes and has SHA256 `F2F3DF29650A8E190BBB317F83197CD6D0BD9778155F3DF34D5C64AB6F8F4A63`.
+
+Full-frame inspection after conversion confirms that the rocky shore, sea and distant ship, palm-lined built edge, sky and visible earthworks remain in the composition. No identifiable person, readable private telephone number or email address, or prominent vehicle registration is visible. The image remains a dated 14 April 2014 coastal record and must not be presented as proof of today's beach condition, access, development, traffic, works, cleanliness, outlook or a property view.
+
+Any publication must visibly credit Frank Vincentz, Wikimedia Commons and CC BY-SA 3.0, state the 14 April 2014 capture date and disclose the proportional resize and WebP conversion. The derivative remains under CC BY-SA 3.0. It is prepared for an unpublished preview only; no public page, navigation entry or sitemap record has been created in this step.
+
 ## Map and routing guardrails
 
 Use a click-to-load OpenStreetMap orientation frame that shows Bay Square, the Bognor waterfront and the Dawret il-Gżejjer/Perched Beach edge. It must not draw an invented boundary between Buġibba and Qawra or show any generic route.
