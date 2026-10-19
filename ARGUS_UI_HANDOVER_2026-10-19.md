@@ -17,7 +17,8 @@ Commits on `claude/argus-functional-ui`, oldest first:
 3. `9bae046` Screenshots
 4. `e1f8e7d` Desktop header iteration (superseded by 6)
 5. `3f11ce1` Cards: full-height photo, rule icons beside the star; filter column collapsed; spacing
-6. `422fa2c` **Final layout per founder mockups** (phone and desktop header)
+6. `422fa2c` Layout per founder mockups (phone and desktop header)
+7. `9afd875` **Final:** centred canvas, founder-style filter column, outdated tests rewritten
 
 ## 2. Final layout (what the founder signed off on)
 
@@ -32,11 +33,14 @@ Commits on `claude/argus-functional-ui`, oldest first:
 - Unchanged: the bottom nav island and the Active / +3 Months / area chip strip.
 
 ### Desktop (≥761px)
-- **Header, left to right:** 2906 mark · ARGUS island + (⌂)(map)(🔧), left-aligned with the results column · labelled nav (Dashboard, Inventory, Board, Bookings, Outreach, Profile) + "…" More · Nexus + theme.
+- **Centred canvas, not edge to edge:** filter column 180px + 28px gap + results up to 1220px (three card columns), centred in the viewport. Two columns at ≤1180px, one at ≤900px. Screenshots: `desktop-1920.png`, `desktop-1440-price-open.png`, `desktop-1100.png`.
+- **Header, left to right:** 2906 mark (far left) · ARGUS island + (⌂)(map)(🔧), starting exactly over the first card column · labelled nav (Dashboard, Inventory, Board, Bookings, Outreach, Profile) + "…" More, ending over the results' right edge · Nexus + theme (far right).
   - Labels show from 1360px. Below that the nav is icons only, except the current page.
   - Below 1100px, only the current page and More remain; More then also lists the primary items.
   - While ARGUS search is open, the nav labels collapse (`:has()` rule).
-- **Left column:** filter accordion (Location, Price range, Booking, Bedrooms, Bathrooms, Property types, Pets/specials, Season). **All sections start collapsed.**
+- **Left column (founder style):** right-aligned uppercase labels with the icon on the right: LOCATION, PRICE RANGE, BOOKING, BEDROOMS, BATHROOMS, PROPERTY TYPES, PETS / SPECIALS, SEASON.
+  - **All sections start collapsed.** Clicking a label opens that section as a small card underneath, with the same controls as the phone panel.
+  - An active filter turns its label and icon to the accent colour.
 - **Cards:**
   - The photo spans from the card top to the action tray.
   - Rule icons sit beside the star: ❄ winter (rental mode or "Bis" date), ☀ short let, 🐾 pets, 👥 sharing. An explicit "no" is crossed out; unknown is hidden; subletting stays filter-only.
@@ -70,7 +74,7 @@ Both have an in-flight `useRef` lock against double taps.
 - `lib/crm/ui.tsx`: `CrmShell` `sidebar` prop, `.crm-agency-brand` (`/logo-wide.png`), header nav, `HEADER_PRIMARY`, More menu
 - `components/crm/board-dialogs.tsx`: AvDateDialog Save / Save & Repost
 - `app/crm/property/[id]/page.tsx`: Save / Save & Repost
-- `app/crm/crm.css`: three appended blocks at the end of the file ("ARGUS functional UI", "pass 2", "pass 3"). Later blocks override earlier ones, so a cleanup pass can fold them together.
+- `app/crm/crm.css`: four appended blocks at the end of the file ("ARGUS functional UI", "pass 2", "pass 3", "pass 4"). Later blocks override earlier ones, so a cleanup pass can fold them together.
 - Tests: `tests/crm-argus-functional-ui.test.cjs` (new); `tests/helpers/crm-mock.cjs` (`fixtures.routes` override hook); `tests/crm-mocked-ui.test.cjs` (two assertions moved to the new header/island)
 
 ## 5. How to verify
@@ -80,6 +84,7 @@ npx tsc --noEmit -p .
 npx next dev -p 3109 --webpack
 CRM_MOCK_BASE=http://localhost:3109 ARGUS_SHOTS=docs/argus-ui-2026-10-19 node --test tests/crm-argus-functional-ui.test.cjs   # 10/10
 CRM_MOCK_BASE=http://localhost:3109 node --test tests/crm-mocked-ui.test.cjs tests/crm-board-search.test.cjs                  # 14/14
+CRM_MOCK_BASE=http://localhost:3109 node tests/board-clean-desktop.test.cjs                                                      # passes
 node --test ops/owner-group-flow/backend/test/avDateConfirm.dedupe.test.js   # in the outreach-yes-fix worktree: 3/3
 ```
 
@@ -87,14 +92,12 @@ The browser tests use a mocked backend (puppeteer). No WhatsApp message, no live
 
 ## 6. Known gaps / for Codex
 
-- **Superseded tests:**
-  - `tests/board-clean-desktop.test.cjs` asserts the old Workspaces island / top rail / centred map link.
-  - `tests/rental-modes.test.js` (live backend) expects the WINTER tag beside the locality, which now lives beside the star.
-  - Both need updating or retiring.
+- **Rewritten for the new layout:**
+  - `tests/board-clean-desktop.test.cjs` checks header order, ARGUS over the results, labelled nav, the collapsed filter column, the centred canvas, and the phone buttons plus 8 filter icons. It passes. Its base URL is now `CRM_MOCK_BASE` (default :4174).
+  - `tests/rental-modes.test.js` now looks for the ❄/☀ icons beside the star, finding cards by `data-ref`. It needs the live backend and a CRM_TOKEN, so it was **not run** here.
 - `tests/board-area-multiselect-mobile.test.cjs` and `tests/chat-composer-mobile.test.cjs` are hard-wired to `localhost:4174`, so they were not run.
 - **Not checked live:** no real CRM session, no Vercel build, no real-device test. Desktop 761–1100px was checked only through CSS logic, without screenshots.
-- **Left filter column style:** the founder mockup shows right-aligned uppercase labels with the icon on the right. The current version is a left-aligned accordion. The founder said "only look at the header" for this round; open item.
-- `crm.css` has three stacked override blocks, so it's worth consolidating.
+- `crm.css` has four stacked override blocks, so it's worth consolidating.
 - The Market switch is UI-only state (`useState` in the board page), with no URL param and no backend. When the BEN boards exist, wire `market` into the listings query.
 - The 10-minute cooldown is a judgement call; the founder can tune `AV_REPOST_COOLDOWN_MIN`.
 - Unrelated in-flight work: `claude/nexus-map-perf` has **uncommitted** renderer fixes (flicker, pearl colours, trees). The founder still wants a less chalk-white day ground. Do not lose that worktree.
