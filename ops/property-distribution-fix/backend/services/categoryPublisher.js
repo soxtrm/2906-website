@@ -247,38 +247,27 @@ function buildAgentMessage(row, restrictions) {
   // link/coordinate the owner pasted, pulled OUT of the public ad text.
   // Package 2 is the one place it is allowed to surface, same as address.
   const mapsLinks = Array.isArray(row.public_payload?.maps_links) ? row.public_payload.maps_links : []
+  const label = availableLabel(row.available_date)
   let message = formatAgentPackage({
     ref_id: row.ref, restrictions, address, mapsLinks,
-    viewingsLabel: viewingsLabelFor(row), availableLabel: availableLabel(row.available_date),
+    viewingsLabel: viewingsLabelFor(row), availableLabel: label,
   })
+  // Kev, 2026-10-19: the AGENT card (Package 2, never the client description)
+  // carries the availability marker on top and the booking + info links, so
+  // agents can jump straight to the listing. Package 1 stays untouched.
+  const marker = label === 'Now' ? '🟢 AVAILABLE NOW' : `🗓️ AVAILABLE ${String(label).toUpperCase()}`
+  const links = propertyActionLinks(row.ref)
+  if (links) {
+    const linkLines = `📅 Book a viewing: ${links.book}\nℹ️ Info & photos: ${links.detail}`
+    const refLine = `\n\n#${row.ref}`
+    message = message.includes(refLine)
+      ? message.replace(refLine, `\n${linkLines}${refLine}`)
+      : `${message}\n${linkLines}`
+  }
+  message = `${marker}\n\n${message}`
   const tag = agentTag(row)
   if (tag) message += `\n${tag}`
   return message
-}
-
-// ONE property card per group (Kev, 2026-10-19): the separate "📍 street /
-// Available: … / #REF" message after every post read as spam. The card is now
-// the description with an availability marker on top ("🟢 AVAILABLE NOW" /
-// "🗓️ AVAILABLE EARLY DECEMBER") and, underneath, restrictions, Viewings /
-// Available, the booking link and the info link. The street stays OUT of it —
-// agents forward this card to clients; the address is one tap away behind the
-// info link (agent login), as are the maps links.
-function buildGroupCard(row, restrictions) {
-  const body = buildMessage(row)                       // leak-checked public package
-  const label = availableLabel(row.available_date)
-  const marker = label === 'Now' ? '🟢 AVAILABLE NOW' : `🗓️ AVAILABLE ${String(label).toUpperCase()}`
-  const links = propertyActionLinks(row.ref)
-  const lines = []
-  if (restrictions && restrictions.length) lines.push(...restrictions, '')
-  const bits = []
-  const viewings = viewingsLabelFor(row)
-  if (viewings) bits.push(`Viewings: ${viewings}`)
-  bits.push(`Available: ${label}`)
-  lines.push(bits.join(' / '))
-  if (links) lines.push(`📅 Book a viewing: ${links.book}`, `ℹ️ Info & photos: ${links.detail}`)
-  const footer = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
-  assertNoOwnerDataLeak(footer, { street: row.street, apt: row.apt })
-  return `${marker}\n\n${body}\n\n${footer}`
 }
 
 function payloadImages(payload, property = null) {
@@ -451,12 +440,13 @@ async function publishToCategoryGroups(propertyId, opts = {}) {
     throw new Error(`#${row.ref} needs manual categorisation — bedrooms are ${cls.bedroom_status.toLowerCase()} and no seafront/villa/luxury signal applies. Set category_override or confirm bedrooms before publishing.`)
   }
 
-  // Restrictions come off the SAME raw ad text buildMessage() already stripped
-  // them from — one extraction, read twice, not a second source of truth.
+  const message = buildMessage(row)          // throws before anything is sent
+  // Two-package property-group output (Kev, 2026-09-08): restrictions come
+  // off the SAME raw ad text buildMessage() already stripped them from —
+  // one extraction, read twice, not a second source of truth.
   const rawDesc = String(payload?.description_social || payload?.description_public || '')
   const { restrictions } = splitRestrictions(rawDesc)
-  const message = buildGroupCard(row, restrictions)   // throws before anything is sent
-  const agentMessage = null                           // folded into the card (2026-10-19)
+  const agentMessage = buildAgentMessage(row, restrictions)
   const images  = payloadImages(payload, row)
   const videos  = propertyVideos(row)
   const groups  = await activeGroupsForKeys(keys)
@@ -516,9 +506,17 @@ async function publishToCategoryGroups(propertyId, opts = {}) {
       // independently repostable via !av. A failure here is logged and
       // tracked separately; it must never undo Package 1's already-
       // successful, already-recorded post.
-      // (Package 2 is folded into the card above since 2026-10-19 — no second
-      // message. Nothing reads 'category_groups_agent' for new posts; the
-      // rented detector still finds the listing by the card's own id.)
+      let agentMsgId = null
+      try {
+        const sentAgent = await waha.sendText(session, g.group_id, agentMessage, { timeoutMs: TEXT_TIMEOUT_MS })
+        agentMsgId = sentAgent?.key?.id || sentAgent?.id || sentAgent?._data?.id?.id || null
+        await markPosted(propertyId, g.group_id, agentMsgId, session, 'category_groups_agent')
+        log.info('categoryPublisher: agent package posted', { ref: row.ref, key: g.key, group: g.group_id, msgId: agentMsgId })
+      } catch (agentErr) {
+        log.warn('categoryPublisher: agent package send failed', { ref: row.ref, key: g.key, err: agentErr.message })
+        try { await markFailed(propertyId, g.group_id, agentErr.message, 'category_groups_agent') }
+        catch (dbErr) { log.error('categoryPublisher: markFailed (agent) failed', { err: dbErr.message }) }
+      }
 
       // then images (best-effort — a failed image must not fail the post)
       let sentImages = 0
@@ -611,12 +609,17 @@ async function previewCategoryPost(propertyId) {
   let message = null
   let leakCheck = 'passed'
   try {
-    const rawDesc = String(payload?.description_social || payload?.description_public || '')
-    message = buildGroupCard(row, splitRestrictions(rawDesc).restrictions)
+    message = buildMessage(row)
   } catch (e) {
     leakCheck = `FAILED — ${e.message}`
   }
-  const agentMessage = null   // folded into the card (2026-10-19)
+  let agentMessage = null
+  try {
+    const rawDesc = String(payload?.description_social || payload?.description_public || '')
+    agentMessage = buildAgentMessage(row, splitRestrictions(rawDesc).restrictions)
+  } catch (e) {
+    agentMessage = `FAILED — ${e.message}`
+  }
 
   const images = payloadImages(payload, row)
   const videos = propertyVideos(row)
@@ -746,7 +749,6 @@ async function handleCategorizeCommand(payload, session, senderPhone) {
 
 module.exports = {
   publishToCategoryGroups, previewCategoryPost,
-  buildGroupCard,   // 2026-10-19: the one-message property card (tests)
   payloadImages,
   // MATCH + AV HOTFIX (2026-09-16): exported for direct testing of the
   // canonical viewing-label logic independently of a live publish/preview.
