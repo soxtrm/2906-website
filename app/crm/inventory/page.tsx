@@ -185,10 +185,10 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
             <input type="checkbox" checked={checked} onChange={onToggleSelect} style={{ accentColor: A, width: 15, height: 15, cursor: 'pointer' }} />
           </td>
         )}
-        <td style={tdS}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <td className="inventory-gallery-cell" style={tdS}>
+          <div className="inventory-gallery-lead">
             <InventoryImageStrip images={p.images} count={p.imageCount} exclusive={p.exclusive} />
-            <div>
+            <div className="inventory-gallery-copy">
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: p.published ? A : DTEXT_FAINT, fontFamily: FM, cursor: 'pointer' }} onClick={() => onOpen(p.id)}>{p.ref}</span>
                 {p.published
@@ -202,13 +202,13 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
             </div>
           </div>
         </td>
-        <td style={{ ...tdS, color: DTEXT_FAINT, fontSize: 11, whiteSpace: 'nowrap' }}>{p.type}</td>
-        <td style={{ ...tdS, minWidth: 160 }}>
+        <td className="inventory-type-cell" style={{ ...tdS, color: DTEXT_FAINT, fontSize: 11, whiteSpace: 'nowrap' }}>{p.type}</td>
+        <td className="inventory-owner-cell" style={{ ...tdS, minWidth: 160 }}>
           <div style={{ fontWeight: 700, fontSize: 13, color: DTEXT, cursor: 'pointer', borderBottom: `1px dashed ${AB}`, display: 'inline-block', marginBottom: 5 }} onClick={() => onOwner(p.owner.id)}>{p.owner.name || '—'}</div>
           <Masked entityType="owner_phone" entityId={p.owner.id} masked={p.owner.phoneMasked} hasValue={p.owner.hasPhone} propertyId={p.id} />
           <Masked entityType="owner_email" entityId={p.owner.id} masked={p.owner.emailMasked} hasValue={p.owner.hasEmail} propertyId={p.id} />
         </td>
-        <td style={{ ...tdS, fontSize: 12 }}>
+        <td className="inventory-location-cell" style={{ ...tdS, fontSize: 12 }}>
           <div style={{ fontWeight: 700, color: DTEXT, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span>{p.location.town}</span>
             <RentalModeBadges modes={p.rentalModes} availableUntil={p.availableUntil} />
@@ -273,13 +273,14 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
 function InventoryImageStrip({ images = [], count, exclusive }: { images?: any[]; count?: number; exclusive?: boolean }) {
   const total = count ?? images.length
   return (
-    <div className="inventory-image-strip" aria-label={`${total} property photos`}>
+    <div className="inventory-image-strip" data-exclusive={exclusive || undefined} aria-label={`${total} property photos`}>
       {[0, 1, 2].map(i => {
         const image = images[i]
         const url = image && (image.thumbnail || image.url || image)
         return (
-          <div key={i} className="inventory-image-slot" style={url ? { backgroundImage: `url(${url})` } : undefined}>
-            {!url && i < total && <span>Photo</span>}
+          <div key={i} className="inventory-image-slot">
+            {url && <img src={url} alt="" loading="lazy" decoding="async" />}
+            {!url && i < total && <span aria-hidden="true">⌂</span>}
             {i >= total && <span>·</span>}
           </div>
         )
