@@ -63,3 +63,19 @@ Tests: `node --test ops/owner-group-flow/backend/test/avDateConfirm.dedupe.test.
 Deployed: no (frontend not merged to main; backend route not deployed — needs operator OK).
 Not verified / risks: no live CRM session used (mocked backend only); real Vercel build not run; desktop 761-1000px only checked by CSS, not screenshot; Smart combinations moved into Tools; !available threaded-reply change NOT prepared.
 Next: operator review of screenshots in docs/argus-ui-2026-10-19 → merge `claude/argus-functional-ui`; then deploy crmScheduleBoard.js with deploy-file.sh (md5 guard b427eaab…).
+
+### 2026-10-19 Bug batch (Claude): Rented?, drafts, seafront, gate, Olga, group card
+Changed (branch `claude/possibly-rented`, mirror ops/property-distribution-fix/backend): services/availability.js (9028d6f, ce72308), services/categoryClassifier.js (9028d6f), services/ownerSendGate.js (ce72308), handlers/upload.js + handlers/uploadListing.js (09c8623, c1109a6), services/autoOwnerConversation.js (c1109a6), services/categoryPublisher.js (deaa54f). Frontend (main 36dc73c): Rented? chip, bottom island line on sheets.
+Why / evidence:
+- 71 listings set "rented" by the classifier alone in 30 days → owner "rented" now = pending_check "Possibly rented — owner said: …", shown under the board chip "Rented?"; nothing public changes until an agent confirms.
+- #2906-9489 posted to Sea Front on "Easy Access to Sliema Seafront" → only "direct seafront" counts.
+- Owner's Facebook ad link read as "could not read it" twice → listing link = still available.
+- Board Still available?/Ask refused 40 h ("a person is handling this owner") after anybody typed → explicit agent actions pass bot stand-downs (DNC, contact pause, complaint still block).
+- #2906-9502 (Olga "3500€ asking price") stored as SALE → price < €20k is rent (row fixed + website resynced); Olga (agent 2) now broadcasts to category groups (env CATEGORY_BROADCAST_AGENT_IDS, default 1,2); bogus "1 duplicate skipped (#same ref)" removed.
+- Owner drafts auto-published + left ref-less staging rows as 2nd cards → no auto-publish (AUTO_PUBLISH_DRAFTS=1 to re-enable), every upload archives the owner's staging drafts; one-off cleanup archived 51 draft rows matched by owner + same town/price.
+- Category groups got a 2nd "📍 street / Available / #REF" message → one card: availability marker, description, Viewings/Available, booking + info links; street stays out.
+- #2906-9416 was NOT auto-rented: archived "Deleted from CRM" by agent 1 at 2026-10-10 23:20 (together with 9169 in the same second).
+Tests (real modules, I/O stubbed, each fails on the old file): possiblyRented 2/2, av-listing-link 8/8, seafrontHint 19/19, av-classify (prod) ok, ownerSendGate.agentAction 5/5, upload.rentNotSale 2/2, drafts.noAutoPublish 3/3, categoryCard.oneMessage 4/4. Live: container check seafront/link verdicts; dry-run preview of #2906-9489 card (bed2, leak check passed).
+Deployed: yes, deploy-multi.sh with md5 guard; backups /opt/2906-system/backups/property-distribution-20261019T200318Z, …T201418Z, …T201939Z, …T202431Z, …T202955Z. Repo md5 = prod md5 (CR-stripped).
+Not verified / risks: no live owner "rented" reply or real upload observed after deploy; #2906-9489 already sits in Sea Front group (old post, not removed); "Available now" re-marking of an already-posted card when its date arrives is NOT built; 45 open drafts without an upload remain; av-date-confirm dedupe (branch claude/av-repost-dedupe) still not deployed.
+Next: watch the first Rented? cases on the board and the next Olga upload in her group.
