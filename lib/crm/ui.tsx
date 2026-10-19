@@ -1,7 +1,7 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -488,6 +488,10 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
 }
 const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database }
 
+// Board desktop header (founder mockup 2026-10-19): these carry labels in the
+// header; every other workspace sits behind "More".
+const HEADER_PRIMARY: NavKey[] = ['dashboard', 'inventory', 'board', 'bookings', 'outreach', 'profile']
+
 export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, children, dark: darkDefault, mobileImmersive, sidebar }:
   { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; mobileActions?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileImmersive?: boolean
     /** Desktop: replaces the left navigation column (the board puts its
@@ -571,7 +575,15 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
     </aside>
     <div className="crm-main">
       <header className="crm-header">{sidebar && <Link className="crm-agency-brand" href={crmPath('/', pathname)} aria-label="2906 dashboard"><img src="/logo-wide.png" alt="2906" /></Link>}<div className="crm-header-copy">{mobileImmersive && <span className="crm-header-kicker">ARGUS · LIVE INVENTORY</span>}<h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
-        {sidebar && <nav className="crm-header-nav" aria-label="Main navigation">{items.map(navItem)}</nav>}
+        {sidebar && <nav className="crm-header-nav" aria-label="Main navigation">
+          {items.filter(i => HEADER_PRIMARY.includes(i.key)).map(navItem)}
+          {items.length > 0 && <details className="crm-header-more">
+            <summary aria-label="More navigation" title="More"><MoreHorizontal size={17} aria-hidden /></summary>
+            {/* Primary entries repeat here and only show when the header is too
+                narrow for them (CSS), so nothing becomes unreachable. */}
+            <div>{items.map(i => <span key={i.key} data-primary={HEADER_PRIMARY.includes(i.key) || undefined}>{navItem(i)}</span>)}</div>
+          </details>}
+        </nav>}
         <div className="crm-header-actions">
           <a className="crm-icon-button crm-nexus" href="https://2906.estate/Link" target="_blank" rel="noreferrer" aria-label="Open Nexus Link" title="Open Nexus Link"><svg width="20" height="20" viewBox="0 0 100 100" aria-hidden><path d="M3 3C26 22 38 33 50 33S74 22 97 3C78 26 67 38 67 50S78 74 97 97C74 78 62 67 50 67S26 78 3 97C22 74 33 62 33 50S22 26 3 3Z" fill="currentColor" /></svg></a>
           <button className="crm-icon-button" onClick={() => toggleTheme(dark)} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title={dark ? 'Light mode' : 'Dark mode'}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>

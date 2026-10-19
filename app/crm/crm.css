@@ -839,3 +839,64 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-filterbar{padding:10px 12px 8px}
 }
 @media (max-width:380px){.crm-board-orb{width:34px}.crm-board-islands .crm-argus-orbit{flex-basis:72px}}
+
+/* 2026-10-19 pass 3 (founder mockups "before → NOW" + desktop header):
+   phone = bigger ARGUS island, round Home/Map/Menu, full filter icon set;
+   desktop header = 2906 · ARGUS group over the results · labelled nav · theme. */
+.crm-orb-icon-desktop{display:none}
+@media (max-width:760px){
+  .crm-board-islands{gap:6px;height:60px;max-height:60px}
+  .crm-board-islands .crm-argus-orbit{flex:0 0 96px;height:56px;padding:6px!important;border-radius:22px!important}
+  .crm-board-islands .crm-argus-orbit::before{border-radius:23px}
+  .crm-board-islands .crm-argus-orbit>button{height:44px}
+  .crm-board-islands .crm-argus-orbit.is-searching{flex:1 1 auto}
+  .crm-board-islands .crm-argus-logo-window{width:80px;height:22px}
+  .crm-board-islands .crm-argus-logo-window img{left:-18px;top:-22px;width:116px!important}
+  .crm-board-orbs{gap:6px}
+  .crm-board-orb{width:42px;height:42px;min-height:42px!important;border-radius:50%!important}
+  .crm-board-islands .crm-filter-island{flex:1 1 auto;min-width:0;height:42px;padding:0 6px!important;border-radius:21px!important}
+  .crm-board-islands .crm-filter-icons{gap:0;justify-content:space-between}
+  .crm-board-islands .crm-filter-icons>.crm-island-feature{flex:1 1 0;width:auto;min-width:0;max-width:26px;height:36px;min-height:36px!important;border-radius:10px!important}
+  .crm-board-islands .crm-filter-icons>.crm-island-feature>svg{width:14px;height:14px}
+}
+@media (max-width:380px){
+  .crm-board-islands .crm-argus-orbit{flex-basis:88px}
+  .crm-board-orb{width:38px;height:38px;min-height:38px!important}
+}
+@media (min-width:761px){
+  .crm-orb-icon-phone{display:none}
+  .crm-orb-icon-desktop{display:block}
+  .crm-has-sidebar-slot .crm-filterbar{top:3px;right:auto;left:calc(max(14px,(100vw - 1840px)/2) + 302px)}
+  .crm-has-sidebar-slot .crm-board-islands{justify-content:flex-start}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{flex:0 0 150px;height:44px}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit.is-searching{flex:0 0 min(420px,max(220px,calc(100vw - 1040px)))}
+  .crm-has-sidebar-slot .crm-argus-logo-window{width:92px;height:23px}
+  .crm-has-sidebar-slot .crm-argus-logo-window img{left:-33px;top:-34px;width:155px!important}
+  .crm-has-sidebar-slot .crm-board-orb{width:42px;height:42px;min-height:42px!important;border-radius:50%!important}
+  .crm-header-nav{margin-left:auto;margin-right:18px;overflow:visible}
+  .crm-has-sidebar-slot .crm-header-actions{margin-left:0}
+  .crm-header-more{position:relative}
+  .crm-header-more>summary{display:grid;width:36px;height:36px;place-items:center;border-radius:10px;color:var(--crm-muted);cursor:pointer;list-style:none}
+  .crm-header-more>summary::-webkit-details-marker{display:none}
+  .crm-header-more>summary:hover,.crm-header-more[open]>summary{background:var(--crm-raised);color:var(--crm-text)}
+  .crm-header-more>div{position:absolute;right:0;top:42px;z-index:60;display:grid;min-width:210px;padding:6px;border:1px solid var(--crm-border);border-radius:14px;background:var(--crm-surface);box-shadow:0 18px 44px rgba(4,10,24,.16)}
+  .crm-header-more>div>span[data-primary]{display:none}
+  .crm-header-nav .crm-header-more .crm-nav-item{width:100%;justify-content:flex-start;gap:9px;font-size:12px}
+  .crm-header-nav .crm-header-more .crm-nav-item[aria-disabled=true]{display:flex;opacity:.5}
+}
+@media (min-width:1360px){
+  .crm-header-nav>.crm-nav-item{gap:7px;font-size:11.5px;padding:6px 11px}
+  .crm-workspace:has(.crm-board-islands[data-panel=search]) .crm-header-nav>.crm-nav-item:not([aria-current]){gap:0;font-size:0;padding:6px 8px}
+  .crm-header-nav>.crm-nav-item svg{width:15px;height:15px}
+}
+@media (min-width:761px) and (max-width:1320px){
+  .crm-has-sidebar-slot .crm-filterbar{left:264px}
+}
+@media (min-width:761px) and (max-width:1100px){
+  .crm-header-nav>.crm-nav-item:not([aria-current]){display:none}
+  .crm-header-more>div>span[data-primary]{display:block}
+}
+@media (min-width:761px) and (max-width:1000px){
+  .crm-has-sidebar-slot .crm-filterbar{left:238px}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{flex-basis:120px}
+}
