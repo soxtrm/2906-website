@@ -96,7 +96,7 @@ Image records:
 
 Full-frame inspection after conversion confirms that the rocky shore, sea and distant ship, palm-lined built edge, sky and visible earthworks remain in the composition. No identifiable person, readable private telephone number or email address, or prominent vehicle registration is visible. The image remains a dated 14 April 2014 coastal record and must not be presented as proof of today's beach condition, access, development, traffic, works, cleanliness, outlook or a property view.
 
-Any publication must visibly credit Frank Vincentz, Wikimedia Commons and CC BY-SA 3.0, state the 14 April 2014 capture date and disclose the proportional resize and WebP conversion. The derivative remains under CC BY-SA 3.0. It is prepared for an unpublished preview only; no public page, navigation entry or sitemap record has been created in this step.
+Any publication must visibly credit Frank Vincentz, Wikimedia Commons and CC BY-SA 3.0, state the 14 April 2014 capture date and disclose the proportional resize and WebP conversion. The derivative remains under CC BY-SA 3.0 and is used in the validated release candidate.
 
 ## Map and routing guardrails
 
@@ -104,13 +104,13 @@ Use a click-to-load OpenStreetMap orientation frame that shows Bay Square, the B
 
 No straight line may be presented as walking geometry. Walking, bus, current road traffic and taxi-price observations require separate sources, exact endpoints, mode and timestamp. No ferry is assumed for an ordinary Buġibba property journey, and no route may cut across the bay or sea. A ferry may appear only where a routing response includes ferry geometry and a current operator schedule is separately verified.
 
-## Unpublished preview status
+## Release-candidate status
 
-`public/link-marketplace/areas/bugibba.html` is an unpublished English `noindex,nofollow` preview. It has no canonical, Open Graph metadata, structured data, Marketplace link or sitemap entry. The page separates Bay Square, Bognor waterfront and the Dawret il-Gżejjer/Perched Beach edge; keeps Qawra and the older St Paul's Bay core distinct; and presents the health catchment, WaterPark, temple and restaurant as narrow examples rather than rankings or proximity claims.
+`public/link-marketplace/areas/bugibba.html` is a validated English release candidate. The earlier `noindex,nofollow` preview gate passed before the robots block was removed. The candidate now has exactly one self-canonical, three matching Open Graph fields, one valid `BreadcrumbList`, one Marketplace link and one sitemap entry. The page separates Bay Square, Bognor waterfront and the Dawret il-Gżejjer/Perched Beach edge; keeps Qawra and the older St Paul's Bay core distinct; and presents the health catchment, WaterPark, temple and restaurant as narrow examples rather than rankings or proximity claims.
 
-The page uses the complete 1800×1200 derivative with its caption outside the image so the full 3:2 composition remains visible. Its click-to-load OpenStreetMap frame uses `14.399,35.939,14.427,35.962`, draws no boundary or route, and starts with no iframe. Chromium validation at 390×844 and 1440×1000 found one H1, zero horizontal overflow, a fully decoded 1800×1200 image, no failed page, stylesheet, image or map request, and exactly one visible OSM iframe after interaction. The only HTTP error was the project-wide missing `/favicon.ico` during the first mobile run.
+The page uses the complete 1800×1200 derivative with its caption outside the image so the full 3:2 composition remains visible. Its click-to-load OpenStreetMap frame uses `14.399,35.939,14.427,35.962`, draws no boundary or route, and starts with no iframe. Release validation in Chromium at 390×844 and 1440×1000 found one H1, no robots block, zero horizontal overflow, a fully decoded 1800×1200 image, no failed page, stylesheet, image or map request, and exactly one visible OSM iframe after interaction. The project-wide missing `/favicon.ico` remains excluded from the page-specific error gate.
 
-Preview record: 14,020 bytes, SHA256 `8D142F176D019687DC648F10EB7BC62C73D216039E2B3FFCBCFAF50B77AA1675`. The preview remains unpublished pending the separate release-metadata, navigation, sitemap, build and production-verification gates.
+Release records: page 14,855 bytes/SHA256 `5757EB7E7FFDB2FBD1CE24D1D8ED39CB4FE5DEE84B6A830433BD9849815E0870`; Marketplace index 8,452 bytes/SHA256 `80D8FB1B8D171A806D5C165E1805C820B6D046C9A3EB8B3948A9C4A9528C8091`; sitemap 2,392 bytes/SHA256 `4A5C24AE526F408BE22981EA66737AFDE0D1D697B9CF882D982538869BD05DD0`. A full Next.js production build generated 52/52 static pages successfully. Production push and live verification remain separate gates.
 
 ## Release gates
 
@@ -123,4 +123,4 @@ Preview record: 14,020 bytes, SHA256 `8D142F176D019687DC648F10EB7BC62C73D216039E
 7. Add release metadata, one Marketplace link and one sitemap entry only after preview and source gates pass.
 8. Build and deploy from the isolated worktree, verify public and CRM copies and retain a specific rollback commit.
 
-No public image, page, navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this research step.
+No backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this release candidate.
