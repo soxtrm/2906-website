@@ -79,3 +79,9 @@ Tests (real modules, I/O stubbed, each fails on the old file): possiblyRented 2/
 Deployed: yes, deploy-multi.sh with md5 guard; backups /opt/2906-system/backups/property-distribution-20261019T200318Z, …T201418Z, …T201939Z, …T202431Z, …T202955Z. Repo md5 = prod md5 (CR-stripped).
 Not verified / risks: no live owner "rented" reply or real upload observed after deploy; #2906-9489 already sits in Sea Front group (old post, not removed); "Available now" re-marking of an already-posted card when its date arrives is NOT built; 45 open drafts without an upload remain; av-date-confirm dedupe (branch claude/av-repost-dedupe) still not deployed.
 Next: watch the first Rented? cases on the board and the next Olga upload in her group.
+
+### 2026-10-20 Outreach shortfall 19.10. (Claude)
+Evidence: 19.10. Cedric 10/37 sent (27 skipped "not_on_whatsapp"), kevthirdd 2/32 (30), Argus5 0/15 (14), default 8/33 (25× WAHA 422 "Session status is not as expected"). The "no LID found" numbers were cross-checked with check-exists on Kevsecond (test number → exists): 24/24 really not on WhatsApp. Cause: the 19.10. lists (#282, #266, built 17./18.10.) predate the list-builder WhatsApp pre-check (first ran 2026-10-18 14:19). Lists for 20./21. were rebuilt 19.10. 00:12 → all numbers VALID; Argus5 22.10. (#293) still old → 11/14 not on WhatsApp → rebuilt.
+Changed (data only, via outreachPlanner functions; script ops/outreach-approval-fix/backend/scripts/catchup-2026-10-19.js): Cedric + kevthirdd topped up to 40 on 20./21. and new 40-lists on 22./23.; Kevsecond new 35-lists 21./22.; all armed. 20.10. re-armed after the 24h15 cooldown (kevthirdd 08:50, Cedric 09:12 Malta).
+default: WAHA session was FAILED; restart → SCAN_QR_CODE (logged out). Needs a QR scan by Kev; plans #303 (20.) / #304 (21.) stay saved (34/37 verified) until then.
+Not verified: the 20.10. sends themselves.
