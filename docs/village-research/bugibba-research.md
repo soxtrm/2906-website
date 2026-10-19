@@ -104,6 +104,14 @@ Use a click-to-load OpenStreetMap orientation frame that shows Bay Square, the B
 
 No straight line may be presented as walking geometry. Walking, bus, current road traffic and taxi-price observations require separate sources, exact endpoints, mode and timestamp. No ferry is assumed for an ordinary Buġibba property journey, and no route may cut across the bay or sea. A ferry may appear only where a routing response includes ferry geometry and a current operator schedule is separately verified.
 
+## Unpublished preview status
+
+`public/link-marketplace/areas/bugibba.html` is an unpublished English `noindex,nofollow` preview. It has no canonical, Open Graph metadata, structured data, Marketplace link or sitemap entry. The page separates Bay Square, Bognor waterfront and the Dawret il-Gżejjer/Perched Beach edge; keeps Qawra and the older St Paul's Bay core distinct; and presents the health catchment, WaterPark, temple and restaurant as narrow examples rather than rankings or proximity claims.
+
+The page uses the complete 1800×1200 derivative with its caption outside the image so the full 3:2 composition remains visible. Its click-to-load OpenStreetMap frame uses `14.399,35.939,14.427,35.962`, draws no boundary or route, and starts with no iframe. Chromium validation at 390×844 and 1440×1000 found one H1, zero horizontal overflow, a fully decoded 1800×1200 image, no failed page, stylesheet, image or map request, and exactly one visible OSM iframe after interaction. The only HTTP error was the project-wide missing `/favicon.ico` during the first mobile run.
+
+Preview record: 14,020 bytes, SHA256 `8D142F176D019687DC648F10EB7BC62C73D216039E2B3FFCBCFAF50B77AA1675`. The preview remains unpublished pending the separate release-metadata, navigation, sitemap, build and production-verification gates.
+
 ## Release gates
 
 1. Recheck every authority and operator source immediately before drafting.
