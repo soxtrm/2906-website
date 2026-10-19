@@ -51,6 +51,14 @@ const ALIASES: Record<string, string> = {
   'st paul s bay': 'st pauls bay',
   'st pauls bay qawra': 'st pauls bay',
   'saint pauls bay': 'st pauls bay',
+  // Spellings seen in the live table that the backend left unresolved
+  // (2026-10-19 town audit). Targets exist once any listing resolves them.
+  'haz zebbug': 'zebbug',
+  'hal ghaxaq': 'ghaxaq',
+  'victoria rabat ghawdex': 'victoria',
+  'xemxija st pauls bay': 'xemxija',
+  'san giljan': 'st julians',
+  'st giljan': 'st julians',
 }
 
 // Canonical key → display label + town-centre coordinates.

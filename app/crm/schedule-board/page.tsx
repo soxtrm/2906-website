@@ -81,17 +81,25 @@ const SOUTH_EAST_VILLAGES = new Set([
   'isla-senglea', 'kalkara', 'marsa', 'marsaskala', 'marsaxlokk', 'paola',
   'tarxien', 'valletta', 'vittoriosa', 'xghajra', 'zabbar', 'zejtun',
 ])
+// Gozo keys come from the backend resolver without a "gozo-" prefix
+// ("victoria", "xaghra gozo", "marsalforn") — they all fell into Central and
+// the Gozo chip read 0.
+const GOZO_VILLAGES = new Set([
+  'gozo', 'victoria', 'rabat-gozo', 'fontana', 'ghajnsielem', 'gharb', 'ghasri', 'kercem', 'marsalforn',
+  'mgarr-gozo', 'munxar', 'nadur', 'qala', 'san-lawrenz', 'sannat', 'xaghra', 'xewkija', 'xlendi',
+  'zebbug-gozo', 'dwejra', 'hondoq', 'ramla',
+])
 const NORTH_VILLAGES = new Set([
   'bahar-ic-caghaq', 'bahrija', 'bidnija', 'birguma-naxxar', 'bugibba', 'burmarrad',
   'dingli', 'ghadira', 'ghajn-tuffieha', 'gharghur', 'madliena', 'maghtab', 'manikata',
   'mdina', 'mellieha', 'mgarr', 'mtarfa', 'mtarleb', 'pembroke', 'qawra', 'salina',
-  'san-pawl-tat-targa-naxxar', 'st-pauls-bay', 'swieqi', 'ta-ibragg-swieqi',
+  'san-pawl-tat-targa-naxxar', 'st-pauls-bay', 'swieqi', 'ibragg', 'ta-ibragg-swieqi',
   'wardija', 'xemxija',
 ])
 
 function villageAreaFor(key: string): VillageArea {
   const normalized = key.toLowerCase().trim().replace(/[_\s]+/g, '-').replace(/-+/g, '-')
-  if (normalized.startsWith('gozo-')) return 'gozo'
+  if (normalized.startsWith('gozo-') || normalized.endsWith('-gozo') || GOZO_VILLAGES.has(normalized)) return 'gozo'
   if (SOUTH_EAST_VILLAGES.has(normalized)) return 'south-east'
   if (SOUTH_VILLAGES.has(normalized)) return 'south'
   if (NORTH_VILLAGES.has(normalized)) return 'north'
@@ -105,6 +113,15 @@ function villageBelongsToArea(key: string, area: VillageArea): boolean {
     return baseArea === 'central' || CENTRAL_SURROUNDING_VILLAGES.has(normalized)
   }
   return baseArea === area
+}
+
+// Board keys are hyphenated ("st-julians"); the coordinate table is keyed with
+// spaces ("st julians"). Every TOWNS lookup goes through here — a direct
+// TOWNS[boardKey] silently dropped every multi-word village (St Julian's,
+// San Ġwann, St Paul's Bay, Ta' Xbiex, …) off the map (Kev, 2026-10-19).
+function boardTown(key?: string | null) {
+  if (!key) return undefined
+  return TOWNS[key] || TOWNS[key.replace(/-/g, ' ')]
 }
 
 function canonicalBoardTownKey(key?: string | null, label?: string | null): string | null {
@@ -822,7 +839,7 @@ function Board() {
           const current = merged.get(key)
           merged.set(key, {
             key,
-            label: TOWNS[key]?.label || String(town.label),
+            label: boardTown(key)?.label || String(town.label),
             n: (current?.n || 0) + (Number(town.n) || 0),
           })
         }
@@ -974,7 +991,7 @@ function Board() {
     // newest-first ordering away before it ever reached a card.
     const pos = new Map<string, { lat: number | null; lng: number | null; tkey: string }>()
     for (const [k, list] of Object.entries(byTown)) {
-      const base = k === '_unknown' ? null : TOWNS[k]
+      const base = k === '_unknown' ? null : boardTown(k)
       list.forEach((r, i) => {
         const p = base ? spread(base, i, list.length) : null
         pos.set(r.ref, { lat: p?.lat ?? null, lng: p?.lng ?? null, tkey: k })
@@ -996,7 +1013,7 @@ function Board() {
     return Object.entries(counts)
       .map(([k, n]) => ({
         key: k,
-        label: TOWNS[k]?.label || rows.find(row => row.localityKey === k)?.localityLabel || k,
+        label: boardTown(k)?.label || rows.find(row => canonicalBoardTownKey(row.localityKey, row.localityLabel || row.town) === k)?.localityLabel || k,
         n,
       }))
       .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label))
@@ -2510,7 +2527,7 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
     // No `libraries=drawing`: DrawingManager is gone since 3.65.
     // This compact board map only needs the core Maps API. Loading Places here
     // made a simple property-pin view pay for the much larger editor library.
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}`
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}&language=en&region=MT`
     s.onload = () => setReady(true)
     s.onerror = () => setLoadErr('load-failed')
     document.head.appendChild(s)
@@ -2736,7 +2753,7 @@ function MapPanel({ items, rect, onRect, circ, onCirc, onMarkerClick, selectedTo
     areaRef.current.forEach(c => c.setMap(null))
     areaRef.current = []
     for (const k of selectedTowns) {
-      const t = TOWNS[k]
+      const t = boardTown(k)
       if (!t) continue
       areaRef.current.push(new g.maps.Circle({
         map: mapRef.current,

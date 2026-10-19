@@ -451,7 +451,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
     if (panel === 'filters' && railTarget) {
       const key = RAIL_FOR_TARGET[target] || 'location'
       closeIslandSurfaces()
-      setRailOpen(current => ({ ...current, [key]: true }))
+      setRailOpen({ [key]: true })
       requestAnimationFrame(() => railTarget.querySelector(`[data-rail="${key}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
       return
     }
@@ -592,15 +592,17 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
 
   // Desktop left column (founder mockup): LOCATION · PRICE RANGE · BOOKING ·
   // BEDROOMS · BATHROOMS · PROPERTY TYPES · PETS/SPECIALS · SEASON.
-  const railSections: { key: string; label: string; icon: React.ReactNode; active: boolean; body: React.ReactNode }[] = [
-    { key: 'location', label: 'Location', icon: <MapPin />, active: value.towns.length > 0, body: locationSection },
-    { key: 'price', label: 'Price range', icon: <Euro />, active: !!(value.min || value.max), body: priceFields },
-    { key: 'booking', label: 'Booking', icon: <CalendarDays />, active: !!value.updated, body: <><div className="crm-mobile-extra">{extra}</div>{updatedFields}</> },
-    { key: 'beds', label: 'Bedrooms', icon: <BedDouble />, active: value.beds.length > 0, body: bedsField },
-    { key: 'baths', label: 'Bathrooms', icon: <Bath />, active: value.baths.length > 0, body: bathsField },
-    { key: 'types', label: 'Property types', icon: <Building2 />, active: !!value.type, body: typeFields },
-    { key: 'specials', label: 'Pets / specials', icon: <Cat />, active: rulesActive || value.quick.length > 0, body: <>{tenancyFields}<div className="crm-rail-subhead">Quick filters</div>{quickFields}</> },
-    { key: 'season', label: 'Season', icon: <Snowflake />, active: !!value.rental, body: seasonFields },
+  // `summary` is what a closed section shows beside its label, so an agent
+  // sees every active choice without opening anything.
+  const railSections: { key: string; label: string; icon: React.ReactNode; active: boolean; summary?: string; body: React.ReactNode }[] = [
+    { key: 'location', label: 'Location', icon: <MapPin />, active: value.towns.length > 0 || locationAreasSelected.length > 0, summary: locationAreasSelected.length ? (locationAreasSelected.length === 1 ? locationAreas.find(a => a.key === locationAreasSelected[0])?.label : `${locationAreasSelected.length} areas`) : value.towns.length ? `${value.towns.length} town${value.towns.length === 1 ? '' : 's'}` : undefined, body: locationSection },
+    { key: 'price', label: 'Price range', icon: <Euro />, active: !!(value.min || value.max), summary: value.min || value.max ? (value.min && value.max ? `€${value.min}–${value.max}` : value.max ? `≤ €${value.max}` : `≥ €${value.min}`) : undefined, body: priceFields },
+    { key: 'booking', label: 'Booking', icon: <CalendarDays />, active: !!value.updated, summary: value.updated ? UPDATED_OPTIONS.find(o => o[0] === value.updated)?.[1] : undefined, body: <><div className="crm-mobile-extra">{extra}</div>{updatedFields}</> },
+    { key: 'beds', label: 'Bedrooms', icon: <BedDouble />, active: value.beds.length > 0, summary: value.beds.join(', ') || undefined, body: bedsField },
+    { key: 'baths', label: 'Bathrooms', icon: <Bath />, active: value.baths.length > 0, summary: value.baths.map(b => `${b}+`).join(', ') || undefined, body: bathsField },
+    { key: 'types', label: 'Property types', icon: <Building2 />, active: !!value.type, summary: value.type ? TYPES.find(t => t[0] === value.type)?.[1] : undefined, body: typeFields },
+    { key: 'specials', label: 'Pets / specials', icon: <Cat />, active: rulesActive || value.quick.length > 0, summary: rulesActive || value.quick.length ? String((value.pets ? 1 : 0) + (value.sharing ? 1 : 0) + (value.sublet ? 1 : 0) + value.quick.length) : undefined, body: <>{tenancyFields}<div className="crm-rail-subhead">Quick filters</div>{quickFields}</> },
+    { key: 'season', label: 'Season', icon: <Snowflake />, active: !!value.rental, summary: value.rental ? RENTAL_LABEL[value.rental] : undefined, body: seasonFields },
   ]
   const desktopRail = railTarget ? createPortal(
     <nav className="crm-filter-rail" aria-label="Property filters" data-testid="board-filter-rail">
@@ -610,8 +612,8 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
         {activeCount > 0 && <button type="button" className="crm-filter-reset" onClick={onReset} aria-label="Reset property filters"><RotateCcw /><em>Reset</em></button>}
       </header>
       {railSections.map(section => <section key={section.key} data-rail={section.key} data-open={!!railOpen[section.key]} data-selected={section.active}>
-        <button type="button" className="crm-rail-toggle" aria-expanded={!!railOpen[section.key]} onClick={() => setRailOpen(current => ({ ...current, [section.key]: !current[section.key] }))}>
-          {section.icon}<span>{section.label}</span>{section.active && <i aria-label="active" />}<ChevronDown aria-hidden />
+        <button type="button" className="crm-rail-toggle" aria-expanded={!!railOpen[section.key]} onClick={() => setRailOpen(current => (current[section.key] ? {} : { [section.key]: true }))}>
+          {section.icon}<span>{section.label}</span>{section.summary ? <em className="crm-rail-summary">{section.summary}</em> : section.active && <i aria-label="active" />}<ChevronDown aria-hidden />
         </button>
         {railOpen[section.key] && <div className="crm-rail-body">{section.body}</div>}
       </section>)}

@@ -942,3 +942,13 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-has-sidebar-slot .crm-listing-grid{grid-template-columns:1fr!important}
 }
 @media (prefers-reduced-motion:reduce){.crm-filter-rail .crm-rail-body{animation:none}}
+
+/* Left filter column, pass 5: one section open at a time; a closed section
+   shows its active value; location fits the 180px column. */
+@media (min-width:761px){
+  .crm-filter-rail .crm-rail-toggle>em.crm-rail-summary{order:0;max-width:72px;overflow:hidden;padding:2px 7px;border-radius:999px;background:var(--crm-accent-soft);color:var(--crm-accent);font:700 9.5px var(--font-jetbrains);font-style:normal;letter-spacing:0;text-overflow:ellipsis;text-transform:none;white-space:nowrap}
+  .crm-filter-rail .crm-rail-body .crm-location-topics{grid-template-columns:1fr}
+  .crm-filter-rail .crm-rail-body .crm-location-map{min-height:118px}
+  .crm-filter-rail .crm-rail-body .crm-location-town-heading{flex-wrap:wrap}
+  .crm-filter-rail .crm-rail-body .crm-location-choices{max-height:180px}
+}

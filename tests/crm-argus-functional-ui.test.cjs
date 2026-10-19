@@ -167,10 +167,15 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     assert.ok(Math.abs(gap) <= 2, `photo meets the tray (gap ${gap}px)`)
     // Rail and results share the state.
     await page.click('[data-rail=beds] .crm-rail-toggle')
-    await page.click('[data-rail=price] .crm-rail-toggle')
     await page.waitForSelector('[data-rail=beds] .crm-rail-body')
     await page.$$eval('[data-rail=beds] button', els => els.find(e => e.textContent.trim() === '2').click())
     await page.waitForFunction(() => new Set([...document.querySelectorAll('[data-ref]')].map(e => e.dataset.ref)).size === 3)
+    // One section at a time: opening Price closes Bedrooms, whose choice
+    // stays visible as a summary next to its label.
+    await page.click('[data-rail=price] .crm-rail-toggle')
+    await page.waitForSelector('[data-rail=price] .crm-rail-body')
+    assert.deepEqual(await page.$$eval('[data-rail][data-open=true]', els => els.map(e => e.dataset.rail)), ['price'])
+    assert.equal(await page.$eval('[data-rail=beds] .crm-rail-summary', el => el.textContent), '2')
     await page.type('[data-rail=price] input[placeholder="Any"]', '1500')
     await page.waitForFunction(() => new Set([...document.querySelectorAll('[data-ref]')].map(e => e.dataset.ref)).size === 1)
     assert.deepEqual(await cards(page), ['2906-9103'])
