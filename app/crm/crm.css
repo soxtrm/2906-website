@@ -715,7 +715,7 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-board-desktop-rail[hidden]{display:none!important}
   .crm-board-orb{width:42px;height:42px;min-height:42px!important;border-radius:15px!important;box-shadow:0 6px 18px rgba(4,10,24,.06),inset 0 1px 0 rgba(255,255,255,.045)}
   .crm-board-orb:hover{color:var(--crm-text);transform:translateY(-1px)}
-  .crm-board-menu-panel{position:absolute;left:0;top:52px;width:min(760px,calc(100vw - 340px));max-height:min(74dvh,720px)}
+  .crm-board-menu-panel{position:absolute;left:auto;right:0;top:52px;width:min(760px,calc(100vw - 340px));max-height:min(74dvh,720px)}
   .crm-board-menu-panel .crm-market-options{grid-template-columns:repeat(5,minmax(0,1fr))}
   .crm-board-tools-panel .crm-mobile-quick-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 
@@ -728,13 +728,22 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-has-sidebar-slot .crm-header{display:flex;align-items:center;gap:14px;padding:6px 14px 6px max(16px,calc((100vw - 1840px)/2 + 6px))}
   .crm-agency-brand{display:flex;flex:0 0 auto;align-items:center;height:46px;pointer-events:auto}
   .crm-agency-brand img{display:block;width:auto;height:34px}
-  .crm-has-sidebar-slot .crm-filterbar{left:max(130px,calc((100vw - 1840px)/2 + 130px));right:auto;max-width:none;width:auto}
-  .crm-has-sidebar-slot .crm-board-islands{width:auto}
-  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{flex:0 0 190px;max-width:none}
-  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit.is-searching{flex:0 0 min(460px,calc(100vw - 900px))}
+  /* Nav icons sit left next to the 2906 mark; the ARGUS group is anchored
+     right (before theme / Nexus), so search grows leftwards into free space. */
+  .crm-has-sidebar-slot .crm-filterbar{top:3px;left:auto;right:calc(max(14px,(100vw - 1840px)/2) + 96px);max-width:none;width:auto}
+  .crm-has-sidebar-slot .crm-board-islands{width:auto;justify-content:flex-end;gap:6px;height:52px}
+  .crm-has-sidebar-slot .crm-board-orbs{gap:6px}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{height:42px;padding:4px!important;border-radius:15px!important}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit::before{border-radius:16px}
+  .crm-has-sidebar-slot .crm-argus-orbit>button{height:32px}
+  .crm-has-sidebar-slot .crm-argus-logo-window{width:78px;height:20px}
+  .crm-has-sidebar-slot .crm-argus-logo-window img{left:-29px;top:-30px;width:134px!important}
+  .crm-has-sidebar-slot .crm-argus-orbit input{height:34px}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{flex:0 0 132px;max-width:none}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit.is-searching{flex:0 0 min(420px,calc(100vw - 860px))}
   .crm-has-sidebar-slot .crm-filter-island{display:none!important}
   .crm-has-sidebar-slot .crm-board-islands[data-panel=search] .crm-board-orbs{max-width:200px;opacity:1;pointer-events:auto}
-  .crm-header-nav{display:flex;flex:0 1 auto;align-items:center;gap:2px;min-width:0;margin-left:auto;overflow-x:auto;scrollbar-width:none;pointer-events:auto}
+  .crm-header-nav{display:flex;flex:0 1 auto;align-items:center;gap:2px;min-width:0;margin-left:6px;overflow-x:auto;scrollbar-width:none;pointer-events:auto}
   .crm-header-nav::-webkit-scrollbar{display:none}
   .crm-header-nav .crm-nav-item{display:inline-flex;flex:0 0 auto;width:auto;align-items:center;gap:0;min-height:36px;padding:6px 9px;border-radius:10px;color:var(--crm-muted);font-size:0;font-weight:650;white-space:nowrap;text-decoration:none}
   .crm-header-nav .crm-nav-item svg{width:17px;height:17px}
@@ -743,7 +752,7 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-header-nav .crm-nav-item small{display:none}
   .crm-header-nav .crm-nav-item[aria-current=page]{background:var(--crm-accent-soft);color:var(--crm-accent);font-weight:800}
   .crm-header-nav .crm-nav-item[aria-disabled=true]{display:none}
-  .crm-has-sidebar-slot .crm-header-actions{margin-left:0}
+  .crm-has-sidebar-slot .crm-header-actions{margin-left:auto}
 
   .crm-filter-rail,.crm-mobile-immersive .crm-sidebar nav.crm-filter-rail{display:grid;gap:2px;padding:0 4px 18px}
   .crm-has-sidebar-slot .crm-account progress{display:none}
@@ -798,6 +807,6 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-workspace.crm-mobile-immersive.crm-has-sidebar-slot{grid-template-columns:236px minmax(0,1fr);gap:14px}
 }
 @media (min-width:761px) and (max-width:1000px){
-  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{flex-basis:140px}
+  .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{flex-basis:120px}
   .crm-workspace.crm-mobile-immersive.crm-has-sidebar-slot{grid-template-columns:210px minmax(0,1fr)}
 }
