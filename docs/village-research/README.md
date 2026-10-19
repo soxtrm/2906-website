@@ -1,7 +1,7 @@
 # Malta village editions — editorial checkpoint
 
-Status: Twenty-six English editions are published: Sliema, St Julian's, Swieqi,
-Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr, Żurrieq, Marsa, Santa Venera and Iklin. The older `swieqi-preview.html` is retained
+Status: Twenty-eight English editions are published: Sliema, St Julian's, Swieqi,
+Tal-Ibraġ, Madliena, Pembroke, Mosta, Naxxar, Mellieħa, Gzira, Msida, Qawra, Marsaskala, St Paul's Bay, Għargħur, San Ġwann, Birkirkara, Birżebbuġa, Rabat, Pietà, Attard, Mġarr, Żurrieq, Marsa, Santa Venera, Iklin, Baħar iċ-Ċagħaq and Buġibba. The older `swieqi-preview.html` is retained
 only as an archival draft and is not the public release.
 
 Included: Swieqi / Tal-Ibrag / Madliena comparison, separate Pembroke treatment, licensed archival panorama, Greens weekly shop, Drift and The Greenhouse operator-sourced listings, council-sourced heritage, click-to-load OSM area overview.
@@ -68,3 +68,7 @@ Marsa is published independently at https://www.2906.estate/link-marketplace/are
 Santa Venera is published independently at https://www.2906.estate/link-marketplace/areas/santa-venera.html (release commit `540b58c`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `santa-venera-research.md`; the edition separates residential streets, the aqueduct/Casa Leoni/Romeo Romano heritage-and-garden group and busier road edges, retains the Primary HealthCare legacy-content warning, and draws no invented boundary, property route, generic journey time or ferry.
 
 Iklin is published independently at https://www.2906.estate/link-marketplace/areas/iklin.html (release commit `143395c`, production HTTP 200 verified on 18 October 2026). Its sourced dossier is `iklin-research.md`; the edition separates Upper Iklin, the parish/civic centre and the Tal-Balal road edge, keeps Naxxar, Lija, Birkirkara and San Ġwann separate, and draws no invented boundary, property route, generic journey time or ferry.
+
+Baħar iċ-Ċagħaq is published independently at https://www.2906.estate/link-marketplace/areas/bahar-ic-caghaq.html (release commit `074098d`, production HTTP 200 verified on 19 October 2026). Its sourced dossier is `bahar-ic-caghaq-research.md`; the edition separates the coastal settlement, rural-edge roads and neighbouring localities and draws no invented boundary, property route, generic journey time or ferry.
+
+Buġibba is published independently at https://www.2906.estate/link-marketplace/areas/bugibba.html (release commit `f5885e5`, production HTTP 200 verified on 19 October 2026). Its sourced dossier is `bugibba-research.md`; the edition separates Bay Square, the Bognor waterfront and the Dawret il-Gżejjer/Perched Beach edge, keeps Qawra and the older St Paul's Bay core distinct, and draws no invented boundary, water crossing, property route, generic journey time or ferry.
