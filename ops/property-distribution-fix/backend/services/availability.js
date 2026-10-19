@@ -781,6 +781,12 @@ function extractTimeframe(text) {
   return d ? d.label : null
 }
 
+// Kev, 2026-10-19: an owner who answers "is it still available?" with the link
+// to their own live ad (Facebook / Marketplace / MaltaPark / an agency page) is
+// saying yes — nobody sends the ad of a flat that is gone. Before this, a bare
+// link read as 'unclear' twice and the listing went to "needs recheck".
+const LISTING_LINK_RE = /https?:\/\/(?:[a-z0-9-]+\.)*(?:facebook\.com|fb\.me|fb\.com|fb\.watch|maltapark\.com|propertymarket\.com\.mt|airbnb\.[a-z.]+|booking\.com|remax-malta\.com|frank\.com\.mt|dhalia\.com|quicklets\.com\.mt|perry\.com\.mt|belair\.com\.mt|zanzi\.com\.mt|simonmamo\.com|homesofquality\.com\.mt|benestates\.com|2906\.estate)\/\S*/i
+
 // → { status, timeframe } | { status: 'unclear' }
 function classifyReply(text, { messageDate = new Date() } = {}) {
   const raw = String(text || '').trim()
@@ -798,6 +804,13 @@ function classifyReply(text, { messageDate = new Date() } = {}) {
     return { status: 'replied_available', timeframe: tf.label, date: tf.date, precision: tf.precision || 'stated' }
   }
   if (tf) return { status: 'replied_soon', timeframe: tf.label, date: tf.date, precision: tf.precision || 'stated' }
+
+  if (LISTING_LINK_RE.test(raw)) {
+    const words = raw.replace(/https?:\/\/\S+/gi, ' ').trim()
+    if (!NEGATIVE.test(words) && !RENTED_VERB.test(words) && !BARE_RENT.test(words) && !NEGATED_AVAILABILITY.test(words)) {
+      return { status: 'replied_available', via: 'listing_link' }
+    }
+  }
 
   // Blank out a negated rented verb before ANYTHING reads the text. Deleting
   // the phrase is what makes the rest of this function correct: leaving it in
@@ -2545,6 +2558,36 @@ async function onUnclearReply(check, { ownerSession, ownerChat }) {
   log.info('[av] unclear reply handled', { checkId: check.id, ref })
 }
 
+// ── OWNER SAID RENTED → "RENTED?" (Kev, 2026-10-19) ─────────────────────────
+// An owner's "it's rented" read by the classifier is no longer a final verdict.
+// 71 listings in 30 days left the board on that reading alone — some never
+// rented at all. The listing now stays on the board as pending_check with a
+// "Possibly rented" reason: sorted to the bottom, shown under the board's
+// "Rented?" chip, and nothing public changes (website, group posts, Facebook)
+// until an agent confirms it with the board's own Rented button.
+// The frontend keys on this prefix — keep the two in sync.
+const POSSIBLY_RENTED_PREFIX = 'Possibly rented'
+async function markPossiblyRented({ propertyId, oldStatus = null, ownerText, activityType, details = {} }) {
+  const said = String(ownerText || '').trim().replace(/\s+/g, ' ').slice(0, 160)
+  const reason = `${POSSIBLY_RENTED_PREFIX} — owner said: "${said}"`
+  const upd = await db.query(
+    `UPDATE properties
+        SET available_status = 'pending_check', status_change_reason = $2, updated_at = NOW()
+      WHERE id = $1 AND COALESCE(available_status, 'available') NOT IN ('rented', 'archived')
+      RETURNING id`, [propertyId, reason])
+  if (!upd.rows.length) return { applied: false, reason: 'already_rented_or_archived' }
+  try {
+    await db.query(
+      `INSERT INTO property_activities (property_id, activity_type, details, is_significant, created_at)
+       VALUES ($1, $2, $3::jsonb, TRUE, NOW())`,
+      [propertyId, activityType, JSON.stringify({
+        ...details, changed_by: 'owner_reply', owner_reply: String(ownerText || '').slice(0, 500),
+        old_status: oldStatus, new_status: 'pending_check', reason,
+      })])
+  } catch (err) { log.warn('[av] possibly-rented activity log failed', { propertyId, err: err.message }) }
+  return { applied: true }
+}
+
 // ── OWNER SAID RENTED ───────────────────────────────────────────────────────
 
 async function onRented(check, { ownerSession, ownerChat, replyMsgId }) {
@@ -2584,76 +2627,28 @@ async function onRented(check, { ownerSession, ownerChat, replyMsgId }) {
   // 2. Agent-bound reaction stays immediate.
   await reactOnRequest(check, '👎')
 
-  // 3a. CRM / DB — through boardAction.markRecentlyRented, not a raw UPDATE.
-  // The builder is what also sets recently_rented_at and lifecycle_state, and
-  // recently_rented_at is what puts the card in the board's 48h "what just
-  // went?" view. Writing available_status by hand here left the owner path out
-  // of that view entirely — an owner's own "it's rented" was the one verdict the
-  // board could not show.
-  //
-  // The builder's own audit row is skipped deliberately: the
-  // 'marked_rented_via_av' row below carries the owner's actual words and the
-  // old status, which is strictly more than the generic one, and two audit rows
-  // for one event is noise.
-  const boardAction = require('./boardAction')
-  const rentedPlan = await boardAction.markRecentlyRented({
+  // 3. CRM — "Rented?" instead of rented. The listing stays on the board
+  // (bottom, under the Rented? chip); website, group posts and Facebook are left
+  // alone until an agent confirms. (Before 2026-10-19 this unpublished, posted
+  // "now rented" in every group and cancelled Facebook on the classifier alone.)
+  const marked = await markPossiblyRented({
     propertyId: check.property_id,
-    agentId: null,
-    changedBy: 'owner_reply',
     oldStatus: check.available_status || null,
-    reason: `Owner replied: "${String(check.reply_text || '').trim().slice(0, 160)}"`,
+    ownerText: check.reply_text,
+    activityType: 'possibly_rented_via_av',
+    details: { source: 'av_owner_reply', check_id: check.id, account_session: check.account_session },
   })
-  let applied = false
-  if (rentedPlan.ok) {
-    try {
-      const upd = await db.query(rentedPlan.update.sql, rentedPlan.update.params)
-      applied = upd.rows.length > 0
-    }
-    catch (err) { log.warn('[av] rented state write failed', { checkId: check.id, err: err.message }) }
-  } else {
-    log.warn('[av] rented plan refused', { checkId: check.id, reason: rentedPlan.reason })
-  }
-  if (!applied) return { applied: false, reason: rentedPlan.reason || 'state_write_not_applied' }
-  try {
-    await db.query(
-      `INSERT INTO property_activities (property_id, activity_type, details, is_significant, created_at)
-       VALUES ($1, 'marked_rented_via_av', $2::jsonb, TRUE, NOW())`,
-      [check.property_id, JSON.stringify({
-        source: 'av_owner_reply', changed_by: 'owner_reply', check_id: check.id,
-        account_session: check.account_session, owner_reply: String(check.reply_text || '').slice(0, 500),
-        old_status: check.available_status, new_status: 'rented',
-      })])
-  } catch (err) { log.warn('[av] activity log insert failed', { err: err.message }) }
+  if (!marked.applied) return { applied: false, reason: marked.reason }
 
-  // 3b. Website — the builder already unpublished it. Belt and braces for the
-  // case where its guard held (already archived): an archived listing must not
-  // come back to the public site because this line was skipped.
-  await db.query('UPDATE properties SET published = FALSE WHERE id = $1', [check.property_id])
-
-  // 3c. Property chats — 😡 on the bot's description message in each group, and
-  // a worded correction under the listing itself. The emoji alone was invisible
-  // to anyone scrolling: it is a reaction on a message that still reads as a
-  // live offer. Neutral wording only — the group is public, so no reason and no
-  // owner details (see services/boardFeedback.js for the same rule).
-  const groupResult = await reactAngryInPropertyGroups(check.property_id)
-  const groupText = await replyUnderListing(check.property_id,
-    withPropertyLink(`🔴 #${ref} — now rented. No longer available.`, ref))
-
-  // 3d. Facebook — cancel everything still pending.
-  const fbResult = await cancelFacebookJobs(check.property_id)
-
-  log.info('[av] rented flow complete', {
-    checkId: check.id, ref, groups: groupResult, groupText, fb: fbResult,
-  })
+  log.info('[av] possibly-rented flow complete', { checkId: check.id, ref })
 
   await postToRequester(check,
-    `🔴 #${ref} — owner says RENTED.\n` +
-    `• CRM: off the board, marked rented (48h "recently rented")\n` +
-    `• Website: unpublished\n` +
-    `• Facebook: ${fbResult.cancelled} pending post(s) cancelled\n` +
-    `• Groups: 😡 on ${groupResult.reacted}/${groupResult.total} listing message(s), ` +
-    `correction posted under ${groupText.replied}/${groupText.total}` +
-    (groupResult.total === 0 ? ' — no stored message id for this listing' : ''))
+    `🟠 #${ref} — owner says RENTED.
+` +
+    `Not taken off yet: it stays on the board under "Rented?" (bottom of the list).
+` +
+    `Confirm it there with Rented, or mark it Still available. Website, groups and Facebook are unchanged until then.`)
+  return { applied: true }
 }
 
 // ── OWNER SAID RENTED, UNPROMPTED (ARGUS item 1) ────────────────────────────
@@ -2682,56 +2677,26 @@ async function applyRentedVerdictFromOwnerChat({ propertyId, ownerId, ref, owner
     label: 'rented_thanks_spontaneous', jobId: `av-spontaneous-rented-${propertyId}-${Date.now()}`,
   }).catch(err => log.warn('[av] spontaneous rented thank-you queue failed', { propertyId, err: err.message }))
 
-  const boardAction = require('./boardAction')
-  const rentedPlan = await boardAction.markRecentlyRented({
-    propertyId, agentId: null, changedBy: 'owner_reply',
-    reason: `Owner said, unprompted: "${String(replyText || '').trim().slice(0, 160)}"`,
+  // "Rented?" instead of rented — see markPossiblyRented above.
+  const marked = await markPossiblyRented({
+    propertyId,
+    ownerText: replyText,
+    activityType: 'possibly_rented_via_owner_chat',
+    details: { source: 'owner_chat_spontaneous' },
   })
-  let applied = false
-  if (rentedPlan.ok) {
-    try {
-      const upd = await db.query(rentedPlan.update.sql, rentedPlan.update.params)
-      applied = upd.rows.length > 0
-    } catch (err) { log.warn('[av] spontaneous rented state write failed', { propertyId, err: err.message }) }
-  } else {
-    log.warn('[av] spontaneous rented plan refused', { propertyId, reason: rentedPlan.reason })
-  }
-  if (!applied) return { applied: false }
+  if (!marked.applied) return { applied: false }
 
-  try {
-    await db.query(
-      `INSERT INTO property_activities (property_id, activity_type, details, is_significant, created_at)
-       VALUES ($1, 'marked_rented_via_owner_chat', $2::jsonb, TRUE, NOW())`,
-      [propertyId, JSON.stringify({
-        source: 'owner_chat_spontaneous', changed_by: 'owner_reply',
-        owner_reply: String(replyText || '').slice(0, 500), new_status: 'rented',
-      })])
-  } catch (err) { log.warn('[av] spontaneous rented activity log failed', { err: err.message }) }
-
-  await db.query('UPDATE properties SET published = FALSE WHERE id = $1', [propertyId])
-
-  const groupResult = await reactAngryInPropertyGroups(propertyId)
-  const groupText = await replyUnderListing(propertyId,
-    withPropertyLink(`🔴 #${ref} — now rented. No longer available.`, ref))
-  const fbResult = await cancelFacebookJobs(propertyId)
-
-  log.info('[av] spontaneous rented flow complete', {
-    propertyId, ref, groups: groupResult, groupText, fb: fbResult,
-  })
+  log.info('[av] spontaneous possibly-rented flow complete', { propertyId, ref })
 
   try {
     const adminSession = await pickAdminSession()
     if (adminSession) {
       await sendTextAs(adminSession, config.admin.botNumber,
-        `🔴 #${ref} — owner said RENTED, unprompted (no pending availability check was open).\n` +
-        `• CRM: off the board, marked rented (48h "recently rented")\n` +
-        `• Website: unpublished\n` +
-        `• Facebook: ${fbResult.cancelled || 0} pending post(s) cancelled\n` +
-        `• Groups: 😡 on ${groupResult.reacted}/${groupResult.total} listing message(s), ` +
-        `correction posted under ${groupText.replied}/${groupText.total}` +
-        (groupResult.total === 0 ? ' — no stored message id for this listing' : ''))
+        `🟠 #${ref} — owner said RENTED, unprompted: "${String(replyText || '').trim().slice(0, 160)}"
+` +
+        `Not taken off yet: it is on the board under "Rented?" — confirm it there with Rented, or mark it Still available.`)
     }
-  } catch (err) { log.warn('[av] spontaneous rented admin alert failed', { err: err.message }) }
+  } catch (err) { log.warn('[av] spontaneous possibly-rented admin alert failed', { err: err.message }) }
 
   return { applied: true }
 }
@@ -4322,6 +4287,7 @@ module.exports = {
   // ARGUS item 1 — exported for direct testing without a live webhook.
   isUnambiguousRentedStatement, maybeHandleSpontaneousRentedStatement,
   applyRentedVerdictFromOwnerChat, onPropertyIdentityReply,
+  __onRented: onRented,   // tests: the owner-reply "Rented?" path
   // services/bookRelay.js:sendToAgentPrivate() needs the same DB-name→live-
   // WAHA-session mapping this module already owns, for the same default-
   // account rule (Kev 2026-08-21, item 5).
