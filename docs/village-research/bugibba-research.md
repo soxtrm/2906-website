@@ -1,6 +1,6 @@
-# Buġibba edition — sourced research draft
+# Buġibba edition — sourced publication record
 
-Language: English. Status: research only; no page, public image derivative or release asset has been published.
+Language: English. Status: published and production-verified on 19 October 2026.
 
 ## Why this zone needs its own treatment
 
@@ -104,13 +104,13 @@ Use a click-to-load OpenStreetMap orientation frame that shows Bay Square, the B
 
 No straight line may be presented as walking geometry. Walking, bus, current road traffic and taxi-price observations require separate sources, exact endpoints, mode and timestamp. No ferry is assumed for an ordinary Buġibba property journey, and no route may cut across the bay or sea. A ferry may appear only where a routing response includes ferry geometry and a current operator schedule is separately verified.
 
-## Release-candidate status
+## Published status
 
-`public/link-marketplace/areas/bugibba.html` is a validated English release candidate. The earlier `noindex,nofollow` preview gate passed before the robots block was removed. The candidate now has exactly one self-canonical, three matching Open Graph fields, one valid `BreadcrumbList`, one Marketplace link and one sitemap entry. The page separates Bay Square, Bognor waterfront and the Dawret il-Gżejjer/Perched Beach edge; keeps Qawra and the older St Paul's Bay core distinct; and presents the health catchment, WaterPark, temple and restaurant as narrow examples rather than rankings or proximity claims.
+`public/link-marketplace/areas/bugibba.html` is the validated and published English edition. The earlier `noindex,nofollow` preview gate passed before the robots block was removed. The published page has exactly one self-canonical, three matching Open Graph fields, one valid `BreadcrumbList`, one Marketplace link and one sitemap entry. It separates Bay Square, Bognor waterfront and the Dawret il-Gżejjer/Perched Beach edge; keeps Qawra and the older St Paul's Bay core distinct; and presents the health catchment, WaterPark, temple and restaurant as narrow examples rather than rankings or proximity claims.
 
 The page uses the complete 1800×1200 derivative with its caption outside the image so the full 3:2 composition remains visible. Its click-to-load OpenStreetMap frame uses `14.399,35.939,14.427,35.962`, draws no boundary or route, and starts with no iframe. Release validation in Chromium at 390×844 and 1440×1000 found one H1, no robots block, zero horizontal overflow, a fully decoded 1800×1200 image, no failed page, stylesheet, image or map request, and exactly one visible OSM iframe after interaction. The project-wide missing `/favicon.ico` remains excluded from the page-specific error gate.
 
-Release records: page 14,855 bytes/SHA256 `5757EB7E7FFDB2FBD1CE24D1D8ED39CB4FE5DEE84B6A830433BD9849815E0870`; Marketplace index 8,452 bytes/SHA256 `80D8FB1B8D171A806D5C165E1805C820B6D046C9A3EB8B3948A9C4A9528C8091`; sitemap 2,392 bytes/SHA256 `4A5C24AE526F408BE22981EA66737AFDE0D1D697B9CF882D982538869BD05DD0`. A full Next.js production build generated 52/52 static pages successfully. Production push and live verification remain separate gates.
+Release commit `f5885e5` was pushed to `main` after verifying that `origin/main` still matched the reviewed base `074098d`. The existing Git/Vercel route published the edition. The www, apex and CRM copies returned HTTP 200 and the exact 14,855-byte release HTML with SHA256 `5757EB7E7FFDB2FBD1CE24D1D8ED39CB4FE5DEE84B6A830433BD9849815E0870`; Marketplace index 8,452 bytes/SHA256 `80D8FB1B8D171A806D5C165E1805C820B6D046C9A3EB8B3948A9C4A9528C8091`; sitemap 2,392 bytes/SHA256 `4A5C24AE526F408BE22981EA66737AFDE0D1D697B9CF882D982538869BD05DD0`; hero 374,944 bytes/SHA256 `F2F3DF29650A8E190BBB317F83197CD6D0BD9778155F3DF34D5C64AB6F8F4A63`. Production Chromium at 390×844 and 1440×1000 repeated the metadata, layout, full-image and lazy-map checks with no failed page, stylesheet, image or map request.
 
 ## Release gates
 
@@ -123,4 +123,4 @@ Release records: page 14,855 bytes/SHA256 `5757EB7E7FFDB2FBD1CE24D1D8ED39CB4FE5D
 7. Add release metadata, one Marketplace link and one sitemap entry only after preview and source gates pass.
 8. Build and deploy from the isolated worktree, verify public and CRM copies and retain a specific rollback commit.
 
-No backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this release candidate.
+Rollback is the targeted revert of release commit `f5885e5`. No backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this publication.
