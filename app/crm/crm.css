@@ -810,3 +810,32 @@ html:not([data-crm-theme="dark"]) .crm-mobile-immersive .crm-board-orb[data-acti
   .crm-has-sidebar-slot .crm-board-islands .crm-argus-orbit{flex-basis:120px}
   .crm-workspace.crm-mobile-immersive.crm-has-sidebar-slot{grid-template-columns:210px minmax(0,1fr)}
 }
+
+/* 2026-10-19 pass 2: rule icons beside the star, tighter top, even islands. */
+.crm-card-rule-icons{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden}
+.crm-card-rule-icons i{display:grid;width:26px;height:26px;place-items:center;border-radius:8px;color:var(--crm-muted);font-style:normal}
+.crm-card-rule-icons i[data-rule=winter]{color:#4f9fd0;background:rgba(79,159,208,.1)}
+.crm-card-rule-icons i[data-rule=short]{color:#d79a2b;background:rgba(215,154,43,.1)}
+.crm-card-rule-icons i[data-rule=pets],.crm-card-rule-icons i[data-rule=sharing]{color:#3f8f6b;background:rgba(63,143,107,.1)}
+.crm-card-rule-icons i[data-no]{position:relative;color:var(--crm-faint);background:transparent}
+.crm-card-rule-icons i[data-no]::after{content:"";position:absolute;left:5px;right:5px;top:50%;height:1.5px;border-radius:2px;background:currentColor;transform:rotate(-38deg)}
+@media (min-width:761px){
+  .crm-has-sidebar-slot .crm-board-content{padding-top:10px!important}
+  .crm-has-sidebar-slot .crm-sidebar{padding-top:66px}
+  .crm-filter-rail>header{min-height:34px;padding:0 6px 6px}
+  .crm-rail-toggle{min-height:38px;padding:7px 6px}
+  .crm-has-sidebar-slot .crm-board-scope-rail{min-height:34px;margin-bottom:8px}
+}
+@media (max-width:760px){
+  .crm-board-islands{gap:5px;height:50px;max-height:50px}
+  .crm-board-islands .crm-argus-orbit{height:46px;flex:0 0 80px;padding:4px!important;border-radius:17px!important}
+  .crm-board-islands .crm-argus-orbit::before{border-radius:18px}
+  .crm-board-islands .crm-argus-orbit>button{height:38px}
+  .crm-board-orbs{gap:5px}
+  .crm-board-orb{width:38px;height:46px;min-height:46px!important;border-radius:15px!important;box-shadow:0 6px 18px rgba(4,10,24,.08),inset 0 1px 0 rgba(255,255,255,.035)}
+  .crm-board-islands .crm-filter-island{height:46px;padding:0 4px!important;border-radius:17px!important;box-shadow:0 6px 18px rgba(4,10,24,.08),inset 0 1px 0 rgba(255,255,255,.035)}
+  .crm-board-islands .crm-argus-orbit{box-shadow:0 6px 18px rgba(4,10,24,.08),inset 0 1px 0 rgba(255,255,255,.035)}
+  .crm-board-islands .crm-filter-icons>.crm-island-feature{height:40px;min-height:40px!important}
+  .crm-filterbar{padding:10px 12px 8px}
+}
+@media (max-width:380px){.crm-board-orb{width:34px}.crm-board-islands .crm-argus-orbit{flex-basis:72px}}

@@ -285,7 +285,7 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
   const [open, setOpen] = useState<string | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'smart' | 'filters' | 'market' | 'tools' | null>(null)
   const [railTarget, setRailTarget] = useState<HTMLElement | null>(null)
-  const [railOpen, setRailOpen] = useState<Record<string, boolean>>({ location: true, price: true, beds: true, baths: true })
+  const [railOpen, setRailOpen] = useState<Record<string, boolean>>({})  // all collapsed; an agent opens what they need
   const [smartPickerOpen, setSmartPickerOpen] = useState(false)
   const [filterPickerOpen, setFilterPickerOpen] = useState(false)
   const [islandReady, setIslandReady] = useState(true)

@@ -26,7 +26,7 @@ function fixtures() {
     listing(1, { town: 'Sliema', beds: 1, price: 1200 }),
     listing(2, { town: 'Sliema', beds: 2, price: 1600 }),
     listing(3, { town: 'Gzira', beds: 2, price: 1400 }),
-    listing(4, { town: 'Mosta', beds: 3, price: 2100 }),
+    listing(4, { town: 'Mosta', beds: 3, price: 2100, rentalModes: ['winter_let'], sharing: false }),
     listing(5, { town: 'Swieqi', beds: 2, price: 2500 }),
   ]
   // Beds / price run server-side; answer like the real handler would.
@@ -152,7 +152,17 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     assert.ok(w1 > w0 + 100, `desktop island is longer when searching (${w0} → ${w1})`)
     await shot(page, 'desktop-search-open')
     await page.keyboard.press('Escape')
+    // Sections start collapsed; the agent opens what they need.
+    assert.equal(await page.$$eval('[data-testid=board-filter-rail] .crm-rail-toggle[aria-expanded=true]', els => els.length), 0)
+    // Rule icons beside the star: winter + crossed-out sharing on 9104.
+    assert.deepEqual(await page.$$eval('[data-ref="2906-9104"] .crm-card-rule-icons i', els => els.map(e => e.dataset.rule + (e.dataset.no ? ':no' : ''))), ['winter', 'pets', 'sharing:no'])
+    // Photo runs down to the action tray.
+    const gap = await page.$eval('[data-ref="2906-9101"]', card => card.querySelector('.crm-card-action-tray').getBoundingClientRect().top - card.querySelector('.crm-listing-photo').getBoundingClientRect().bottom)
+    assert.ok(Math.abs(gap) <= 2, `photo meets the tray (gap ${gap}px)`)
     // Rail and results share the state.
+    await page.click('[data-rail=beds] .crm-rail-toggle')
+    await page.click('[data-rail=price] .crm-rail-toggle')
+    await page.waitForSelector('[data-rail=beds] .crm-rail-body')
     await page.$$eval('[data-rail=beds] button', els => els.find(e => e.textContent.trim() === '2').click())
     await page.waitForFunction(() => new Set([...document.querySelectorAll('[data-ref]')].map(e => e.dataset.ref)).size === 3)
     await page.type('[data-rail=price] input[placeholder="Any"]', '1500')

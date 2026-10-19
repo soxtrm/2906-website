@@ -12,13 +12,13 @@
 // ============================================================================
 import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDown, ChevronLeft, ChevronRight, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus, HelpCircle } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, PawPrint, Users as UsersIcon, Snowflake, Sun, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus, HelpCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, type BoardLocationArea, type MarketKey, type QuickKey, UPDATED_MAX_MS } from '@/components/crm/board-filters'
-import { RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
+import { UntilLine } from '@/components/crm/rental-modes'
 import { AskDialog, AvDateDialog, BookDialog, ChatDialog, StatusDialog, type StatusAction } from '@/components/crm/board-dialogs'
 import { BookingDialog } from '@/components/crm/booking-dialog'
 import { OwnerGroupRequestDialog } from '@/components/crm/owner-group-request-dialog'
@@ -3965,12 +3965,14 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           // Keep every listing photo in one predictable frame. Previously
           // height:100% let verbose cards stretch their image far beyond the
           // standard-sized #2906-9340 card.
-          height: isMobile ? 142 : 230,
+          // Kev, 2026-10-19: the photo now runs from the top of the card down
+          // to the action tray instead of stopping at a fixed 230px and
+          // leaving an empty strip under it. The minimum keeps short cards
+          // from shrinking the photo.
           minHeight: isMobile ? 142 : 230,
-          maxHeight: isMobile ? 142 : 230,
-          alignSelf: 'start',
+          alignSelf: 'stretch',
           flexShrink: 0, background: '#111', gridColumn: 1,
-          gridRow: isMobile ? 1 : '1 / 4', touchAction: 'pan-y',
+          gridRow: isMobile ? 1 : '1 / 3', touchAction: 'pan-y',
         }}
       >
         {r.images[hoverPhotoIdx] || r.images[0]
@@ -4153,7 +4155,9 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
                 winter-let mode OR a "Bis" date (unchanged rule), SHORT for a short
                 let. Rendered by the shared component so board, inventory and the
                 property page can never disagree. */}
-            <RentalModeBadges modes={r.rentalModes} availableUntil={r.availableUntil} />
+            {/* 2026-10-19: the WINTER / SHORT tag moved to the icon row beside
+                the star (same rule: winter mode OR a "Bis" date) — in the title
+                row it collided with the price on narrow cards. */}
 
           </div>
           <div style={{ display: 'grid', justifyItems: 'end', flexShrink: 0, lineHeight: 1.1 }}>
@@ -4514,7 +4518,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             block right before `isUpcoming` above. Facebook stays inside "..."
             exactly where it already is (still under menuSection "Tools"). */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
             <button
               className="crm-card-action-button"
               data-favourite={r.ref}
@@ -4532,6 +4536,15 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             >
               <StarGlyph filled={starStepOf(r) > 0} color={starStepOf(r) === 2 ? HOT : A} size={16} />
             </button>
+            {/* Listing rules at a glance (Kev, 2026-10-19). Unknown stays
+                hidden — never drawn as a yes or a no. Subletting stays
+                filter-only by design. */}
+            <span className="crm-card-rule-icons" aria-label="Listing rules">
+              {(r.leaseType === 'winter_let' || r.rentalModes?.includes('winter_let') || r.availableUntil) && <i title={r.availableUntil ? `Winter let · until ${fmtDateDots(r.availableUntil)}` : 'Winter let'} data-rule="winter"><Snowflake size={15} /></i>}
+              {(r.leaseType === 'short_let' || r.rentalModes?.includes('short_let')) && <i title="Short let" data-rule="short"><Sun size={15} /></i>}
+              {r.petFriendly != null && <i title={r.petFriendly ? 'Pets allowed' : 'No pets'} data-rule="pets" data-no={!r.petFriendly || undefined}><PawPrint size={15} /></i>}
+              {r.sharing != null && <i title={r.sharing ? 'Sharing allowed' : 'No sharing'} data-rule="sharing" data-no={!r.sharing || undefined}><UsersIcon size={15} /></i>}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
           <button
