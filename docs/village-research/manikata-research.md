@@ -1,6 +1,6 @@
 # Manikata edition — sourced research draft
 
-Language: English. Status: release candidate with current sources rechecked on 19 October 2026; public metadata and discovery are pending final validation.
+Language: English. Status: published English neighbourhood edition; sources rechecked and production verified on 19 October 2026.
 
 ## Editorial priority
 
@@ -101,6 +101,8 @@ Chromium validation at 390×844 and 1440×1000 found one H1, zero horizontal ove
 Source-preview commit `6b1c644` was pushed to `main` after verifying that `origin/main` still matched the reviewed base `1a56d8c`. The existing Git/Vercel path served the exact 13,920-byte HTML and 464,574-byte hero on the www production host. Production Chromium repeated the mobile, desktop, metadata, complete-image and lazy-map checks. Rollback is the targeted revert of `6b1c644`; the separately reviewed image asset remains in commit `bb219d8`.
 
 Immediately before opening the release gate, the Mellieħa Local Council locality and church pages, May 2026 Primary HealthCare charter, Restoration Directorate project list, government restoration release, Koperattiva Rurali Manikata about and 2026 Summer Club pages, MTA restaurant register and Commons image record were rechecked on 19 October 2026. The MTA register still listed Country Bar and Restaurant as `RST-13232` and reported its own data update at 12:25 Malta time that day. No reviewed claim or source boundary required a copy change.
+
+Release commit `90a38f3` added the self-canonical, Open Graph fields, breadcrumb data, Marketplace discovery link and neighbourhood-sitemap entry. Production served the exact 14,808-byte page, 8,528-byte Marketplace index, 2,474-byte sitemap and 464,574-byte hero asset. Mobile and desktop Chromium validation at 390×844 and 1440×1000 passed the H1, robots, canonical, Open Graph, JSON-LD, overflow, image and click-to-load map checks without failed page, stylesheet, image or map requests. Rollback is the targeted revert of `90a38f3`.
 
 ## Release gates
 
