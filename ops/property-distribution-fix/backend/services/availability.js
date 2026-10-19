@@ -3787,7 +3787,11 @@ async function requestOwnerAvailability({
   // must not put a fresh question in front of an owner in any of those states. The
   // refusal goes to the requester ("owner_paused"), nothing goes to the owner.
   {
-    const gate = await ownerSendGate.checkOwnerSend({ ownerId: prop.owner_id, propertyId: prop.id, kind: 'check' })
+    // A board click or an agent's !av carries the agent (agentId / phone); the
+    // reachout robots pass neither. Only the explicit agent request may pass a
+    // bot stand-down (see ownerSendGate AGENT_PASSES_STAND_DOWN).
+    const agentRequested = !!(requester && (requester.agentId || requester.phone))
+    const gate = await ownerSendGate.checkOwnerSend({ ownerId: prop.owner_id, propertyId: prop.id, kind: 'check', automated: !agentRequested })
     if (!gate.allow) {
       log.info('[av] owner check refused — pre-send gate', { ref: prop.ref, reason: gate.reason })
       return {
