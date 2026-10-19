@@ -1,6 +1,6 @@
 # Manikata edition — sourced research draft
 
-Language: English. Status: research only; no page, public image derivative or release asset has been published.
+Language: English. Status: sourced research with an approved public image derivative; no page or release metadata has been published.
 
 ## Editorial priority
 
@@ -76,6 +76,14 @@ Commons records:
 
 Any later web derivative of the preferred image must preserve the complete composition, state exact output dimensions, bytes and SHA256, disclose proportional resize and format conversion and visibly credit Frank Vincentz, Wikimedia Commons, CC BY-SA 3.0 and the 4 March 2013 capture date. The derivative must remain under CC BY-SA 3.0.
 
+## Approved web derivative
+
+`public/link-marketplace/assets/manikata-village-fields-frank-vincentz.webp` is the approved web derivative of the preferred Frank Vincentz original. The 5616×3744 RGB JPEG was proportionally resized to 1800×1200 with Pillow's Lanczos resampling and converted to RGB WebP at quality 84 and method 6. The complete 3:2 frame was retained without crop, retouching, blur, identifier alteration or generative edit. The derivative is 464,574 bytes and has SHA256 `4602F61EA025CF71FD37B5CCBB53693E8F0D11A3BDDA51F9DCF0E6009EDA612C`.
+
+Full-frame inspection after conversion confirms that the village, cultivated plots, dry-stone field edges, sky and the original vehicle-interior edge along the bottom remain visible. The two field workers at lower left remain too distant for a face or other personal identifier to be discernible. No readable private telephone number, email address or prominent vehicle registration is visible. The image remains a dated 4 March 2013 village-and-agriculture record and must not be presented as proof of current land use, development, road condition, access, outlook or a listing view.
+
+Any publication must visibly credit Frank Vincentz, Wikimedia Commons and CC BY-SA 3.0, state the 4 March 2013 capture date and disclose the proportional resize and WebP conversion. The derivative remains under CC BY-SA 3.0.
+
 ## Map and routing guardrails
 
 Use a click-to-load OpenStreetMap orientation frame that shows the village/parish context, the agricultural edge and Ir-Razzett tal-Qasam without drawing an administrative or property-search boundary. District and venue pins should remain omitted until their coordinates and labels are independently verified.
@@ -85,7 +93,7 @@ No straight line may be presented as walking geometry. Walking, bus, current roa
 ## Release gates
 
 1. Recheck every authority, regulator and operator source immediately before drafting.
-2. Create a proportional, uncropped WebP derivative only from the preferred Frank Vincentz original, then inspect the full output for composition, people, contact details and identifiers.
+2. Use only the approved proportional, uncropped WebP derivative and keep its visible credit, capture date and conversion disclosure with the complete image.
 3. Keep the village/parish, agricultural/cooperative and outer-road/coast-facing contexts separate; do not turn the editorial frame into a council or estate boundary.
 4. Treat the health catchment, churches, cooperative programmes and restaurant licence as narrow examples; do not publish rankings, permanent hours, access promises or property-proximity claims.
 5. Start with an unpublished `noindex,nofollow` preview containing no canonical, social metadata, structured data, Marketplace link or sitemap entry.
@@ -93,4 +101,4 @@ No straight line may be presented as walking geometry. Walking, bus, current roa
 7. Add release metadata, one Marketplace link and one sitemap entry only after preview and source gates pass.
 8. Build and deploy from the isolated worktree, verify public and CRM copies and retain a specific rollback commit.
 
-No public image, page, navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this research step.
+No page, navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this asset step.
