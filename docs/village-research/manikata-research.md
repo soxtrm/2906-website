@@ -1,6 +1,6 @@
 # Manikata edition — sourced research draft
 
-Language: English. Status: sourced research with an approved public image derivative; no page or release metadata has been published.
+Language: English. Status: validated `noindex,nofollow` source preview with an approved public image derivative; no release metadata, Marketplace link or sitemap entry has been published.
 
 ## Editorial priority
 
@@ -90,15 +90,23 @@ Use a click-to-load OpenStreetMap orientation frame that shows the village/paris
 
 No straight line may be presented as walking geometry. Walking, bus, current road traffic and taxi-price observations require separate sources, exact endpoints, mode and timestamp. No ferry is assumed for an ordinary Manikata property journey. A beach or coastal landmark must remain an orientation point unless a real route and current access information have been checked; no line across fields, protected land, cliffs or water becomes a journey.
 
+## Validated source preview
+
+`public/link-marketplace/areas/manikata.html` is the unpublished English source preview. It keeps the village/parish, agricultural/cooperative and outer-road/coast-facing contexts separate, uses the health catchment, two church contexts, cooperative programme and MTA-licensed restaurant as narrow sourced examples, and makes no ranking, proximity or permanent-opening claim.
+
+The preview has `noindex,nofollow`, no canonical, Open Graph fields, JSON-LD, Marketplace link or sitemap entry. Its 2D map starts with no iframe and loads a broad OpenStreetMap frame for `14.334,35.925,14.373,35.958` only after a click. The frame is centred around the OSM `Il-Manikata` village node and draws no boundary, route, venue pin, coastal shortcut or journey time.
+
+Chromium validation at 390×844 and 1440×1000 found one H1, zero horizontal overflow, a fully decoded 1800×1200 hero and one visible OSM iframe only after interaction. The complete image and attribution remained visible at both widths. There were no failed page, stylesheet, image or map requests; the repository-wide missing `/favicon.ico` is outside the page-specific gate. The 13,920-byte preview has SHA256 `65A5102F44E9AAD0E229B9932173F7934BD7AEED8D9224FC069A70650B5E66FE`.
+
 ## Release gates
 
 1. Recheck every authority, regulator and operator source immediately before drafting.
 2. Use only the approved proportional, uncropped WebP derivative and keep its visible credit, capture date and conversion disclosure with the complete image.
 3. Keep the village/parish, agricultural/cooperative and outer-road/coast-facing contexts separate; do not turn the editorial frame into a council or estate boundary.
 4. Treat the health catchment, churches, cooperative programmes and restaurant licence as narrow examples; do not publish rankings, permanent hours, access promises or property-proximity claims.
-5. Start with an unpublished `noindex,nofollow` preview containing no canonical, social metadata, structured data, Marketplace link or sitemap entry.
-6. Verify 390×844 and 1440×1000 layouts, full image framing, attribution, zero horizontal overflow and click-to-load OSM behaviour.
+5. Keep the validated preview `noindex,nofollow` with no canonical, social metadata, structured data, Marketplace link or sitemap entry until the release gate is opened.
+6. Preserve the validated 390×844 and 1440×1000 layouts, full image framing, attribution, zero horizontal overflow and click-to-load OSM behaviour.
 7. Add release metadata, one Marketplace link and one sitemap entry only after preview and source gates pass.
 8. Build and deploy from the isolated worktree, verify public and CRM copies and retain a specific rollback commit.
 
-No page, navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this asset step.
+No navigation, sitemap, backlink, outreach, WhatsApp, backend, traffic or scheduler change is part of this preview step.
