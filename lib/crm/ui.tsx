@@ -506,56 +506,41 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const [moreOpen, setMoreOpen] = useState(false)
   const [navigationCompact, setNavigationCompact] = useState(false)
   const contentRef = useRef<HTMLElement>(null)
+  const navigationScrollRef = useRef<{ lastTop: number; direction: 'up' | 'down' | null; directionStart: number }>({ lastTop: 0, direction: null, directionStart: 0 })
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
-  useEffect(() => { setMoreOpen(false) }, [pathname])
+  useEffect(() => {
+    setMoreOpen(false)
+    setNavigationCompact(false)
+    navigationScrollRef.current = { lastTop: 0, direction: null, directionStart: 0 }
+  }, [pathname])
   useEffect(() => {
     const open = () => setMoreOpen(true)
     window.addEventListener('crm-open-mobile-menu', open)
     return () => window.removeEventListener('crm-open-mobile-menu', open)
   }, [])
-  useEffect(() => {
-    const scroller = contentRef.current
-    if (!mobileImmersive || !scroller) return
-    let frame = 0
-    let lastTop = scroller.scrollTop
-    let lastTime = performance.now()
-    let velocity = 0
-    let direction: 'up' | 'down' | null = null
-    let directionStart = lastTop
-    const update = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const nextTop = scroller.scrollTop
-        const now = performance.now()
-        const delta = nextTop - lastTop
-        const elapsed = Math.max(8, now - lastTime)
-        const instantVelocity = delta / elapsed
-        velocity = velocity * .68 + instantVelocity * .32
-        const nextDirection = delta > 1 ? 'down' : delta < -1 ? 'up' : direction
-        if (nextDirection && nextDirection !== direction) {
-          direction = nextDirection
-          directionStart = lastTop
-        }
-        const travel = nextTop - directionStart
-        // Directional hysteresis prevents the island from chattering during
-        // small finger corrections. A deliberate downward gesture needs more
-        // travel than an upward reveal, while velocity keeps slow reading
-        // scrolls from constantly moving the controls.
-        if (nextTop < 20 || (direction === 'up' && travel < -14 && velocity < -.025)) {
-          setNavigationCompact(false)
-        } else if (nextTop > 92 && direction === 'down' && travel > 30 && velocity > .045) {
-          setNavigationCompact(true)
-        }
-        lastTop = nextTop
-        lastTime = now
-      })
+  const handleContentScroll = useCallback((event: React.UIEvent<HTMLElement>) => {
+    if (window.matchMedia('(min-width: 761px)').matches) return
+    const nextTop = event.currentTarget.scrollTop
+    const state = navigationScrollRef.current
+    const delta = nextTop - state.lastTop
+    const nextDirection = delta > 1 ? 'down' : delta < -1 ? 'up' : state.direction
+    if (nextDirection && nextDirection !== state.direction) {
+      state.direction = nextDirection
+      state.directionStart = state.lastTop
     }
-    update()
-    scroller.addEventListener('scroll', update, { passive: true })
-    return () => { cancelAnimationFrame(frame); scroller.removeEventListener('scroll', update) }
-  }, [mobileImmersive])
+    const travel = nextTop - state.directionStart
+    // Keep the full island at the route top. A deliberate downward scroll
+    // turns it into a slim, tappable handle; a short upward scroll restores
+    // it so actions on every CRM detail page remain reachable.
+    if (nextTop < 20 || (state.direction === 'up' && travel < -14)) {
+      setNavigationCompact(false)
+    } else if (nextTop > 92 && state.direction === 'down' && travel > 30) {
+      setNavigationCompact(true)
+    }
+    state.lastTop = nextTop
+  }, [])
   const navItem = (item: typeof NAV[number]) => {
     const Icon = NAV_ICONS[item.key]
     return item.disabled
@@ -592,7 +577,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
       </header>
       {hasReveals && reveals.used >= 40 && <div className="crm-notice" role="status">{reveals.used >= reveals.limit ? 'Reveal limit reached. Contact admin to raise your limit.' : `You have used ${reveals.used} of ${reveals.limit} contact reveals today.`}</div>}
       {filterBar !== undefined && <div className="crm-filterbar">{filterBar}</div>}
-      <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content"><div key={pathname} className="crm-route-enter">{children}</div></main>
+      <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content" data-mobile-nav-scroll="adaptive" onScroll={handleContentScroll}><div key={pathname} className="crm-route-enter">{children}</div></main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation" data-compact={navigationCompact || undefined}>
       <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Show mobile navigation" tabIndex={navigationCompact ? 0 : -1}><span /></button>

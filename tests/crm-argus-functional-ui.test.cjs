@@ -40,6 +40,26 @@ function fixtures() {
   })]]
   return f
 }
+
+function propertyEditorFixtures() {
+  const f = fixtures()
+  const prop = {
+    id: 1, ref: '2906-9101', type: 'apartment', beds: 2, baths: 1, sizeSqm: 80, published: false,
+    location: { town: 'Sliema', street: 'Tower Road', apt: '4' }, prices: { longlet: 1600, sale: null, shortlet: false },
+    availableStatus: 'available', availableDate: '2026-11-01', viewingStatus: 'none', viewingDate: null, viewingNotes: '',
+    internalNotes: '', description: 'Mock', exclusive: false, exclusiveUntil: null, rentalModes: ['long_let'], availableUntil: null,
+    hasBalcony: null, balconySize: null, hasStudyRoom: null, parkingAvailable: null, listingAgents: ['QA Agent'], activityAgents: [], activityAgent: null, activityAgentId: null, listedByAgentId: 1, ownerCreator: null, ownerCreatorId: null,
+    categoryOverride: null, categoryOverrideReason: null, completeness: 80, imageCount: 0, images: [], fav: false,
+    owner: { id: 7, name: 'Test Owner', phoneMasked: '+356 •••• ••19', hasPhone: true, emailMasked: null, hasEmail: false },
+  }
+  f.routes = [
+    ...f.routes,
+    [/^properties\/1$/, 'GET', () => ({ property: prop, activities: [], agents: [] })],
+    [/^properties\/1$/, 'PATCH', () => ({ ok: true, activitiesLogged: 1, completeness: 80 })],
+    [/av-date-confirm$/, 'POST', () => ({ ok: true, message: '#2906-9101 dates confirmed — reposting to its category group now.' })],
+  ]
+  return f
+}
 // Clicks in a page that may still be animating.
 async function click(page, selector) {
   await page.waitForSelector(selector, { visible: true, timeout: 10000 })
@@ -291,22 +311,7 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
   })
 
   await t.test('property editor: Save vs Save & Repost (admin)', async t2 => {
-    const f = fixtures()
-    const prop = {
-      id: 1, ref: '2906-9101', type: 'apartment', beds: 2, baths: 1, sizeSqm: 80, published: false,
-      location: { town: 'Sliema', street: 'Tower Road', apt: '4' }, prices: { longlet: 1600, sale: null, shortlet: false },
-      availableStatus: 'available', availableDate: '2026-11-01', viewingStatus: 'none', viewingDate: null, viewingNotes: '',
-      internalNotes: '', description: 'Mock', exclusive: false, exclusiveUntil: null, rentalModes: ['long_let'], availableUntil: null,
-      hasBalcony: null, balconySize: null, hasStudyRoom: null, parkingAvailable: null, listingAgents: ['QA Agent'], activityAgents: [], activityAgent: null, activityAgentId: null, listedByAgentId: 1, ownerCreator: null, ownerCreatorId: null,
-      categoryOverride: null, categoryOverrideReason: null, completeness: 80, imageCount: 0, images: [], fav: false,
-      owner: { id: 7, name: 'Test Owner', phoneMasked: '+356 •••• ••19', hasPhone: true, emailMasked: null, hasEmail: false },
-    }
-    f.routes = [
-      ...f.routes,
-      [/^properties\/1$/, 'GET', () => ({ property: prop, activities: [], agents: [] })],
-      [/^properties\/1$/, 'PATCH', () => ({ ok: true, activitiesLogged: 1, completeness: 80 })],
-      [/av-date-confirm$/, 'POST', () => ({ ok: true, message: '#2906-9101 dates confirmed — reposting to its category group now.' })],
-    ]
+    const f = propertyEditorFixtures()
     const page = await open(t2, browser, { path: '/crm/property/1', fixtures: f, width: 1280, height: 900 })
     await page.waitForSelector('[data-testid=property-save]', { timeout: 20000 })
     await shot(page, 'property-editor')
@@ -320,5 +325,23 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     await page.waitForFunction(() => /reposting to its category group/.test(document.body.innerText), { timeout: 15000 })
     const order = page.crmCalls.filter(c => c.method !== 'GET').map(c => `${c.method} ${c.path}`)
     assert.deepEqual(order, ['PATCH properties/1', 'POST schedule-board/listings/2906-9101/av-date-confirm'], 'save first, then one repost')
+  })
+
+  await t.test('mobile detail pages: bottom island clears actions and can be reopened', async t2 => {
+    const page = await open(t2, browser, { path: '/crm/property/1', fixtures: propertyEditorFixtures(), width: 390, height: 844 })
+    await page.waitForSelector('[data-testid=property-save]', { timeout: 20000 })
+    assert.ok(await page.$eval('.crm-bottom-nav', el => el.getBoundingClientRect().height) > 40, 'shared island starts open at the top of the route')
+    await page.$eval('[data-testid=property-save]', el => el.scrollIntoView({ block: 'center' }))
+    await page.waitForFunction(() => document.querySelector('.crm-bottom-nav').getBoundingClientRect().height <= 24)
+    const actionIsReachable = await page.$eval('[data-testid=property-save]', el => {
+      const box = el.getBoundingClientRect()
+      const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      return !!top && (top === el || el.contains(top))
+    })
+    assert.ok(actionIsReachable, 'the compact island no longer covers the property action')
+    assert.deepEqual(await page.$$eval('.crm-bottom-nav :is(a,button)', nodes => nodes.filter(node => node.tabIndex >= 0).map(node => node.getAttribute('aria-label') || node.textContent.trim())), ['Show mobile navigation'], 'only the visible handle stays in the keyboard order')
+    await page.click('.crm-bottom-nav-handle')
+    await page.waitForFunction(() => document.querySelector('.crm-bottom-nav').getBoundingClientRect().height > 40)
+    await shot(page, 'mobile-property-island-restored')
   })
 })

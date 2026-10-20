@@ -24,7 +24,8 @@
       "Preserve the current information architecture and route structure.",
       "Use the CRM semantic tokens and support light and dark modes.",
       "Prefer restrained transform/opacity motion with reduced-motion fallbacks.",
-      "Keep every operational control keyboard accessible and resilient to empty API responses."
+      "Keep every operational control keyboard accessible and resilient to empty API responses.",
+      "Keep the shared mobile bottom island expanded at the top of every CRM route, collapse it to a tappable handle after deliberate downward scrolling, and restore it on upward scrolling or a direct handle tap so page actions remain reachable."
     ]
   },
   "design": {
