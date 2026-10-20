@@ -851,3 +851,21 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 
 - Nach dem Dokumentationscommit `f0d39c6` lieferte die Produktion den korrigierten Endstand mit HTTP200, 15.311 Bytes und SHA256 `D82DD17FD7B38DE001DC384E6BB6D38EE475B8A238BD89C5C9D4A5766CA41019`. Der Text enthält keine Preview- oder Release-Candidate-Kennzeichnung mehr; Dossierstatus und Liveausgabe sind konsistent.
 - Ausgangshash dieses letzten Worklog-Schritts: `39B3526286C581367515CBE227ED3D529BE14D80C8EA459334781EBD244D845D`. Der Inhaltsrelease ist abgeschlossen; Rollback erfolgt durch Revert der Siġġiewi-Commits `f0d39c6` und `9a8fc37` in dieser Reihenfolge. Keine externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs- oder Scheduler-Änderung.
+
+## 01:19 Malta, 21.10 — Żejtun als isolierten Release-Kandidaten vorbereitet
+
+- Vor Edits den sauberen Release-Worktree `C:\Users\kevin\nexus-bridge-work\20261020\siggiewi-release` auf HEAD/origin-main `473301fa7e2c01465ec44c2f29dde7aae947c489` geprüft; Ausgangshash des Worklogs `A312E43228D681693D4AB4E35E297A2DDE57D9E401AC91AB650D5E1BBC815149`. Die 163 fremden Statuszeilen im bestehenden Reise-Checkout blieben unberührt.
+- Die quellengeprüfte Żejtun-Vorschau als eigenständige englische Ausgabe nach `public/link-marketplace/areas/zejtun.html` überführt. Release-Metadaten enthalten exakt einen Self-Canonical, drei Open-Graph-Felder und eine valide BreadcrumbList; `noindex,nofollow` und Previewkennzeichnung wurden entfernt.
+- Marketplace-Navigation und `public/neighbourhood-sitemap.xml` enthalten jeweils genau einen Żejtun-Verweis. Das lizenzierte Hero `zejtun-st-catherine.webp` liegt unverändert bei 1800×1218, 302.070 Bytes und SHA256 `5432C83AC952D7CA7A22D8600873A597FC6E56C0A7DBB446F0271F8AE827EFAD`; Attribution zu JosephAmodio, Wikimedia Commons und CC BY-SA 4.0 bleibt sichtbar.
+- Statische Releaseprüfung bestanden: genau ein H1, ein Canonical, drei Open-Graph-Felder, eine valide BreadcrumbList, kein Robots-Block, initial kein iframe, genau ein Heroverweis sowie je genau ein Index- und Sitemap-Verweis. `git diff --check` bestanden.
+- Kandidatenhashes: HTML `402E65C5A12D4A0BB2F703BA125CCE7E6156A653A0514A542D9B9E65D1A29E06`; Index `4DC36940AD55C59C8E379FC25D130DB3AC27C3A3D4BCA82A444BADB3C5728EAD`; Sitemap `E5090527640B7B060660C46F7D3B25C15B7FE1B0C6F47132F390AFB7E8F14F1F`; Dossier vor Statuswechsel `705014C56408B6FD30852DD3E4F0E09B55AF9F616868672982F8DB632507BE0C`.
+- Noch nicht live behauptet: Production-Build, echte Mobile-/Desktop-Browserprüfung, gezielter Commit, Fast-Forward-Push und Produktionsprüfung folgen separat. Keine externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs-, Google-API- oder Scheduler-Änderung.
+
+## 01:27 Malta, 21.10 — Żejtun-Releasebuild und echte Responsive-Prüfung bestanden
+
+- Vor der Prüfung Worklog-Hash `CDDFF21F5FB05EDA534729498F4AF4FB97775CD1BF1DEA327B27D7A005D615B5` und Basiscommit `473301fa7e2c01465ec44c2f29dde7aae947c489` festgehalten. Der vorhandene Dependency-Baum blieb unverändert und ungetrackt.
+- Vollständiger `next build --webpack` mit Next.js 16.2.0 erfolgreich: 52/52 statische Seiten. Die bestehende projektweite Typprüfung bleibt deaktiviert; die vom Build veränderte `next-env.d.ts` wurde auf den unveränderten Repostand zurückgesetzt.
+- Zwei letzte Previewformulierungen in der Produktionsseite zu „This edition” korrigiert. Finaler HTML-Kandidatenhash `0D00B9E50E204DF60EECA2E62182ED175D5CABA2E95485F0BBBADC67D784AED4`.
+- Echter Chromium-Test bei 390×844 und 1440×1000 bestanden: HTTP200, genau ein H1, exakter Self-Canonical, drei Open-Graph-Felder, eine BreadcrumbList, kein Robots-Block, null horizontaler Overflow, vollständig dekodiertes 1800×1218-Hero und initial null iframes. Mobile und Desktop zeigen den kirchenzentrierten Zuschnitt ohne Clipping oder Überlagerung.
+- Nach Klick entstand genau ein sichtbarer OSM-Frame; Button, Kartenstatus und Fallback-Link verhielten sich korrekt. Żejtun und umliegende Ortslabels sind sichtbar, ohne Grenze, Property-Pin, Route, Distanz oder Reisezeit.
+- Noch nicht live behauptet: gezielter Commit, erneute Fast-Forward-Prüfung, Push und Produktionsprüfung folgen. Keine externen Backlinks, Outreach-, WhatsApp-, Backend-, Verkehrs-, Google-API- oder Scheduler-Änderung.
