@@ -1,6 +1,6 @@
 # Żejtun village edition — sourced research
 
-Status: **RELEASE CANDIDATE — not yet published**  
+Status: **PUBLISHED — production verified 21 October 2026**  
 Checked: 20 October 2026  
 Scope: source material for an independent Żejtun edition. This is not a popularity ranking, a promise of walkability, or a disclosure of exact property locations.
 
