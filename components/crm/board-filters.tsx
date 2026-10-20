@@ -14,7 +14,7 @@
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bath, BedDouble, Building2, CalendarDays, Cat, Check, ChevronDown, Euro, House, Lock, Map as MapIcon, Menu, MapPin, RotateCcw, Search, Snowflake, Sparkles, Wrench, X } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, Cat, Check, ChevronDown, Euro, House, Lock, Map as MapIcon, Menu, MapPin, RotateCcw, Search, SlidersHorizontal, Snowflake, Sparkles, Wrench, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { RENTAL_MODES, RENTAL_LABEL } from '@/components/crm/rental-modes'
@@ -112,7 +112,7 @@ const BATHS = ['1', '2', '3']
 const RAIL_FOR_TARGET: Record<string, string> = {
   'crm-filter-location': 'location',
   'crm-filter-price': 'price', 'crm-filter-availability': 'booking', 'crm-filter-updated': 'booking',
-  'crm-filter-bedrooms': 'beds', 'crm-filter-bathrooms': 'baths', 'crm-filter-property-type': 'types',
+  'crm-filter-rooms': 'beds', 'crm-filter-bedrooms': 'beds', 'crm-filter-bathrooms': 'baths', 'crm-filter-property-type': 'types',
   'crm-filter-tenancy': 'specials', 'crm-filter-rental': 'season',
 }
 
@@ -681,7 +681,12 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 exit={{ opacity: 0, scale: .72, rotate: 10 }}
                 transition={prefersReducedMotion ? { duration: .01 } : { type: 'spring', stiffness: 430, damping: 27 }}
               >
-                <Sparkles aria-hidden />
+                <span className="crm-filter-cloud-preview" aria-hidden>
+                  <i data-testid="filter-preview-location" data-selected={value.towns.length > 0 || locationAreasSelected.length > 0}><MapPin /></i>
+                  <i data-testid="filter-preview-price" data-selected={!!(value.min || value.max)}><Euro /></i>
+                  <i data-testid="filter-preview-rooms" data-selected={value.beds.length > 0 || value.baths.length > 0}><span className="crm-rooms-filter-icon"><BedDouble /><Bath /></span></i>
+                  <i data-testid="filter-preview-availability"><CalendarDays /></i>
+                </span>
                 {activeCount > 0 && <span className="crm-island-count" aria-hidden>{activeCount}</span>}
               </motion.button>
             ) : (
@@ -698,8 +703,12 @@ export function BoardFilters({ value, onChange, onReset, count, mineCount, loadi
                 {([
                   ['location', 'Open village filters', 'crm-filter-location', <MapPin key="i" aria-hidden />, value.towns.length > 0 || locationAreasSelected.length > 0],
                   ['price', 'Open price filters', 'crm-filter-price', <Euro key="i" aria-hidden />, !!(value.min || value.max)],
+                  ['availability', 'Open availability filters', 'crm-filter-availability', <CalendarDays key="i" aria-hidden />, false],
                   ['rooms', 'Open bedroom and bathroom filters', 'crm-filter-rooms', <span key="i" className="crm-rooms-filter-icon" aria-hidden><BedDouble /><Bath /></span>, value.beds.length > 0 || value.baths.length > 0],
-                  ['more', 'Open all property filters', 'crm-filter-location', <ChevronDown key="i" aria-hidden />, !!(value.type || rulesActive || value.quick.length || value.updated || value.rental)],
+                  ['types', 'Open property types', 'crm-filter-property-type', <Building2 key="i" aria-hidden />, !!value.type],
+                  ['tenancy', 'Open pets and tenancy filters', 'crm-filter-tenancy', <Cat key="i" aria-hidden />, rulesActive || value.quick.length > 0],
+                  ['updated', 'Open updated filters', 'crm-filter-updated', <SlidersHorizontal key="i" aria-hidden />, !!value.updated],
+                  ['rental', 'Open rental filters', 'crm-filter-rental', <Snowflake key="i" aria-hidden />, !!value.rental],
                 ] as const).map(([key, label, target, icon, selected]) => (
                   <motion.button
                     key={key}

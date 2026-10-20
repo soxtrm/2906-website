@@ -116,6 +116,7 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     bottomNav:getComputedStyle(document.querySelector('.crm-bottom-nav')).display,
     orbs:[...document.querySelectorAll('.crm-board-orb')].map(node=>node.dataset.testid),
     filterIcons:document.querySelectorAll('.crm-filter-island .crm-island-feature').length,
+    filterPreviewIcons:document.querySelectorAll('.crm-filter-cloud-preview>i').length,
     filterTrigger:!!document.querySelector('[data-testid=island-filter-trigger]'),
   }))
   assert.ok(['none','missing'].includes(mobile.desktopRail),'desktop controls are hidden on mobile')
@@ -124,16 +125,17 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.notEqual(mobile.bottomNav,'none','mobile bottom navigation remains available')
   assert.deepEqual(mobile.orbs,['board-market-button','board-map-button','board-tools-button'],'Market · Map · Tools')
   assert.equal(mobile.filterIcons,0,'the phone filter cloud starts calm and collapsed')
-  assert.equal(mobile.filterTrigger,true,'the collapsed phone filter cloud has one clear trigger')
+  assert.equal(mobile.filterPreviewIcons,4,'the closed filter cloud previews the frequent filters')
+  assert.equal(mobile.filterTrigger,true,'the whole collapsed phone filter cloud is one clear trigger')
 
   const filterWidthBefore=await page.$eval('.crm-filter-island',node=>node.getBoundingClientRect().width)
-  await page.$eval('[data-testid=island-filter-trigger]',button=>button.click())
+  await page.$eval('[data-testid=filter-preview-price]',icon=>icon.click())
   await page.waitForSelector('[data-testid=island-price]')
   await new Promise(resolve=>setTimeout(resolve,600))
   assert.equal(await page.$('#crm-mobile-filter-panel'),null,'expanding the cloud does not pick a filter')
   const filterWidthAfter=await page.$eval('.crm-filter-island',node=>node.getBoundingClientRect().width)
   assert.ok(filterWidthAfter>filterWidthBefore+25,`filter cloud grows before selection (${filterWidthBefore} → ${filterWidthAfter})`)
-  assert.deepEqual(await page.$$eval('.crm-filter-icons .crm-island-feature',nodes=>nodes.map(node=>node.dataset.testid)),['island-location','island-price','island-rooms','island-more'],'only the four useful mobile entries are exposed')
+  assert.deepEqual(await page.$$eval('.crm-filter-icons .crm-island-feature',nodes=>nodes.map(node=>node.dataset.testid)),['island-location','island-price','island-availability','island-rooms','island-types','island-tenancy','island-updated','island-rental'],'the expanded cloud exposes every filter group')
   await page.$eval('.crm-filter-island [aria-label="Open price filters"]',button=>button.click())
   await page.waitForSelector('#crm-mobile-filter-panel')
   assert.equal(await page.$eval('#crm-mobile-filter-panel',node=>getComputedStyle(node).display!=='none'),true,'a shortcut opens its section after the cloud expands')

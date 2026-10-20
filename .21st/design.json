@@ -432,7 +432,8 @@
   "decisions": [
     "Desktop polish is applied through the shared CRM shell and semantic page classes before route-specific overrides.",
     "Motion is functional and restrained; route transitions use opacity and controls use short transform feedback.",
-    "Inventory desktop rows start with three compact square property photos; owner and location remain separate scan columns; preserve light-first ARGUS tokens and dense operational spacing."
+    "Inventory desktop rows start with three compact square property photos; owner and location remain separate scan columns; preserve light-first ARGUS tokens and dense operational spacing.",
+    "On mobile, the right filter cloud previews several frequent filters while closed; the first tap anywhere in that cloud only expands it, and filter selection begins from the expanded controls."
   ],
   "evidence": [
     {
