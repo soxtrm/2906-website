@@ -1,6 +1,6 @@
 # Siġġiewi village edition — research draft
 
-Status: **RELEASE CANDIDATE — publication and live checks pending**
+Status: **PUBLISHED — production verified 20 October 2026**
 Checked: 20 October 2026
 Scope: an independent Siġġiewi edition. This draft is source material for editorial review; it is not a ranking, a promise of walkability, or a property-location disclosure.
 
