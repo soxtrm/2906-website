@@ -591,22 +591,36 @@ function decideSessionAction(state, backoffMs = 0) {
   return 'restart'
 }
 
+// Kev, 2026-10-22: operator alerts come from the persisted episode model in
+// services/sessionAlertState.js (Redis), not from the in-memory throttle that
+// every backend restart reset. Returns the restart permission for this tick.
+async function _observeSessionHealth(session, wahaStatus) {
+  const sessionAlert = require('./services/sessionAlertState')
+  const redis = require('./redis')
+  const prev = await sessionAlert.load(redis, session)
+  const { record, messages, allowRestart } = sessionAlert.step(prev, wahaStatus, Date.now(), session)
+  await sessionAlert.save(redis, session, record)
+  for (const text of messages) await _alertViaWhatsApp(text)
+  return { allowRestart, record }
+}
+
+async function _noteSessionRestart(session) {
+  const sessionAlert = require('./services/sessionAlertState')
+  const redis = require('./redis')
+  const rec = await sessionAlert.load(redis, session)
+  if (rec) await sessionAlert.save(redis, session, sessionAlert.noteRestart(rec, Date.now()))
+}
+
 async function ensureSessionWorking(session) {
   const status = await getSessionStatus(session)
   const state = status?.status
   const backoffMs = _backoffBlocks(session)
   const action = decideSessionAction(state, backoffMs)
-
-  // Kev 2026-08-22: track how long a session has sat non-WORKING so we can
-  // page him once it crosses 15 min, regardless of which of the non-healthy
-  // actions below is firing.
-  if (action !== 'healthy') {
-    if (!_downSince.has(session)) _downSince.set(session, Date.now())
-    const downMs = Date.now() - _downSince.get(session)
-    if (downMs > 15 * 60_000 && _shouldAlert(session, 'down15')) {
-      await _alertViaWhatsApp(`⚠️ Session ${session} has been non-WORKING for over 15 min (state: ${state ?? 'unreachable'}).`)
-    }
-  }
+  const health = await _observeSessionHealth(session, state).catch(err => {
+    log.warn('session health episode update failed', { session, err: err.message })
+    return { allowRestart: true }
+  })
+  if (action !== 'healthy' && !_downSince.has(session)) _downSince.set(session, Date.now())
 
   // WEBJS reports WORKING before the client is fully ready (me is null during warmup).
   // Wait up to 30s for me to be populated before declaring healthy.
@@ -650,10 +664,7 @@ async function ensureSessionWorking(session) {
   if (action === 'qr') {
     await saveQrCode(session)
     log.warn('WAHA session awaiting QR scan', { session })
-    if (_shouldAlert(session, 'qr')) {
-      await _alertViaWhatsApp(`📷 Session ${session} needs a QR rescan — it cannot self-heal by restarting.`)
-    }
-    return false
+    return false   // the operator alert (once per episode) was sent by _observeSessionHealth
   }
 
   // Mid-transition — WAHA is already doing the thing we would be asking for.
@@ -670,6 +681,13 @@ async function ensureSessionWorking(session) {
     return false
   }
 
+  // A session that needs a human QR scan is not stop/started every few
+  // minutes (each lap produced a new QR and a new alert): at most hourly.
+  if (!health.allowRestart) {
+    log.info('WAHA session waits for a QR scan, not restarting', { session, state: state ?? 'unreachable' })
+    return false
+  }
+  await _noteSessionRestart(session).catch(() => {})
   log.warn('WAHA session not active, restarting', { session, state: state ?? 'unreachable' })
   await sendAlert(`WAHA session ${session} (${state ?? 'unreachable'}) — restarting`, 'warn')
 
@@ -722,10 +740,9 @@ async function ensureSessionWorking(session) {
       _noteRestartFailure(session)
       await saveQrCode(session)
       log.warn('WAHA session needs QR scan', { session })
-      await sendAlert(`WAHA QR scan needed for ${session} — saved to qr_${session}.png`, 'warn')
-      if (_shouldAlert(session, 'qr')) {
-        await _alertViaWhatsApp(`📷 Session ${session} needs a QR rescan — it cannot self-heal by restarting.`)
-      }
+      // One episode, one alert: the episode model decides (it has already
+      // alerted if this episode saw a QR before this restart).
+      await _observeSessionHealth(session, st).catch(() => {})
       return false
     }
   }
