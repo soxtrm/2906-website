@@ -33,7 +33,8 @@ const config = require('../config')
 const waha = require('../waha')
 const { addJob, QUEUES } = require('../queues')
 const reminderFromMessage = require('./reminderFromMessage')
-const { resolveAgentIdentity, agencyAnswer } = require('./agentIdentityRegistry')
+const { resolveIdentityForSession, agencyAnswer, isAgencyQuestion, AGENCY_QUESTION_RE: REGISTRY_AGENCY_QUESTION_RE,
+  PERSONA_IDENTITIES } = require('./agentIdentityRegistry')
 const styleLearning = require('./styleLearning')
 const unwatermark = require('./unwatermark')
 const ownerPreferenceProfile = require('./ownerPreferenceProfile')
@@ -122,15 +123,35 @@ const FALL3_NEEDS_HUMAN_TEXT =
 // biography. Kevin's wording is explicitly approved; Cedric keeps his existing
 // Quicklets answer. Gabriela has her own conservative session answer so her
 // account never inherits Kevin's four-year biography by accident.
-const AGENCY_QUESTION_RE = /\b(which agency|what agency|which company|what company|who do you work for|whom do you (?:work for|represent)|which agents?|are you (?:an? )?(?:agent|freelancer)|do you work (?:independently|for))\b/i
-const CEDRIC_AGENCY_ANSWER = "I'm with Quicklets."
-const KEVIN_AGENCY_ANSWER =
-  "I work independently with 2906 Estate. I've worked in real estate for four years and have been a freelancer for the past year. " +
-  "We're building a collective of around 30 agents who share property opportunities and work together to help clients find the right home."
-const GABRIELA_AGENCY_ANSWER = 'I work independently with 2906 Estate.'
+// Kev, 2026-10-22 (P0, #5598 Argus5 / #5630 Gabriela): detection and identity
+// now live in agentIdentityRegistry (one detector for both conversation
+// paths; persona from whatsapp_accounts). The old local regex missed "the
+// name of your agency" / "the agency you are representing" / "what estate
+// agency", and the old session-keyed lookup returned null for Argus1-5 and
+// for the "Gabriela" session -> both conversations escalated instead of
+// answering. Gabriela represents Sotheby's (Kev's identity spec 2026-10-22),
+// never 2906 Estate.
+const AGENCY_QUESTION_RE = REGISTRY_AGENCY_QUESTION_RE
+const KEVIN_AGENCY_ANSWER = agencyAnswer(PERSONA_IDENTITIES.kev)
+const CEDRIC_AGENCY_ANSWER = agencyAnswer(PERSONA_IDENTITIES.cedric)
+const GABRIELA_AGENCY_ANSWER = agencyAnswer(PERSONA_IDENTITIES.gabriela)
 
 async function approvedAgencyAnswer(session) {
-  return agencyAnswer(resolveAgentIdentity(session))
+  return agencyAnswer(await resolveIdentityForSession(session, db))
+}
+
+function agencyRepeatAnswer(identity) {
+  if (!identity || !identity.agency) return null
+  return `Sure — I'm ${identity.fullName || identity.name} from ${identity.agency}, based in Malta.`
+}
+
+// Kev, 2026-10-22 (P0): an owner's direct question is never "unclear intent".
+// When no deterministic answer exists, the bot must not answer it with the
+// intake questionnaire ("Just to check — do you have a property…?"); it stays
+// silent and hands the question to a human instead.
+const DIRECT_QUESTION_RE = /\?|^\s*(?:what|which|who|whom|whose|where|when|why|how|can you|could you|do you|are you|is it|is this|will you|would you)\b/im
+function isDirectQuestion(text) {
+  return DIRECT_QUESTION_RE.test(String(text || ''))
 }
 
 // ── FALL 3 (Kev, 2026-09-06, GOLDEN-SCRIPT) -- completely new. A voice
@@ -1234,7 +1255,44 @@ const YEAR_LIKE_RE = /^20(2[4-9]|3[0-9])$/
 // can safely be greedy without also swallowing an unrelated date sitting
 // next to the real price in the same sentence.
 const PRICE_NUMBER = String.raw`\d{1,3}(?:[.,]\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?`
+
+// Kev, 2026-10-22 (P0, conversation #5587 George Cachia / draft 29496): the
+// owner's FIRST reply was "Next vacancy July '26". Price was the first
+// missing field, so the targeted price extraction ran on that text, took the
+// "26" out of "July '26" as a bare digit run and applied the x1000 Malta
+// shorthand -> EUR 26,000/month was published and the marketing copy called
+// it "an excellent price". The owner never stated a rent. The same fallback
+// read a house number ("17, Triq Le Brun" -> 17,000), a flat number or a
+// postcode digit run as a price.
+// Rule now: numbers that are part of a date, year, postcode, phone number or
+// property reference are removed before any price matching, and WITHOUT a
+// currency/rent anchor a number is a price only when the reply is nothing but
+// a price ("1600", "around 1.6k", "1500 negotiable", "4"). Anything else
+// leaves the price missing -- asked again / reviewed, never guessed.
+const PRICE_MONTHS = String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`
+function stripNonPriceNumbers(text) {
+  return String(text || '')
+    .replace(new RegExp(String.raw`\b${PRICE_MONTHS}\.?\s*(?:of\s+)?['’]?\s*\d{2,4}\b`, 'gi'), ' ') // July '26, March 2027
+    .replace(new RegExp(String.raw`\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?${PRICE_MONTHS}\b`, 'gi'), ' ') // 1st March, 20 October
+    .replace(/['’]\d{2}\b/g, ' ')                                   // a lone '26
+    .replace(/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/g, ' ')        // 21/10, 21-10-2026
+    .replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, ' ')                  // 03.01.2027 (dotted dates need 3 groups: "1.6k" is a price)
+    .replace(/\b20\d{2}-\d{1,2}(?:-\d{1,2})?\b/g, ' ')               // 2026-07, 2027-03-01
+    .replace(/\b[A-Z]{3} \d{4}\b/g, ' ')                            // Malta postcode "SWQ 2081" (caps only: "the 1500" is not one)
+    .replace(/\b[a-z]{3}\d{4}\b/gi, ' ')                            // "SWQ2081" / "swq2081"
+    .replace(/\+?\d[\d ]{7,}\d/g, ' ')                              // phone numbers
+    .replace(/\b(?:PD|REF|ID|2906)[-\s#:]?\d+\b/gi, ' ')            // property / draft references
+    .replace(/\b(?:no\.?|number|apt|apartment|flat|block|unit|house|door|level|floor)\s*#?\d+\b/gi, ' ')
+    .replace(/\b\d+\s*,?\s*(?:triq|street|st\.?|road|rd\.?|avenue|ave\.?)\b/gi, ' ')
+}
+const PRICE_FILLER_RE = /\b(?:the|rent|rental|price|asking|ask|is|it'?s|its|would|will|be|around|approx(?:imately)?|about|roughly|circa|i|think|believe|negotiable|neg|ono|plus|excl(?:uding)?|incl(?:uding)?|bills?|utilities|per|month|monthly|a|pm|eur|euros?|for|long[- ]?let|we|want|max|min|k|ok|okay|yes|hi|hello|thanks?|thank you)\b/gi
+function isPriceOnlyReply(text, digits) {
+  const rest = String(text || '').replace(digits, ' ').replace(PRICE_FILLER_RE, ' ').replace(/[^a-z0-9]/gi, '')
+  return rest === ''
+}
+
 function extractPrice(text) {
+  text = stripNonPriceNumbers(text)
   const original = String(text)
 
   // Pass 1: a number with an explicit currency/rent marker directly attached
@@ -1250,6 +1308,14 @@ function extractPrice(text) {
     const n = parseFloat(raw.replace(/,/g, ''))
     if (Number.isFinite(n) && n > 0) return n < 100 && isBareShorthandPrice(original, raw) ? n * 1000 : n
   }
+  // Pass 1b: a rent/price word directly in front of the number ("the rent is
+  // 1500, available from March") is as unambiguous as a currency sign.
+  const keyed = original.match(new RegExp(String.raw`\b(?:rent|price|asking(?:\s+price)?)\s*(?:is|of|would be|will be|:|=)?\s*(?:around|about|approx(?:imately)?)?\s*(${PRICE_NUMBER})\s*(k\b)?`, 'i'))
+  if (keyed) {
+    let n = parseFloat(keyed[1].replace(/,/g, ''))
+    if (keyed[2]) n *= 1000
+    if (Number.isFinite(n) && n > 0 && !YEAR_LIKE_RE.test(keyed[1])) return n < 100 && isBareShorthandPrice(original, keyed[1]) ? n * 1000 : n
+  }
 
   const cleaned = original
     .replace(/[\u20ac$]/g, ' ')
@@ -1258,7 +1324,9 @@ function extractPrice(text) {
   // as 1600/2000, not 1.6/2 -- checked BEFORE the plain digit-run match so
   // the 'k' suffix is consumed as part of the same number, not dropped.
   const km = cleaned.match(/(\d+(?:\.\d+)?)\s*k\b/i)
-  if (km) {
+  // "2.5k" is an explicit price marker on its own (unlike a bare digit run);
+  // only an area ("1k sqm") is excluded.
+  if (km && !/^\s*(?:sq|m2|m²)/i.test(cleaned.slice(km.index + km[0].length))) {
     const n = parseFloat(km[1]) * 1000
     return Number.isFinite(n) && n > 0 ? n : null
   }
@@ -1278,6 +1346,8 @@ function extractPrice(text) {
   // asked again / flagged for review, which is the correct outcome for a
   // value this uncertain with zero currency context to back it up.
   if (YEAR_LIKE_RE.test(m[1])) return null
+  // No currency/rent anchor at all: only a reply that IS a price counts.
+  if (!isPriceOnlyReply(cleaned, m[1])) return null
   let n = parseFloat(m[1].replace(/,/g, ''))
   if (!Number.isFinite(n) || n <= 0) return null
   if (n < 100 && isBareShorthandPrice(original, m[1])) n *= 1000
@@ -1593,7 +1663,13 @@ function extractDateMention(text) {
 // already claimed above, and within a plausible Malta rent range -- guards
 // against grabbing a phone number or some other unrelated figure.
 function extractStandalonePrice(text, excludeValues) {
-  const matches = [...String(text).matchAll(/\b(\d{2,6}(?:[.,]\d{3})*)\b/g)]
+  // Kev, 2026-10-22 (P0): this branch runs with NO currency/rent word in the
+  // message, so it may only accept a message that is nothing but a price —
+  // "Apt 205", "Block 1500" or a postcode were read as rents before.
+  const bare = stripNonPriceNumbers(stripBedsBaths(text))
+  const only = bare.match(/\b(\d{2,6}(?:[.,]\d{3})*)\b/)
+  if (!only || !isPriceOnlyReply(bare, only[1])) return null
+  const matches = [...String(bare).matchAll(/\b(\d{2,6}(?:[.,]\d{3})*)\b/g)]
   for (const m of matches) {
     const val = parseFloat(m[1].replace(/,/g, ''))
     if (!Number.isFinite(val) || val < 150 || val > 20000) continue
@@ -3487,8 +3563,14 @@ async function processStep({ conversationId, phone, session }) {
     // ── BUSINESS / IDENTITY FIRST ────────────────────────────────────────
     // This is a direct answer, not another availability question. Unknown
     // personas are escalated instead of receiving an invented biography.
-    if (AGENCY_QUESTION_RE.test(combinedText)) {
-      const agencyAnswer = await approvedAgencyAnswer(session)
+    if (isAgencyQuestion(combinedText)) {
+      let agencyAnswer = await approvedAgencyAnswer(session)
+      // A repeated question must still get an answer: sendGate refuses an
+      // exact duplicate text, so the second answer is a short restatement
+      // (never the intake question, never silence — #5598 asked twice).
+      if (agencyAnswer && hasAlreadySentExactText(updatedChecklist, agencyAnswer)) {
+        agencyAnswer = agencyRepeatAnswer(await resolveIdentityForSession(session, db))
+      }
       if (!agencyAnswer) {
         await persistAndReturn({ _agency_question_needs_human: true })
         await waha.markChatUnread(session, phone).catch(() => {})
@@ -3728,6 +3810,14 @@ async function processStep({ conversationId, phone, session }) {
         )
         await db.query(`UPDATE outreach_log SET conversation_state='declined' WHERE phone=$1 AND conversation_state IN ('cold','active')`, [phone])
         await waha.markChatUnread(session, phone)
+        return
+      }
+      if (intent === 'unclear' && isDirectQuestion(combinedText)) {
+        updatedChecklist = mergeExtracted(updatedChecklist, extracted, combinedText)
+        await persistAndReturn({ _owner_question_needs_human: combinedText.slice(0, 300) })
+        await waha.markChatUnread(session, phone).catch(() => {})
+        await notifyAdminEscalation(session, phone, 'OWNER ASKED A DIRECT QUESTION — no approved automatic answer; please reply personally',
+          `"${combinedText.slice(0, 200)}"`)
         return
       }
       if (intent === 'unclear') {

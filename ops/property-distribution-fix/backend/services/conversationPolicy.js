@@ -16,7 +16,9 @@ const OPT_OUT_RE = /\b(stop (?:contacting|messaging|texting) me|don'?t (?:contac
 const PROPERTY_REMOVAL_RE = /\b(remove (?:it|the (?:property|place|listing))|take (?:it|the (?:property|place|listing)) off|remove me from the list)\b/i
 const RENTED_RE = /\b(?:just\s+)?(?:been\s+)?rented\b|\balready rented\b|\bplace (?:is|has been) taken\b/i
 const SOLD_RE = /\b(?:just\s+)?sold\b|\balready sold\b/i
-const AGENCY_QUESTION_RE = /\b(which|what) (agency|company)|\bwho do you (?:work for|represent)|\bare you (?:an? )?(?:agent|freelancer)\b/i
+// Kev, 2026-10-22: one shared detector (agentIdentityRegistry) for both
+// conversation paths; this local copy missed "name of your agency" etc.
+const { AGENCY_QUESTION_RE } = require('./agentIdentityRegistry')
 const CLIENT_QUESTION_RE = /\bwhat (?:type|kind)s? of clients? (?:do )?you (?:have|work with)|\bwhich clients? (?:do )?you (?:have|work with)\b/i
 const CONTACT_REASON_RE = /\bwhy (?:are|do) you (?:contacting|message|text|write)|\bwhat are you contacting me (?:about|for)\b/i
 const CONTRACT_ONLY_RE = /\bcontract only\b|\bneed(?:s|ed)? (?:a )?contract only\b|\bpay(?:s|ing)? monthly for (?:the )?(?:contract|address|documents?)\b|\b(?:paper|document)[ -]?only lease\b/i
