@@ -79,6 +79,11 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(layout.content.r,layout.viewport,'the page scrollbar lives at the far browser edge')
   assert.equal(await page.$eval('.crm-board-legacy-filter-row',node=>getComputedStyle(node).display),'none','legacy text filters never create a second desktop row')
   const firstPhoto=await page.$('.crm-listing-photo')
+  await page.waitForFunction(()=>{
+    const layers=[...document.querySelectorAll('.crm-listing-card:first-child .crm-photo-layer')]
+    return layers.length===4 && layers.every(layer=>layer.complete&&layer.naturalWidth>0)
+  })
+  assert.equal(await page.$$eval('.crm-listing-card:first-child .crm-photo-layer[data-active=true]',nodes=>nodes.length),1,'one decoded photo layer remains visible while the gallery changes')
   await firstPhoto.hover()
   await new Promise(resolve=>setTimeout(resolve,100))
   const hoveredIndex=Number(await page.$eval('.crm-listing-photo',node=>node.dataset.photoIndex))
@@ -86,6 +91,10 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(Number(await page.$eval('.crm-listing-photo',node=>node.dataset.photoIndex)),hoveredIndex,'hover never auto-advances listing photos')
   await page.click('.crm-listing-card:first-child .crm-photo-arrow-next')
   await page.waitForFunction(expected=>Number(document.querySelector('.crm-listing-photo')?.dataset.photoIndex)===expected,{timeout:3000},(hoveredIndex+1)%4)
+  await page.waitForFunction(()=>{
+    const photo=document.querySelector('.crm-listing-photo')
+    return photo?.dataset.displayPhotoIndex===photo?.dataset.photoIndex
+  },{timeout:3000})
   const hoverGallery=await page.evaluate(()=>({
     index:Number(document.querySelector('.crm-listing-photo')?.dataset.photoIndex),
     arrows:[...document.querySelectorAll('.crm-listing-card:first-child .crm-photo-arrow')].map(node=>getComputedStyle(node).opacity),

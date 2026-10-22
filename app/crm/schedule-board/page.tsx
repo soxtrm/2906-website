@@ -3946,9 +3946,48 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   // touch swipe. Never advance a card on a timer: a stationary pointer should
   // leave the selected photo stable and avoid background React updates.
   const [hoverPhotoIdx, setHoverPhotoIdx] = useState(0)
+  const [displayPhotoIdx, setDisplayPhotoIdx] = useState(0)
+  const [preloadPhotos, setPreloadPhotos] = useState(false)
+  const loadedPhotoIndexes = useRef(new Set<number>())
+  const photoFrameRef = useRef<HTMLDivElement | null>(null)
   const swipeStartX = useRef<number | null>(null)
   const didSwipePhoto = useRef(false)
   const photoCount = (r.images || []).length
+  const photoIdentity = (r.images || []).join('\u0000')
+
+  // Cards close to the viewport mount their full photo stack before the user
+  // reaches it. Off-screen listings still render only their lead photo, so a
+  // long board does not download every gallery at once. Once a layer reports
+  // loaded, photo changes cross-fade between two decoded images instead of
+  // removing the old image and exposing the black frame while the next one
+  // downloads.
+  useEffect(() => {
+    loadedPhotoIndexes.current.clear()
+    setHoverPhotoIdx(0)
+    setDisplayPhotoIdx(0)
+    setPreloadPhotos(false)
+  }, [r.ref, photoIdentity])
+
+  useEffect(() => {
+    const node = photoFrameRef.current
+    if (!node || preloadPhotos) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setPreloadPhotos(true)
+      return
+    }
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return
+      setPreloadPhotos(true)
+      observer.disconnect()
+    }, { rootMargin: '360px 0px' })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [preloadPhotos, r.ref])
+
+  useEffect(() => {
+    if (loadedPhotoIndexes.current.has(hoverPhotoIdx)) setDisplayPhotoIdx(hoverPhotoIdx)
+  }, [hoverPhotoIdx])
+
   const previewPhotoAtPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'mouse' || photoCount < 2) return
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -4037,10 +4076,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           matter how many columns fit. `objectFit: cover` still crops rather
           than distorts, so nothing is squashed. */}
       <div
+        ref={photoFrameRef}
         className="crm-listing-photo"
         data-photo-index={hoverPhotoIdx}
+        data-display-photo-index={displayPhotoIdx}
         data-photo-count={photoCount}
         onClick={event => { event.stopPropagation(); if (didSwipePhoto.current) { didSwipePhoto.current = false; return }; onOpen() }}
+        onPointerEnter={() => setPreloadPhotos(true)}
         onPointerMove={previewPhotoAtPointer}
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
@@ -4059,8 +4101,26 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           gridRow: 1, touchAction: 'pan-y',
         }}
       >
-        {r.images[hoverPhotoIdx] || r.images[0]
-          ? <motion.img key={r.images[hoverPhotoIdx] || r.images[0]} src={r.images[hoverPhotoIdx] || r.images[0]} alt={`#${r.ref}`} loading="lazy" decoding="async" initial={{ opacity: .35, scale: 1.018 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .18, ease: [0.22, 1, 0.36, 1] }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        {r.images[0]
+          ? <div className="crm-photo-stack">
+              {(preloadPhotos ? r.images : r.images.slice(0, 1)).map((src, index) => (
+                <img
+                  key={`${src}:${index}`}
+                  className="crm-photo-layer"
+                  data-active={index === displayPhotoIdx}
+                  data-layer-index={index}
+                  src={src}
+                  alt={index === displayPhotoIdx ? `#${r.ref}` : ''}
+                  aria-hidden={index !== displayPhotoIdx}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  onLoad={() => {
+                    loadedPhotoIndexes.current.add(index)
+                    if (index === hoverPhotoIdx) setDisplayPhotoIdx(index)
+                  }}
+                />
+              ))}
+            </div>
           : <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#555', fontSize: 11, background: '#1C1C1C' }}>no photo</div>}
 
         {/* Kev's redesign brief (2026-08-22): a real scrim instead of relying on
