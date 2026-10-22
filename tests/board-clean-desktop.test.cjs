@@ -127,6 +127,9 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
     filterIcons:document.querySelectorAll('.crm-filter-island .crm-island-feature').length,
     filterPreviewIcons:document.querySelectorAll('.crm-filter-cloud-preview>i').length,
     filterTrigger:!!document.querySelector('[data-testid=island-filter-trigger]'),
+    firstCard:(()=>{const node=document.querySelector('.crm-listing-card');const rect=node?.getBoundingClientRect();return rect&&{height:Math.round(rect.height)}})(),
+    firstPhoto:(()=>{const node=document.querySelector('.crm-listing-photo');const rect=node?.getBoundingClientRect();return rect&&{height:Math.round(rect.height)}})(),
+    photoLayers:[...document.querySelectorAll('.crm-listing-card:first-child .crm-photo-layer')].map(node=>({position:getComputedStyle(node).position,opacity:getComputedStyle(node).opacity})),
   }))
   assert.ok(['none','missing'].includes(mobile.desktopRail),'desktop controls are hidden on mobile')
   assert.notEqual(mobile.islands,'none','mobile islands remain visible')
@@ -136,6 +139,11 @@ const listings = ['Mġarr','San Ġwann','Swieqi','St Julian’s','Żurrieq','Sli
   assert.equal(mobile.filterIcons,0,'the phone filter cloud starts calm and collapsed')
   assert.equal(mobile.filterPreviewIcons,4,'the closed filter cloud previews the frequent filters')
   assert.equal(mobile.filterTrigger,true,'the whole collapsed phone filter cloud is one clear trigger')
+  assert.ok(mobile.firstPhoto.height>=140&&mobile.firstPhoto.height<260,`mobile photo stays inside its compact frame (${mobile.firstPhoto.height}px)`)
+  assert.ok(mobile.firstCard.height<620,`preloaded images do not stretch the mobile card (${mobile.firstCard.height}px)`)
+  assert.ok(mobile.photoLayers.length>1,'mobile preloads the listing gallery near the viewport')
+  assert.ok(mobile.photoLayers.every(layer=>layer.position==='absolute'),'every preloaded mobile photo is overlaid in one frame')
+  assert.equal(mobile.photoLayers.filter(layer=>layer.opacity==='1').length,1,'only one preloaded mobile photo is visible')
 
   const filterWidthBefore=await page.$eval('.crm-filter-island',node=>node.getBoundingClientRect().width)
   await page.$eval('[data-testid=filter-preview-price]',icon=>icon.click())
