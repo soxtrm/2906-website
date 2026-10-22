@@ -106,3 +106,10 @@ Not verified / risks:
 - fb-groups 'Failed to launch the browser process' (189x in the 48h before deploy; pre-existing, unrelated)
 - Vertex [Classifier] 403 CONSUMER_INVALID (side finding)
 Next: watch the next agency question / QR episode in the logs; fix the Vertex [Classifier] 403 and the fb-groups browser launch separately.
+
+### 2026-10-22 Category rules: direct seafront always wins (Claude)
+Changed: ops/property-distribution-fix/backend/services/categoryClassifier.js, handlers/upload.js (!categorygroups rule text), test/categoryRules.20261022.test.js, test/fixtures-9519.json, ops/property-distribution-fix/deploy-category-rules.sh
+Why: #2906-9519 ("🌊 Direct Seafront Location", €3,000) went to Luxury. Two causes: (1) the trailing word "Location" matched a proximity disqualifier; (2) the generated description vetoed the agent's text. Kev's rules: direct seafront → ALWAYS seafront; then houses (any villa/house/townhouse/…) and luxury; luxury from €2,500 for every size; bedroom groups below.
+Tests: node test/categoryRules.20261022.test.js → 7/7 (production 0/7). Container: categoryRules 7/7, seafrontHint (current version) 19/19, agentPermissions 8/8.
+Deployed: yes 2026-10-22 02:35Z (backup /opt/2906-system/backups/category-rules-20261022T023516Z; md5 classifier 54c4dfc5…, upload 3de5f7ac… = repo). The stale production seafrontHint.test.js (August rules, 4 red) was replaced by the mirror version (old copy is in the same backup).
+Not verified / risks: #2906-9519 is still posted in the Luxury group (repost needs Kev's OK). 1BR listings at €2,000–2,499 now go to bed1 instead of Luxury (intended by the new rule).
