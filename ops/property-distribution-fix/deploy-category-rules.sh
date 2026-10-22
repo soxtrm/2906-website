@@ -11,10 +11,8 @@ BK=/opt/2906-system/backups/category-rules-$(date -u +%Y%m%dT%H%M%SZ)
 
 # relpath=expected production md5 (snapshot 2026-10-22) | NEW
 FILES=(
-  services/categoryClassifier.js=f33515d55afd4c99489abdecec7e0330
-  handlers/upload.js=336b1ac5d8c2c69b72b8405197e5b2b0
-  test/categoryRules.20261022.test.js=NEW
-  test/fixtures-9519.json=NEW
+  services/categoryClassifier.js=54c4dfc597385cf655c15149dbb45e02
+  test/categoryRules.20261022.test.js=3b186ef32e913ea39cfc682536d9e331
 )
 
 for pair in "${FILES[@]}"; do

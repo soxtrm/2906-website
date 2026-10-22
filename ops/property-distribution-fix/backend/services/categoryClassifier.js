@@ -409,7 +409,16 @@ async function classifyProperty(publicPayload, opts = {}) {
   const sfEv = seafrontEvidence(evidenceText)
   // "unclear type" = not a named house type and not a named apartment type.
   const typeUnclear = !det.isHouseType && !det.isApartmentType
-  const needGemini = desc.trim().length > 10 && typeUnclear   // own_entrance only
+  // Kev, 2026-10-22: "alle House typen = House egal ob 50€ oder 50k; Luxury =
+  // Apartments, Maisonettes, Penthouses, Studios, Duplex … ab 2500". House is
+  // decided deterministically: by the type, or — when the upload extraction
+  // set a wrong/generic type — by the agent's own headline naming a house
+  // type (and no apartment type). The Gemini "own entrance" guess no longer
+  // turns anything into a house: that path could move an apartment into
+  // Houses, and a house typed "apartment" into Luxury by price.
+  const headline = String(agentText.split(/\n/).find(line => line.trim()) || '')
+  const headlineHouse = HOUSE_TYPE_RE.test(headline) && !APARTMENT_TYPE_RE.test(headline)
+  const needGemini = false
 
   // Kev, 2026-10-22: a "direct seafront" in the agent's own text ALWAYS wins.
   // The old VETO (our generated description says only "seafront apartment"
@@ -430,7 +439,8 @@ async function classifyProperty(publicPayload, opts = {}) {
   // villas = standalone house/villa. Either it is named as one, or its type is
   // unclear AND it has its own entrance. A named apartment type (incl.
   // maisonette) never becomes a villa, own entrance or not.
-  const villas = det.isHouseType || (typeUnclear && ownEntrance && !det.isApartmentType)
+  const villas = det.isHouseType || headlineHouse
+  void typeUnclear
 
   // ── candidates, then ONE winner by precedence ─────────────────────────────
   // det.bucket is now null when bedrooms are UNKNOWN/CONFLICTING (2026-09-17
@@ -463,7 +473,7 @@ async function classifyProperty(publicPayload, opts = {}) {
   bits.push(`candidates=[${ordered.join(' > ') || 'none'}]`)
   bits.push(`→ ${winner || 'no active group'}`)
   if (det.luxury) bits.push(`luxury: ${det.luxuryWhy}`)
-  if (villas) bits.push(det.isHouseType ? 'villas: named house/villa' : 'villas: own entrance, unclear type')
+  if (villas) bits.push(det.isHouseType ? 'villas: house type' : `villas: headline names a house ("${headline.trim().slice(0, 60)}")`)
   if (det.type === 'maisonette') bits.push('maisonette counted as apartment')
   bits.push(`seafront=${seafront} (${seafront ? `explicit: "${sfEv.evidence || 'property type'}"` : (sfBasis || sfEv.why)})`)
   if (geminiUsed) bits.push(`own_entrance=${ownEntrance}`)

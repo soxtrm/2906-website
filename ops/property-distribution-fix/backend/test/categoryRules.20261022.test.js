@@ -71,6 +71,30 @@ const ad = (social, extra = {}) => ({ description_social: social, description: '
     assert.strictEqual(await key(ad('Flat', { bedrooms: null, beds: null, longlet_price: 1500 })), null)   // still needs a human
   })
 
+  // Kev, 2026-10-22 (2): "Luxury = Apartments, Maisonettes, Penthouses, Studios,
+  // Duplex Penthouses & so weiter +2500€. Alle House typen = House egal ob 50€ oder 50k."
+  await run('every house type is Houses at €50 and at €50,000 — never Luxury', async () => {
+    for (const type of ['house', 'villa', 'townhouse', 'house of character', 'terraced house', 'semi-detached villa', 'farmhouse', 'bungalow', 'palazzo'])
+      for (const price of [50, 1800, 2600, 50000])
+        assert.strictEqual(await key(ad('Lovely home', { type, bedrooms: 3, beds: 3, longlet_price: price })), 'villas', `${type} €${price}`)
+  })
+
+  await run('apartment-type listings from €2,500 are Luxury — never Houses', async () => {
+    for (const type of ['apartment', 'maisonette', 'Maisonette', 'penthouse', 'studio', 'duplex penthouse', 'duplex', 'flat'])
+      assert.strictEqual(await key(ad('Stunning home with private entrance and garden', { type, bedrooms: 2, beds: 2, longlet_price: 2700 })), 'luxury', type)
+  })
+
+  await run('a house mistyped as "apartment" by the upload extraction is still Houses when the headline names it', async () => {
+    assert.strictEqual(await key(ad('💎 THE VIEW – LUXURY SEMI-DETACHED VILLA IN IBRAG 💎\nGreat home.', { type: 'apartment', bedrooms: 4, beds: 4, longlet_price: 3799 })), 'villas')
+    assert.strictEqual(await key(ad('🏡 MODERN TOWNHOUSE – GŻIRA 🏡', { type: 'apartment', bedrooms: 3, beds: 3, longlet_price: 2400 })), 'villas')
+    // an apartment headline that merely mentions a villa stays an apartment
+    assert.strictEqual(await key(ad('Penthouse in a villa complex, Swieqi', { type: 'penthouse', bedrooms: 3, beds: 3, longlet_price: 3200 })), 'luxury')
+  })
+
+  await run('no AI "own entrance" guess turns an apartment into a house', async () => {
+    assert.strictEqual(await key(ad('Ground floor with its own private entrance and yard', { type: '', bedrooms: 2, beds: 2, longlet_price: 2700 })), 'luxury')
+  })
+
   console.log(`\n${passed} passed, ${failed} failed`)
   process.exit(failed ? 1 : 0)
 })()
