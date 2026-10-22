@@ -948,8 +948,18 @@ async function runCategoryDistribution(session, chatId, propId, ref) {
   } catch (e) {
     log.error('upload: category distribution failed', { ref, err: e.message })
     await markChannel(propId, 'category_groups', 'failed', e.message)
+    // Kev, 2026-10-22 (P1, Olga #2906-9507/9515): a missing category is not a
+    // crash — ask the uploader ONE concise question with the valid answers.
+    // A reply "3" to this message (or !recategorize REF 3) resolves it.
+    if (/needs manual categorisation/i.test(e.message)) {
+      await reply(session, chatId,
+        `❓ #${ref} needs a category before it goes to the groups — the bedroom count is unknown.\n` +
+        `Reply to this message with 1, 2, 3 or 4 (bedrooms) — or C (commercial) / LUX (villa/luxury, needs an admin).\n` +
+        `Same as: !recategorize ${ref} 3`)
+      return null
+    }
     await ul.alertKev(`❌ Category distribution failed for #${ref}\n${e.message}\n${(e.stack || '').split('\n').slice(0, 4).join('\n')}`)
-    await reply(session, chatId, `⚠️ #${ref} category distribution failed — details sent to your notes. Retry: !recategorize ${ref}`)
+    await reply(session, chatId, `⚠️ #${ref} category distribution failed — Kev has the details. Retry: !recategorize ${ref}`)
     return null
   }
 }
@@ -1895,7 +1905,36 @@ async function cmdCategoryTest(session, chatId, arg) {
 // second entry point onto ONE mechanism, not a second implementation.
 // Setting the override touches ONLY category_override* — never bedrooms/
 // price/type, per Kev's explicit "do not change factual data" rule.
-async function cmdRecategorize(session, chatId, argLine) {
+// Kev, 2026-10-22 (P1): the uploader resolves their own draft's category.
+// Bedroom categories (1-4) are routine; commercial/luxury (C, LUX) change the
+// distribution destination and stay with an admin — only that step is
+// escalated, never the whole upload.
+const SPECIAL_CATEGORY_TOKENS = new Set(['c', 'commercial', 'lux', 'luxury'])
+async function recategorizeAsOperator({ session, chatId, payload, isGroup, senderForAuth, argLine }) {
+  const perms = require('../services/agentPermissions')
+  const realPhone = phoneFromJid(realSenderJid(payload, isGroup)) || null
+  const operator = await perms.resolveOperator([senderForAuth, realPhone], { isAdmin })
+  if (!operator.kind) return false   // not ours: external chats never change inventory, no reply
+  const parts = String(argLine || '').trim().split(/\s+/).filter(Boolean)
+  const prop = parts[0] ? await findByRef(parts[0]) : null
+  if (operator.kind !== 'admin') {
+    const token = parts[1] ? parts[1].toLowerCase() : null
+    const action = token && SPECIAL_CATEGORY_TOKENS.has(token) ? 'set_special_category' : 'set_bedroom_category'
+    const scope = prop ? await perms.propertyScope(prop.id) : null
+    const decision = perms.authorize(operator, action, scope)
+    if (!decision.allow) {
+      await reply(session, chatId, `❌ #${prop?.ref || parts[0] || '?'} — ${decision.message}`)
+      if (decision.reason === 'needs_admin' && prop) {
+        await ul.alertKev(`🗂️ ${operator.agent?.name || 'An agent'} asked for category ${String(token).toUpperCase()} on #${prop.ref} — needs an admin: !recategorize ${prop.ref} ${token}`).catch(() => {})
+      }
+      return true
+    }
+  }
+  await cmdRecategorize(session, chatId, argLine, { agentId: operator.agent?.id || null, actor: operator.agent?.name || 'admin' })
+  return true
+}
+
+async function cmdRecategorize(session, chatId, argLine, { agentId = null, actor = 'admin' } = {}) {
   const parts = String(argLine || '').trim().split(/\s+/).filter(Boolean)
   const refToken = parts[0]
   const catToken = parts[1] ? parts[1].toLowerCase() : null
@@ -1913,7 +1952,7 @@ async function cmdRecategorize(session, chatId, argLine) {
       return
     }
     try {
-      await setCategoryOverride(prop.id, key, null, `!recategorize by admin`)
+      await setCategoryOverride(prop.id, key, agentId, `!recategorize by ${actor}`)
     } catch (e) {
       await reply(session, chatId, `❌ ${e.message}`)
       return
@@ -2556,6 +2595,23 @@ async function handleWebhookMessage({ payload, session, text, isGroup, chatId, s
     if (await bookRelay.handleAgentMessage({ session, chatId, senderPhone, text: t, payload })) return true
   }
 
+  // Kev, 2026-10-22 (P1): "3" (or "C"/"LUX") sent as a reply to the bot's
+  // "❓ #REF needs a category" question resolves that draft — same permission
+  // check as !recategorize. Anything else falls through untouched.
+  {
+    const answer = t.match(/^(?:([1-4])(?:\s*bed(?:room)?s?)?|(c|commercial|lux|luxury))\.?$/i)
+    if (answer) {
+      const { quotedFromPayload } = require('../lib/quotedMessage')
+      const q = String(quotedFromPayload(payload).body || '').match(/#(2906-\d{2,6}) needs a category/i)
+      if (q) {
+        const who = await ul.extractSenderPhone(payload, session, isGroup) || senderPhone || ''
+        const handled = await recategorizeAsOperator({ session, chatId, payload, isGroup, senderForAuth: who,
+          argLine: `${q[1]} ${(answer[1] || answer[2]).toLowerCase()}` })
+        if (handled) return true
+      }
+    }
+  }
+
   if (!t.startsWith('!')) return false
 
   const senderForAuth = await ul.extractSenderPhone(payload, session, isGroup) || senderPhone || ''
@@ -2649,13 +2705,13 @@ async function handleWebhookMessage({ payload, session, text, isGroup, chatId, s
     return true
   }
   if (/^!recategorize\b/i.test(t)) {
-    if (!isAdmin(senderForAuth)) { await reply(session, chatId, '❌ Admin only.'); return true }
     // Kev, 2026-09-23 (ARGUS category hotfix): used to pass only t.split()[1]
     // (the ref) — an explicit category token after it (the whole point of
     // "!recategorize REF 2") was silently discarded. cmdRecategorize now
     // parses both itself.
-    await cmdRecategorize(session, chatId, t.replace(/^!recategorize\s*/i, ''))
-    return true
+    // Kev, 2026-10-22: no longer admin-only — the uploader/assigned agent may
+    // set a bedroom category on their own property (see agentPermissions).
+    return recategorizeAsOperator({ session, chatId, payload, isGroup, senderForAuth, argLine: t.replace(/^!recategorize\s*/i, '') })
   }
   if (/^!categorytest\b/i.test(t)) {
     if (!isAdmin(senderForAuth)) { await reply(session, chatId, '❌ Admin only.'); return true }
@@ -2787,11 +2843,47 @@ async function handleWebhookMessage({ payload, session, text, isGroup, chatId, s
   // (boardAction.returnToMarket — restores the ref, republishes, clears the
   // rented/archived state). Same handler, not a second implementation —
   // added as a plain alias so both names work.
-  if (/^!(priority|archive|markrecentlyrented|return|available)\b/i.test(t)) {
-    if (!isAdmin(senderForAuth) && !(await ul.resolveAgent(senderForAuth))) return false
+  // Kev, 2026-10-22 (P1): the gate is the permission matrix in
+  // services/agentPermissions.js — admin/core agents on every property, board
+  // agents on properties they listed or are assigned to, everyone else
+  // ignored (no reply to external chats). The old gate (ul.resolveAgent, an
+  // exact whatsapp_phones match) silently dropped board agents' commands.
+  // !rented: admins keep their existing path (adminCommands → rentedDetector);
+  // agents get the SAME rentedDetector handler here after the scope check.
+  if (/^!(priority|archive|markrecentlyrented|return|available|rented)\b/i.test(t)) {
+    const cmd = t.match(/^!(priority|archive|markrecentlyrented|return|available|rented)\b/i)[1].toLowerCase()
+    const perms = require('../services/agentPermissions')
+    const realPhone = phoneFromJid(realSenderJid(payload, isGroup)) || null
+    const operator = await perms.resolveOperator([senderForAuth, realPhone], { isAdmin })
+    if (!operator.kind) return false
+    if (cmd === 'rented' && operator.kind === 'admin') return false   // unchanged admin path
+    let resolvedRef = null
+    if (operator.kind !== 'admin') {
+      const rd = require('../services/rentedDetector')
+      const { quotedFromPayload } = require('../lib/quotedMessage')
+      const { id: quotedMessageId, body: quotedBody } = quotedFromPayload(payload)
+      const target = await rd.resolveRentedTarget({
+        text: `!rented ${t.replace(/^!\w+\s*/i, '')}`, quotedMessageId, quotedBody, chatId,
+        mode: cmd === 'rented' ? undefined : 'available',
+      })
+      if (!target || target.ambiguous) {
+        await reply(session, chatId, target?.ambiguous
+          ? `❓ More than one listing matches — send !${cmd} with the exact ref.`
+          : `❌ Usage: !${cmd} <ref>  or reply to the listing message with !${cmd}`)
+        return true
+      }
+      const scope = await perms.propertyScope(target.property_id)
+      const action = cmd === 'rented' ? 'mark_rented' : cmd === 'available' || cmd === 'return' ? 'mark_available' : 'lifecycle'
+      const decision = perms.authorize(operator, action, scope)
+      if (!decision.allow) { await reply(session, chatId, `❌ #${target.ref} — ${decision.message}`); return true }
+      if (cmd === 'rented') {
+        await rd.handleRentedCommand(payload, session, senderForAuth || realPhone)
+        return true
+      }
+      resolvedRef = target.ref   // a quoted-reply command carries no ref of its own
+    }
     const P = require('./priority')
-    const cmd = t.match(/^!(priority|archive|markrecentlyrented|return|available)\b/i)[1].toLowerCase()
-    const arg = t.replace(/^!\w+\s*/i, '')
+    const arg = t.replace(/^!\w+\s*/i, '') || resolvedRef || ''
     const fn = cmd === 'priority' ? P.cmdPriority
       : cmd === 'archive' ? P.cmdArchive
       : cmd === 'markrecentlyrented' ? P.cmdMarkRecentlyRented
