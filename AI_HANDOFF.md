@@ -85,3 +85,21 @@ Evidence: 19.10. Cedric 10/37 sent (27 skipped "not_on_whatsapp"), kevthirdd 2/3
 Changed (data only, via outreachPlanner functions; script ops/outreach-approval-fix/backend/scripts/catchup-2026-10-19.js): Cedric + kevthirdd topped up to 40 on 20./21. and new 40-lists on 22./23.; Kevsecond new 35-lists 21./22.; all armed. 20.10. re-armed after the 24h15 cooldown (kevthirdd 08:50, Cedric 09:12 Malta).
 default: WAHA session was FAILED; restart → SCAN_QR_CODE (logged out). Needs a QR scan by Kev; plans #303 (20.) / #304 (21.) stay saved (34/37 verified) until then.
 Not verified: the 20.10. sends themselves.
+
+### 2026-10-22 ARGUS owner AI + permissions repair (Claude)
+Changed: ops/property-distribution-fix/backend/{services/autoOwnerConversation.js, services/agentIdentityRegistry.js, services/conversationPolicy.js, services/canonical2906Renderer.js, waha.js, handlers/upload.js, services/sessionAlertState.js (new), services/agentPermissions.js (new), test/ownerAi.repair.test.js, test/sessionAlert.episodes.test.js, test/agentPermissions.commands.test.js}, ops/property-distribution-fix/deploy-owner-ai.sh, ARGUS_OWNER_AI_AND_PERMISSIONS_REPAIR.md (commits 7458fd5..HEAD, branch claude/possibly-rented)
+Why:
+- #5598 Argus5 / #5630 Gabriela agency questions escalated: the regex missed "name of your agency", and the registry had no Argus*/"Gabriela" keys.
+- #5587 George Cachia: "Next vacancy July '26" read as €26,000/month (bare-digit fallback + x1000 shorthand); "excellent price" fallback copy; past date advertised; restrictions only in notes.
+- Olga #2906-9507/9515: told to run admin-only !recategorize.
+- QR alert throttle in memory, reset on every restart (3,750 "awaiting QR scan" lines in 7 days).
+- Review post could go out via any group member (incl. Cedric) with an invented "was offline" reason.
+Tests: node test/ownerAi.repair.test.js → 21/21 (production file: 2/17); node test/sessionAlert.episodes.test.js → 5/5 (production 0/5); node test/agentPermissions.commands.test.js → 8/8 (production 2/8); existing mirror tests pass (autoPublish.distribution already fails on the production file). Live: nothing exercised — read-only SQL/log evidence only.
+Deployed: no (needs Kev's explicit go; deploy-owner-ai.sh is md5-guarded, backs up, syntax-checks, runs the container tests, prints rollback)
+Not verified / risks:
+- container run of the new tests
+- CRM/matching propagation for later draft edits
+- board-agent scope limited to listed_by/activity_agent
+- data still wrong in prod: property 29496 (€26,000, "July 2026") and unanswered owners #5598/#5630 — need OK
+- Vertex [Classifier] 403 CONSUMER_INVALID (side finding)
+Next: deploy-owner-ai.sh after Kev's OK, then correct draft 29496 and answer #5598/#5630 personally or via the new path.
