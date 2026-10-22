@@ -1855,9 +1855,9 @@ async function cmdCategoryGroups(session, chatId) {
     bed1:     'beds ≤ 1 or studio',
     bed2:     'beds = 2',
     bed3:     'beds ≥ 3',
-    villas:   'type = house/villa (replaces bedroom bucket)',
-    luxury:   'longlet ≥ €2500, or beds ≤ 1 and ≥ €2000',
-    seafront: 'genuinely seafront (AI-checked)',
+    villas:   'any house / villa / townhouse / house of character',
+    luxury:   'longlet ≥ €2500 (any size)',
+    seafront: '"direct seafront" in the agent text — always wins',
   }
   const lines = ['📂 *Category groups:*', '']
   for (const g of r.rows) {

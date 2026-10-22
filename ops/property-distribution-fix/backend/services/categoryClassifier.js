@@ -7,13 +7,18 @@
 // ONE GROUP PER PROPERTY. A property is never cross-posted: every candidate
 // category is evaluated, then exactly ONE winner is picked by PRECEDENCE.
 //
-// PRECEDENCE (highest first) — confirmed by Kev 2026-07-26:
-//   seafront  >  villas  >  luxury  >  bed3 / bed2 / bed1
+// PRECEDENCE (highest first) — confirmed by Kev 2026-07-26, rules 2026-10-22:
+//   seafront  >  villas (houses)  >  luxury  >  bed3 / bed2 / bed1
 //
-//   so:  2BR €2600 seafront → seafront   (not luxury, not bed2)
+//   seafront: the agent text says "direct seafront" → ALWAYS seafront
+//   villas  : every house / villa / townhouse / house of character …
+//   luxury  : €2,500/month or more (one threshold for every size)
+//   bed1-3  : below €2,500 and none of the above
+//
+//   so:  2BR €2600 direct seafront → seafront (not luxury, not bed2)
 //        4BR villa €3000    → villas     (not luxury)
 //        4BR villa €1800    → villas
-//        1BR €2100          → luxury
+//        1BR €2100          → bed1       (was luxury under the old €2,000 1-bed rule)
 //        2BR €2200          → bed2
 //        maisonette 3BR     → bed3       (maisonettes count as apartments)
 //
@@ -23,8 +28,8 @@
 //                                   beds >= 3           → bed3
 //   villas : standalone house/villa — anything with its OWN entrance,
 //            EXCEPT maisonettes, which we count as apartments.
-//   luxury : longlet >= 2000 when beds <= 1, else longlet >= 2500
-//   seafront: genuinely seafront (not "sea glimpse" / "5 min walk")
+//   luxury : longlet >= 2500 (any size, bedrooms not needed)
+//   seafront: "direct seafront" in the agent text (not "sea glimpse" / "near" / "5 min walk")
 //
 // GEMINI (ONE call, only for the two things code cannot decide):
 //   1. is it genuinely seafront?
@@ -64,6 +69,12 @@ const HOUSE_TYPES = ['villa', 'house', 'bungalow', 'townhouse', 'detached', 'far
 // Types that are apartments even when they have their own entrance.
 // Maisonettes live here deliberately — "die zählen wir meistens als apartments".
 const APARTMENT_TYPES = ['apartment', 'flat', 'studio', 'penthouse', 'maisonette', 'duplex']
+// Kev, 2026-10-22: "Houses = alle Häuser, Villen und co" — matched as words
+// inside the type too ("house of character", "semi-detached villa",
+// "terraced house"), not only as an exact type value.
+const HOUSE_TYPE_RE = /\b(villas?|houses?|bungalows?|townhouses?|town\s+house|farmhouses?|detached|semi[- ]detached|terraced|palazz[oi]|chalet|mansion|razzett|house\s+of\s+character)\b/i
+const APARTMENT_TYPE_RE = /\b(apartments?|flats?|studios?|penthouses?|maisonettes?|duplex)\b/i
+const LUXURY_MIN_PRICE = 2500
 
 // Bedroom count confidence (2026-09-17 fix — Kev's exact bug: unknown
 // bedrooms silently became `Number(undefined) || 0` → `0 <= 1` → bed1, live
@@ -122,22 +133,17 @@ function classifyKeys(publicPayload) {
     else                                 bucket = 'bed3'
   }
 
-  // luxury threshold depends on bedroom size (1 bed/studio → 2000, else
-  // 2500) — so luxury is ALSO undetermined when bedrooms are unknown; we
-  // cannot pick the right threshold without guessing. No guessing.
-  let luxury = false
-  let luxuryWhy = null
-  if (bedsKnown) {
-    const beds = bedState.value
-    const threshold = beds <= 1 ? 2000 : 2500
-    luxury = price >= threshold
-    luxuryWhy = luxury
-      ? `price ${price} >= ${threshold} (${beds <= 1 ? '1 bed' : '2+ beds'})`
-      : null
-  }
+  // Kev, 2026-10-22: ONE luxury threshold, €2,500/month, for every size
+  // ("3b 2b 1b … wenn unter 2500€"). It no longer needs the bedroom count, so
+  // a €3,000 listing with unknown bedrooms is Luxury instead of "needs manual
+  // categorisation". Below €2,500 the bedroom groups take it.
+  const luxury = price >= LUXURY_MIN_PRICE
+  const luxuryWhy = luxury ? `price ${price} >= ${LUXURY_MIN_PRICE}` : null
 
-  const isHouseType = HOUSE_TYPES.includes(type)
-  const isApartmentType = APARTMENT_TYPES.includes(type)
+  // Houses = every house, villa and the like; apartments (incl. maisonette,
+  // penthouse) never count as a house.
+  const isApartmentType = APARTMENT_TYPES.includes(type) || APARTMENT_TYPE_RE.test(type)
+  const isHouseType = !isApartmentType && (HOUSE_TYPES.includes(type) || HOUSE_TYPE_RE.test(type))
 
   return { bucket, luxury, luxuryWhy, beds: bedState.value, bedState, type, price, isHouseType, isApartmentType }
 }
@@ -230,6 +236,7 @@ const SF_AFTER_DISQ = [
 // proximity / marketing claim → not seafront.
 const SF_DIRECT_BEFORE = /\bdirect(?:ly)?\s+(?:on\s+(?:the\s+)?|facing\s+(?:the\s+)?)?$/i
 const SF_DIRECT_RE = /\bdirect(?:ly)?\s+(?:on\s+(?:the\s+)?|facing\s+(?:the\s+)?)?sea\s*-?front\b/i
+const SF_DIRECT_NEGATED_BEFORE = /\b(?:not|no|isn'?t|non|never)\s+(?:a\s+)?direct(?:ly)?\s+(?:on\s+(?:the\s+)?|facing\s+(?:the\s+)?)?$/i
 
 function seafrontEvidence(text) {
   const t = String(text || '')
@@ -243,7 +250,16 @@ function seafrontEvidence(text) {
       sawToken = true
       const before = clause.slice(Math.max(0, m.index - 45), m.index)
       const after = clause.slice(m.index + m[0].length, m.index + m[0].length + 40)
-      const disq = !SF_DIRECT_BEFORE.test(before) || SF_BEFORE_DISQ.some(re => re.test(before)) || SF_AFTER_DISQ.some(re => re.test(after))
+      // Kev, 2026-10-22 ("wenn direct seafront erwähnt wird → IMMER SEAFRONT"):
+      // #2906-9519 said "🌊 Direct Seafront Location" and went to Luxury,
+      // because SF_AFTER_DISQ read "… Location" as a proximity phrase. A
+      // DIRECT claim is only cancelled by an explicit negation ("not direct
+      // seafront"); the proximity qualifiers apply to every other wording.
+      const direct = SF_DIRECT_BEFORE.test(before)
+      const disq = direct
+        ? SF_DIRECT_NEGATED_BEFORE.test(before)
+        : true   // without "direct(ly)" the seafront word is never a claim (rule of 2026-10-19)
+      void after
       // quote the words AROUND the token (a long ad sentence would otherwise be cut before it)
       if (!disq) return { verdict: true, evidence: clause.slice(Math.max(0, m.index - 60), m.index + m[0].length + 60).trim(), why: 'explicit_claim' }
     }
@@ -395,15 +411,13 @@ async function classifyProperty(publicPayload, opts = {}) {
   const typeUnclear = !det.isHouseType && !det.isApartmentType
   const needGemini = desc.trim().length > 10 && typeUnclear   // own_entrance only
 
+  // Kev, 2026-10-22: a "direct seafront" in the agent's own text ALWAYS wins.
+  // The old VETO (our generated description says only "seafront apartment"
+  // → disagreement → not seafront) is what kept #2906-9519 out of the Sea
+  // Front group. It existed for sanitizer-damaged proximity text; since only
+  // "direct seafront" can be a claim at all, no sanitizer cut can create one.
   let seafront = hint === true
   let sfBasis = null
-  // VETO: the agent text can be damaged by the sanitizer (distances stripped). If OUR
-  // stored description of the same listing carries the seafront wording only as a
-  // proximity statement, the two sources disagree — and disagreement is not evidence.
-  if (seafront && agentText) {
-    const gen = seafrontEvidence([p.description_public, p.description].filter(Boolean).join('\n'))
-    if (gen.verdict === false) { seafront = false; sfBasis = 'conflicting:stored_description_says_proximity' }
-  }
   let ownEntrance = false
   let geminiUsed = false
 
