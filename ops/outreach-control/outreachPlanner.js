@@ -50,13 +50,12 @@ const AUTO_DAILY_MINUTES_MAX = 22
 const AUTO_PREP_LEAD_MS = 2 * 60 * 60_000
 const AUTO_PREP_GRACE_MS = 15 * 60_000
 const OUTREACH_PLAN_MAX = 45
-const NEXUSLINK_PLAN_MAX = 15
 const DEFAULT_RESTRICTION_HOURS = 40
 const HEALTHY_SESSION_STATES = new Set(['WORKING', 'CONNECTED'])
 const RESTRICTED_SESSION_STATES = new Set(['FAILED', 'SCAN_QR_CODE', 'STOPPED'])
 
-function planLimit(sessionName, label = '') {
-  return /argus\s*5|argus[_-]?5|nexuslink/i.test(`${sessionName || ''} ${label || ''}`) ? NEXUSLINK_PLAN_MAX : OUTREACH_PLAN_MAX
+function planLimit() {
+  return OUTREACH_PLAN_MAX
 }
 
 // BullMQ reserves ':' inside custom job ids. Legacy plan keys contain ISO
@@ -519,7 +518,7 @@ async function prepareDueAccountPlans(now = new Date()) {
 // intentionally a preview operation: it neither writes reservations nor
 // advances pool_cursors. Generated times/counts live on the plans, so reloads
 // show the exact same preparation instead of rolling fresh random values.
-async function autoPrepareAccount(accountId, { baseCount = null, message = null, actor = 'admin', now = new Date() } = {}) {
+async function autoPrepareAccount(accountId, { baseCount = null, message = null, labels = null, actor = 'admin', now = new Date() } = {}) {
   const account = (await db.query(`SELECT * FROM whatsapp_accounts WHERE id=$1 AND is_active=TRUE AND outreach_enabled=TRUE`, [accountId])).rows[0]
   if (!account) throw new Error(`account ${accountId} not found`)
   if (isSystemManagerSession(account.session_name, account.label)) {
@@ -556,6 +555,16 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
     [accountId, resolvedBase, resolvedMessage]
   )
 
+  const validLabels = new Set(['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'])
+  const selectedLabels = Array.isArray(labels)
+    ? new Set(labels.map(label => String(label)).filter(label => validLabels.has(label)))
+    : null
+  if (Array.isArray(labels) && selectedLabels.size === 0) {
+    const err = new Error('at least one valid outreach day is required')
+    err.code = 'invalid_plan_labels'
+    throw err
+  }
+
   const plans = await listRollingPlans(accountId, actor)
   const cooldown = await accountCooldown(account.session_name, now)
   let anchor = cooldown.lastSentAt
@@ -565,6 +574,14 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
 
   for (const plan of plans) {
     const full = await getPlanWithEntries(plan.id)
+    if (selectedLabels && !selectedLabels.has(plan.label)) {
+      for (const entry of full?.entries || []) {
+        const phone = normPhone(entry.normalized_phone)
+        if (phone) excludedPhones.add(phone)
+      }
+      if (plan.scheduled_at) anchor = new Date(plan.scheduled_at)
+      continue
+    }
     const untouched = !plan.armed
       && !['ready', 'running', 'completed', 'cancelled'].includes(plan.status)
       && plan.stats.total === 0

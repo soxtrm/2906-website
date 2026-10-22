@@ -88,6 +88,8 @@ function maltaHM(d: Date) {
 
 const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
 const OUTREACH_LIST_MAX = 45
+const OUTREACH_DAY_LABELS = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'] as const
+type OutreachDayLabel = typeof OUTREACH_DAY_LABELS[number]
 function isArgusManager(account: Account) {
   return /argus\s*1|argus[_-]?1/i.test(`${account.label} ${account.sessionName}`)
 }
@@ -508,14 +510,16 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   account: Account; accent: typeof ACCENTS[0]; onChanged: () => void
   templates: Template[]; onTemplatesChanged: () => void
 }) {
-  const accountListMax = /argus\s*5|argus[_-]?5|nexuslink/i.test(`${account.sessionName} ${account.label}`) ? 15 : OUTREACH_LIST_MAX
+  const accountListMax = OUTREACH_LIST_MAX
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [plans, setPlans] = useState<Plan[] | null>(null)
   // Kev, 2026-09-11: defaults to TODAY, not TOMORROW — "ich hab kb für
   // morgen alles auszufüllen und dann zu merken dass es für den falschen
   // tag ist" (filling in the wrong day by accident because it opened on
   // tomorrow by default).
-  const [activeLabel, setActiveLabel] = useState<'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS'>('TODAY')
+  const [activeLabel, setActiveLabel] = useState<OutreachDayLabel>('TODAY')
+  const [prepareDaysOpen, setPrepareDaysOpen] = useState(false)
+  const [selectedPrepareDays, setSelectedPrepareDays] = useState<OutreachDayLabel[]>([])
   const [queueText, setQueueText] = useState('')
   const [msgOpen, setMsgOpen] = useState(true)
   const [msgDraft, setMsgDraft] = useState('')
@@ -548,8 +552,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     if (current && (current.armed || current.stats.total > 0 || current.message_template)) return
     const prepared = plans.find(p => p.armed || p.status === 'ready')
       || plans.find(p => p.stats.total > 0 || Boolean(p.message_template))
-    if (prepared && ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'].includes(prepared.label)) {
-      setActiveLabel(prepared.label as 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS')
+    if (prepared && OUTREACH_DAY_LABELS.includes(prepared.label as OutreachDayLabel)) {
+      setActiveLabel(prepared.label as OutreachDayLabel)
     }
   }, [plans, activeLabel])
 
@@ -641,8 +645,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // One account-level action fills every untouched day. Random count/time
   // values are generated and persisted by the backend once, while contacts
   // remain previews until ARM performs the final recheck and lock.
-  async function autoRun() {
-    if (!plans?.length || busy) return
+  async function autoRun(selectedLabels: OutreachDayLabel[] = [...OUTREACH_DAY_LABELS]) {
+    if (!plans?.length || busy || !selectedLabels.length) return
     const last = loadLastUsed(account.id)
     const seedCount = commitCountDraft()
     const seedText = msgDraft.trim() || account.outreachAutoMessage || activePlan?.message_template || last?.text || ''
@@ -654,7 +658,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
     setBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/accounts/${account.id}/auto-prepare`, 'POST', { baseCount: seedCount, message: seedText })
+      const r = await crmJson(`outreach/accounts/${account.id}/auto-prepare`, 'POST', { baseCount: seedCount, message: seedText, labels: selectedLabels })
       setPlans(r.rollingPlans)
       await onChanged()
       saveLastUsed(account.id, { text: seedText, count: seedCount })
@@ -663,9 +667,21 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const blocked = (r.plans || []).filter((plan: any) => plan.status === 'blocked')
       const contacts = prepared.reduce((sum: number, plan: any) => sum + Number(plan.preparedCount || 0), 0)
       setNote(`Auto prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${contacts} previews · ${preserved.length} preserved${blocked.length ? ` · ${blocked.length} blocked by time/safety` : ''}.`)
+      setSelectedPrepareDays([])
+      setPrepareDaysOpen(false)
     } catch (e: any) {
       setNote(e?.message || 'Auto failed')
     } finally { setBusy(false) }
+  }
+
+  function togglePrepareDay(label: OutreachDayLabel) {
+    setSelectedPrepareDays(current => current.includes(label)
+      ? current.filter(day => day !== label)
+      : [...current, label])
+  }
+
+  function autoSelectPrepareDays() {
+    setSelectedPrepareDays([...OUTREACH_DAY_LABELS])
   }
 
   // Saved Drafts (spec follow-up, Kev 2026-09-11) — a small global template
@@ -748,7 +764,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <span className="queue-eyebrow"><Radio size={13} /> OUTREACH / WORKSPACE</span>
         <h2>Prepare. Review. Connect.</h2>
         <p>One account. One queue. Every step in view.</p>
-        <button className="queue-autosetup" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={autoRun}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>{count} ±3 contacts · 16–22 min · no lock</span></button>
+        <button className="queue-autosetup" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={() => setPrepareDaysOpen(open => !open)} aria-expanded={prepareDaysOpen}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>Choose the days first</span></button>
       </div>
       <div className="queue-progress" aria-label="Queue preparation progress">
         {[{icon: Users, label: 'Contacts', value: `${s?.eligible || 0} eligible`, done: Boolean(s?.eligible)}, {icon: MessageSquare, label: 'Message', value: activePlan?.message_template ? 'Saved' : 'Needs text', done: Boolean(activePlan?.message_template)}, {icon: Clock3, label: 'Window', value: armTime + ' · Malta', done: Boolean(activePlan?.scheduled_at)}, {icon: ShieldCheck, label: 'Release', value: activePlan?.armed ? 'Armed' : 'Review first', done: Boolean(activePlan?.armed)}].map((step, i) => <div key={step.label} className={step.done ? 'is-done' : ''}><step.icon size={17} /><span><small>0{i + 1} / {step.label}</small><b>{step.value}</b></span></div>)}
@@ -797,7 +813,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       <div className="queue-day-tabs">
       {/* day tabs */}
       <div style={{ display: 'flex', gap: 6 }}>
-        {(['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'] as const).map(label => {
+        {OUTREACH_DAY_LABELS.map(label => {
           const p = plans?.find(pl => pl.label === label)
           const on = activeLabel === label
           return (
@@ -813,6 +829,34 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           )
         })}
       </div>
+
+      {prepareDaysOpen && (
+        <div className="queue-day-picker" aria-label="Choose outreach days to prepare">
+          <div className="queue-day-picker-head">
+            <div><b>Which days?</b><span>Tick them yourself, or let Auto tick all five. Preparation stays editable and does not send.</span></div>
+            <div>
+              <button type="button" onClick={autoSelectPrepareDays} disabled={busy}>Auto · check all</button>
+              <button type="button" onClick={() => setSelectedPrepareDays([])} disabled={busy || !selectedPrepareDays.length}>Clear</button>
+            </div>
+          </div>
+          <div className="queue-day-checks">
+            {OUTREACH_DAY_LABELS.map(label => {
+              const plan = plans?.find(candidate => candidate.label === label)
+              const checked = selectedPrepareDays.includes(label)
+              return (
+                <label key={label} className={checked ? 'is-checked' : ''}>
+                  <input type="checkbox" checked={checked} disabled={busy} onChange={() => togglePrepareDay(label)} />
+                  <span>{dayLabelText(label)}</span>
+                  <small>{plan?.armed ? 'Armed · kept' : plan?.status === 'completed' ? 'Done · kept' : plan?.stats?.total ? `${plan.stats.eligible} queued · kept` : 'Empty draft'}</small>
+                </label>
+              )
+            })}
+          </div>
+          <button type="button" className="queue-prepare-selected" disabled={busy || !selectedPrepareDays.length} onClick={() => autoRun(selectedPrepareDays)}>
+            {busy ? 'Preparing…' : `Prepare selected (${selectedPrepareDays.length})`}
+          </button>
+        </div>
+      )}
 
       </div>
       <section className="queue-contacts"><h3><Users size={17} /> Contact queue <span>01</span></h3>
@@ -852,7 +896,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
-            disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={autoRun}
+            disabled={busy || account.operationalStatus === 'restricted' || !activePlan} onClick={() => autoRun([activeLabel])}
             title="Prepare the exact target count as an editable draft. Contacts stay in the shared pool until ARM."
             style={{ ...btnPrimary(accent), flex: '0 0 auto', paddingLeft: 16, paddingRight: 16 }}>
             Auto-setup

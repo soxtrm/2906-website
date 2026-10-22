@@ -19,3 +19,16 @@ test('automatic preparation sends the operator base and persists the backend spr
   assert.match(planner, /AUTO_DAILY_MINUTES_MIN = 16/)
   assert.match(planner, /AUTO_DAILY_MINUTES_MAX = 22/)
 })
+
+test('Argus 5 uses the same 45-contact plan ceiling as every outreach account', () => {
+  assert.match(page, /const accountListMax = OUTREACH_LIST_MAX/)
+  assert.match(planner, /function planLimit\(\) \{\s*return OUTREACH_PLAN_MAX\s*\}/)
+  assert.doesNotMatch(planner, /NEXUSLINK_PLAN_MAX/)
+})
+
+test('five-day preparation supports manual checks and Auto checks all days', () => {
+  assert.match(page, /Prepare free days/)
+  assert.match(page, /setSelectedPrepareDays\(\[\.\.\.OUTREACH_DAY_LABELS\]\)/)
+  assert.match(page, /labels: selectedLabels/)
+  assert.match(planner, /selectedLabels && !selectedLabels\.has\(plan\.label\)/)
+})
