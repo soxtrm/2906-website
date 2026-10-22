@@ -1,7 +1,7 @@
 # ARGUS — Owner AI & Permissions Repair (2026-10-22)
 
-Status: **repaired and tested locally against the real handlers, NOT deployed.**
-Production still runs the snapshot md5s listed in §9. Deploying needs Kev's explicit go.
+Status: **deployed 2026-10-22 02:25Z with Kev's OK.** Backup: `/opt/2906-system/backups/owner-ai-repair-20261022T022552Z`. Production md5 = repo md5 for every changed runtime file. Container tests after restart: ownerAi 21/21, sessionAlert 5/5, agentPermissions 8/8, owner-context-firewall 6/6 (that test was red before the deploy).
+Data correction done: property 29496 and conversation 5587 (backups in `/opt/2906-system/backups/owner-ai-data-20261022/`). Owners #5598 and #5630 were **not** messaged, because both had already been answered personally on 21.10.
 No owner messages were sent and no production rows were changed. All production access during the investigation was read-only (`BEGIN READ ONLY` SQL, log greps, file reads).
 
 Branch `claude/possibly-rented`; mirror folder `ops/property-distribution-fix/backend`. The commits are:
@@ -142,10 +142,8 @@ References are taken from the command, an embedded `#2906-…`, the quoted messa
 
 ## 8. Remaining failures / not verified
 
-- **Not deployed** (§9). The container tests in `deploy-owner-ai.sh` have not run yet.
-- **Existing production data** is not corrected (each needs Kev's OK):
-  - Draft 29496 still has `longlet_price = 26000` and "July 2026".
-  - #5598 (Argus5) and #5630 (Gabriela) still have unanswered agency questions; answering them means messaging real owners.
+- No live owner conversation has exercised the new agency path yet; the evidence comes from container tests and the review warnings computed on the corrected real row.
+- Pre-existing, unrelated: the fb-groups job fails with "Failed to launch the browser process" (189 times in the 48 h before the deploy).
 - Board-agent scope uses `listed_by_agent_id` / `activity_agent_id`. Properties assigned by other means (contracts, boards) are not counted. Core `agent` role keeps global scope, as before.
 - Matching-engine propagation of corrected facts (T20) is verified up to checklist, renderer, warnings and provenance. The CRM `UPDATE` and the matching invalidation for a draft edited later are **not** exercised end-to-end.
 - QR episode state is in Redis (volume-backed). A Redis restart without a snapshot could cause one duplicate alert.

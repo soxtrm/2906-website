@@ -95,11 +95,14 @@ Why:
 - QR alert throttle in memory, reset on every restart (3,750 "awaiting QR scan" lines in 7 days).
 - Review post could go out via any group member (incl. Cedric) with an invented "was offline" reason.
 Tests: node test/ownerAi.repair.test.js → 21/21 (production file: 2/17); node test/sessionAlert.episodes.test.js → 5/5 (production 0/5); node test/agentPermissions.commands.test.js → 8/8 (production 2/8); existing mirror tests pass (autoPublish.distribution already fails on the production file). Live: nothing exercised — read-only SQL/log evidence only.
-Deployed: no (needs Kev's explicit go; deploy-owner-ai.sh is md5-guarded, backs up, syntax-checks, runs the container tests, prints rollback)
+Deployed: yes 2026-10-22 02:25Z with Kev's OK (backup /opt/2906-system/backups/owner-ai-repair-20261022T022552Z; prod md5 = repo md5 for all 8 runtime files, e.g. autoOwnerConversation f22c9404…, waha a52a8861…, upload 336b1ac5…). Container tests after restart: ownerAi 21/21, sessionAlert 5/5, agentPermissions 8/8, owner-context-firewall 6/6 (was red before).
+Data: property 29496 + conversation 5587 corrected (price NULL/MISSING, dates → clarification, restrictions as columns, DISCUSSABLE company lease, cached 'excellent price' copy removed; row backups /opt/2906-system/backups/owner-ai-data-20261022/). Deployed code computes the 3 expected review warnings on the real row.
+Owners #5598/#5630: NOT messaged — both were already answered personally on 21.10. (Kev 12:15/15:19, Gabriela 20:10).
 Not verified / risks:
 - container run of the new tests
 - CRM/matching propagation for later draft edits
 - board-agent scope limited to listed_by/activity_agent
-- data still wrong in prod: property 29496 (€26,000, "July 2026") and unanswered owners #5598/#5630 — need OK
+- no live owner conversation has exercised the new agency path yet (only container tests)
+- fb-groups 'Failed to launch the browser process' (189x in the 48h before deploy; pre-existing, unrelated)
 - Vertex [Classifier] 403 CONSUMER_INVALID (side finding)
-Next: deploy-owner-ai.sh after Kev's OK, then correct draft 29496 and answer #5598/#5630 personally or via the new path.
+Next: watch the next agency question / QR episode in the logs; fix the Vertex [Classifier] 403 and the fb-groups browser launch separately.
