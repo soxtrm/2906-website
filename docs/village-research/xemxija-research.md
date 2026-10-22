@@ -1,6 +1,6 @@
 # Ix-Xemxija village edition — sourced research
 
-Status: **RESEARCH DRAFT — NOT PUBLISHED**
+Status: **PUBLISHED**
 Checked: 22 October 2026
 Scope: source material for an independent Ix-Xemxija edition. This is not a popularity ranking, a promise of walkability, or a disclosure of an exact property location.
 
@@ -119,4 +119,6 @@ Before this becomes a public edition:
 - run typecheck and the production build, then deploy from a clean current `origin/main` worktree with a documented rollback;
 - keep any external placement as a separately reviewed publication with disclosed affiliation and the host community's rules.
 
-No public page, navigation, sitemap, production deployment or external placement has been created in this research step.
+## Publication record
+
+Published at `https://www.2906.estate/link-marketplace/areas/xemxija.html` from release commit `f4661da` on 22 October 2026. The live page, asset, index entry and sitemap entry were byte-checked after deployment; the responsive page and click-to-load map were rechecked in Chrome at 390×844 and 1440×1000. Rollback is a targeted revert of `f4661da` followed by the publication-record commit.
