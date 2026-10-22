@@ -1,6 +1,6 @@
 # Valletta city edition — sourced research
 
-Status: **RESEARCH DRAFT — NOT PUBLISHED**
+Status: **PUBLISHED**
 Checked: 22 October 2026
 Scope: source material for an independent Valletta edition. This is not a popularity ranking, a promise of walkability, or a disclosure of an exact property location.
 
@@ -89,4 +89,10 @@ Before this becomes a public edition:
 - run the production build and deploy from a clean current `origin/main` worktree with a documented rollback;
 - keep any external placement as a separately reviewed publication with disclosed affiliation and the host community's rules.
 
-No public page, navigation entry, sitemap change or external placement exists yet.
+## Published edition
+
+Published 22 October 2026 at [https://www.2906.estate/link-marketplace/areas/valletta.html](https://www.2906.estate/link-marketplace/areas/valletta.html) from release commit `b95cb208c2d7ebbd0dcb36bf4c325e0c2c51654d`. The deployed HTML is 15,337 bytes with SHA-256 `E0E78B30F9D5DADBB76CD9AFE2935794A9B1EA742FA984FEBDE5E3AA22D65E21`; the deployed 1800×1201 hero is 425,136 bytes with SHA-256 `FD58FAF5595EFF8450410689BD399752FD1959C3679FCC2B8EE5F08C422856D2`.
+
+The public page has one self-canonical, a matching Open Graph URL, one BreadcrumbList and no robots block. Its internal marketplace link and neighbourhood-sitemap entry are unique; the sitemap contains 37 locality editions. Live 390×844 and 1440×1000 checks returned no horizontal overflow, a fully decoded hero and zero initial iframes. The click-to-load map created one visible OpenStreetMap iframe at both sizes. No heritage boundary, exact property pin, straight line, walking route, ferry geometry, distance or journey time was published.
+
+Rollback is a targeted revert of `b95cb20` followed by the documentation update. No external backlink, outreach, WhatsApp, backend, traffic, Google API or scheduler change accompanied the release.
