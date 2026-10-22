@@ -2844,7 +2844,7 @@ function fmtTimestampMalta(d = new Date()) {
 // Spec item 1: owner + agent/WA-profile provenance, NEVER missing. Falls
 // back to the phone alone when the name is unknown -- never blocks the post
 // over a lookup failure (best-effort, wrapped).
-async function buildReviewProvenanceBlock({ phone, conversationId, collectingSession, postingSession }) {
+async function buildReviewProvenanceBlock({ phone, conversationId, collectingSession, postingSession, fallbackReason = null }) {
   let ownerName = null
   try {
     const r = await db.query(
@@ -2866,7 +2866,10 @@ async function buildReviewProvenanceBlock({ phone, conversationId, collectingSes
     `🤖 Collected via: ${collectingSession || 'unknown'}`,
   ]
   if (postingSession && postingSession !== collectingSession) {
-    lines.push(`📤 Sent via: ${postingSession} (fallback — ${collectingSession || 'unknown'} was offline)`)
+    // The reason is the one verified at post time (offline / not in the
+    // group), never an assumed "was offline" (#5587 claimed it while
+    // kevthirdd was WORKING).
+    lines.push(`📤 Sent via: ${postingSession} (same-persona fallback — ${fallbackReason || 'reason not recorded'})`)
   }
   lines.push(`🧾 Draft: PD-${conversationId || '?'}`, `🕐 ${fmtTimestampMalta()}`)
   return lines.join('\n')
@@ -2992,36 +2995,9 @@ async function postChecklistCompleteToAvCentral(phone, checklist, { targetGroupI
   // -- same post, same downstream !upload5/!undo pipeline, richer review
   // package, different room.
   const groupId = targetGroupId || draftGroupFor(checklist)
-  let session = targetSession || await pickUploadSession().catch(() => null)
-  // A WORKING account can still be absent from a specific group. Pick the
-  // preferred bridge first, then another live member, so a disabled Argus1
-  // or a newly connected Argus2 cannot silently drop a completed draft.
-  if (!targetSession && (!session || !(await waha.isGroupMember(session, groupId)))) {
-    const working = await waha.getWorkingSessions().catch(() => [])
-    for (const candidate of working.map(item => item.name)) {
-      if (await waha.isGroupMember(candidate, groupId)) { session = candidate; break }
-    }
-  }
-  if (!session || !(await waha.isGroupMember(session, groupId))) {
-    log.warn('autoOwnerConversation: no connected group member available for review post', { groupId })
-    if (conversationId) {
-      await db.query(
-        `UPDATE owner_auto_conversations
-            SET checklist = checklist || $1::jsonb, updated_at = NOW()
-          WHERE id = $2`,
-        [JSON.stringify({ _last_action: { action: 'review_post', status: 'queued_no_group_member', groupId, at: new Date().toISOString() } }), conversationId]
-      ).catch(() => {})
-    }
-    return false
-  }
-
-  if (checklist._last_message_id) {
-    await reactAs(session, checklist._last_message_id, '✅').catch(() => {})
-  }
 
   // Spec item 10: the account that actually COLLECTED this conversation,
-  // read straight off owner_auto_conversations -- independent of `session`
-  // above, which is only ever the account posting THIS message right now.
+  // read straight off owner_auto_conversations.
   let collectingSession = null
   if (conversationId) {
     try {
@@ -3030,6 +3006,55 @@ async function postChecklistCompleteToAvCentral(phone, checklist, { targetGroupI
     } catch (err) {
       log.warn('autoOwnerConversation: collecting-session lookup failed', { err: err.message })
     }
+  }
+
+  // Kev, 2026-10-22 (P1, multi-account routing): the account that ran the
+  // owner conversation posts its review. A fallback is allowed only to
+  // another account of the SAME persona (Kevin -> Kevin, never Kevin ->
+  // Cedric/Gabriela), and the audit states the VERIFIED reason. Before, any
+  // working group member could post (Cedric is a member of the review group)
+  // and the card always claimed "<collector> was offline" — for #5587
+  // kevthirdd was WORKING; Kevsecond posted only because it was the
+  // preferred upload session.
+  const { resolvePersonaForSession } = require('./agentIdentityRegistry')
+  const workingNames = (await waha.getWorkingSessions().catch(() => [])).map(item => item.name)
+  const isWorking = name => workingNames.some(w => String(w).toLowerCase() === String(name).toLowerCase())
+  const persona = collectingSession ? await resolvePersonaForSession(collectingSession, db) : null
+  let session = targetSession || null
+  let fallbackReason = null
+  if (!session) {
+    if (collectingSession && isWorking(collectingSession) && await waha.isGroupMember(collectingSession, groupId)) {
+      session = collectingSession
+    } else {
+      fallbackReason = !collectingSession ? 'collecting account unknown'
+        : !isWorking(collectingSession) ? `${collectingSession} offline`
+          : `${collectingSession} is not a member of the review group`
+      // A WORKING account can still be absent from a specific group: the
+      // preferred bridge first, then another live member — same persona only.
+      const preferred = await pickUploadSession().catch(() => null)
+      const candidates = [preferred, ...workingNames].filter(Boolean).filter((n, i, a) => a.indexOf(n) === i)
+      for (const candidate of candidates) {
+        if (!isWorking(candidate)) continue
+        if (persona && (await resolvePersonaForSession(candidate, db)) !== persona) continue
+        if (await waha.isGroupMember(candidate, groupId)) { session = candidate; break }
+      }
+    }
+  }
+  if (!session || !(await waha.isGroupMember(session, groupId))) {
+    log.warn('autoOwnerConversation: no connected same-persona group member available for review post', { groupId, collectingSession, persona })
+    if (conversationId) {
+      await db.query(
+        `UPDATE owner_auto_conversations
+            SET checklist = checklist || $1::jsonb, updated_at = NOW()
+          WHERE id = $2`,
+        [JSON.stringify({ _last_action: { action: 'review_post', status: 'queued_no_group_member', groupId, collectingSession, persona, fallbackReason, at: new Date().toISOString() } }), conversationId]
+      ).catch(() => {})
+    }
+    return false
+  }
+
+  if (checklist._last_message_id) {
+    await reactAs(session, checklist._last_message_id, '✅').catch(() => {})
   }
 
   const photos = (checklist._photos || []).slice(0, 15)
@@ -3070,7 +3095,7 @@ async function postChecklistCompleteToAvCentral(phone, checklist, { targetGroupI
         log.warn('autoOwnerConversation: AV CENTRAL photo send failed', { err: e.message })
       }
     }
-    const provenance = await buildReviewProvenanceBlock({ phone, conversationId, collectingSession, postingSession: session })
+    const provenance = await buildReviewProvenanceBlock({ phone, conversationId, collectingSession, postingSession: session, fallbackReason })
     await waha.sendText(session, groupId, `OWNER\n${provenance}`)
     if (warnings.length) {
       await waha.sendText(session, groupId, `⚠️ REVIEW REQUIRED\n${warnings.join('\n')}`).catch(() => {})
@@ -3106,7 +3131,7 @@ async function postChecklistCompleteToAvCentral(phone, checklist, { targetGroupI
     if (conversationId) {
       await db.query(
         `UPDATE owner_auto_conversations SET checklist = checklist || $1::jsonb, updated_at = NOW() WHERE id = $2`,
-        [JSON.stringify({ _last_action: { action: 'review_post', status: 'sent', session, groupId, at: new Date().toISOString() } }), conversationId]
+        [JSON.stringify({ _last_action: { action: 'review_post', status: 'sent', session, collectingSession, fallbackReason, groupId, at: new Date().toISOString() } }), conversationId]
       ).catch(() => {})
     }
     log.info('autoOwnerConversation: checklist complete, posted for review', { phone: phone.slice(-4), photos: photos.length, canonical: rendered.ok, warnings: warnings.length, session, groupId })

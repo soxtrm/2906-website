@@ -10,7 +10,10 @@ const path = require('path')
 const Module = require('module')
 
 const ADMIN = '35699270699'
-const PERSONAS = { argus5: 'kev', kevthirdd: 'kev', cedric: 'cedric', gabriela: 'gabriela', olga: 'olga' }
+const PERSONAS = { argus5: 'kev', kevthirdd: 'kev', kevsecond: 'kev', argus2: 'kev', cedric: 'cedric', gabriela: 'gabriela', olga: 'olga' }
+let workingSessions = []   // for the review-post routing tests
+let collectingSession = 'kevthirdd'
+let uploadPreferred = 'Cedric'
 const sent = []          // { session, to, text }
 const sql = []
 let convo = null          // the owner_auto_conversations row under test
@@ -21,6 +24,7 @@ const db = {
     const s = q.replace(/\s+/g, ' ')
     sql.push({ q: s, p })
     if (/automation_control/.test(s)) return { rows: [{ value: false }] }
+    if (/SELECT session FROM owner_auto_conversations WHERE id/.test(s)) return { rows: [{ session: collectingSession }] }
     if (/FROM whatsapp_accounts/.test(s)) {
       const persona = PERSONAS[String(p[0] || '').toLowerCase()]
       return { rows: persona ? [{ account_persona: persona, id: 1, session_name: p[0], label: p[0] }] : [] }
@@ -49,6 +53,8 @@ const inert = new Proxy(function () {}, { get: (_, k) => (k === 'then' ? undefin
 const waha = new Proxy({
   sendText: async (session, to, text) => { sent.push({ session, to: String(to), text }); return { id: 'm' + sent.length } },
   markChatUnread: async () => {},
+  getWorkingSessions: async () => workingSessions.map(name => ({ name })),
+  isGroupMember: async () => true,
 }, { get: (t, k) => (k in t ? t[k] : async () => {}) })
 class FakeGenAI { constructor() { this.models = { generateContent: async () => ({ text: JSON.stringify(geminiReply || { intent: 'unclear', extracted: {} }) }) } } }
 
@@ -63,6 +69,8 @@ Module._load = function (request) {
   if (request === './conversationIntelligence') return { preflightOutbound: async () => ({ allow: true }) }
   if (['./agentIdentityRegistry', './canonical2906Renderer', './rentalModes'].includes(request)) return original.apply(this, arguments)
   if (request === '@google/genai') return { GoogleGenAI: FakeGenAI }
+  if (request === '../handlers/upload') return { pickUploadSession: async () => uploadPreferred }
+  if (request === './availability') return { __reactAs: async () => {} }
   if (request.startsWith('.') || ['ioredis', 'bullmq', 'axios', 'openai', 'cloudinary', 'sharp', 'node-cron'].includes(request)) return inert
   return original.apply(this, arguments)
 }
@@ -240,6 +248,53 @@ const INTAKE = /do you have a property available/i
     assert.strictEqual(provenance.company_lease, 'DISCUSSABLE_NOT_APPROVED')
     assert.strictEqual(provenance.photos, 'NONE_RECEIVED')
     assert.strictEqual(provenance.price.verification, 'MISSING')
+  })
+
+  await run('T20 a corrected fact propagates: owner confirms the rent → verified, printed, warning gone, CRM provenance updated', async () => {
+    let c = { town: 'Ibrag', bedrooms: 3, bathrooms: 2, notes: GEORGE_NOTES, sharing: 'no', pets: 'no', _last_message_id: 'wamid-rent' }
+    assert.ok(aoc.buildSanityWarnings(c).some(w => /PRICE MISSING/.test(w)))
+    const said = 'The rent is €1,800 per month'
+    c = aoc.mergeExtracted(c, aoc.localExtract('price', said), said)
+    assert.strictEqual(c.price, 1800)
+    assert.strictEqual(aoc.priceVerification(c), 'VERIFIED')
+    assert.ok(!aoc.buildSanityWarnings(c).some(w => /PRICE/.test(w)), 'publication no longer held for the price')
+    geminiReply = null
+    const r = await renderer.render2906Listing(c)
+    assert.ok(/€1,800\/month/.test(r.text) && !/Price to be confirmed/.test(r.text), r.text)
+    const { provenance } = aoc.draftRulesAndProvenance(c)
+    assert.deepStrictEqual([provenance.price.value, provenance.price.verification, provenance.price.source_message_id, provenance.price.source_text],
+      [1800, 'VERIFIED', 'wamid-rent', said])
+  })
+
+  // ── multi-account routing of the review post (#5587: kevthirdd collected, Kevsecond posted) ──
+  const REVIEW = { town: 'Ibrag', bedrooms: 3, bathrooms: 2, price: 1600, notes: GEORGE_NOTES }
+  const postReview = async () => {
+    sent.length = 0
+    convo = { id: 5587, status: 'ready_for_kev', checklist: {} }
+    const ok = await aoc.postChecklistCompleteToAvCentral('35699470780', REVIEW, { conversationId: 5587 })
+    return { ok, sessions: [...new Set(sent.map(m => m.session))], text: sent.map(m => m.text).join('\n') }
+  }
+
+  await run('T19 the collecting Kevin account posts its own review when it is online (no invented "was offline")', async () => {
+    collectingSession = 'kevthirdd'; workingSessions = ['kevthirdd', 'Kevsecond', 'Cedric']; uploadPreferred = 'Kevsecond'
+    const r = await postReview()
+    assert.deepStrictEqual(r.sessions, ['kevthirdd'])
+    assert.ok(!/was offline|fallback/.test(r.text), r.text)
+  })
+
+  await run('T19b collecting account offline → same-persona fallback with the verified reason, never Cedric', async () => {
+    collectingSession = 'kevthirdd'; workingSessions = ['Cedric', 'Kevsecond']; uploadPreferred = 'Cedric'
+    const r = await postReview()
+    assert.deepStrictEqual(r.sessions, ['Kevsecond'])
+    assert.ok(/same-persona fallback — kevthirdd offline/.test(r.text), r.text)
+    assert.ok(/Collected via: kevthirdd/.test(r.text))
+  })
+
+  await run('T19c no Kevin account online → the post waits (queued), it is never sent as Cedric/Gabriela', async () => {
+    collectingSession = 'kevthirdd'; workingSessions = ['Cedric', 'Gabriela']; uploadPreferred = 'Cedric'
+    const r = await postReview()
+    assert.strictEqual(r.ok, false)
+    assert.deepStrictEqual(r.sessions, [])
   })
 
   console.log(`\n${passed} passed, ${failed} failed`)

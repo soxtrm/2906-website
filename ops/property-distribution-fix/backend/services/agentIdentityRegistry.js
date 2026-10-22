@@ -84,6 +84,15 @@ function resolveAgentIdentity(senderAccountId, accountPersona = null) {
   return identityForPersona(persona, key)
 }
 
+// The sending account's persona string (kev, cedric, gabriela, olga …), even
+// for personas without a configured identity. Used to keep fallbacks inside
+// one persona.
+async function resolvePersonaForSession(session, db = null) {
+  await resolveIdentityForSession(session, db)
+  const cached = personaCache.get(String(session || '').trim().toLowerCase())
+  return (cached && cached.persona) || null
+}
+
 // Asynchronous, canonical: reads whatsapp_accounts.account_persona.
 async function resolveIdentityForSession(session, db = null) {
   const key = String(session || '').trim().toLowerCase()
@@ -142,5 +151,5 @@ function _clearCache() { personaCache.clear() }
 
 module.exports = {
   PERSONA_IDENTITIES, DEFAULT_IDENTITIES, SESSION_PERSONA_FALLBACK, AGENCY_QUESTION_RE,
-  resolveAgentIdentity, resolveIdentityForSession, agencyAnswer, clientTypeAnswer, isAgencyQuestion, _clearCache,
+  resolveAgentIdentity, resolveIdentityForSession, resolvePersonaForSession, agencyAnswer, clientTypeAnswer, isAgencyQuestion, _clearCache,
 }
