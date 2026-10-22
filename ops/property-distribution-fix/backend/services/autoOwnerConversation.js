@@ -1123,7 +1123,9 @@ function checkOptionalStopRule(checklist) {
 // processStep below.
 function countUnclearSignals(checklist) {
   let n = 0
-  for (const f of mustFieldsFor(checklist)) if (checklist[`_unresolved_${f}`]) n++
+  // A date held back by the chronology gate is a contradiction for the
+  // operator to clarify, not a sign the owner is hard to understand.
+  for (const f of mustFieldsFor(checklist)) if (checklist[`_unresolved_${f}`] && !(checklist._date_clarification || {})[f]) n++
   if (checklist._optional_questions_closed) n++
   return n
 }
@@ -1289,6 +1291,68 @@ const PRICE_FILLER_RE = /\b(?:the|rent|rental|price|asking|ask|is|it'?s|its|woul
 function isPriceOnlyReply(text, digits) {
   const rest = String(text || '').replace(digits, ' ').replace(PRICE_FILLER_RE, ' ').replace(/[^a-z0-9]/gi, '')
   return rest === ''
+}
+
+// ── Price provenance + verification (Kev, 2026-10-22, P0) ─────────────────
+// Every price that lands in a checklist carries where it came from. An
+// unusual value is FLAGGED for an operator, never replaced: a EUR 26,000
+// maisonette is not impossible, it just cannot be asserted without evidence.
+const PRICE_REVIEW_RENT_MIN = 250      // EUR/month: below this a long-let rent is implausible
+const PRICE_REVIEW_RENT_MAX = 12000    // EUR/month: above this a residential long-let needs a human glance
+function buildPriceEvidence({ price, rawText, notes, messageId = null, transactionType = 'rent', at = new Date() }) {
+  const shorthand = (notes || []).some(n => /Malta shorthand/.test(n))
+  const anchored = /[€$]|\beur\b|\beuros?\b|\bper\s*month\b|\bmonthly\b|\bpm\b|\brent\b|\bprice\b|\d\s*k\b/i.test(String(rawText || ''))
+  const anomalies = []
+  if (transactionType !== 'sale') {
+    if (price < PRICE_REVIEW_RENT_MIN) anomalies.push(`below €${PRICE_REVIEW_RENT_MIN}/month`)
+    if (price > PRICE_REVIEW_RENT_MAX) anomalies.push(`above €${PRICE_REVIEW_RENT_MAX.toLocaleString('en-US')}/month`)
+  } else if (price < 20000) {
+    anomalies.push('sale price below €20,000')
+  }
+  if (YEAR_LIKE_RE.test(String(Math.round(price)))) anomalies.push('year-shaped value')
+  const evidence = shorthand ? 'OWNER_SHORTHAND_INFERRED' : anchored ? 'OWNER_STATED' : 'OWNER_STATED_BARE_NUMBER'
+  return {
+    source_message_id: messageId,
+    source_text: String(rawText || '').slice(0, 200),
+    parsed_amount: price,
+    currency: 'EUR',
+    billing_period: transactionType === 'sale' ? 'one_off' : 'month',
+    evidence,
+    anomalies,
+    verification: shorthand || anomalies.length ? 'NEEDS_REVIEW' : 'VERIFIED',
+    recorded_at: at.toISOString(),
+  }
+}
+function priceVerification(checklist) {
+  const c = checklist || {}
+  if (c.price == null) return 'MISSING'
+  if (c._price_evidence && c._price_evidence.verification) return c._price_evidence.verification
+  // legacy rows recorded before provenance existed: the shorthand note is the only signal
+  return (c.notes || []).some(n => /Malta shorthand|please verify/i.test(n)) ? 'NEEDS_REVIEW' : 'VERIFIED'
+}
+
+// ── Date chronology (Kev, 2026-10-22, P0) ──────────────────────────────────
+// "Next vacancy July '26" said on 21 Oct 2026 names a month that is already
+// over. It is never silently moved to July 2027 and never shown as
+// "Available from July!": the field stays unset and the draft carries a
+// clarification for the operator. A month WITHOUT a year is left as stated.
+const MONTH_INDEX = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 }
+function statedMonthYear(text) {
+  const m = String(text || '').toLowerCase().match(new RegExp(String.raw`\b(${PRICE_MONTHS})\.?\s*(?:of\s+)?(?:['’]\s*(\d{2})|(\d{4})|(\d{2}))\b`))
+  if (!m) return null
+  const month = MONTH_INDEX[m[1].slice(0, 3)]
+  const year = m[3] ? Number(m[3]) : 2000 + Number(m[2] || m[4])
+  return month == null || !Number.isFinite(year) ? null : { month, year, raw: m[0] }
+}
+function maltaYearMonth(at) {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', year: 'numeric', month: 'numeric' }).formatToParts(at)
+  return { year: Number(parts.find(p => p.type === 'year').value), month: Number(parts.find(p => p.type === 'month').value) - 1 }
+}
+function pastStatedDate(text, at = new Date()) {
+  const stated = statedMonthYear(text)
+  if (!stated) return null
+  const now = maltaYearMonth(at)
+  return stated.year * 12 + stated.month < now.year * 12 + now.month ? stated : null
 }
 
 function extractPrice(text) {
@@ -1756,10 +1820,16 @@ function applySublettingInferenceOverride(field, checklist, replyMessage, extrac
 // never applied to a normal subletting answer.
 const CONFIRMATION_RE = /^\s*(exact(?:ly)?|yes|yep|yeah|correct|right|true|confirmed|that'?s\s+(?:right|correct|exact))[\s.!,]*$/i
 
+// Kev, 2026-10-22 (#5587): "We'd have to discuss … I currently have a lease
+// to a company, and it's going well. So we would discuss" was dropped
+// entirely. Willingness to DISCUSS a company lease is recorded as its own
+// state and never as permission.
+const SUBLETTING_DISCUSS_RE = /\b(?:we'?d|we would|would|will|we can|we could|can|could)\s+(?:have to\s+|need to\s+)?discuss\b|\b(?:open|willing|happy) to discuss\b|\bcan be discussed\b|\bto be discussed\b|\bdepends on the company\b/
 function extractSublettingMention(text) {
   const lower = String(text).toLowerCase()
   if (/\bno\s+subletting\b|\bstrictly no\b.*sublet|\bnot interested\b.*sublet/.test(lower)) return 'no'
   if (/\bsubletting\s*(?:is)?\s*(?:ok(?:ay)?|fine|possible|allowed)\b/.test(lower)) return 'yes'
+  if (SUBLETTING_DISCUSS_RE.test(lower)) return 'discuss'
   return null
 }
 
@@ -1777,6 +1847,7 @@ function classifySublettingAnswer(raw) {
   if (raw == null) return { considered: null, note: null }
   const text = String(raw).trim()
   if (!text) return { considered: null, note: null }
+  if (text === 'discuss') return { considered: true, approved: false, note: 'DISCUSSABLE — owner is willing to discuss a company lease; NOT approved' }
   if (SUBLETTING_REFUSAL_RE.test(text)) return { considered: false, note: null }
   if (/^yes\.?!?$/i.test(text)) return { considered: true, note: null }
   // Anything else substantive ("Depends on company", "Only serious
@@ -2571,6 +2642,12 @@ function mergeExtracted(checklist, extracted, rawText) {
       next.previous_price = next.price
     }
     next.price = extracted.price
+    if (isNewValue || !next._price_evidence) {
+      next._price_evidence = buildPriceEvidence({
+        price: Number(extracted.price), rawText, notes: extracted.notes, messageId: next._last_message_id || null,
+        transactionType: next.transaction_type || extracted.transactionType || 'rent',
+      })
+    }
     if (extracted._priceConfidence || extracted.priceConfidence) {
       next._confidence_price = extracted._priceConfidence || extracted.priceConfidence
     } else if (isNewValue && next._confidence_price) {
@@ -2607,6 +2684,23 @@ function mergeExtracted(checklist, extracted, rawText) {
     delete next.available_date
     delete next.viewable_date
     delete next.address
+  }
+  // Chronology gate (P0 2026-10-22): a stated month+year that is already in
+  // the past never becomes available_date/viewable_date. The model and the
+  // local extractor both shorten "July '26" to "July", so the RAW text the
+  // owner wrote is checked as well as the extracted value.
+  for (const [key, field] of [['availableDate', 'available_date'], ['viewableDate', 'viewable_date']]) {
+    if (!extracted[key]) continue
+    const past = pastStatedDate(extracted[key]) || pastStatedDate(rawText)
+    if (!past) continue
+    next._date_clarification = {
+      ...(next._date_clarification || {}),
+      [field]: { owner_text: String(rawText || extracted[key]).slice(0, 200), stated: past.raw, stated_at: new Date().toISOString(),
+        reason: 'stated month is already in the past — confirm the intended date with the owner' },
+    }
+    next[`_unresolved_${field}`] = true
+    delete next[field]
+    extracted = { ...extracted, [key]: null }
   }
   if (extracted.availableDate && !looksLikeOccupancyConflict(extracted.availableDate)) {
     const isNewDate = next.available_date == null || next.available_date !== extracted.availableDate
@@ -2809,6 +2903,15 @@ function buildStructuredDraftBlock(checklist) {
 // extraction that does not add up. Never auto-corrects anything -- only
 // ever adds a warning line; the values themselves are left exactly as
 // extracted so a reviewer sees precisely what the system saw.
+// "The monthly asking rent for the 3-bedroom maisonette in Ibrag is still
+// missing. Could you confirm the price?" — built only from known facts.
+function missingPriceQuestion(checklist) {
+  const c = checklist || {}
+  const type = (String((c.notes || []).join(' ')).match(/\b(duplex penthouse|penthouse|maisonette|villa|bungalow|townhouse|studio|apartment|flat)\b/i) || [])[1]
+  const parts = [c.bedrooms != null ? `${c.bedrooms}-bedroom` : null, type ? type.toLowerCase() : 'property'].filter(Boolean).join(' ')
+  return `The monthly asking rent for the ${parts}${c.town ? ` in ${c.town}` : ''} is still missing. Could you confirm the price?`
+}
+
 function buildSanityWarnings(checklist) {
   const warnings = []
   const beds = Number(checklist.bedrooms)
@@ -2818,6 +2921,19 @@ function buildSanityWarnings(checklist) {
   const bathsOk = Number.isFinite(baths)
   const priceOk = Number.isFinite(price)
 
+  // P0 2026-10-22: price/date integrity. Each warning holds auto-publish and
+  // tells the operator the ONE question that resolves it.
+  const verification = priceVerification(checklist)
+  if (verification === 'MISSING' && (checklist.transaction_type || 'rent') !== 'sale') {
+    warnings.push(`⚠️ PRICE MISSING — no monthly rent was established in the conversation. Ask: "${missingPriceQuestion(checklist)}"`)
+  } else if (verification === 'NEEDS_REVIEW') {
+    const ev = checklist._price_evidence || {}
+    const why = [ev.evidence === 'OWNER_SHORTHAND_INFERRED' ? 'inferred from shorthand' : null, ...(ev.anomalies || [])].filter(Boolean).join(', ') || 'legacy shorthand note'
+    warnings.push(`⚠️ PRICE NEEDS VERIFICATION — €${price.toLocaleString()} (${why})${ev.source_text ? ` from "${ev.source_text.slice(0, 80)}"` : ''}`)
+  }
+  for (const [field, c] of Object.entries(checklist._date_clarification || {})) {
+    warnings.push(`⚠️ DATE NEEDS CLARIFICATION — ${field.replace('_', ' ')}: owner wrote "${String(c.owner_text).slice(0, 80)}" on ${String(c.stated_at).slice(0, 10)}; that month has already passed`)
+  }
   if (bedsOk && beds >= 8) {
     warnings.push(`⚠️ UNUSUAL BEDROOM COUNT — ${beds} bedrooms`)
   }
@@ -3228,7 +3344,9 @@ async function runAutoPublishJob(conversationId, { explicitClaim = false } = {})
     // subletting_allowed kept in sync for older readers (canonical2906Renderer.js
     // etc.); subletting_considered/subletting_note are the source of truth from
     // here on -- see classifySublettingAnswer's own comment.
-    subletting_allowed: sublettingAnswer.considered,
+    // A DISCUSSABLE answer is never permission (P0 2026-10-22): allowed stays
+    // unknown while considered=true + the note carry "willing to discuss".
+    subletting_allowed: sublettingAnswer.approved === false ? null : sublettingAnswer.considered,
     subletting_considered: sublettingAnswer.considered,
     subletting_note: sublettingAnswer.note,
     subletting_price: checklist.subletting_price != null ? Number(checklist.subletting_price) : null,
@@ -3352,6 +3470,33 @@ async function distributeAutoPublished({ upload, result, session, chatId, varian
   await upload.autoShareToGroups({ created: [result], session, chatId, noAd: false })
 }
 
+// Kev, 2026-10-22 (P0): the draft row carries the owner's restrictions as
+// real columns (they used to exist only as free-text notes, so #29496 had
+// pets/sharing NULL) and a field_provenance record per fact, so a reviewer
+// can see which owner message established which value and how sure it is.
+function draftRulesAndProvenance(checklist) {
+  const c = checklist || {}
+  const sub = classifySublettingAnswer(c.subletting)
+  const rules = {
+    pets_allowed: c.pets === 'yes' ? true : c.pets === 'no' ? false : null,
+    sharing_allowed: c.sharing === 'yes' ? true : c.sharing === 'no' ? false : null,
+    subletting_allowed: sub.approved === false ? null : sub.considered,
+    subletting_considered: sub.considered,
+    subletting_note: sub.note,
+  }
+  const provenance = {
+    source: 'owner_whatsapp_conversation',
+    price: c.price == null
+      ? { verification: 'MISSING', value: null }
+      : { ...(c._price_evidence || {}), value: Number(c.price), verification: priceVerification(c) },
+    company_lease: c.subletting === 'discuss' ? 'DISCUSSABLE_NOT_APPROVED' : sub.considered === true ? 'CONSIDERED' : sub.considered === false ? 'REFUSED' : 'UNKNOWN',
+    photos: Array.isArray(c._photos) && c._photos.length ? 'RECEIVED' : 'NONE_RECEIVED',
+    date_clarification: c._date_clarification || null,
+    recorded_at: new Date().toISOString(),
+  }
+  return { rules, provenance }
+}
+
 async function writeDraftProperty(phone, checklist) {
   // Point F: an unambiguous existing CRM listing was matched at conversation
   // start (checklistFromExistingProperty) -- update that same row instead of
@@ -3427,14 +3572,19 @@ async function writeDraftProperty(phone, checklist) {
   notes.push(...extraIntelligenceNotes(checklist))
   const unresolvedNote = unresolvedFieldNote(checklist)
   if (unresolvedNote) notes.push(unresolvedNote)
+  const { rules, provenance } = draftRulesAndProvenance(checklist)
+  for (const [field, c] of Object.entries(checklist._date_clarification || {})) {
+    notes.push(`${field} NEEDS CLARIFICATION: owner wrote "${c.owner_text}" (${c.reason})`)
+  }
 
   const r = await db.query(
     `INSERT INTO properties
        (owner_id, property_type, town, street, bedrooms, bathrooms, size_sqm,
         longlet_price, sale_price, available_status, listed_by_agent_id, published,
         internal_notes, viewing_notes, is_staging, chat_extracted_fields,
-        locality_id, locality_resolution_status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending_check',1,false,$10,$11,TRUE,$12,$13,$14)
+        locality_id, locality_resolution_status,
+        pets_allowed, sharing_allowed, subletting_allowed, subletting_considered, subletting_note, field_provenance)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending_check',1,false,$10,$11,TRUE,$12,$13,$14,$15,$16,$17,$18,$19,$20)
      RETURNING id`,
     [ownerId, propertyType, town, checklist.address || null,
      checklist.bedrooms || null, checklist.bathrooms || null,
@@ -3442,7 +3592,9 @@ async function writeDraftProperty(phone, checklist) {
      transactionType === 'rent' ? (checklist.price || null) : null,
      transactionType === 'sale' ? (checklist.price || null) : null,
      notes.join(' | '), checklist.viewable_date || null, JSON.stringify(structuredIntake),
-     localityId, localityStatus]
+     localityId, localityStatus,
+     rules.pets_allowed, rules.sharing_allowed, rules.subletting_allowed, rules.subletting_considered, rules.subletting_note,
+     JSON.stringify(provenance)]
   )
   for (const [index, url] of (checklist._plans || []).entries()) {
     await db.query(
@@ -4254,6 +4406,14 @@ module.exports = {
   findExistingProperty, // test-only: Schritt 2 D dedup-before-collection-start proof
   checklistFromExistingProperty, // test-only
   extractPrice, // test-only: Schritt 2 A price-shorthand proof
+  // P0 owner-AI repair 2026-10-22 — test-only
+  priceVerification,
+  buildPriceEvidence,
+  missingPriceQuestion,
+  draftRulesAndProvenance,
+  pastStatedDate,
+  extractSublettingMention,
+  isDirectQuestion,
   // Final Fixes (2026-09-12): shared with handlers/upload.js's own
   // matchedConvo -> structuredRules mapping so a nuanced subletting answer
   // ("Depends on company") is never re-collapsed to null by a second,

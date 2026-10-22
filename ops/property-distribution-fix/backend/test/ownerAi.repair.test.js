@@ -61,7 +61,7 @@ Module._load = function (request) {
   if (request === '../config') return { automation: { testNumbers: [], autoPublishTimerMinutes: 10, autoPublishVariant: 5 }, admin: { botNumber: ADMIN }, waha: {} }
   if (request === './ownerSendGate') return { checkOwnerSend: async () => ({ allow: true }), handleFrustratedOwner: async () => {} }
   if (request === './conversationIntelligence') return { preflightOutbound: async () => ({ allow: true }) }
-  if (request === './agentIdentityRegistry') return original.apply(this, arguments)
+  if (['./agentIdentityRegistry', './canonical2906Renderer', './rentalModes'].includes(request)) return original.apply(this, arguments)
   if (request === '@google/genai') return { GoogleGenAI: FakeGenAI }
   if (request.startsWith('.') || ['ioredis', 'bullmq', 'axios', 'openai', 'cloudinary', 'sharp', 'node-cron'].includes(request)) return inert
   return original.apply(this, arguments)
@@ -161,6 +161,85 @@ const INTAKE = /do you have a property available/i
       'The rent is 1500, available from March': 1500, '1500 negotiable': 1500, '4': 4000, 'available 03.01.2027, €1,500/month': 1500 }
     for (const [t, want] of Object.entries(cases)) assert.strictEqual(aoc.localExtract('price', t).price, want, t)
     assert.strictEqual(aoc.localExtractAll('I have 2 studio flats available in st julians\ndesigner finished\n2.5k monthly').price, 2500)
+  })
+
+  // ── the George Cachia draft (#5587 / property 29496) ────────────────────
+  const renderer = require(path.join(path.dirname(aocPath), 'canonical2906Renderer.js'))
+  const GEORGE_NOTES = ['Maisonette', '2 double bedrooms, 1 single bedroom', '1 en-suite shower, 1 bath', 'back yard', 'barbecue area', 'interconnecting garage']
+  const SAID_AT = new Date('2026-10-21T08:13:13Z')
+
+  await run('T07 an explicitly stated but unusual rent is preserved and flagged for review, not replaced', async () => {
+    const ev = aoc.buildPriceEvidence({ price: 26000, rawText: '€26,000 per month', notes: [], transactionType: 'rent' })
+    assert.strictEqual(ev.parsed_amount, 26000)
+    assert.strictEqual(ev.evidence, 'OWNER_STATED')
+    assert.strictEqual(ev.verification, 'NEEDS_REVIEW')
+    const normal = aoc.buildPriceEvidence({ price: 1600, rawText: '€1,600 per month', notes: [] })
+    assert.strictEqual(normal.verification, 'VERIFIED')
+    const merged = aoc.mergeExtracted({ _last_message_id: 'wamid-42' }, { price: 1600 }, 'the rent is 1600')
+    assert.strictEqual(merged.price, 1600)
+    assert.deepStrictEqual([merged._price_evidence.source_message_id, merged._price_evidence.currency, merged._price_evidence.billing_period,
+      merged._price_evidence.source_text], ['wamid-42', 'EUR', 'month', 'the rent is 1600'])
+  })
+
+  await run('T08 no confirmed price → no price line, no price claim, review warning with the one targeted question', async () => {
+    const c = { town: 'Ibrag', bedrooms: 3, bathrooms: 2, notes: GEORGE_NOTES, pets: 'no', sharing: 'no' }
+    assert.strictEqual(aoc.priceVerification(c), 'MISSING')
+    geminiReply = null
+    const r = await renderer.render2906Listing(c)
+    assert.ok(r.ok)
+    assert.ok(/Price to be confirmed/.test(r.text) && !/€/.test(r.text), r.text)
+    assert.ok(!/excellent price|great opportunity|opportunity/i.test(r.text), r.text)
+    const w = aoc.buildSanityWarnings(c).join('\n')
+    assert.ok(w.includes('The monthly asking rent for the 3-bedroom maisonette in Ibrag is still missing. Could you confirm the price?'), w)
+  })
+
+  await run('T08b the published €26,000 legacy draft is held: shorthand price is not printed and the cached "excellent price" copy is discarded', async () => {
+    const legacy = { town: 'Ibrag', bedrooms: 3, bathrooms: 2, price: 26000, notes: ['Rent given as a bare "26" -- read as €26,000/month (Malta shorthand); please verify', ...GEORGE_NOTES] }
+    assert.strictEqual(aoc.priceVerification(legacy), 'NEEDS_REVIEW')
+    const r = await renderer.render2906Listing(legacy, { cachedCanonical: { fingerprint: 'x', intro: 'This 3-bedroom property offers a great opportunity.', closing: 'A great opportunity in Ibrag at an excellent price.' } })
+    assert.ok(!/26,000|excellent price/i.test(r.text), r.text)
+    assert.ok(aoc.buildSanityWarnings(legacy).some(w => /PRICE NEEDS VERIFICATION/.test(w)))
+  })
+
+  await run("T09 \"Next vacancy July '26\" said in Oct 2026 → no availability/viewing date, clarification instead (never silently July 2027)", async () => {
+    assert.ok(aoc.pastStatedDate("Next vacancy July '26", SAID_AT))
+    assert.strictEqual(aoc.pastStatedDate("Next vacancy July '27", SAID_AT), null)
+    assert.strictEqual(aoc.pastStatedDate('from July', SAID_AT), null)   // no year: left as stated
+    const c = aoc.mergeExtracted({}, { availableDate: 'July' }, "Next vacancy July '26")
+    const c2 = aoc.mergeExtracted(c, { viewableDate: "Next vacancy July '26, so viewing around that time" }, "Next vacancy July '26, so viewing around that time")
+    assert.strictEqual(c2.available_date, undefined)
+    assert.strictEqual(c2.viewable_date, undefined)
+    assert.ok(c2._date_clarification.available_date && c2._date_clarification.viewable_date)
+    assert.strictEqual(aoc.countUnclearSignals(c2), 0, 'a chronology hold is not "unclear owner"')
+    const r = await renderer.render2906Listing({ ...c2, town: 'Ibrag', bedrooms: 3, notes: GEORGE_NOTES })
+    assert.ok(/Availability to be confirmed/.test(r.text) && !/Available from July|Viewings from July/.test(r.text), r.text)
+    // the already-published legacy shape is not advertised either
+    const legacy = await renderer.render2906Listing({ town: 'Ibrag', bedrooms: 3, available_date: 'July', viewable_date: 'July 2026', notes: GEORGE_NOTES })
+    assert.ok(!/Viewings from July 2026/.test(legacy.text), legacy.text)
+  })
+
+  await run('T10 no photos → no appearance claims; unsupported luxury/pool/sea-view prose is rejected', async () => {
+    const c = { town: 'Ibrag', bedrooms: 3, bathrooms: 2, price: 1600, notes: GEORGE_NOTES }
+    geminiReply = { intro: 'Looking for luxury? This stunning maisonette in Ibrag offers sea views and a pool.', closing: 'An exceptional opportunity at an excellent price.' }
+    const r = await renderer.render2906Listing(c)
+    assert.ok(!/stunning|luxury|sea view|pool|excellent price|opportunity/i.test(r.text), r.text)
+    geminiReply = { intro: 'Looking for space in Ibrag? This maisonette has three bedrooms, two bathrooms and an interconnecting garage.', closing: 'A practical family home with a back yard and barbecue area in Ibrag.' }
+    const ok = await renderer.render2906Listing(c)
+    assert.ok(/interconnecting garage/.test(ok.text) && /€1,600\/month/.test(ok.text), ok.text)
+  })
+
+  await run('T11/T12 no sharing persisted; company lease "we would discuss" is DISCUSSABLE, never approved', async () => {
+    const said = "We'd have to discuss.  I've had one 2yr lease that was not too good. But I currently have a lease to a company, and it's going well .  So we would discuss"
+    assert.strictEqual(aoc.extractSublettingMention(said), 'discuss')
+    const c = aoc.mergeExtracted({ _asked_subletting: true, sharing: 'no', pets: 'no' }, {}, said)
+    assert.strictEqual(c.subletting, 'discuss')
+    const { rules, provenance } = aoc.draftRulesAndProvenance({ ...c, town: 'Ibrag' })
+    assert.deepStrictEqual([rules.sharing_allowed, rules.pets_allowed, rules.subletting_allowed, rules.subletting_considered],
+      [false, false, null, true])
+    assert.ok(/DISCUSSABLE/.test(rules.subletting_note))
+    assert.strictEqual(provenance.company_lease, 'DISCUSSABLE_NOT_APPROVED')
+    assert.strictEqual(provenance.photos, 'NONE_RECEIVED')
+    assert.strictEqual(provenance.price.verification, 'MISSING')
   })
 
   console.log(`\n${passed} passed, ${failed} failed`)
