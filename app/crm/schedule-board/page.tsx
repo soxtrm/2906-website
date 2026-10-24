@@ -628,8 +628,9 @@ function Board() {
   const [swipeResult, setSwipeResult] = useState<{ url: string; count: number } | null>(null)
   const [swipeMultiResult, setSwipeMultiResult] = useState<{ ref: string; url?: string; error?: string }[] | null>(null)
   const openBook = useCallback((r: Listing) => {
-    setDetailIntent('book')
-    setDetail(r.ref)
+    setDetail(null)
+    setDetailIntent(null)
+    setBooking(r)
   }, [])
   // Kev, 2026-09-10: "Collected" (existing behaviour, one deck link) vs
   // "Multiple" (one persistent single-property link per listing, so he can
@@ -4018,7 +4019,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   return (
     <div
       ref={innerRef}
-      className="crm-listing-card transition-transform duration-200 hover:-translate-y-1 active:scale-[0.995]"
+      className={isMobile ? 'crm-listing-card' : 'crm-listing-card transition-transform duration-200 hover:-translate-y-1'}
       tabIndex={0}
       aria-label={`Open listing ${r.ref}${r.town ? ` in ${r.town}` : ''}`}
       onClick={event => {
@@ -4083,7 +4084,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         data-photo-count={photoCount}
         onClick={event => { event.stopPropagation(); if (didSwipePhoto.current) { didSwipePhoto.current = false; return }; onOpen() }}
         onPointerEnter={() => setPreloadPhotos(true)}
-        onPointerMove={previewPhotoAtPointer}
+        onPointerMove={isMobile ? undefined : previewPhotoAtPointer}
         onPointerDown={startPhotoSwipe}
         onPointerUp={finishPhotoSwipe}
         onPointerCancel={() => { swipeStartX.current = null }}
