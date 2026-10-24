@@ -24,6 +24,8 @@ type Row = {
   phone_owner_count: number
   linked_whatsapp_session: string | null
   linked_whatsapp_label: string | null
+  can_ask_owner: boolean
+  can_create_owner_group: boolean
 }
 type AccessRequest = { id: number; name: string; email: string; phone: string; requested_at: string }
 
@@ -94,6 +96,14 @@ function BoardAccess() {
     setNote(null)
     try { await crmJson(`board-access/${r.id}`, 'PATCH', { active: !r.active }); await load() }
     catch (e: any) { setNote(e?.message || 'Could not update') }
+  }
+
+  async function toggleCommand(r: Row, command: 'ask_owner' | 'create_group', enabled: boolean) {
+    setNote(null)
+    try {
+      await crmJson(`board-access/${r.id}`, 'PATCH', { command, enabled })
+      await load()
+    } catch (e: any) { setNote(e?.data?.error || e?.message || 'Could not update command access') }
   }
 
   async function reviewRequest(r: AccessRequest, action: 'approve' | 'reject') {
@@ -279,9 +289,9 @@ function BoardAccess() {
         ) : (
           <>
             <Section title="Board agents" hint="Outside agents. Removing one deletes the account." rows={agents}
-              empty="Nobody yet — add the first address above." onToggle={toggle} onRemove={remove} onSavePhone={savePhone} onSendInvite={sendInvite} isMobile={isMobile} />
+              empty="Nobody yet — add the first address above." onToggle={toggle} onToggleCommand={toggleCommand} onRemove={remove} onSavePhone={savePhone} onSendInvite={sendInvite} isMobile={isMobile} />
             <Section title="Staff with board access" hint="Their CRM account is untouched; only board access is removed here."
-              rows={staff} empty="No staff has board access." onToggle={toggle} onRemove={remove} onSavePhone={savePhone} onSendInvite={sendInvite} isMobile={isMobile} />
+              rows={staff} empty="No staff has board access." onToggle={toggle} onToggleCommand={toggleCommand} onRemove={remove} onSavePhone={savePhone} onSendInvite={sendInvite} isMobile={isMobile} />
           </>
         )}
       </div>
@@ -316,9 +326,10 @@ function PhoneCell({ r, onSave }: { r: Row; onSave: (r: Row, value: string) => v
   )
 }
 
-function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, onSendInvite, isMobile }: {
+function Section({ title, hint, rows, empty, onToggle, onToggleCommand, onRemove, onSavePhone, onSendInvite, isMobile }: {
   title: string; hint: string; rows: Row[]; empty: string
   onToggle: (r: Row) => void; onRemove: (r: Row) => void; onSavePhone: (r: Row, value: string) => void
+  onToggleCommand: (r: Row, command: 'ask_owner' | 'create_group', enabled: boolean) => void
   onSendInvite: (r: Row) => void; isMobile: boolean
 }) {
   return (
@@ -340,6 +351,12 @@ function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, on
               <div style={{ fontSize: 11.5, color: DTEXT_DIM, marginTop: 2 }}>{r.email || 'no address — cannot sign in'}</div>
             </div>
             <PhoneCell r={r} onSave={onSavePhone} />
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <CommandToggle label="Ask owner" enabled={r.can_ask_owner !== false}
+                onClick={() => onToggleCommand(r, 'ask_owner', r.can_ask_owner === false)} />
+              <CommandToggle label="Create group" enabled={r.can_create_owner_group === true}
+                onClick={() => onToggleCommand(r, 'create_group', r.can_create_owner_group !== true)} />
+            </div>
             <div style={{ minWidth: 116 }}>
               <div style={{ fontSize: 11.5, color: r.last_active_at ? A : DTEXT_FAINT }}>active: {when(r.last_active_at)}</div>
               <div style={{ fontSize: 10.5, color: DTEXT_FAINT, marginTop: 2 }}>login: {when(r.last_login_at)}</div>
@@ -356,6 +373,17 @@ function Section({ title, hint, rows, empty, onToggle, onRemove, onSavePhone, on
         ))}
       </div>
     </div>
+  )
+}
+
+function CommandToggle({ label, enabled, onClick }: { label: string; enabled: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} title={`${enabled ? 'Disable' : 'Enable'} ${label}`}
+      style={{ ...ghost, padding: '6px 9px', color: enabled ? '#86EFAC' : DTEXT_FAINT,
+        borderColor: enabled ? 'rgba(134,239,172,.35)' : DBORDER,
+        background: enabled ? 'rgba(34,197,94,.08)' : 'transparent' }}>
+      {enabled ? '✓' : '—'} {label}
+    </button>
   )
 }
 

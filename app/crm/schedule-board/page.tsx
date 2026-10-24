@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight, PawPrint, Users as UsersIcon, Snowflake, Sun, Link2, Copy, Euro, Check, X as XGlyph, CalendarClock, Camera, MoreHorizontal, Settings, ShieldAlert, Clock3, CopyPlus, AtSign, BusFront, CarFront, CircleHelp, MessageCircle, CalendarDays, CheckCircle2, Waves, BedDouble, Building2, House, Sparkles, SlidersHorizontal, X, LayoutGrid, List, Star, Map as MapIcon, Plus, HelpCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
-import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile, canCreateGroup } from '@/lib/crm/ui'
+import { CrmProvider, CrmShell, A, AD, AB, NAVY, F, FM, useCrm, useIsMobile } from '@/lib/crm/ui'
 import { TOWNS, townKey, townLabel, townCoord, spread, registerCanonicalLocalities } from '@/lib/crm/towns'
 import { BoardFilters, type BoardFilterValue, type BoardLocationArea, type MarketKey, type QuickKey, UPDATED_MAX_MS } from '@/components/crm/board-filters'
 import { UntilLine } from '@/components/crm/rental-modes'
@@ -3674,7 +3674,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   // "..." menu + panel, icon row) below now respond to it.
   const dark = theme != null ? theme === 'dark' : true
   // Olga/Katya: trusted for Create Group specifically, not admin generally.
-  const canCreateGroupBtn = canCreateGroup(me)
+  const canCreateGroupBtn = r.canCreateOwnerGroup === true
   const confirmed = r.availableStatus === 'available_confirmed'
   const photoInputRef = useRef<HTMLInputElement>(null)
 
@@ -4744,7 +4744,7 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
                 disabled={!c.canQuestion}
                 title={c.questionReason || 'Ask a question — you approve the wording before it sends'}
                 style={{ ...menuGridBtn(dark), color: c.canQuestion ? (dark ? DTEXT : LTEXT) : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: c.canQuestion ? 'pointer' : 'not-allowed' }}>
-                {r.isMine ? 'Ask Owner' : 'Ask Agent'}
+                Ask Owner
               </button>
               {(() => {
                 const canAskLocation = !r.isMine && !r.hasViewingLocation && c.canAsk
