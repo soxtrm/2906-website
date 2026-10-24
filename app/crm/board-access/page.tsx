@@ -355,6 +355,7 @@ function Section({ title, hint, rows, empty, onToggle, onToggleCommand, onRemove
               <CommandToggle label="Ask owner" enabled={r.can_ask_owner !== false}
                 onClick={() => onToggleCommand(r, 'ask_owner', r.can_ask_owner === false)} />
               <CommandToggle label="Create group" enabled={r.can_create_owner_group === true}
+                disabled={!/\b(?:olga|katya)\b/i.test(`${r.name || ''} ${r.username || ''}`)}
                 onClick={() => onToggleCommand(r, 'create_group', r.can_create_owner_group !== true)} />
             </div>
             <div style={{ minWidth: 116 }}>
@@ -376,12 +377,13 @@ function Section({ title, hint, rows, empty, onToggle, onToggleCommand, onRemove
   )
 }
 
-function CommandToggle({ label, enabled, onClick }: { label: string; enabled: boolean; onClick: () => void }) {
+function CommandToggle({ label, enabled, disabled = false, onClick }: { label: string; enabled: boolean; disabled?: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} title={`${enabled ? 'Disable' : 'Enable'} ${label}`}
+    <button onClick={onClick} disabled={disabled} title={disabled ? `${label} is restricted to Olga and Katya` : `${enabled ? 'Disable' : 'Enable'} ${label}`}
       style={{ ...ghost, padding: '6px 9px', color: enabled ? '#86EFAC' : DTEXT_FAINT,
         borderColor: enabled ? 'rgba(134,239,172,.35)' : DBORDER,
-        background: enabled ? 'rgba(34,197,94,.08)' : 'transparent' }}>
+        background: enabled ? 'rgba(34,197,94,.08)' : 'transparent', opacity: disabled ? 0.45 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer' }}>
       {enabled ? '✓' : '—'} {label}
     </button>
   )
