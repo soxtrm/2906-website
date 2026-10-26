@@ -55,6 +55,7 @@ for (const file of files) {
     assert.ok(src.startsWith('../assets/'), `${file}: locality images must be self-hosted`)
     assert.ok(/\bwidth=["']\d+["']/i.test(imageTag), `${file}: image width is required`)
     assert.ok(/\bheight=["']\d+["']/i.test(imageTag), `${file}: image height is required`)
+    assert.ok(/\bfetchpriority=["']high["']/i.test(imageTag), `${file}: hero image must receive high fetch priority`)
     assert.ok(fs.existsSync(path.resolve(areasDir, src)), `${file}: image asset does not exist: ${src}`)
   }
 
