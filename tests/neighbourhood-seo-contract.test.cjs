@@ -48,6 +48,16 @@ for (const file of files) {
   assert.ok(sitemapUrls.includes(publicUrl), `${file}: missing from neighbourhood sitemap`)
   assert.ok(hub.includes(`href="${publicPath}"`), `${file}: missing from neighbourhood hub`)
 
+  const imageTags = [...html.matchAll(/<img\b[^>]*>/gi)].map(match => match[0])
+  assert.ok(imageTags.length > 0, `${file}: missing a locality image`)
+  for (const imageTag of imageTags) {
+    const src = value(imageTag, [/\bsrc=["']([^"']+)["']/i])
+    assert.ok(src.startsWith('../assets/'), `${file}: locality images must be self-hosted`)
+    assert.ok(/\bwidth=["']\d+["']/i.test(imageTag), `${file}: image width is required`)
+    assert.ok(/\bheight=["']\d+["']/i.test(imageTag), `${file}: image height is required`)
+    assert.ok(fs.existsSync(path.resolve(areasDir, src)), `${file}: image asset does not exist: ${src}`)
+  }
+
   titles.set(title, [...(titles.get(title) || []), file])
   descriptions.set(description, [...(descriptions.get(description) || []), file])
 }
@@ -59,4 +69,4 @@ for (const [description, matchingFiles] of descriptions) {
   assert.equal(matchingFiles.length, 1, `duplicate description in ${matchingFiles.join(', ')}`)
 }
 
-console.log('Neighbourhood SEO, sitemap and hub contract passed for all 54 editions')
+console.log('Neighbourhood SEO, sitemap, hub and image contract passed for all 54 editions')
