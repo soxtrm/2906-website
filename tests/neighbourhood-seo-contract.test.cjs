@@ -56,6 +56,19 @@ for (const file of files) {
   } else {
     assert.ok(/edition-map\.mjs/i.test(html), `${file}: missing deferred 2D map implementation`)
   }
+  const mapButtons = [...html.matchAll(/<button\b[^>]*(?:class=["'][^"']*\bmap-open\b[^"']*["']|id=["']load-map["'])[^>]*>/gi)]
+    .map(match => match[0])
+  assert.equal(mapButtons.length, 1, `${file}: must expose one map control`)
+  assert.equal(
+    value(mapButtons[0], [/\baria-controls=["']([^"']+)["']/i]),
+    'area-map',
+    `${file}: map control must identify its map region`,
+  )
+  const mapRegion = value(html, [/(<div\b[^>]*\bid=["']area-map["'][^>]*>)/i])
+  assert.ok(mapRegion, `${file}: missing map region`)
+  assert.ok(/\brole=["']region["']/i.test(mapRegion), `${file}: map container must be an explicit region`)
+  assert.ok(/\baria-label=["'][^"']+["']/i.test(mapRegion), `${file}: map region needs an accessible label`)
+  assert.ok(/\bhidden\b/i.test(mapRegion), `${file}: map region must stay hidden before user intent`)
   assert.ok(/application\/ld\+json/i.test(html), `${file}: missing structured data`)
   assert.ok(sitemapUrls.includes(publicUrl), `${file}: missing from neighbourhood sitemap`)
   assert.ok(hub.includes(`href="${publicPath}"`), `${file}: missing from neighbourhood hub`)
@@ -93,4 +106,4 @@ for (const file of files) {
   assert.ok(inbound.length > 0, `${file}: needs an inbound contextual link from another distinct edition`)
 }
 
-console.log('Neighbourhood SEO, sitemap, hub and image contract passed for all 54 editions')
+console.log('Neighbourhood SEO, sitemap, hub, image and deferred-map accessibility contract passed for all 54 editions')
