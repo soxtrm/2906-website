@@ -26,6 +26,16 @@ function value(html, patterns) {
   return ''
 }
 
+function decodeHtml(text) {
+  return text
+    .replace(/&#x([0-9a-f]+);/gi, (_, value) => String.fromCodePoint(Number.parseInt(value, 16)))
+    .replace(/&#(\d+);/g, (_, value) => String.fromCodePoint(Number(value)))
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+}
+
 for (const file of files) {
   const html = fs.readFileSync(path.join(areasDir, file), 'utf8')
   const publicUrl = `https://www.2906.estate/link-marketplace/areas/${file}`
@@ -39,10 +49,35 @@ for (const file of files) {
     /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["'][^>]*>/i,
     /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']canonical["'][^>]*>/i,
   ])
+  const ogType = value(html, [/<meta[^>]+property=["']og:type["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const ogLocale = value(html, [/<meta[^>]+property=["']og:locale["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const ogSiteName = value(html, [/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const ogImage = value(html, [/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const ogImageWidth = value(html, [/<meta[^>]+property=["']og:image:width["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const ogImageHeight = value(html, [/<meta[^>]+property=["']og:image:height["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const ogImageAlt = value(html, [/<meta[^>]+property=["']og:image:alt["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const twitterCard = value(html, [/<meta[^>]+name=["']twitter:card["'][^>]+content=["']([^"']+)["'][^>]*>/i])
+  const imageTags = [...html.matchAll(/<img\b[^>]*>/gi)].map(match => match[0])
+  const heroSrc = value(imageTags[0] || '', [/\bsrc=["']([^"']+)["']/i])
+  const heroAlt = value(imageTags[0] || '', [/\balt=["']([^"']+)["']/i])
+  const heroWidth = value(imageTags[0] || '', [/\bwidth=["']([^"']+)["']/i])
+  const heroHeight = value(imageTags[0] || '', [/\bheight=["']([^"']+)["']/i])
 
   assert.ok(title, `${file}: missing title`)
   assert.ok(description, `${file}: missing meta description`)
   assert.equal(canonical, publicUrl, `${file}: canonical must match its public URL`)
+  assert.equal(ogType, 'website', `${file}: Open Graph type must describe a website`)
+  assert.equal(ogLocale, 'en_MT', `${file}: Open Graph locale must identify Malta English`)
+  assert.equal(ogSiteName, '2906 Estate', `${file}: Open Graph site name must preserve the agency identity`)
+  assert.equal(
+    ogImage,
+    `https://www.2906.estate/link-marketplace/assets/${path.basename(heroSrc)}`,
+    `${file}: Open Graph image must use the page's self-hosted hero`,
+  )
+  assert.equal(ogImageWidth, heroWidth, `${file}: Open Graph image width must match the hero`)
+  assert.equal(ogImageHeight, heroHeight, `${file}: Open Graph image height must match the hero`)
+  assert.equal(decodeHtml(ogImageAlt), decodeHtml(heroAlt), `${file}: Open Graph image alt must match the hero`)
+  assert.equal(twitterCard, 'summary_large_image', `${file}: social card must use the large-image layout`)
   assert.equal((html.match(/<h1\b/gi) || []).length, 1, `${file}: must contain exactly one H1`)
   assert.equal((html.match(/<iframe\b/gi) || []).length, 0, `${file}: maps must not load an initial iframe`)
   if (/createElement\(["']iframe["']\)/i.test(html)) {
@@ -73,7 +108,6 @@ for (const file of files) {
   assert.ok(sitemapUrls.includes(publicUrl), `${file}: missing from neighbourhood sitemap`)
   assert.ok(hub.includes(`href="${publicPath}"`), `${file}: missing from neighbourhood hub`)
 
-  const imageTags = [...html.matchAll(/<img\b[^>]*>/gi)].map(match => match[0])
   assert.ok(imageTags.length > 0, `${file}: missing a locality image`)
   for (const imageTag of imageTags) {
     const src = value(imageTag, [/\bsrc=["']([^"']+)["']/i])
@@ -106,4 +140,4 @@ for (const file of files) {
   assert.ok(inbound.length > 0, `${file}: needs an inbound contextual link from another distinct edition`)
 }
 
-console.log('Neighbourhood SEO, sitemap, hub, image and deferred-map accessibility contract passed for all 54 editions')
+console.log('Neighbourhood SEO, sitemap, hub, social image and deferred-map accessibility contract passed for all 54 editions')
