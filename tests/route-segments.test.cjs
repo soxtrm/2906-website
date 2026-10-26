@@ -1,10 +1,16 @@
 const assert = require('node:assert/strict');
-const { routeSegments } = require('../ops/property-routing/route-segments.cjs');
+const { ferryEvidence, routeSegments } = require('../ops/property-routing/route-segments.cjs');
 const mixed = routeSegments({legs:[{steps:[{mode:'walking',duration:100},{mode:'ferry',name:'Tas-Sliema - Marsamxett',duration:900.8,distance:1200}]}]});
 assert.equal(mixed.includesFerry,true);
 assert.equal(mixed.ferries[0].name,'Tas-Sliema - Marsamxett');
+assert.equal(mixed.ferries[0].evidence.status,'OFFICIAL_CORRIDOR');
+assert.equal(mixed.ferries[0].evidence.corridor,'Sliema–Valletta');
+assert.match(mixed.ferries[0].evidence.authorityUrl,/transport\.gov\.mt/);
+assert.match(mixed.ferries[0].evidence.operatorScheduleUrl,/vallettaferryservices\.com\/schedule/);
+assert.equal(mixed.ferryEvidenceStatus,'OFFICIAL_CORRIDOR');
 assert.equal(mixed.ferryWaitSeconds,null);
-assert.equal(mixed.ferrySchedule,'UNKNOWN');
+assert.equal(mixed.ferrySchedule,'LIVE_CHECK_REQUIRED');
 assert.equal(routeSegments({legs:[{steps:[{mode:'walking'}]}]}).includesFerry,false);
 assert.deepEqual(routeSegments(null).ferries,[]);
+assert.equal(ferryEvidence('Unnamed water shuttle').status,'ROUTED_ONLY');
 console.log('route segment tests passed');
