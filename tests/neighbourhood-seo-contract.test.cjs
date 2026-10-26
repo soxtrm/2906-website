@@ -12,6 +12,7 @@ assert.equal(files.length, 54, 'expected the current 54 neighbourhood editions')
 
 const titles = new Map()
 const descriptions = new Map()
+const editionLinks = new Map()
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1])
 
 assert.equal(sitemapUrls.length, files.length, 'sitemap and published edition count must match')
@@ -70,6 +71,11 @@ for (const file of files) {
     assert.ok(fs.existsSync(path.resolve(areasDir, src)), `${file}: image asset does not exist: ${src}`)
   }
 
+  const relatedEditions = [...html.matchAll(/href=["']([^"']+\.html(?:#[^"']*)?)["']/gi)]
+    .map(match => match[1].split('#')[0].split('/').at(-1))
+    .filter(target => files.includes(target) && target !== file)
+  editionLinks.set(file, new Set(relatedEditions))
+
   titles.set(title, [...(titles.get(title) || []), file])
   descriptions.set(description, [...(descriptions.get(description) || []), file])
 }
@@ -79,6 +85,12 @@ for (const [title, matchingFiles] of titles) {
 }
 for (const [description, matchingFiles] of descriptions) {
   assert.equal(matchingFiles.length, 1, `duplicate description in ${matchingFiles.join(', ')}`)
+}
+
+for (const file of files) {
+  assert.ok(editionLinks.get(file).size > 0, `${file}: needs a contextual link to another distinct edition`)
+  const inbound = files.filter(source => editionLinks.get(source).has(file))
+  assert.ok(inbound.length > 0, `${file}: needs an inbound contextual link from another distinct edition`)
 }
 
 console.log('Neighbourhood SEO, sitemap, hub and image contract passed for all 54 editions')
