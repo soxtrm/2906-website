@@ -79,7 +79,7 @@
       const frame=document.createElement('iframe');
       frame.title='Birżebbuġa and nearby locality labels — OpenStreetMap overview';
       frame.src='https://www.openstreetmap.org/export/embed.html?bbox=14.510%2C35.813%2C14.548%2C35.839&layer=mapnik';
-      frame.style='width:100%;height:100%;border:0';frame.loading='lazy';
+      frame.style='width:100%;height:100%;border:0';frame.loading='eager';frame.referrerPolicy='strict-origin-when-cross-origin';
       map.hidden=false;map.append(frame);this.hidden=true;
       document.getElementById('map-status').textContent='The map loads from OpenStreetMap. If it stays blank, use the larger-map link.';
     },{once:true});

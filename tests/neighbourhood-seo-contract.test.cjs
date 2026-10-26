@@ -44,6 +44,17 @@ for (const file of files) {
   assert.equal(canonical, publicUrl, `${file}: canonical must match its public URL`)
   assert.equal((html.match(/<h1\b/gi) || []).length, 1, `${file}: must contain exactly one H1`)
   assert.equal((html.match(/<iframe\b/gi) || []).length, 0, `${file}: maps must not load an initial iframe`)
+  if (/createElement\(["']iframe["']\)/i.test(html)) {
+    assert.ok(/frame\.title\s*=/i.test(html), `${file}: deferred map iframe needs an accessible title`)
+    assert.ok(/frame\.loading\s*=\s*["']eager["']/i.test(html), `${file}: clicked map must load immediately`)
+    assert.ok(
+      /frame\.referrerPolicy\s*=\s*["']strict-origin-when-cross-origin["']/i.test(html),
+      `${file}: deferred map iframe needs the strict referrer policy`,
+    )
+    assert.ok(/\{\s*once\s*:\s*true\s*\}/i.test(html), `${file}: map button must create only one iframe`)
+  } else {
+    assert.ok(/edition-map\.mjs/i.test(html), `${file}: missing deferred 2D map implementation`)
+  }
   assert.ok(/application\/ld\+json/i.test(html), `${file}: missing structured data`)
   assert.ok(sitemapUrls.includes(publicUrl), `${file}: missing from neighbourhood sitemap`)
   assert.ok(hub.includes(`href="${publicPath}"`), `${file}: missing from neighbourhood hub`)

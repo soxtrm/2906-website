@@ -79,7 +79,7 @@
       const frame=document.createElement('iframe');
       frame.title="Attard, Sant'Anton, Balzan, Lija and Ta' Qali — OpenStreetMap overview";
       frame.src='https://www.openstreetmap.org/export/embed.html?bbox=14.408%2C35.875%2C14.468%2C35.909&layer=mapnik';
-      frame.style='width:100%;height:100%;border:0';frame.loading='lazy';
+      frame.style='width:100%;height:100%;border:0';frame.loading='eager';frame.referrerPolicy='strict-origin-when-cross-origin';
       map.hidden=false;map.append(frame);this.hidden=true;
       document.getElementById('map-status').textContent='The map loads from OpenStreetMap. If it stays blank, use the larger-map link.';
     },{once:true});

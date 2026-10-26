@@ -65,7 +65,7 @@
       const frame=document.createElement('iframe');
       frame.title='Xgħajra and surrounding place labels — OpenStreetMap';
       frame.src='https://www.openstreetmap.org/export/embed.html?bbox=14.531%2C35.876%2C14.559%2C35.895&layer=mapnik';
-      frame.style='width:100%;height:100%;border:0';frame.loading='lazy';
+      frame.style='width:100%;height:100%;border:0';frame.loading='eager';frame.referrerPolicy='strict-origin-when-cross-origin';
       map.hidden=false;map.append(frame);this.hidden=true;
       document.getElementById('map-status').textContent='The map loads from OpenStreetMap. If it stays blank, use the larger-map link.';
     },{once:true});

@@ -77,7 +77,7 @@
       const frame=document.createElement('iframe');
       frame.title='Iklin hill, civic centre and Tal-Balal context — OpenStreetMap overview';
       frame.src='https://www.openstreetmap.org/export/embed.html?bbox=14.444%2C35.900%2C14.466%2C35.918&layer=mapnik';
-      frame.style='width:100%;height:100%;border:0';frame.loading='lazy';
+      frame.style='width:100%;height:100%;border:0';frame.loading='eager';frame.referrerPolicy='strict-origin-when-cross-origin';
       map.hidden=false;map.append(frame);this.hidden=true;
       document.getElementById('map-status').textContent='The map loads from OpenStreetMap. If it stays blank, use the larger-map link.';
     },{once:true});

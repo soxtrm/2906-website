@@ -31,7 +31,7 @@
   </main>
   <footer><span>2906 Estate · Local intelligence by Nexus Link</span><span>Paola (Raħal Ġdid) · neighbourhood edition · sources reviewed 24 October 2026</span></footer>
   <script>
-    document.getElementById('load-map').addEventListener('click',function(){const map=document.getElementById('area-map');const frame=document.createElement('iframe');frame.title='OpenStreetMap broad locality overview of Paola, Malta';frame.loading='lazy';frame.referrerPolicy='strict-origin-when-cross-origin';frame.src='https://www.openstreetmap.org/export/embed.html?bbox=14.482%2C35.861%2C14.515%2C35.884&layer=mapnik';frame.style.cssText='width:100%;height:100%;border:0';map.hidden=false;map.append(frame);this.hidden=true;document.getElementById('map-status').textContent='The map loads from OpenStreetMap. If it stays blank, use the larger-map link.';},{once:true});
+    document.getElementById('load-map').addEventListener('click',function(){const map=document.getElementById('area-map');const frame=document.createElement('iframe');frame.title='OpenStreetMap broad locality overview of Paola, Malta';frame.loading='eager';frame.referrerPolicy='strict-origin-when-cross-origin';frame.src='https://www.openstreetmap.org/export/embed.html?bbox=14.482%2C35.861%2C14.515%2C35.884&layer=mapnik';frame.style.cssText='width:100%;height:100%;border:0';map.hidden=false;map.append(frame);this.hidden=true;document.getElementById('map-status').textContent='The map loads from OpenStreetMap. If it stays blank, use the larger-map link.';},{once:true});
   </script>
 </body>
 </html>
