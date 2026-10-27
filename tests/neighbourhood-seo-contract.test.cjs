@@ -13,6 +13,7 @@ assert.equal(files.length, 54, 'expected the current 54 neighbourhood editions')
 const titles = new Map()
 const descriptions = new Map()
 const editionLinks = new Map()
+const contentProfiles = new Map()
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1])
 const currentMaltaDate = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'Europe/Malta',
@@ -62,6 +63,10 @@ function decodeHtml(text) {
 
 for (const file of files) {
   const html = fs.readFileSync(path.join(areasDir, file), 'utf8')
+  const mainHtml = value(html, [/<main\b[^>]*>([\s\S]*?)<\/main>/i])
+  const visibleWords = decodeHtml(mainHtml.replace(/<[^>]+>/g, ' '))
+    .toLowerCase()
+    .match(/[\p{L}\p{N}'’-]+/gu) || []
   const publicUrl = `https://www.2906.estate/link-marketplace/areas/${file}`
   const publicPath = `/link-marketplace/areas/${file}`
   const title = value(html, [/<title>([\s\S]*?)<\/title>/i])
@@ -90,6 +95,7 @@ for (const file of files) {
 
   assert.ok(title, `${file}: missing title`)
   assert.ok(description, `${file}: missing meta description`)
+  assert.ok(visibleWords.length >= 400, `${file}: edition is too thin at ${visibleWords.length} visible words`)
   assert.equal(canonical, publicUrl, `${file}: canonical must match its public URL`)
   assert.equal(ogType, 'website', `${file}: Open Graph type must describe a website`)
   assert.equal(ogLocale, 'en_MT', `${file}: Open Graph locale must identify Malta English`)
@@ -151,6 +157,7 @@ for (const file of files) {
     .map(match => match[1].split('#')[0].split('/').at(-1))
     .filter(target => files.includes(target) && target !== file)
   editionLinks.set(file, new Set(relatedEditions))
+  contentProfiles.set(file, new Set(visibleWords.filter(word => word.length >= 4)))
 
   titles.set(title, [...(titles.get(title) || []), file])
   descriptions.set(description, [...(descriptions.get(description) || []), file])
@@ -161,6 +168,20 @@ for (const [title, matchingFiles] of titles) {
 }
 for (const [description, matchingFiles] of descriptions) {
   assert.equal(matchingFiles.length, 1, `duplicate description in ${matchingFiles.join(', ')}`)
+}
+
+for (let sourceIndex = 0; sourceIndex < files.length; sourceIndex += 1) {
+  for (let targetIndex = sourceIndex + 1; targetIndex < files.length; targetIndex += 1) {
+    const source = contentProfiles.get(files[sourceIndex])
+    const target = contentProfiles.get(files[targetIndex])
+    const shared = [...source].filter(word => target.has(word)).length
+    const union = new Set([...source, ...target]).size
+    const similarity = shared / union
+    assert.ok(
+      similarity < 0.75,
+      `${files[sourceIndex]} and ${files[targetIndex]} are too structurally similar (${similarity.toFixed(3)})`,
+    )
+  }
 }
 
 for (const file of files) {
