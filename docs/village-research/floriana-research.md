@@ -1,6 +1,6 @@
 # Floriana edition — sourced research draft
 
-Language: English. Status: **RESEARCH DRAFT — NOT PUBLISHED**. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -104,17 +104,25 @@ The other originals were retained only as documented alternatives:
 
 Local verification hashes for those alternatives are: Granaries SHA-256 `1B818ED3B9D51612826F7CF1A56E9F6455362BF948FC9BE74D6712F379377DC6`; St Anne Street SHA-256 `F4E662E0BE2E795CA8C9539202BBD78998FAF4C8C9DD0E9DC1121BC9F971E114`; Argotti SHA-256 `D56684BC523848CF0BDC38EAFC5914C586C6848CDE3491D4330716FAA8461E10`; Porte des Bombes SHA-256 `43953CBC80BC2CABC3B8C0A5F5F72354AD119D36D8414C7DC2F5644C5B02AD95`.
 
+## Private preview verification
+
+The private English preview is `public/link-marketplace/areas/floriana-preview.html`, 18,044 bytes, SHA-256 `A61ECB0DA2A04A114F83F269AAF0451A7664E6398C3D1A13E2DFB2DA40788F8F`. It has `noindex,nofollow`, no canonical and no social URL. It separates civic streets, Pjazza San Publju / the Granaries, the garden and bastion edge, and Xatt Pinto; neighbouring Valletta, Pietà, Marsa and Ħamrun remain explicitly separate.
+
+Headless Chrome verification passed at 390×844 and 1440×1000. Both layouts had one H1, no horizontal overflow, a fully decoded 1800×1463 hero and visible Diego Delso / Wikimedia Commons / CC BY-SA 4.0 attribution. The actual responsive crops were visually inspected and keep the two towers, church frontage and sufficient Granaries context legible.
+
+The page initially creates no iframe. A deliberate button click creates exactly one visible OpenStreetMap iframe using the neutral locality viewport `14.500,35.890,14.511,35.898`, hides the trigger, sets `aria-expanded=true` and preserves zero horizontal overflow. It draws no boundary, listing pin, connector, route, distance, time or ferry line. The final mobile and desktop runs had no console errors, failed requests or HTTP responses at or above 400.
+
 ## Direct verification record
 
 The public inventory, Floriana Local Council overview/heritage/services pages, University of Malta Argotti page, Malta Public Transport route directory, filtered MTA register and Wikimedia API returned HTTP 200 in neutral direct checks on 28 October 2026. Primary HealthCare returned HTTP 403 to the neutral PowerShell client but remained current and readable through browser search/index access; no claim was expanded from that transport-layer response.
 
-The MTA filter returned exactly ten Floriana restaurant records. The inventory returned one currently available exact-Floriana record with eight images. No private contact details were copied. No image, preview, public HTML, canonical, sitemap, index, live deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+The MTA filter returned exactly ten Floriana restaurant records. The inventory returned one currently available exact-Floriana record with eight images. No private contact details were copied. The verified preview remains local and non-indexable; no public HTML, canonical, sitemap, index, live deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed.
 
 ## Release gates
 
 - recheck every public-service, operator and regulator source immediately before release;
 - compare real mobile/desktop crops and visible attribution in the private preview before final hero approval;
-- build a private `noindex,nofollow` preview before any public page;
+- preserve the verified `noindex,nofollow` preview until a separate release worktree passes the public SEO and production gates;
 - keep the civic streets, Granaries, garden/bastion edge and Xatt Pinto waterfront context distinct;
 - keep Valletta, Pietà, Marsa and Ħamrun separate and avoid “Valletta centre” shorthand for Floriana addresses;
 - test the deferred map, accessibility, canonical, Open Graph data, BreadcrumbList, sitemap and internal links;
