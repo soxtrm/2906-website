@@ -81,7 +81,7 @@ There is no water crossing inside the researched locality context and no basis f
 
 ## Licensed image candidates
 
-The Wikimedia Commons API returned the following candidate originals with reusable licences. They are **candidates only**: none has been downloaded into Git or approved as a hero. Before any preview, the originals must be downloaded outside Git, local SHA-1 values must match Commons, full-resolution content must be inspected, and real 390px and desktop crops must be tested.
+The Wikimedia Commons API returned the following candidate originals with reusable licences. All nine originals were downloaded outside Git, their local SHA-1 values matched Commons, and their full-resolution content was inspected. Only the selected proportional web derivative is stored in Git; no original is stored in Git.
 
 1. **02020 Għaxaq Parish Church (1).jpg** — Dans; captured 14 August 2017; 3264×1836; 1,761,392 bytes; CC BY-SA 4.0; Commons SHA-1 `2F1A33E3EF8E57D3BF41BE9155D95F1CED0BFF34`.
    - https://commons.wikimedia.org/wiki/File:02020_G%C4%A7axaq_Parish_Church_(1).jpg
@@ -93,8 +93,33 @@ The Wikimedia Commons API returned the following candidate originals with reusab
    - https://commons.wikimedia.org/wiki/File:G%C4%A7axaq.jpg
 5. **Santa Marija Fireworks, Ħal Għaxaq (03) (2025).jpg** — Tranceliner; captured 14 August 2025; 4035×2690; 1,140,049 bytes; CC BY-SA 4.0; Commons SHA-1 `282640DBF0CC8A2B3E73A64544B0C5CEB68032FD`.
    - https://commons.wikimedia.org/wiki/File:Santa_Marija_Fireworks,_%C4%A6al_G%C4%A7axaq_(03)_(2025).jpg
+6. **Il-Knisja ta' Ħal Għaxaq.jpg** — NoelMalta; captured 27 February 2021; 4208×3120; 5,010,663 bytes; CC BY-SA 4.0; Commons SHA-1 `915DF7390044178891248F75788B2FF3B51EB6C6`.
+   - https://commons.wikimedia.org/wiki/File:Il-Knisja_ta%27_%C4%A6al_G%C4%A7axaq.jpg
+7. **Detail from the Main Square, Għaxaq.jpg** — Tranceliner; captured 14 August 2025; 5314×3542; 4,552,059 bytes; CC BY-SA 4.0; Commons SHA-1 `B981EF0A8D97AB62171A59596EBD43E2DA939FC5`.
+   - https://commons.wikimedia.org/wiki/File:Detail_from_the_Main_Square,_G%C4%A7axaq.jpg
+8. **Għaxaq (26586742357).jpg** — Thomas Woodtli; captured 14 April 2018; 4032×3024; 3,326,581 bytes; CC BY-SA 2.0; Commons SHA-1 `FC3139380E7C518B36D3231703068E06746EB94D`.
+   - https://commons.wikimedia.org/wiki/File:G%C4%A7axaq_(26586742357).jpg
+9. **Dji fly 20240813 022922 808 1723814511312 photo.jpg** — Wendy Verbraeken; captured 13 August 2024; 4032×3024; 3,963,496 bytes; CC BY-SA 4.0; Commons SHA-1 `CFA8909902E5A6D33AFF0B9A7E2271C5E300E08F`.
+   - https://commons.wikimedia.org/wiki/File:Dji_fly_20240813_022922_808_1723814511312_photo.jpg
 
-The fireworks image is event-specific and cannot stand for ordinary daily conditions. A church-centred image cannot stand for every street, a property outlook or current access. The next gate is a full-resolution visual comparison and neutral hero selection with visible author / Commons / licence attribution.
+Local original SHA-256 verification, in candidate order: `3152C0D168844587DC1DD888A6B7A8224E2FEDD295F28BC07F3196F36246EC8D`, `BCC58B41C2097CDA5E28739EB86ECC437890655E8AB4F7D1CB4F6B6B87AEB82F`, `82F6CC5F38547532EDF07699F77BCAE54DF9E547F5B92C856C69DB98072032F3`, `6D917333E161072994697F2432F7E807F5E7F121A4604DEBAA8DA486A9EE3A95`, `E15FFC47E85793B090AF3B3339C7D88F1DC898E4D84A2477C35EDA6AA7260960`, `287594AA7109F6950B013CA4767F731A5F06D0C2FA93F650D07FBF92300DFCDC`, `EEAE1F748976DF44E8BA3460AB073632237BE310C43067B751E5F77DE73B0756`, `F6FF04E115174E2E5D060F5411AAAE9FB31711F3945B7B895F2C3BA1C4DF7F8C`, `FA798EE6534E0F6CC4509C1EF41BD621AEAF4D5A48C248E4FA61B97693D63392`.
+
+### Hero selection and integrity record
+
+Selected: **Għaxaq.jpg** by Alecastorina93, captured 19 September 2010 and licensed CC BY-SA 3.0. It is the strongest neutral locality overview in the inspected set: the parish church, surrounding residential fabric and broad village skyline remain readable together, without an identifiable private person, advertisement, close private façade, dominant vehicle or active event. Its age is a strict editorial limitation; it may orient readers to the locality, but cannot establish present-day building condition, skyline completeness, access, parking, quietness, property outlook or the location of any listing.
+
+The alternatives were rejected as the primary hero for specific visual reasons. Candidates 1, 5, 7 and 9 are event-specific night or fireworks/feast views with temporary lighting or decorations. Candidate 2 is a close private-façade view with wiring and address detail. Candidate 3 is dominated by a rural-edge foreground, a stored boat and equipment. Candidate 6 is dominated by a parking area, vehicles and a branded work van while the church is distant. Candidate 8 is chiefly an outer-rural and Freeport view and does not identify the village core. These files may not be reused merely as interchangeable locality decoration.
+
+Original integrity:
+
+- 4320×3240; 7,015,204 bytes;
+- Commons and local SHA-1 `225A9EB1927D1E31174CA07B37122BAE3D326EB8`;
+- local SHA-256 `6D917333E161072994697F2432F7E807F5E7F121A4604DEBAA8DA486A9EE3A95`;
+- Commons file page: https://commons.wikimedia.org/wiki/File:G%C4%A7axaq.jpg
+
+Prepared derivative: `public/link-marketplace/assets/ghaxaq-village-skyline-alecastorina93.webp`. It is a proportional 1800×1350 WebP conversion at quality 84 and encoder effort 6, with no crop, retouching, compositing, colour treatment or generative alteration. It measures 247,788 bytes and has SHA-256 `332CE1B31B18E5A00504CE65480FDA5270F33EE21D0EAA7F12A777893714E446`. The derivative passed a full-image visual check.
+
+Any preview or public use must visibly credit **Alecastorina93 / Wikimedia Commons / CC BY-SA 3.0** and link the file page and licence. Real 390px and desktop crops, accessible alt text and visible attribution remain required in a separate private preview gate. No crop has yet been approved.
 
 ## Direct verification record
 
@@ -105,7 +130,7 @@ No private contact details were copied. No image, preview, public HTML, canonica
 ## Release gates
 
 - recheck every public-service, operator, heritage and regulator source immediately before preview and release;
-- download image originals outside Git, verify Commons SHA-1, inspect full resolution and document local SHA-256 before selecting a hero;
+- preserve the verified original/derivative hashes and do not substitute or crop the selected hero without a new visual review;
 - test visible attribution and actual mobile/desktop crops in a private `noindex,nofollow` preview;
 - keep civic core, Labour Avenue, Bir id-Deheb / Dawret Ħal Għaxaq roads and rural edge distinct;
 - keep Żejtun, Gudja, Santa Luċija, Marsaxlokk and Birżebbuġa separate;
