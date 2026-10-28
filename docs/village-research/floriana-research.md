@@ -1,6 +1,14 @@
 # Floriana edition — sourced research draft
 
-Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Checked 28 October 2026 (Europe/Malta).
+
+## Release-candidate verification — 28 October 2026
+
+The public candidate `public/link-marketplace/areas/floriana.html` replaces the private noindex preview in the release. It has one self-canonical, one Open Graph URL, one BreadcrumbList, a self-hosted 1800×1463 hero with visible Diego Delso / Wikimedia Commons / CC BY-SA 4.0 attribution, and no robots block. The neighbourhood hub, image sitemap and a contextual inbound link from the Valletta edition reference it exactly once.
+
+Floriana Local Council, Council services, the Granaries record, University of Malta Argotti, Din l-Art Ħelwa's Msida Bastion Historic Garden record, Malta Public Transport, Primary HealthCare and the MTA Floriana restaurant filter were rechecked before the release candidate. Current access, operating details and departures remain on the linked live sources. No property position, boundary, route, walking line, water shortcut, distance, journey time or ferry line has been added.
+
+The 57-edition SEO/sitemap/hub contract, route-segment and ferry-presentation regressions, direct TypeScript validation and the Next.js production build passed. Chrome verification at 390×844 and 1440×1000 passed before and after the deferred map load: HTTP 200, one H1, exact canonical and social URL, one BreadcrumbList, no horizontal overflow, visible attribution, zero initial iframes, exactly one OpenStreetMap iframe after intent, and no final console, request or HTTP errors. The 21st UI review reported zero findings. Publication and live verification remain a separate final step.
 
 ## Why this locality is next
 
