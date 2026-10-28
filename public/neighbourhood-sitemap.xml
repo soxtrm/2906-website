@@ -386,4 +386,11 @@
       <image:loc>https://www.2906.estate/link-marketplace/assets/marsaxlokk-harbour-berthold-werner.webp</image:loc>
     </image:image>
   </url>
+  <url>
+    <loc>https://www.2906.estate/link-marketplace/areas/bormla.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <image:image>
+      <image:loc>https://www.2906.estate/link-marketplace/assets/bormla-dock-1-tranceliner.webp</image:loc>
+    </image:image>
+  </url>
 </urlset>

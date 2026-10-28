@@ -1,6 +1,6 @@
 # Bormla (Cospicua) edition — sourced research draft
 
-Language: English. Status: preview verified — not published. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: release candidate verified — not published. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -121,3 +121,11 @@ Preview file: 17,977 bytes; SHA-256 `485632919C6565CDB9B1520487F69504C2AC51702A2
 - run the route regression suite before any map-related release;
 - run TypeScript, production build and live mobile/desktop checks;
 - document the rollback commit and update `TRAVEL_WORKLOG.md` after each independent step.
+
+## Release-candidate verification
+
+The private preview was promoted only inside the clean release worktree to `public/link-marketplace/areas/bormla.html`. The public candidate has the exact self-canonical and Open Graph URL, one `BreadcrumbList`, the self-hosted 1800×1200 hero and visible Tranceliner/Wikimedia Commons/CC BY-SA 4.0 attribution. Index, neighbourhood sitemap and one contextual inbound link from Kalkara were added exactly once; the SEO contract now covers 56 distinct editions.
+
+`node tests/neighbourhood-seo-contract.test.cjs`, direct TypeScript validation and `next build --webpack` passed; the production build generated 52/52 static pages. `21st review public/link-marketplace/areas/bormla.html` returned zero findings. Chrome checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, exact canonical and Open Graph URL, one structured-data block, no robots block, no horizontal overflow, a decoded 1800×1200 hero, visible attribution and zero initial iframes. The map click created one visible OpenStreetMap frame with bbox `14.509,35.873,14.536,35.893`, set `aria-expanded=true`, hid the trigger and produced no console errors, failed requests or HTTP responses at or above 400. Full-page captures are stored under `D:\2906\nexus-bridge-work\artifacts\20261028-bormla-release`.
+
+Release-candidate hashes before documentation update: Bormla HTML 19,415 bytes, SHA-256 `750122D5DDD47BABBD0B180B54306AA7A81B8CE662B9AAE8706AC33123466803`; hero SHA-256 `CA886644ED42000AD0DE26606E77CCB1E48C19AB98C1C626C960D88BB44E80B0`; index SHA-256 `9C8FA0F04C75BD91977B385D870810F13135A56CB631AE352F4E653363FE2879`; neighbourhood sitemap SHA-256 `8AE103C349ECDD1B6A054A201E08AFB9D6F283F2C9344851F534CF16663D4B3A`. Publication remains pending a fresh `origin/main` fast-forward check and live verification.
