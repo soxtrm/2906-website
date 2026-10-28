@@ -1,6 +1,6 @@
 # Bormla (Cospicua) edition — sourced research draft
 
-Language: English. Status: hero selected — preview not yet verified or published. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: preview verified — not published. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -99,13 +99,23 @@ The derivative was inspected at full frame and remains suitable for later mobile
 
 The inventory, Address Registrar, Malta Public Transport Three Cities and ferry pages, Fondazzjoni Kottonera, the filtered MTA register and Wikimedia API returned HTTP 200 in direct checks on 28 October 2026. The Bormla Local Council, Primary HealthCare, Government press release and Culture pages returned HTTP 403 to the neutral PowerShell client but remained current and readable through browser search/index access; no claim was expanded from those transport-layer responses.
 
-The MTA filter returned exactly three Bormla restaurant records. The public inventory returned one exact Bormla/Cospicua record. No private contact details were copied. One licensed image derivative was added locally for a later preview; no public HTML, sitemap, index, live deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+The MTA filter returned exactly three Bormla restaurant records. The public inventory returned one exact Bormla/Cospicua record. No private contact details were copied. One licensed image derivative and one private noindex preview were added locally; no public-indexable HTML, sitemap, index, live deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+
+## Private preview verification
+
+The private file `public/link-marketplace/areas/bormla-preview.html` is deliberately marked `noindex,nofollow` and contains no canonical or social URL. It separates Dock 1, the rising lived-in streets and the outer fortification/dockyard edges; keeps Birgu, L-Isla, Kalkara, Fgura, Paola and Żabbar separate; uses the three MTA records without rankings; and labels the Cospicua–Valletta connection as a distinct ferry mode rather than a walking route.
+
+Chrome checks at 390×844 and 1440×1000 returned HTTP 200 with exactly one H1, no horizontal overflow, a fully decoded 1800×1200 hero and visible Tranceliner/Commons/CC BY-SA 4.0 attribution. The initial page created no iframe. User intent created exactly one visible OpenStreetMap frame using the neutral broad-locality bbox `14.509,35.873,14.536,35.893`, set `aria-expanded=true`, hid the trigger and preserved zero horizontal overflow. No console errors, failed requests or HTTP responses at or above 400 remained in the final run.
+
+Full-page captures before and after map activation were inspected at both sizes under `D:\2906\nexus-bridge-work\artifacts\20261028-bormla-preview`. The hero subject, attribution, typography, card sequence, ferry warning and map remain readable without clipping. `21st search` was unavailable because the CLI was not signed in, so no external component or generation credit was used; the page instead follows the established neighbourhood HTML and source-boundary patterns. `21st review public/link-marketplace/areas/bormla-preview.html` returned zero findings.
+
+Preview file: 17,977 bytes; SHA-256 `485632919C6565CDB9B1520487F69504C2AC51702A2B042FB50E240B6069BC9B`.
 
 ## Release gates
 
 - recheck every public-service, operator and regulator source immediately before release;
-- verify the selected derivative and visible licence attribution in real 390px mobile and desktop preview layouts;
-- verify the private `noindex,nofollow` preview at real 390px mobile and desktop sizes;
+- recheck the preview's facts, links and image attribution immediately before promotion;
+- promote to the final public filename with exact canonical, Open Graph metadata and BreadcrumbList only in the release worktree;
 - keep Bormla/Cospicua naming clear and Birgu, L-Isla, Kalkara, Fgura, Paola and Żabbar separate;
 - test the deferred map, accessibility, canonical, Open Graph data, BreadcrumbList, sitemap and internal links;
 - run the route regression suite before any map-related release;
