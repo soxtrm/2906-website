@@ -1,6 +1,6 @@
 # Marsaxlokk edition — sourced research draft
 
-Language: English. Status: research draft — not published. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: preview verified — not published. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -88,3 +88,11 @@ The two ultra-wide panoramas retain useful harbour context but were not selected
 9. Run the relevant directory, SEO and production-build tests from a clean isolated worktree; publish only through the existing Git/Vercel route with a specific rollback commit.
 
 No page, navigation, sitemap, backlink, account, message or production deployment is part of this research step.
+
+## Private preview verification
+
+The private `noindex,nofollow` preview is stored at `docs/village-research/marsaxlokk-preview.html`. It contains no canonical URL, social URL, public discovery link or initial map iframe. The click-to-load map is a neutral OpenStreetMap village overview and does not draw a property pin, administrative boundary, route, distance or journey time.
+
+The preview was checked locally on 28 October 2026 at 390 × 844 and 1440 × 1000. Both viewports had exactly one H1, zero horizontal overflow, a decoded 1,800 × 1,204 hero, visible Berthold Werner / Wikimedia Commons / CC BY-SA 3.0 attribution and zero initial iframes. At each size, map intent created exactly one visible OpenStreetMap iframe and no failed request. The actual mobile and desktop full-page captures were visually inspected; the harbour, church, boats, attribution and section hierarchy remain readable without clipping.
+
+This verification does not approve publication. Source rechecks, production metadata, directory and sitemap integration, a clean production build, live responsive checks and a named rollback commit remain release gates.
