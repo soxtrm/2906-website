@@ -86,6 +86,19 @@ function maltaHM(d: Date) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
 }
 
+function outreachDaypart(time: string) {
+  const hour = Number.parseInt(time.split(':')[0] || '0', 10)
+  if (hour < 12) return 'Morning'
+  if (hour < 18) return 'Afternoon'
+  return 'Evening'
+}
+
+function outreachTimeLabel(value: string | null) {
+  if (!value) return null
+  const time = maltaHM(new Date(value))
+  return `${outreachDaypart(time)} · ${time}`
+}
+
 const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
 const OUTREACH_LIST_MAX = 45
 const OUTREACH_DAY_LABELS = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'] as const
@@ -529,11 +542,19 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [armTime, setArmTime] = useState('14:15')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
-  const [volume, setVolume] = useState(account.outreachVolumePercent || 100)
+  const initialVolume = account.outreachVolumePercent || 100
+  const [volume, setVolume] = useState(initialVolume)
+  const [savedVolume, setSavedVolume] = useState(initialVolume)
+  const [volumeFeedback, setVolumeFeedback] = useState<'saved' | 'saving' | 'error'>('saved')
   const [volumeBusy, setVolumeBusy] = useState(false)
+  const [autoSummary, setAutoSummary] = useState('')
   const pickedInitialPlan = useRef(false)
 
-  useEffect(() => { setVolume(account.outreachVolumePercent || 100) }, [account.outreachVolumePercent])
+  useEffect(() => {
+    const persisted = account.outreachVolumePercent || 100
+    setVolume(persisted)
+    setSavedVolume(persisted)
+  }, [account.id, account.outreachVolumePercent])
 
   const loadPlans = useCallback(async () => {
     const r = await crmGet(`outreach/plans?accountId=${account.id}`)
@@ -666,10 +687,14 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const preserved = (r.plans || []).filter((plan: any) => plan.status === 'preserved')
       const blocked = (r.plans || []).filter((plan: any) => plan.status === 'blocked')
       const contacts = prepared.reduce((sum: number, plan: any) => sum + Number(plan.preparedCount || 0), 0)
+      const preparedTimes = prepared.map((plan: any) => outreachTimeLabel(plan.scheduledAt)).filter(Boolean)
+      const timeSummary = preparedTimes.length ? ` · ${preparedTimes.join(' → ')}` : ''
+      setAutoSummary(`✓ AUTO SAVED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +16 min daily${timeSummary}`)
       setNote(`Auto prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${contacts} previews · ${preserved.length} preserved${blocked.length ? ` · ${blocked.length} blocked by time/safety` : ''}.`)
       setSelectedPrepareDays([])
       setPrepareDaysOpen(false)
     } catch (e: any) {
+      setAutoSummary('')
       setNote(e?.message || 'Auto failed')
     } finally { setBusy(false) }
   }
@@ -726,12 +751,19 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function cancel() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/cancel`, 'POST', {}); await refresh() } finally { setBusy(false) } }
 
   async function saveVolume(days: number | null = null) {
-    setVolumeBusy(true); setNote('')
+    setVolumeBusy(true); setVolumeFeedback('saving'); setNote('')
     try {
-      await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { percent: volume, days })
-      setNote(days ? `Volume ${volume}% for ${days} days.` : `Volume ${volume}% saved.`)
-      onChanged()
-    } catch (e: any) { setNote(e?.message || 'Failed to save volume') } finally { setVolumeBusy(false) }
+      const r = await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { percent: volume, days })
+      const persisted = Number(r?.account?.outreach_volume_percent ?? volume)
+      setVolume(persisted)
+      setSavedVolume(persisted)
+      setVolumeFeedback('saved')
+      setNote(days ? `Pace ${persisted}% saved for ${days} days.` : `Pace ${persisted}% saved.`)
+      await onChanged()
+    } catch (e: any) {
+      setVolumeFeedback('error')
+      setNote(e?.message || 'Failed to save pace')
+    } finally { setVolumeBusy(false) }
   }
 
   async function setRestriction(restricted: boolean) {
@@ -798,7 +830,10 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           <input aria-label={`${account.label} outreach volume percent`} type="number" min={10} max={100} value={volume} onChange={e => setVolume(Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
           <b>%</b>
           <input aria-label={`${account.label} outreach volume`} type="range" min={10} max={100} step={1} value={volume} onChange={e => setVolume(Number(e.target.value))} />
-          <button disabled={volumeBusy} onClick={() => saveVolume(null)} style={btnGhost}>Save</button>
+          <button disabled={volumeBusy || volume === savedVolume} onClick={() => saveVolume(null)} style={btnGhost}>{volumeBusy ? 'Saving…' : volume === savedVolume ? 'Saved' : 'Save pace'}</button>
+          <span className={`account-pace-status ${volumeFeedback === 'error' ? 'is-error' : volume !== savedVolume ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
+            {volumeFeedback === 'error' ? '× Save failed' : volumeBusy ? '… Saving' : volume !== savedVolume ? `● Unsaved · ${volume}%` : `✓ Saved · ${savedVolume}%`}
+          </span>
         </div>
         <div className="account-restriction-line">
           <span><b>{account.restrictionsThisWeek || 0}</b> restrictions this week</span>
@@ -847,7 +882,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
                 <label key={label} className={checked ? 'is-checked' : ''}>
                   <input type="checkbox" checked={checked} disabled={busy} onChange={() => togglePrepareDay(label)} />
                   <span>{dayLabelText(label)}</span>
-                  <small>{plan?.armed ? 'Armed · kept' : plan?.status === 'completed' ? 'Done · kept' : plan?.stats?.total ? `${plan.stats.eligible} queued · kept` : 'Empty draft'}</small>
+                  <small>{outreachTimeLabel(plan?.scheduled_at || null) || (plan?.armed ? 'Armed · kept' : plan?.status === 'completed' ? 'Done · kept' : plan?.stats?.total ? `${plan.stats.eligible} queued · kept` : 'Empty draft')}</small>
                 </label>
               )
             })}
@@ -857,6 +892,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           </button>
         </div>
       )}
+
+      {autoSummary && <div className="queue-auto-confirm" role="status" aria-live="polite"><ShieldCheck size={15} />{autoSummary}</div>}
 
       </div>
       <section className="queue-contacts"><h3><Users size={17} /> Contact queue <span>01</span></h3>
@@ -951,7 +988,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       )}
 
       </section>
-      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 15m account cooldown. Auto uses a saved 16–22 minute daily drift. Owner checks run again before sending.</p>
+      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 15m account cooldown. Auto proposes the next day exactly 16 minutes later, so Morning, Afternoon and Evening stay one minute clear of the gate. Owner checks run again before sending.</p>
       {/* schedule / arm */}
       {!isCompleted && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -965,6 +1002,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             <button disabled={busy || !activePlan?.armed} onClick={pause} style={btnGhost}>PAUSE</button>
             <button disabled={busy} onClick={cancel} style={{ ...btnGhost, color: 'var(--crm-danger)' }}>CANCEL</button>
           </div>
+          <div className="queue-time-readout"><span>{outreachDaypart(armTime)}</span><b>{armTime}</b><small>Auto next day: +16 min · accept with ARM</small></div>
           {activePlan?.scheduled_at && (
             <div style={{ fontSize: 11, color: MUTED }}>
               Next: {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(activePlan.scheduled_at))} · {maltaHM(new Date(activePlan.scheduled_at))}

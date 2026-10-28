@@ -45,8 +45,10 @@ const RETRY_DELAY_MS = 3 * 60_000
 // The account safety window is enforced by the backend from the real last
 // send. UI suggestions never weaken this boundary.
 const OUTREACH_ACCOUNT_INTERVAL_MS = (24 * 60 + 15) * 60_000
-const AUTO_DAILY_MINUTES_MIN = 16
-const AUTO_DAILY_MINUTES_MAX = 22
+// The account gate is 24h15. Keep every auto-prepared daily follow-up at a
+// deterministic +16 minutes so the proposed time is always one minute clear
+// of the gate and never changes after review.
+const AUTO_DAILY_MINUTES = 16
 const AUTO_PREP_LEAD_MS = 2 * 60 * 60_000
 const AUTO_PREP_GRACE_MS = 15 * 60_000
 const OUTREACH_PLAN_MAX = 45
@@ -598,7 +600,7 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
       continue
     }
 
-    const spreadMinutes = randomInt(AUTO_DAILY_MINUTES_MIN, AUTO_DAILY_MINUTES_MAX)
+    const spreadMinutes = AUTO_DAILY_MINUTES
     const time = anchor ? addMinutesToMaltaTime(maltaTimeLabel(anchor), spreadMinutes) : '14:15'
     const scheduledAt = maltaLocalToUTC(plan.scheduled_date, time)
     if (scheduledAt <= now || (cooldown.nextEligibleAt && scheduledAt < cooldown.nextEligibleAt)) {
@@ -639,7 +641,7 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
 
   return {
     ok: true, accountId, baseCount: resolvedBase, message: resolvedMessage,
-    intervalMinutes: { min: AUTO_DAILY_MINUTES_MIN, max: AUTO_DAILY_MINUTES_MAX },
+    intervalMinutes: { min: AUTO_DAILY_MINUTES, max: AUTO_DAILY_MINUTES },
     plans: results, rollingPlans: await listRollingPlans(accountId, actor),
   }
 }

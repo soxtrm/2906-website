@@ -8,8 +8,10 @@ const routePatch = fs.readFileSync(path.join(root, 'ops/outreach-control/2026101
 const migration = fs.readFileSync(path.join(root, 'ops/outreach-control/20261011_outreach_auto_settings.sql'), 'utf8')
 
 assert.match(planner, /OUTREACH_ACCOUNT_INTERVAL_MS = \(24 \* 60 \+ 15\) \* 60_000/)
-assert.match(planner, /AUTO_DAILY_MINUTES_MIN = 16/)
-assert.match(planner, /AUTO_DAILY_MINUTES_MAX = 22/)
+assert.match(planner, /AUTO_DAILY_MINUTES = 16/)
+assert.doesNotMatch(planner, /AUTO_DAILY_MINUTES_MAX|randomInt\(AUTO_DAILY_MINUTES/)
+assert.match(planner, /spreadMinutes = AUTO_DAILY_MINUTES/)
+assert.match(planner, /intervalMinutes: \{ min: AUTO_DAILY_MINUTES, max: AUTO_DAILY_MINUTES \}/)
 assert.match(planner, /async function autoPrepareAccount/)
 assert.match(planner, /advanceCursor: false/)
 assert.match(planner, /excludedPhones/)
