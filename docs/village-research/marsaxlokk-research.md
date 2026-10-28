@@ -58,24 +58,28 @@ If route functionality is added later, only network geometry may be shown. A har
 
 ## Licensed image candidates
 
-Preferred candidate for visual review: `Marsaxlokk Harbour.jpg` by G. Mannaerts, photographed 5 November 2017, 11,739 × 2,738 pixels, 36.42 MB, CC BY-SA 4.0. It is a wide harbour panorama suitable for a responsive editorial frame, but it must not be described as a current property view or proof of a home's location.
+Selected image: `Malta Marsaxlokk BW 2011-10-04 13-28-13.JPG` by Berthold Werner, photographed 4 October 2011, 3,872 × 2,592 pixels, 2,586,958 bytes, CC BY-SA 3.0. The exact original's Commons SHA-1 is `a7edf0842aaed56ef77eb9c1b4ba71c28bdeefe2`; the downloaded original matches it and has local SHA-256 `9D50093211403A90ED06D04B8B2963A60A73BA50527B5A2935934F3DA346483C`.
 
-- File page: https://commons.wikimedia.org/wiki/File:Marsaxlokk_Harbour.jpg
-- Licence: https://creativecommons.org/licenses/by-sa/4.0/
+- File page: https://commons.wikimedia.org/wiki/File:Malta_Marsaxlokk_BW_2011-10-04_13-28-13.JPG
+- Licence: https://creativecommons.org/licenses/by-sa/3.0/
+
+The full-resolution original was visually reviewed. It shows Marsaxlokk harbour with traditional and working boats, the church and waterfront buildings under a clear sky. No private contact detail is visible. Vessel identifiers and flags are part of the dated documentary scene and must not be presented as current operating information. The image is suitable as locality context only, not as a property view, guaranteed outlook or proof of a home's waterfront position.
+
+The approved proportional derivative is `public/link-marketplace/assets/marsaxlokk-harbour-berthold-werner.webp`: 1,800 × 1,204 pixels, 219,964 bytes, SHA-256 `59A64C2C73CDAFB0F29D397FF23A767F58744E438C637203C7A8F1F358780307`. It was resized with Lanczos and converted to WebP without crop, retouching or generative alteration. A future preview must keep Berthold Werner, Wikimedia Commons, CC BY-SA 3.0, the 2011 capture date and the transformation disclosure visibly adjacent to the image.
 
 Additional Commons candidates returned by the API and retained for comparison:
 
 - `Puerto de Marsaxlokk, isla de Malta, Malta, 2021-08-21, DD 01-07 PAN.jpg` — Diego Delso, 21 August 2021, 19,312 × 3,682, 11,958,220 bytes, CC BY-SA 4.0, Commons SHA-1 `3202290b2dfa34f4294e27cf4e97380ce89f2dbb`.
 - `Puerto de Marsaxlokk, isla de Malta, Malta, 2021-08-21, DD 08-13 PAN.jpg` — Diego Delso, 21 August 2021, 18,909 × 3,936, 8,979,007 bytes, CC BY-SA 4.0, Commons SHA-1 `8c837d864e2e07801297f715dadf26303357643a`.
-- `Malta Marsaxlokk BW 2011-10-04 13-28-13.JPG` — Berthold Werner, 4 October 2011, 3,872 × 2,592, 2,586,958 bytes, CC BY-SA 3.0, Commons SHA-1 `a7edf0842aaed56ef77eb9c1b4ba71c28bdeefe2`.
+- `Marsaxlokk Harbour.jpg` — G. Mannaerts, 5 November 2017, 11,739 × 2,738, 38,187,885 bytes, CC BY-SA 4.0, Commons SHA-1 `3c48c33d59ff83964dff2afe4a82c052d27ff6f3`.
 
-No image has yet been downloaded, transformed or approved. Before use, the exact original must be downloaded through Commons, visually inspected at full resolution, hashed locally and tested in real 390px mobile and desktop crops. Any derivative must retain visible author, source, licence, capture date and transformation disclosure.
+The two ultra-wide panoramas retain useful harbour context but were not selected because their very shallow aspect ratios would require aggressive responsive cropping or a short hero. A second Berthold Werner frame focused too closely on a covered boat and market edge, with less legible village context. Candidate thumbnails and the selected exact original remain unversioned under `D:\2906\nexus-bridge-work\artifacts\20261028-marsaxlokk-candidates` for audit comparison.
 
 ## Release gates
 
 1. Recheck the Local Council, Address Registrar, Primary HealthCare, Malta Public Transport, SPAR and restaurant operator pages immediately before publication.
-2. Download and visually inspect the exact licensed original; record source dimensions, licence, Commons SHA-1 and local SHA-256.
-3. Produce a proportionate web derivative without generative alteration and verify mobile and desktop framing.
+2. Keep the verified original and derivative hashes matched to the selected Commons record.
+3. Verify the approved proportional derivative in real 390px mobile and desktop framing without hiding the church, harbour context or attribution.
 4. Build a separate `noindex,nofollow` preview with one H1, no canonical, no social URL and no public discovery link.
 5. Keep Marsaxlokk distinct from Birżebbuġa, Żejtun, Marsaskala and the wider Delimara context.
 6. Verify zero horizontal overflow at 390×844 and 1440×1000, full image attribution and no iframe before map intent.
