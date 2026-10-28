@@ -1,6 +1,6 @@
 # Floriana edition — sourced research draft
 
-Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: **PUBLISHED AND LIVE-VERIFIED**. Checked 28 October 2026 (Europe/Malta).
 
 ## Release-candidate verification — 28 October 2026
 
@@ -8,7 +8,11 @@ The public candidate `public/link-marketplace/areas/floriana.html` replaces the 
 
 Floriana Local Council, Council services, the Granaries record, University of Malta Argotti, Din l-Art Ħelwa's Msida Bastion Historic Garden record, Malta Public Transport, Primary HealthCare and the MTA Floriana restaurant filter were rechecked before the release candidate. Current access, operating details and departures remain on the linked live sources. No property position, boundary, route, walking line, water shortcut, distance, journey time or ferry line has been added.
 
-The 57-edition SEO/sitemap/hub contract, route-segment and ferry-presentation regressions, direct TypeScript validation and the Next.js production build passed. Chrome verification at 390×844 and 1440×1000 passed before and after the deferred map load: HTTP 200, one H1, exact canonical and social URL, one BreadcrumbList, no horizontal overflow, visible attribution, zero initial iframes, exactly one OpenStreetMap iframe after intent, and no final console, request or HTTP errors. The 21st UI review reported zero findings. Publication and live verification remain a separate final step.
+The 57-edition SEO/sitemap/hub contract, route-segment and ferry-presentation regressions, direct TypeScript validation and the Next.js production build passed. Chrome verification at 390×844 and 1440×1000 passed before and after the deferred map load: HTTP 200, one H1, exact canonical and social URL, one BreadcrumbList, no horizontal overflow, visible attribution, zero initial iframes, exactly one OpenStreetMap iframe after intent, and no final console, request or HTTP errors. The 21st UI review reported zero findings.
+
+## Live publication verification — 28 October 2026
+
+Release commit `ca0d8db140a9c756e3b1212f60a6ea7cf76c0227` was fast-forwarded from rollback basis `5b5ed6a03f8cfb03d9a33b97294aacb5da9b9036`. The public Floriana page, licensed hero, neighbourhood hub, image sitemap and Valletta inbound link all returned HTTP 200 and matched the committed release after newline normalization. Live Chrome passed at 390×844 and 1440×1000 before and after the deferred OpenStreetMap load with no final console, request or HTTP errors. The publication introduces no property position, boundary, route, walking line, water shortcut, distance, journey time or ferry line.
 
 ## Why this locality is next
 
