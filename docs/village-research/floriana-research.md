@@ -70,9 +70,9 @@ A future page should use a fast, click-to-load OpenStreetMap frame centred broad
 
 Floriana's bastions, arterial roads, grade changes and garden walls make straight-line routing especially misleading. Any later exact-endpoint route must use real network geometry and distinguish entrances, crossings and direction. No harbour crossing may be shown as a walk. A ferry connection belongs only to a separately verified ferry endpoint and water segment; there is no basis in this dossier for drawing one through Floriana.
 
-## Licensed image candidates
+## Licensed image selection
 
-The following Wikimedia Commons files are candidates only. Their original file pages, author, capture date, dimensions, byte size, licence and Commons SHA-1 were retrieved from the Commons API on 28 October 2026. No original has yet been downloaded, transformed, visually approved or released. Full-resolution inspection, local SHA-256 verification, visible attribution and real 390px/desktop crop tests remain mandatory before selection.
+All five Wikimedia Commons originals below were downloaded outside Git and inspected at full resolution on 28 October 2026. Their local SHA-1 values match the Commons API exactly. The selected file is prepared only for a private preview; visible attribution and real 390px/desktop crop tests remain mandatory before any release.
 
 1. **Iglesia de San Publius, Floriana, isla de Malta, Malta, 2021-08-25, DD 176.jpg** — Diego Delso; captured 25 August 2021; 6466×5256; 7,887,789 bytes; CC BY-SA 4.0; Commons SHA-1 `88F651FE6CDAF1BA84D3F6E6056604339A8E7683`.
    - https://commons.wikimedia.org/wiki/File:Iglesia_de_San_Publius,_Floriana,_isla_de_Malta,_Malta,_2021-08-25,_DD_176.jpg
@@ -85,7 +85,24 @@ The following Wikimedia Commons files are candidates only. Their original file p
 5. **Malta - Floriana - Triq Nazzjonali 01 - Porte des Bombes.jpg** — Txllxt TxllxT; captured 9 October 2017; 3976×2652; 6,526,071 bytes; CC BY-SA 4.0; Commons SHA-1 `7B703F654A702CEE309EFA436B7A454B5B5098E7`.
    - https://commons.wikimedia.org/wiki/File:Malta_-_Floriana_-_Triq_Nazzjonali_01_-_Porte_des_Bombes.jpg
 
-The final hero should show recognisable Floriana context without turning a single church, garden, gateway or waterfront edge into the whole locality. It must be captioned as dated locality context and never as a property's outlook or current condition.
+### Selected hero and derivative
+
+**Selected:** `Iglesia de San Publius, Floriana, isla de Malta, Malta, 2021-08-25, DD 176.jpg` by Diego Delso. The balanced view keeps St Publius Church, the Granaries foreground and adjoining historic fabric legible together, without a dominant private person, advertisement or temporary event. It is recognisable Floriana context while still requiring a caption that explains that a single civic landmark does not represent every Floriana street or edge.
+
+- Original: 6466×5256, 7,887,789 bytes; Commons/local SHA-1 `88F651FE6CDAF1BA84D3F6E6056604339A8E7683`; local SHA-256 `7501898A47893084D8BF76D52C05F987183C8F063D9B1AAD8E663E2F1694C0F1`; CC BY-SA 4.0.
+- Local derivative: `public/link-marketplace/assets/floriana-san-publius-diego-delso.webp`; proportional 1800×1463 WebP, quality 84, encoder effort 6; 219,344 bytes; SHA-256 `E8DE824E97409EAEE78E62C76AE978884E0D4149E4EBD5B593E2259C90E349EC`.
+- Transformation boundary: automatic EXIF orientation and proportional resize only. No crop, retouching, compositing, colour treatment or generative change was applied.
+- Required credit: `St Publius Church and the Granaries, Floriana — Diego Delso / Wikimedia Commons, CC BY-SA 4.0; photographed 25 August 2021.` Link the author/file page and licence in the rendered attribution.
+- Use boundary: dated locality context only, never a property's outlook, exact setting, current condition, access, parking, event status, quietness or walking-distance claim.
+
+The other originals were retained only as documented alternatives:
+
+- `The Granaries` includes useful square context but is dominated by parked vehicles, buses, cranes and a heavy foreground.
+- `St. Anne Street 02` shows a lived-in street spine but prominent vehicle and storefront branding make it weaker as a neutral hero.
+- `2025 Floriana Argotti Gardens 01` is portrait-oriented, attraction-specific and includes changeable visitor signage.
+- `Porte des Bombes` is a strong gateway record but road traffic and buses dominate, and the edge setting cannot stand for the whole locality.
+
+Local verification hashes for those alternatives are: Granaries SHA-256 `1B818ED3B9D51612826F7CF1A56E9F6455362BF948FC9BE74D6712F379377DC6`; St Anne Street SHA-256 `F4E662E0BE2E795CA8C9539202BBD78998FAF4C8C9DD0E9DC1121BC9F971E114`; Argotti SHA-256 `D56684BC523848CF0BDC38EAFC5914C586C6848CDE3491D4330716FAA8461E10`; Porte des Bombes SHA-256 `43953CBC80BC2CABC3B8C0A5F5F72354AD119D36D8414C7DC2F5644C5B02AD95`.
 
 ## Direct verification record
 
@@ -96,7 +113,7 @@ The MTA filter returned exactly ten Floriana restaurant records. The inventory r
 ## Release gates
 
 - recheck every public-service, operator and regulator source immediately before release;
-- inspect all candidate originals, verify local hashes and compare real mobile/desktop crops before selecting a hero;
+- compare real mobile/desktop crops and visible attribution in the private preview before final hero approval;
 - build a private `noindex,nofollow` preview before any public page;
 - keep the civic streets, Granaries, garden/bastion edge and Xatt Pinto waterfront context distinct;
 - keep Valletta, Pietà, Marsa and Ħamrun separate and avoid “Valletta centre” shorthand for Floriana addresses;
