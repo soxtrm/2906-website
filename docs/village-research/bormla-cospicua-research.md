@@ -1,6 +1,6 @@
 # Bormla (Cospicua) edition — sourced research draft
 
-Language: English. Status: research draft — not published. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: hero selected — preview not yet verified or published. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -70,34 +70,41 @@ A future page should use a fast, click-to-load OpenStreetMap frame centred broad
 
 If a separate exact-endpoint route is added later, it must use network geometry. A Grand Harbour crossing may only appear when a verified ferry segment is present and visibly named; it must never be rendered as a continuous walk over water. Live departure and operating information remains with Malta Public Transport.
 
-## Licensed hero candidates
+## Licensed hero selection
 
-No image has been downloaded or approved in this research step. The following Wikimedia Commons file records are candidates for full-resolution inspection. Their exact pixels, current file-page metadata, attribution and responsive crops still require verification.
+Five 1920px Commons previews were compared visually before the full original of the leading candidate was downloaded. **Dock 1, Bormla (02).jpg** was selected because its natural blue-hour exposure keeps Dock 1, the church and the industrial-maritime edge readable together in a balanced 3:2 frame, without a dominant private person or visible advertisement. Candidate 1 was markedly more saturated, candidate 3 was dominated by current marina vessels, candidate 4 was a close construction/water-edge detail without useful locality context, and candidate 5 made the ferry terminal the dominant subject.
+
+The chosen image is dated locality context only. It does not prove a property's outlook, current access, lighting, safety, event programming, ferry operations or conditions at night.
+
+- **Selected original:** `Dock 1, Bormla (02).jpg`, Tranceliner, captured 17 September 2023, CC BY-SA 4.0.
+- **Commons file page:** https://commons.wikimedia.org/wiki/File:Dock_1,_Bormla_(02).jpg
+- **Original verification:** 5144×3429 pixels; 4,862,299 bytes; Commons and local SHA-1 `92B16CA176009CE65A3EDC21213B793D60E9888B`; local SHA-256 `B0E7ADD346BD577EA08134EC3F1033CCFBAC1362722E113C06F09B07CCE80EFA`.
+- **Web derivative:** `public/link-marketplace/assets/bormla-dock-1-tranceliner.webp`; 1800×1200 pixels; 135,266 bytes; SHA-256 `CA886644ED42000AD0DE26606E77CCB1E48C19AB98C1C626C960D88BB44E80B0`.
+- **Transformation record:** proportional resize to 1800px width, WebP quality 84 and encoder effort 6. No crop, retouching, compositing or generative alteration.
+
+The derivative was inspected at full frame and remains suitable for later mobile and desktop crop testing. Attribution must remain visibly adjacent to the image in any preview or release.
+
+### Rejected candidates retained for audit
 
 1. **Dock 1, Bormla (01).jpg** — Tranceliner; captured 30 December 2022; 5472×3648; 4,734,440 bytes; CC BY-SA 4.0; Commons SHA-1 `B30E7B1B79C3C0D3FEB8373C3F330103379F68E4`.
    - https://commons.wikimedia.org/wiki/File:Dock_1,_Bormla_(01).jpg
-2. **Dock 1, Bormla (02).jpg** — Tranceliner; captured 17 September 2023; 5144×3429; 4,862,299 bytes; CC BY-SA 4.0; Commons SHA-1 `92B16CA176009CE65A3EDC21213B793D60E9888B`.
-   - https://commons.wikimedia.org/wiki/File:Dock_1,_Bormla_(02).jpg
-3. **Bormla. Mid-Daħla tad-Dockyard 3.jpg** — Enrique Íñiguez Rodríguez (Qoan); captured 28 November 2017; 6000×4000; 10,690,411 bytes; CC BY-SA 4.0; Commons SHA-1 `CC35AF875E4D4E053163B8EA7515566F217EC421`.
+2. **Bormla. Mid-Daħla tad-Dockyard 3.jpg** — Enrique Íñiguez Rodríguez (Qoan); captured 28 November 2017; 6000×4000; 10,690,411 bytes; CC BY-SA 4.0; Commons SHA-1 `CC35AF875E4D4E053163B8EA7515566F217EC421`.
    - https://commons.wikimedia.org/wiki/File:Bormla._Mid-Da%C4%A7la_tad-Dockyard_3.jpg
-4. **Malta - Cospicua - Ix-Xatt ta' Bormla - Dock no1 01 ies.jpg** — Frank Vincentz; captured 27 April 2014; 5616×3744; 19,846,518 bytes; CC BY-SA 3.0; Commons SHA-1 `4042701E6F23713E65E92F4A90B0C0D8329AA671`.
+3. **Malta - Cospicua - Ix-Xatt ta' Bormla - Dock no1 01 ies.jpg** — Frank Vincentz; captured 27 April 2014; 5616×3744; 19,846,518 bytes; CC BY-SA 3.0; Commons SHA-1 `4042701E6F23713E65E92F4A90B0C0D8329AA671`.
    - https://commons.wikimedia.org/wiki/File:Malta_-_Cospicua_-_Ix-Xatt_ta%27_Bormla_-_Dock_no1_01_ies.jpg
-5. **Terminal in bormla for ferries.jpg** — Panek; captured 14 May 2025; 4608×3456; 3,745,830 bytes; CC BY-SA 4.0; Commons SHA-1 `2CE364E2637EBE9937A2DDEBAD8C490230EF0881`.
+4. **Terminal in bormla for ferries.jpg** — Panek; captured 14 May 2025; 4608×3456; 3,745,830 bytes; CC BY-SA 4.0; Commons SHA-1 `2CE364E2637EBE9937A2DDEBAD8C490230EF0881`.
    - https://commons.wikimedia.org/wiki/File:Terminal_in_bormla_for_ferries.jpg
-
-Selection criteria: recognisable Bormla context, balanced mobile and desktop framing, no dominant private person, no misleading property perspective, no avoidable advertising and attribution that can remain legible beside the image. A ferry-terminal image should not become the hero if it makes the whole locality appear to be a transport facility.
 
 ## Direct verification record
 
 The inventory, Address Registrar, Malta Public Transport Three Cities and ferry pages, Fondazzjoni Kottonera, the filtered MTA register and Wikimedia API returned HTTP 200 in direct checks on 28 October 2026. The Bormla Local Council, Primary HealthCare, Government press release and Culture pages returned HTTP 403 to the neutral PowerShell client but remained current and readable through browser search/index access; no claim was expanded from those transport-layer responses.
 
-The MTA filter returned exactly three Bormla restaurant records. The public inventory returned one exact Bormla/Cospicua record. No private contact details were copied. No image, public HTML, sitemap, index, live deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+The MTA filter returned exactly three Bormla restaurant records. The public inventory returned one exact Bormla/Cospicua record. No private contact details were copied. One licensed image derivative was added locally for a later preview; no public HTML, sitemap, index, live deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
 
 ## Release gates
 
 - recheck every public-service, operator and regulator source immediately before release;
-- download and visually inspect the full original of the leading image candidates;
-- record local SHA-256, exact resize/crop operations and licence attribution;
+- verify the selected derivative and visible licence attribution in real 390px mobile and desktop preview layouts;
 - verify the private `noindex,nofollow` preview at real 390px mobile and desktop sizes;
 - keep Bormla/Cospicua naming clear and Birgu, L-Isla, Kalkara, Fgura, Paola and Żabbar separate;
 - test the deferred map, accessibility, canonical, Open Graph data, BreadcrumbList, sitemap and internal links;
