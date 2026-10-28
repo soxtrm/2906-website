@@ -1,10 +1,10 @@
 # Ħal Għaxaq edition — sourced research draft
 
-Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
+Language: English. Status: **PUBLISHED AND LIVE-VERIFIED**. Checked 29 October 2026 (Europe/Malta).
 
-Release-candidate boundary: the public filename, canonical, Open Graph metadata, BreadcrumbList, hub link, sitemap block and one contextual inbound link were prepared in an isolated worktree from rollback basis `328a557b51c7c8be4fa7512c8f944cfde7968305`. Publication remains conditional on the full local test suite, responsive browser checks and a final fast-forward check against `origin/main`.
+Release boundary: the public filename, canonical, Open Graph metadata, BreadcrumbList, hub link, sitemap block and one contextual inbound link were prepared in an isolated worktree from rollback basis `328a557b51c7c8be4fa7512c8f944cfde7968305`. Release commit `eae3e3e949a32ffd99154335fc284ebd3f3565b8` was pushed by fast-forward after the full local test suite, responsive browser checks and a final unchanged-`origin/main` check. The production page, asset and connected index/sitemap/link surfaces were then fetched and browser-tested directly.
 
-Local release verification passed at 390×844 and 1440×1000 with no horizontal overflow, console errors, failed requests or HTTP errors. The 2D map remained absent until user intent, then created exactly one accessible OpenStreetMap iframe; the full TypeScript, production build, 58-edition SEO contract and route/ferry presentation tests also passed. Candidate HTML SHA-256: `A843785702D3EAAAF716D91DA036674BBBF98A4A7EB3686DAD8B66C5ABA2F9B1`.
+Local and live release verification passed at 390×844 and 1440×1000 with no horizontal overflow, console errors, failed requests or HTTP errors. The 2D map remained absent until user intent, then created exactly one accessible OpenStreetMap iframe; the full TypeScript, production build, 58-edition SEO contract and route/ferry presentation tests also passed. Candidate HTML SHA-256: `A843785702D3EAAAF716D91DA036674BBBF98A4A7EB3686DAD8B66C5ABA2F9B1`; live LF-normalized HTML SHA-256: `F329B4D6978493D31E8D316984112CAD101CD47DBE72F6B6D2E6F51419D0649D`.
 
 ## Why this locality is next
 
