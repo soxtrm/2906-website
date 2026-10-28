@@ -1,6 +1,6 @@
 # Ħal Għaxaq edition — sourced research draft
 
-Language: English. Status: **RESEARCH DRAFT — NOT PUBLISHED**. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -119,7 +119,17 @@ Original integrity:
 
 Prepared derivative: `public/link-marketplace/assets/ghaxaq-village-skyline-alecastorina93.webp`. It is a proportional 1800×1350 WebP conversion at quality 84 and encoder effort 6, with no crop, retouching, compositing, colour treatment or generative alteration. It measures 247,788 bytes and has SHA-256 `332CE1B31B18E5A00504CE65480FDA5270F33EE21D0EAA7F12A777893714E446`. The derivative passed a full-image visual check.
 
-Any preview or public use must visibly credit **Alecastorina93 / Wikimedia Commons / CC BY-SA 3.0** and link the file page and licence. Real 390px and desktop crops, accessible alt text and visible attribution remain required in a separate private preview gate. No crop has yet been approved.
+Any preview or public use must visibly credit **Alecastorina93 / Wikimedia Commons / CC BY-SA 3.0** and link the file page and licence. The private preview below verifies the actual 390px and desktop frames, accessible alt text and visible attribution; any material layout or image-position change must repeat that review.
+
+## Private preview verification
+
+Private preview `public/link-marketplace/areas/ghaxaq-preview.html` was checked at 390×844 and 1440×1000 on 28 October 2026. It carries `noindex,nofollow`, no canonical and no `og:url`, and is not linked from the public directory or sitemap. Both layouts contain one H1, no horizontal overflow, a decoded 1800×1350 hero and visible author / Commons / licence links. The actual mobile and desktop hero frames preserve the church, surrounding roofs and attribution; no separate image crop was generated.
+
+The page keeps the civic core, Labour Avenue, Bir id-Deheb / Dawret Ħal Għaxaq road context and agricultural edge separate. Everyday sources, three heritage anchors and three non-ranked snack-bar register records are presented with volatility and evidence limits. Żejtun, Marsaxlokk and Birżebbuġa link to their own editions; Gudja and Santa Luċija remain explicitly separate without invented links.
+
+The map starts with zero iframes. A deliberate button click creates one visible OpenStreetMap frame using the neutral bounding box `14.507,35.842,14.525,35.856`, changes `aria-expanded` to `true`, hides the trigger and leaves horizontal overflow at zero. It draws no pin, boundary, route, distance, journey time, field shortcut or ferry. The final mobile and desktop runs produced no console errors, failed requests or HTTP responses at or above 400. Preview SHA-256: `8A4B923FDD5B4754E801EC67DB7378D2E59ED4A8D5FF138D6CEF73852CD2856F`.
+
+The 21st CLI search could not access the component catalogue because no CLI token was configured; no generation or external component was used. The preview reuses the verified production neighbourhood pattern. `21st review public/link-marketplace/areas/ghaxaq-preview.html` reported zero findings.
 
 ## Direct verification record
 
@@ -131,7 +141,7 @@ No private contact details were copied. No image, preview, public HTML, canonica
 
 - recheck every public-service, operator, heritage and regulator source immediately before preview and release;
 - preserve the verified original/derivative hashes and do not substitute or crop the selected hero without a new visual review;
-- test visible attribution and actual mobile/desktop crops in a private `noindex,nofollow` preview;
+- preserve the verified private preview, attribution and tested responsive hero frames when preparing the release candidate;
 - keep civic core, Labour Avenue, Bir id-Deheb / Dawret Ħal Għaxaq roads and rural edge distinct;
 - keep Żejtun, Gudja, Santa Luċija, Marsaxlokk and Birżebbuġa separate;
 - do not manufacture restaurant recommendations when the exact MTA restaurant filter returns zero records;
