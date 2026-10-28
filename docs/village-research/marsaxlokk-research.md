@@ -1,6 +1,6 @@
 # Marsaxlokk edition — sourced research draft
 
-Language: English. Status: preview verified — not published. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: published and live-verified. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
