@@ -1,6 +1,6 @@
 # Bormla (Cospicua) edition — sourced research draft
 
-Language: English. Status: release candidate verified — not published. Checked 28 October 2026 (Europe/Malta).
+Language: English. Status: published and live-verified. Checked 28 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -129,3 +129,11 @@ The private preview was promoted only inside the clean release worktree to `publ
 `node tests/neighbourhood-seo-contract.test.cjs`, direct TypeScript validation and `next build --webpack` passed; the production build generated 52/52 static pages. `21st review public/link-marketplace/areas/bormla.html` returned zero findings. Chrome checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, exact canonical and Open Graph URL, one structured-data block, no robots block, no horizontal overflow, a decoded 1800×1200 hero, visible attribution and zero initial iframes. The map click created one visible OpenStreetMap frame with bbox `14.509,35.873,14.536,35.893`, set `aria-expanded=true`, hid the trigger and produced no console errors, failed requests or HTTP responses at or above 400. Full-page captures are stored under `D:\2906\nexus-bridge-work\artifacts\20261028-bormla-release`.
 
 Release-candidate hashes before documentation update: Bormla HTML 19,415 bytes, SHA-256 `750122D5DDD47BABBD0B180B54306AA7A81B8CE662B9AAE8706AC33123466803`; hero SHA-256 `CA886644ED42000AD0DE26606E77CCB1E48C19AB98C1C626C960D88BB44E80B0`; index SHA-256 `9C8FA0F04C75BD91977B385D870810F13135A56CB631AE352F4E653363FE2879`; neighbourhood sitemap SHA-256 `8AE103C349ECDD1B6A054A201E08AFB9D6F283F2C9344851F534CF16663D4B3A`. Publication remains pending a fresh `origin/main` fast-forward check and live verification.
+
+## Production publication
+
+`origin/main` remained on rollback commit `bc4b143a09363ce68e18947dc28d71ac8af8d6fd` immediately before the release. Commit `172993cef4928b0aa657e56399a208e5e0a141b9` was pushed as a fast-forward and deployed through the existing production path. The public page, hero, neighbourhood index, sitemap and Kalkara inbound-link page all returned HTTP 200. Live page, index, sitemap and Kalkara HTML match the committed candidates exactly after CRLF-to-LF normalization; the live hero matches byte-for-byte.
+
+Live hashes: Bormla HTML 19,366 bytes, SHA-256 `BEA249A378F2E3E37B3F570DDC79AF81CD46AA4358CFF85B254810857B273759`; hero 135,266 bytes, SHA-256 `CA886644ED42000AD0DE26606E77CCB1E48C19AB98C1C626C960D88BB44E80B0`; index 11,035 bytes, SHA-256 `BEC5E136F00DDAB69B5BEA648CE97C91C8FA66B84586A0CCC6DBBA59CA45E403`; neighbourhood sitemap 15,560 bytes, SHA-256 `1233770E842B4CE40B13B559B155764086FF4EDEE6FF323C768EACFD8B9C74CE`; Kalkara HTML 16,919 bytes, SHA-256 `2CFA6A526AB12AF6EF0F26412763588C9F7940F41CC891F3B77F4DE6C1356E1D`.
+
+Live Chrome checks at 390×844 and 1440×1000 returned HTTP 200 with the same canonical, Open Graph, structured-data, hero, attribution, zero-overflow and deferred-map results as the release candidate. The map loaded one real OpenStreetMap frame only after click. No console errors, failed requests or HTTP responses at or above 400 were observed. Live captures and JSON evidence are stored under `D:\2906\nexus-bridge-work\artifacts\20261028-bormla-release\live`.
