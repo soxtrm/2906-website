@@ -170,7 +170,7 @@
     };
 
     const mobileMap = matchMedia('(max-width:760px), (pointer:coarse)').matches;
-    const map = new mapboxgl.Map({ container:'map', style:'mapbox://styles/mapbox/light-v11', center:[14.499647,35.908036], zoom:mobileMap?16.8:17.5, pitch:mobileMap?56:64, bearing:14, antialias:!mobileMap, pixelRatio:Math.min(devicePixelRatio,mobileMap?1.35:2), attributionControl:true, minTileCacheSize:mobileMap?32:96, maxTileCacheSize:mobileMap?96:384, fadeDuration:mobileMap?0:300 });
+    const map = new mapboxgl.Map({ container:'map', style:'mapbox://styles/mapbox/dark-v11', center:[14.499647,35.908036], zoom:mobileMap?16.8:17.5, pitch:mobileMap?56:64, bearing:14, antialias:!mobileMap, pixelRatio:Math.min(devicePixelRatio,mobileMap?1.35:2), attributionControl:true, minTileCacheSize:mobileMap?32:96, maxTileCacheSize:mobileMap?96:384, fadeDuration:mobileMap?0:300 });
 
     map.on('load', () => { hideDefaultNoise(); addTerrain(); styleBaseLayers(); addWaterLayers(); addGreenLayers(); addBuildingLayers(); addRoadLayers(); addSunReflection(); addWaterShimmer(); bringCustomLayersForward(); applyTheme('night'); wireControls(); });
 
@@ -228,6 +228,6 @@
   </script>
 
 <script type="module" src="app.js?v=matrix-flight-1"></script>
-<script src="/nexus-surface.js"></script>
+<script src="/nexus-surface.js?v=dark-20261030"></script>
 </body>
 </html>

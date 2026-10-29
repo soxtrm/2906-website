@@ -133,3 +133,9 @@ Generated from project sources at 2026-10-15T14:06:20.479Z.
 - Use `app/crm/crm.css` and its `--crm-*` semantic tokens as the CRM source of truth.
 - Support light and dark modes, visible keyboard focus, empty API responses and reduced motion.
 - Use short transform/opacity feedback. Avoid `transition-all` and non-semantic clickable containers.
+
+## NEXUS Map decisions
+
+- Use Mapbox Dark v11 for both the Link Matrix embed and the direct 3D map entry point.
+- Keep sunrise, day and sunset within the dark graphite material system; time changes can adjust atmosphere without returning the ground, roads, water or architecture to pale surfaces.
+- Preserve mapped geometry, labels, road guidance, interaction and accessibility while changing the visual surface treatment.

@@ -168,7 +168,7 @@
       }
     };
 
-    const map = new mapboxgl.Map({ container:'map', style:'mapbox://styles/mapbox/light-v11', center:[14.499647,35.908036], zoom:17.5, pitch:64, bearing:14, antialias:true, attributionControl:true, minTileCacheSize:128, maxTileCacheSize:512 });
+    const map = new mapboxgl.Map({ container:'map', style:'mapbox://styles/mapbox/dark-v11', center:[14.499647,35.908036], zoom:17.5, pitch:64, bearing:14, antialias:true, attributionControl:true, minTileCacheSize:128, maxTileCacheSize:512 });
 
     map.on('load', () => { hideDefaultNoise(); addTerrain(); styleBaseLayers(); addWaterLayers(); addGreenLayers(); addBuildingLayers(); addRoadLayers(); addSunReflection(); addWaterShimmer(); bringCustomLayersForward(); applyTheme('night'); wireControls(); });
 
@@ -226,6 +226,6 @@
   </script>
 
 <script type="module" src="link-runtime.js?v=nexus-cards-2"></script>
-<script src="../nexus-surface.js"></script>
+<script src="../nexus-surface.js?v=dark-20261030"></script>
 <script src="../map-bridge.js?v=mini-nav-1"></script></body>
 </html>

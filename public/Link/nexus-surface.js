@@ -1,18 +1,18 @@
-/* Nexus surface treatment: neutral architectural mass, natural ground, selective light.
+/* Nexus surface treatment: dark architectural mass, muted natural ground, selective light.
    Runs after the original theme definitions, before map load. Geometry is untouched. */
 (() => {
  const palettes={
-  sunrise:{land:'#9badab',road:'#737d80',green:'#527654',water:'#244e65',blocks:['#283440','#303e4b','#3c4c59','#465867','#526574']},
-  morning:{land:'#adbdb8',road:'#788187',green:'#5e835b',water:'#285e77',blocks:['#303d48','#374752','#40515e','#4c5f6c','#596e7a']},
-  day:{land:'#a8bab4',road:'#747f84',green:'#507b54',water:'#23566e',blocks:['#2c3945','#354550','#3e505e','#4a5e6d','#556d7a']},
-  sunset:{land:'#8d9694',road:'#697782',green:'#476b51',water:'#183c55',blocks:['#212d3b','#293846','#324454','#3c5060','#495f70']},
-  night:{land:'#4b5a61',road:'#667987',green:'#2c5145',water:'#0c253b',blocks:['#172431','#1d2d3c','#26394b','#304456','#3a5266']}
+  sunrise:{land:'#18232a',road:'#465965',green:'#23493b',water:'#0b2638',blocks:['#17232d','#1d2b36','#243440','#2b3d49','#344956'],brightness:.88},
+  morning:{land:'#1b272e',road:'#4b5f6b',green:'#284f40',water:'#0c2b3e',blocks:['#192630','#202f3a','#283844','#30434f','#394e5b'],brightness:.90},
+  day:{land:'#1d2930',road:'#50636e',green:'#2b5241',water:'#0d2d40',blocks:['#1b2832','#22313c','#2a3b47','#334651','#3d5260'],brightness:.92},
+  sunset:{land:'#172129',road:'#465763',green:'#234638',water:'#0a2235',blocks:['#151f2a','#1c2934','#23333f','#2b3e4b','#354b59'],brightness:.86},
+  night:{land:'#0d171f',road:'#3b4d5b',green:'#18392f',water:'#071b2b',blocks:['#111c26','#172531','#1e303d','#263b49','#304958'],brightness:.82}
  };
  for(const [name,p]of Object.entries(palettes)){
   const t=THEMES[name];t.land=p.land;t.roadBase=p.road;t.greenBaseRaw=p.green;t.greenBase=p.green;t.greenSoft=p.green;t.parkFill=p.green;
-  t.waterBase=p.water;t.waterDepth=p.water;t.waterLife=p.water;t.building=p.blocks;t.buildingWarm=['#bccddd','#bccddd','#bccddd'];t.buildingWarmOpacity=.012;
-  t.css.mainOpacity=.15;t.css.warmOpacity=.12;t.css.waterOpacity=.22;
-  t.mapFilter={saturation:1,contrast:1.04,brightness:1};
+  t.waterBase=p.water;t.waterDepth=p.water;t.waterLife=p.water;t.building=p.blocks;t.buildingWarm=['#627585','#6e8292','#7b90a0'];t.buildingWarmOpacity=.018;
+  t.css.mainOpacity=.10;t.css.warmOpacity=.06;t.css.waterOpacity=.16;
+  t.mapFilter={saturation:.78,contrast:1.08,brightness:p.brightness};
  }
  // The previous blanket landuse recolour made built-up land look like parkland.
  restyleRawBaseLayers=function(t){
@@ -23,7 +23,7 @@
    else if(layer.type==='fill'&&/landuse|landcover/.test(id))map.setPaintProperty(layer.id,'fill-color',['match',['get','class'],['park','grass','wood','scrub','forest','golf_course','pitch','recreation_ground','cemetery'],t.greenBaseRaw,t.land]);
    else if(layer.type==='fill'&&/park|grass|wood|scrub/.test(id))map.setPaintProperty(layer.id,'fill-color',t.greenBaseRaw);
    if(layer.type==='line'&&/road|street|bridge/.test(id)&&!/label|arrow|oneway|shield|exit|lane|marking|turn|junction/.test(id)){
-    map.setPaintProperty(layer.id,'line-color',/case|casing/.test(id)?'#46545c':t.roadBase);map.setPaintProperty(layer.id,'line-opacity',.8);
+    map.setPaintProperty(layer.id,'line-color',/case|casing/.test(id)?'#121d25':t.roadBase);map.setPaintProperty(layer.id,'line-opacity',.76);
    }
   }
  };
@@ -61,7 +61,7 @@
    const response=await fetch('../assets/malta-osm-vegetation.geojson',{cache:'force-cache'});if(!response.ok)throw new Error('HTTP '+response.status);
    const data=await response.json();vegetation=data.features||[];
    const woodland={type:'FeatureCollection',features:vegetation.filter(feature=>feature.properties?.kind==='woodland')};
-   if(woodland.features.length&&!map.getSource('nexus-osm-woodland')){map.addSource('nexus-osm-woodland',{type:'geojson',data:woodland});map.addLayer({id:'nexus-osm-woodland',type:'fill',source:'nexus-osm-woodland',minzoom:11,paint:{'fill-color':'#315e43','fill-opacity':['interpolate',['linear'],['zoom'],11,.12,16,.32]}});}
+   if(woodland.features.length&&!map.getSource('nexus-osm-woodland')){map.addSource('nexus-osm-woodland',{type:'geojson',data:woodland});map.addLayer({id:'nexus-osm-woodland',type:'fill',source:'nexus-osm-woodland',minzoom:11,paint:{'fill-color':'#214638','fill-opacity':['interpolate',['linear'],['zoom'],11,.12,16,.30]}});}
    renderMappedVegetation();
   }catch(error){console.warn('Mapped vegetation unavailable:',error.message);}
  }

@@ -434,7 +434,8 @@
     "Desktop polish is applied through the shared CRM shell and semantic page classes before route-specific overrides.",
     "Motion is functional and restrained; route transitions use opacity and controls use short transform feedback.",
     "Inventory desktop rows start with three compact square property photos; owner and location remain separate scan columns; preserve light-first ARGUS tokens and dense operational spacing.",
-    "On mobile, the right filter cloud previews several frequent filters while closed; the first tap anywhere in that cloud only expands it, and filter selection begins from the expanded controls."
+    "On mobile, the right filter cloud previews several frequent filters while closed; the first tap anywhere in that cloud only expands it, and filter selection begins from the expanded controls.",
+    "NexusMap uses Mapbox Dark v11 at every entry point. Time-of-day changes may shift ambience, but ground, water, roads and architectural mass remain within the dark graphite system so the map never returns to a pale plastic daytime surface."
   ],
   "evidence": [
     {
