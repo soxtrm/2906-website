@@ -1,6 +1,6 @@
 # Għajnsielem edition — sourced research draft
 
-Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
+Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -127,10 +127,22 @@ The local derivative `public/link-marketplace/assets/ghajnsielem-village-kikku33
 
 The alternatives remain unselected for specific reasons: Luca Aless's view is useful context but has more dated harbour traffic and a prominent vehicle; Larsvr6's harbour frame is dominated by marina activity and a large empty sky; Berthold Werner's frame is centred on a branded ferry and dates from 2011; TheShadow99's portrait-oriented church study is too narrow for a locality hero and includes people, vehicles and temporary seating; Michelle Maria's banner is highly compressed vertically, strongly processed and records extensive older construction. These are editorial selection reasons, not quality rankings.
 
-A future rendered preview must visibly credit **Kikku33**, Wikimedia Commons and **CC BY-SA 4.0**, link both the file page and licence, and verify the real mobile and desktop object-position. Harbour imagery must never imply that every Għajnsielem property overlooks or sits beside Mġarr Harbour.
+A rendered private preview visibly credits **Kikku33**, Wikimedia Commons and **CC BY-SA 4.0**, links both the file page and licence, and has passed real mobile and desktop object-position checks. Harbour imagery must never imply that every Għajnsielem property overlooks or sits beside Mġarr Harbour.
+
+## Private preview verification
+
+The private page `public/link-marketplace/areas/ghajnsielem-preview.html` uses `noindex,nofollow`, has no canonical and no Open Graph URL, and is absent from the public index, navigation and sitemap. It reuses the existing locality-page system rather than introducing another frontend. The village core, Mġarr Harbour, Fort Chambray and Xatt l-Aħmar / outer context remain editorially separate.
+
+The self-hosted 1800×1200 hero passed visual checks at 390×844 and 1440×1000. The parish church, residential fabric and landscape remain legible, the attribution stays visible, and neither viewport has horizontal overflow. The image remains a dated locality illustration from Nadur and is not presented as a property view.
+
+The 2D OpenStreetMap context is absent on first load and appears only after an explicit click. It uses the neutral viewport `14.276,36.018,14.307,36.036`, draws no route, pin, boundary, distance, journey time or ferry line, and therefore cannot mislabel an air line as walking. The page explains the correct land-to-terminal, separately labelled Mġarr–Ċirkewwa ferry, and onward-land sequence without inventing geometry.
+
+Automated Chromium checks at both viewports returned HTTP 200, exactly one H1, a decoded hero, visible attribution, zero initial iframes and exactly one visible map iframe after the click. The control then had `aria-expanded=true`; there were no console errors, page errors, failed requests, HTTP responses at or above 400, or overflow before or after map loading. Four full-page captures were inspected under `D:\2906\nexus-bridge-work\artifacts\20261029-ghajnsielem-preview`.
+
+The optional `21st` catalogue search and review commands were unavailable because the CLI is not installed in this environment. No external component or generation credit was consumed; the established and already verified locality-page pattern was reviewed through the real browser run instead.
 
 ## Verification and publication boundary
 
 The inventory, Address Registrar, Visit Gozo, Gozo Channel, Malta Public Transport, both exact MTA filters, Wikimedia Commons category/API and OpenStreetMap Nominatim returned HTTP 200 to a neutral direct client on 29 October 2026. The Local Council, Cultural Heritage Directorate / Gozo Album and Primary HealthCare pages rejected the neutral PowerShell client with HTTP 403 but remained current and readable through browser retrieval/search indexing; no claim was expanded from that transport-layer difference.
 
-No private contact details were copied. One licensed local WebP asset was added to Git for a later private preview. No preview, public HTML, canonical, sitemap, index, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+No private contact details were copied. One licensed local WebP asset and one private, noindex preview now exist in Git. No public HTML, canonical, sitemap, index, navigation, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
