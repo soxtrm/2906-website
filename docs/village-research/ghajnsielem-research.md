@@ -1,6 +1,6 @@
 # Għajnsielem edition — sourced research draft
 
-Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
+Language: English. Status: **PUBLISHED AND LIVE-VERIFIED**. Checked 29 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -147,4 +147,4 @@ The optional `21st` catalogue search and review commands were unavailable becaus
 
 The inventory, Address Registrar, Visit Gozo, Gozo Channel home and schedule, Malta Public Transport, both exact MTA filters, Wikimedia Commons file page and OpenStreetMap Nominatim returned HTTP 200 to a neutral direct client on 29 October 2026. The exact MTA records `RST-13284`, `RST-13245` and `SBR-25342` remained present. Gozo Channel still identified Mġarr and Ċirkewwa as the ferry endpoints, and the Commons page still identified Kikku33 and CC BY-SA 4.0. The Local Council, Cultural Heritage Directorate / Gozo Album and Primary HealthCare pages rejected the neutral PowerShell client with HTTP 403 but remained current and readable through browser retrieval/search indexing; no claim was expanded from that transport-layer difference.
 
-No private contact details were copied. The release candidate remains unpublished until its named commit is fast-forwarded through the existing path and the resulting public URLs pass live verification. No route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+No private contact details were copied. Release commit `cc670ca37bd1ee50944f144127faa8ab4803f19f` was fast-forwarded from rollback base `e9583d575f4d2ad7cc2defff89467671728b35fb` through the existing path. The page, hero, hub, sitemap and Il-Qala inbound page returned HTTP 200 and matched the release byte-for-byte after line-ending normalisation where applicable. Live Chromium repeated the mobile and desktop checks; the map filled 310×320 on mobile and 1156×520 on desktop, with no overflow, console error, failed request or HTTP response at or above 400. No backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
