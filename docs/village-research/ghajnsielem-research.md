@@ -1,6 +1,6 @@
 # Għajnsielem edition — sourced research draft
 
-Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
+Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -129,20 +129,22 @@ The alternatives remain unselected for specific reasons: Luca Aless's view is us
 
 A rendered private preview visibly credits **Kikku33**, Wikimedia Commons and **CC BY-SA 4.0**, links both the file page and licence, and has passed real mobile and desktop object-position checks. Harbour imagery must never imply that every Għajnsielem property overlooks or sits beside Mġarr Harbour.
 
-## Private preview verification
+## Release-candidate verification
 
-The private page `public/link-marketplace/areas/ghajnsielem-preview.html` uses `noindex,nofollow`, has no canonical and no Open Graph URL, and is absent from the public index, navigation and sitemap. It reuses the existing locality-page system rather than introducing another frontend. The village core, Mġarr Harbour, Fort Chambray and Xatt l-Aħmar / outer context remain editorially separate.
+The verified private preview was promoted to the public release candidate `public/link-marketplace/areas/ghajnsielem.html`. It has the exact self-canonical and Open Graph URL, one BreadcrumbList, the established hub entry, exactly one sitemap entry and a contextual inbound link from Il-Qala. It reuses the existing locality-page system rather than introducing another frontend. The village core, Mġarr Harbour, Fort Chambray and Xatt l-Aħmar / outer context remain editorially separate.
 
 The self-hosted 1800×1200 hero passed visual checks at 390×844 and 1440×1000. The parish church, residential fabric and landscape remain legible, the attribution stays visible, and neither viewport has horizontal overflow. The image remains a dated locality illustration from Nadur and is not presented as a property view.
 
 The 2D OpenStreetMap context is absent on first load and appears only after an explicit click. It uses the neutral viewport `14.276,36.018,14.307,36.036`, draws no route, pin, boundary, distance, journey time or ferry line, and therefore cannot mislabel an air line as walking. The page explains the correct land-to-terminal, separately labelled Mġarr–Ċirkewwa ferry, and onward-land sequence without inventing geometry.
 
-Automated Chromium checks at both viewports returned HTTP 200, exactly one H1, a decoded hero, visible attribution, zero initial iframes and exactly one visible map iframe after the click. The control then had `aria-expanded=true`; there were no console errors, page errors, failed requests, HTTP responses at or above 400, or overflow before or after map loading. Four full-page captures were inspected under `D:\2906\nexus-bridge-work\artifacts\20261029-ghajnsielem-preview`.
+Automated Chromium checks at both viewports returned HTTP 200, exactly one H1, the exact canonical and Open Graph URL, one BreadcrumbList, no robots block, a decoded hero, visible attribution, zero initial iframes and exactly one visible map iframe after the click. The control then had `aria-expanded=true`; there were no console errors, page errors, failed requests, HTTP responses at or above 400, or overflow before or after map loading. The first desktop inspection exposed an iframe initialisation-order defect that left the map at its default size inside the larger frame. Appending the iframe before assigning its source fixed that defect; the repeated desktop run filled the full 1156×520 map frame. Four final full-page captures were inspected under `D:\2906\nexus-bridge-work\artifacts\20261029-ghajnsielem-release`.
+
+The SEO contract passed for all 59 independent editions, and both route-segment and ferry-presentation contracts passed. TypeScript completed without errors. The full Next.js 16.2.0 production build compiled successfully and generated all 52 static pages.
 
 The optional `21st` catalogue search and review commands were unavailable because the CLI is not installed in this environment. No external component or generation credit was consumed; the established and already verified locality-page pattern was reviewed through the real browser run instead.
 
 ## Verification and publication boundary
 
-The inventory, Address Registrar, Visit Gozo, Gozo Channel, Malta Public Transport, both exact MTA filters, Wikimedia Commons category/API and OpenStreetMap Nominatim returned HTTP 200 to a neutral direct client on 29 October 2026. The Local Council, Cultural Heritage Directorate / Gozo Album and Primary HealthCare pages rejected the neutral PowerShell client with HTTP 403 but remained current and readable through browser retrieval/search indexing; no claim was expanded from that transport-layer difference.
+The inventory, Address Registrar, Visit Gozo, Gozo Channel home and schedule, Malta Public Transport, both exact MTA filters, Wikimedia Commons file page and OpenStreetMap Nominatim returned HTTP 200 to a neutral direct client on 29 October 2026. The exact MTA records `RST-13284`, `RST-13245` and `SBR-25342` remained present. Gozo Channel still identified Mġarr and Ċirkewwa as the ferry endpoints, and the Commons page still identified Kikku33 and CC BY-SA 4.0. The Local Council, Cultural Heritage Directorate / Gozo Album and Primary HealthCare pages rejected the neutral PowerShell client with HTTP 403 but remained current and readable through browser retrieval/search indexing; no claim was expanded from that transport-layer difference.
 
-No private contact details were copied. One licensed local WebP asset and one private, noindex preview now exist in Git. No public HTML, canonical, sitemap, index, navigation, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+No private contact details were copied. The release candidate remains unpublished until its named commit is fast-forwarded through the existing path and the resulting public URLs pass live verification. No route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
