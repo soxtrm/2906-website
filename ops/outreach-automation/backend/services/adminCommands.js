@@ -687,6 +687,14 @@ async function sendManualBatch(adminPhone, session, contacts, messageTemplate, o
 // messageTemplate: text with [name] placeholder (replaced with first name)
 async function runDirectOutreach(adminPhone, replySession, sendingSession, contacts, messageTemplate, opts = {}) {
   const { canContact } = require('./cooldownRules')
+  const outreachSchedule = require('./outreachSchedule')
+  const outreachPace = require('./outreachPace')
+  const outreachQuota = require('./outreachQuota')
+  const outreachTemplates = require('./outreachTemplates')
+  const { checkBeforeSend } = require('./outreachEligibility')
+  // Injected only by tests; production uses the real clock and sleep.
+  const now = typeof opts.now === 'function' ? opts.now : () => new Date()
+  const pause = typeof opts.sleep === 'function' ? opts.sleep : sleep
   const pacingType = opts.pacingType || null
   const startedAt = Date.now()
   let sent = 0
@@ -697,6 +705,7 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
   let noWhatsApp = 0
   let consecutiveNoWhatsApp = 0
   const NO_WHATSAPP_STOP_AFTER = 5
+  let deferredAt = null
   const lifecycle = opts.lifecycle || {}
   const progressReply = opts.suppressMirroredProgress ? async () => {} : reply
   const notifyRun = (text) => notifyOutreachRun(adminPhone, replySession, sendingSession, text, { mirror: !opts.suppressMirroredProgress })
@@ -718,19 +727,38 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
     return
   }
   const accountId = identity.accountId
-  let volumePercent = 100
+  // PACE (2026-10-29): the saved value/range is authoritative. It used to
+  // fall back to 100 when an expiry passed or the lookup failed, which is
+  // how a saved 33 kept sending at 100. Unreadable pace → nothing starts.
+  let volumePercent
   try {
-    const volume = (await db.query(
-      `SELECT outreach_volume_percent, outreach_volume_until
-         FROM whatsapp_accounts WHERE id = $1`,
-      [accountId]
-    )).rows[0]
-    const active = !volume?.outreach_volume_until || new Date(volume.outreach_volume_until) > new Date()
-    volumePercent = active ? Math.max(10, Math.min(100, Number(volume?.outreach_volume_percent || 100))) : 100
+    volumePercent = (await outreachPace.resolvePace(accountId)).percent
   } catch (err) {
-    log.warn('Direct outreach: volume setting unavailable, using 100%', { session: sendingSession, err: err.message })
+    log.error('Direct outreach refused: pace setting unavailable', { session: sendingSession, err: err.message })
+    await progressReply(adminPhone, `❌ Outreach NOT started — the saved PACE for ${sendingSession} could not be read. Nothing was sent.`, replySession)
+    return { refused: 'pace_unavailable', why: err.message }
   }
   const paceMultiplier = 100 / volumePercent
+
+  // Send window (2026-10-29): new messages only start 08:30–19:30 Malta.
+  if (!outreachSchedule.isSendAllowed(now())) {
+    const resumeAt = outreachSchedule.nextSendWindowStart(now())
+    log.info('Direct outreach deferred: outside send window', { session: sendingSession, resumeAt: resumeAt.toISOString() })
+    return { sent: 0, skipped: 0, failed: 0, ambiguous: 0, held: 0, deferred: 'outside_send_window', resumeAt }
+  }
+
+  // Message mode is frozen with the identity: a persona-rotation plan renders
+  // its library slot for the period of each send; free text gets its greeting
+  // and closing corrected to the send-time period.
+  let messageMode = outreachTemplates.MODE_FREE
+  let templateSlot = null
+  if (opts.planId) {
+    const planRow = (await db.query(`SELECT message_mode, template_slot FROM outreach_plans WHERE id = $1`, [opts.planId]).catch(() => ({ rows: [] }))).rows[0]
+    if (planRow?.message_mode === outreachTemplates.MODE_ROTATION && planRow.template_slot) {
+      messageMode = outreachTemplates.MODE_ROTATION
+      templateSlot = planRow.template_slot
+    }
+  }
   const FROZEN = Object.freeze({ session: sendingSession, persona: identity.persona, template: messageTemplate })
   const templateForeign = outreachIdentity.findForeignSignatures(FROZEN.template, FROZEN.persona)
   if (templateForeign.length) {
@@ -955,7 +983,15 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
       delay = isWarm ? randomDelay() : coldDelay()
     }
     if (i > 0 && paceMultiplier !== 1) delay = Math.round(delay * paceMultiplier)
-    await sleep(delay)
+    await pause(delay)
+    // Hard cutoff: nothing new starts at/after 19:30 (or before 08:30). The
+    // remaining contacts stay pending and resume in the next window.
+    if (!outreachSchedule.isSendAllowed(now())) {
+      deferredAt = now()
+      log.info('Direct outreach paused at send-window boundary', { batchId, sentSoFar: sent, remaining: contacts.length - i })
+      for (let j = i; j < contacts.length; j++) await checkpoint(contacts[j].phone, 'cancelled', { skipReason: 'deferred_outside_send_window' })
+      break
+    }
     // Re-check AFTER the delay: 2026-09-24 #125 sent once more 30s after
     // !cancel because the only check sat before a 45s sleep.
     if (run.cancelled) {
@@ -966,7 +1002,20 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
 
     // Personalise template — handles both {name}/[name] + cleanup when blank.
     // overrideMessage wins for force-nudge contacts (ghosted prior contact).
-    const text = overrideMessage || applyTemplate(FROZEN.template, { name, phone })
+    const sendAt = now()
+    let baseText
+    try {
+      baseText = (await outreachTemplates.renderAtSendTime({ mode: messageMode, persona: FROZEN.persona, slot: templateSlot, freeText: FROZEN.template }, sendAt)).text
+    } catch (err) {
+      skipped++
+      skippedDetails.push({ phone, name, reason: `template unavailable — ${err.code || err.message}` })
+      await checkpoint(phone, 'skipped', { skipReason: `template_unavailable: ${err.code || err.message}` })
+      await lifecycle.skipped?.(phone, `template_unavailable: ${err.code || err.message}`)
+      continue
+    }
+    const text = overrideMessage
+      ? outreachSchedule.normalizeGreeting(overrideMessage, sendAt).text
+      : applyTemplate(baseText, { name, phone })
 
     // Last gate before the wire: the rendered text must not sign as anyone
     // but the frozen persona (the recipient's own name is not a signature).
@@ -981,11 +1030,34 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
       continue
     }
 
+    if (!adminBypass || contacts[i].force === true) {
+      const fresh = await checkBeforeSend({ phone, accountId, session: FROZEN.session, now: sendAt, force: contacts[i].force === true })
+      if (!fresh.allowed) {
+        skipped++
+        skippedDetails.push({ phone, name, reason: `not eligible now — ${fresh.reason}` })
+        await checkpoint(phone, 'skipped', { skipReason: `ineligible_at_send: ${fresh.reason}` })
+        await lifecycle.skipped?.(phone, `ineligible_at_send: ${fresh.reason}`)
+        continue
+      }
+    }
+    const quota = await outreachQuota.reserve(accountId, phone, { now: sendAt, runId: opts.runId || null })
+    if (!quota.ok) {
+      log.info('Direct outreach stopped: daily cap reached', { batchId, session: FROZEN.session, used: quota.used, cap: quota.cap })
+      for (let j = i; j < contacts.length; j++) {
+        skipped++
+        skippedDetails.push({ phone: contacts[j].phone, name: contacts[j].name, reason: `daily cap ${quota.cap} reached` })
+        await checkpoint(contacts[j].phone, 'skipped', { skipReason: 'daily_cap_reached' })
+        await lifecycle.skipped?.(contacts[j].phone, 'daily_cap_reached')
+      }
+      break
+    }
+
     let transportAccepted = false
     try {
       await lifecycle.beforeSend?.(phone, text)
       await waha.sendText(FROZEN.session, phone, text)
       transportAccepted = true
+      await outreachQuota.markSent(accountId, phone, quota.day).catch(err => log.warn('daily quota mark-sent failed', { err: err.message }))
       await lifecycle.sent?.(phone)
 
       // outreach_log uses owners.id (uuid) — upsert the owner row
@@ -1031,6 +1103,7 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
       // the number has no WhatsApp. That is not a transport fault: count it as
       // skipped, remember it, and stop a batch whose first numbers all fail
       // this way (batch 276 spent 50 minutes on 40 such numbers).
+      if (!unknown) await outreachQuota.release(accountId, phone, quota.day).catch(relErr => log.warn('daily quota release failed', { err: relErr.message }))
       if (!unknown && /no LID found/i.test(String(err?.message || ''))) {
         skipped++
         noWhatsApp++
@@ -1098,8 +1171,12 @@ async function runDirectOutreach(adminPhone, replySession, sendingSession, conta
     }
     if (skippedDetails.length > 30) lines.push(`…and ${skippedDetails.length - 30} more`)
   }
+  if (deferredAt) lines.push('', `⏸ Paused at the 19:30 cutoff — the rest resumes from ${outreachSchedule.nextSendWindowStart(deferredAt).toISOString()} with send-time greetings.`)
   await notifyRun(lines.join('\n'))
-  return { sent, skipped, failed, ambiguous, held, batchId }
+  return {
+    sent, skipped, failed, ambiguous, held, batchId, volumePercent,
+    ...(deferredAt ? { deferred: 'outside_send_window', resumeAt: outreachSchedule.nextSendWindowStart(deferredAt) } : {}),
+  }
 }
 
 // Both Notes/!outreach and the website planner persist the same immutable

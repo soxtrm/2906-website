@@ -36,7 +36,9 @@ async function canContact(contactId, accountId) {
   }
 
   // Global do-not-contact always blocks (DNC is global across ALL accounts).
-  if (contact.do_not_contact === true) {
+  // 2026-10-29: status='do_not_contact' is the form the classifier actually
+  // writes (210 owners); the boolean was set on none, so both count as DNC.
+  if (contact.do_not_contact === true || String(contact.status || '').toLowerCase() === 'do_not_contact') {
     return { allowed: false, reason: 'dnc' }
   }
 

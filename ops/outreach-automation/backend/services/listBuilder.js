@@ -164,7 +164,7 @@ async function getEligibleByStatus(accountId, statuses, limit) {
     WHERE (oc.status = ANY($2::text[]) OR oc.status IS NULL)
       AND (oaa.is_annoyed IS NULL OR oaa.is_annoyed = FALSE)
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
-      AND COALESCE(oc.do_not_contact, FALSE) = FALSE
+      AND COALESCE(oc.do_not_contact, FALSE) = FALSE AND COALESCE(oc.status, '') <> 'do_not_contact'
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
     ORDER BY oc.id DESC
     LIMIT $3
@@ -259,7 +259,7 @@ async function buildListCapped(sessionName, requestedCount, opts = {}) {
     WHERE oc.status = 'hot'
       AND (oaa.is_annoyed IS NULL OR oaa.is_annoyed = FALSE)
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
-      AND COALESCE(oc.do_not_contact, FALSE) = FALSE
+      AND COALESCE(oc.do_not_contact, FALSE) = FALSE AND COALESCE(oc.status, '') <> 'do_not_contact'
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
     ORDER BY COALESCE(oaa.affinity_score, 0) DESC, oc.last_contact_at ASC NULLS FIRST
     LIMIT $2
@@ -284,7 +284,7 @@ async function buildListCapped(sessionName, requestedCount, opts = {}) {
       SELECT oc.id, oc.name, oc.phone_normalized AS phone, oc.status, oc.last_property_mention
       FROM owner_contacts oc
       WHERE oc.status = 'softwarm'
-        AND COALESCE(oc.do_not_contact, FALSE) = FALSE
+        AND COALESCE(oc.do_not_contact, FALSE) = FALSE AND COALESCE(oc.status, '') <> 'do_not_contact'
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
       ORDER BY oc.last_contact_at ASC NULLS FIRST
       LIMIT $1
@@ -419,7 +419,7 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
       SELECT oc.id, oc.name, oc.phone_normalized
       FROM owner_contacts oc
       WHERE oc.id > $1
-        AND COALESCE(oc.do_not_contact, FALSE) = FALSE
+        AND COALESCE(oc.do_not_contact, FALSE) = FALSE AND COALESCE(oc.status, '') <> 'do_not_contact'
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
         -- 2026-10-18 (Kev): the pool is a ROTATION — every owner comes round
         -- again every ~25 days. "Contacted ever" excluded them for good, so a
@@ -463,7 +463,7 @@ async function buildPoolBatch(sessionName, requestedCount, options = {}) {
       SELECT oc.id, oc.name, oc.phone_normalized
       FROM owner_contacts oc
       WHERE oc.id < $1
-        AND COALESCE(oc.do_not_contact, FALSE) = FALSE
+        AND COALESCE(oc.do_not_contact, FALSE) = FALSE AND COALESCE(oc.status, '') <> 'do_not_contact'
       AND (oc.owner_contact_paused_until IS NULL OR oc.owner_contact_paused_until <= CURRENT_DATE)
         -- 2026-10-18 (Kev): the pool is a ROTATION — every owner comes round
         -- again every ~25 days. "Contacted ever" excluded them for good, so a

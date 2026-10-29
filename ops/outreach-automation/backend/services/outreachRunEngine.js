@@ -103,11 +103,14 @@ async function reconcileRecipient(run, recipient) {
   return 'ambiguous'
 }
 
-async function scheduleRecheck(runId) {
-  const runAfter = new Date(Date.now() + RECHECK_DELAY_MS)
+// `at` (2026-10-29): a run paused by the 19:30 cutoff resumes at the next
+// 08:30 window start instead of re-waking every 5 minutes overnight.
+async function scheduleRecheck(runId, at = null) {
+  const runAfter = at ? new Date(Math.max(Date.now() + 60_000, new Date(at).getTime())) : new Date(Date.now() + RECHECK_DELAY_MS)
+  const delay = Math.max(0, runAfter.getTime() - Date.now())
   await db.query(`UPDATE outreach_runs SET status='held',run_after=$2,updated_at=NOW() WHERE run_id=$1`, [runId, runAfter])
   await addJob('outreach-run', { runId, recheck: true }, {
-    attempts: 1, delay: RECHECK_DELAY_MS,
+    attempts: 1, delay,
     jobId: safeJobId(`outreach-recheck-${runId}-${runAfter.getTime()}`),
   })
 }
@@ -118,6 +121,7 @@ async function executeOutreachRun(runId) {
   if (!run) return { claimed: false }
   const client = await db.connect()
   const lockKey = `outreach-session:${String(run.session_name).toLowerCase()}`
+  let dispatchResult = null
   try {
     await client.query(`SELECT pg_advisory_lock(hashtextextended($1,0))`, [lockKey])
     const recipients = (await db.query(
@@ -147,7 +151,7 @@ async function executeOutreachRun(runId) {
       }
       await db.query(`UPDATE outreach_runs SET status='running',updated_at=NOW() WHERE run_id=$1`, [run.run_id])
       const { runDirectOutreach } = require('./adminCommands')
-      await runDirectOutreach(run.initiated_by, run.reply_session || run.session_name, run.session_name,
+      dispatchResult = await runDirectOutreach(run.initiated_by, run.reply_session || run.session_name, run.session_name,
         sendableRows.map(row => ({ ...(row.payload || {}), phone: row.normalized_phone, name: row.display_name })),
         run.message_template, {
           planId: run.plan_id, runId: run.run_id, pacingType: run.pacing_mode,
@@ -162,8 +166,8 @@ async function executeOutreachRun(runId) {
     const count = Object.fromEntries(counts.map(row => [row.state, row.n]))
     if (run.plan_id) await require('./outreachPlanner').reconcilePlanFromRun(run.plan_id, run.run_id)
     if ((count.held || 0) > 0 || (count.ambiguous || 0) > 0 || (count.sending || 0) > 0 || (count.pending || 0) > 0) {
-      await scheduleRecheck(run.run_id)
-      return { claimed: true, status: 'held', counts: count }
+      await scheduleRecheck(run.run_id, dispatchResult?.resumeAt || null)
+      return { claimed: true, status: 'held', counts: count, resumeAt: dispatchResult?.resumeAt || null }
     }
     const status = (count.failed || 0) > 0 && (count.sent || 0) === 0 ? 'failed' : 'completed'
     await db.query(`UPDATE outreach_runs SET status=$2,completed_at=NOW(),updated_at=NOW() WHERE run_id=$1`, [run.run_id, status])
