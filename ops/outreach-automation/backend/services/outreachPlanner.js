@@ -36,6 +36,7 @@ const { canContact, normalizePhone: cooldownNormalizePhone } = require('./cooldo
 const outreachSchedule = require('./outreachSchedule')
 const outreachQuota = require('./outreachQuota')
 const outreachTemplates = require('./outreachTemplates')
+const outreachPace = require('./outreachPace')
 
 function conversationIntelligence() {
   try { return require('./conversationIntelligence') } // production services directory
@@ -275,7 +276,9 @@ async function listAccounts() {
             outreach_volume_percent, outreach_volume_until, pool, operational_status,
             restriction_detected_at, restriction_until, restriction_reason,
             last_session_status, last_session_check_at,
-            outreach_auto_base_count, outreach_auto_message
+            outreach_auto_base_count, outreach_auto_message,
+            outreach_pace_min, outreach_pace_max, outreach_auto_enabled, outreach_auto_rolling,
+            outreach_daily_target_min, outreach_daily_target_max
        FROM whatsapp_accounts ORDER BY priority, id`)
   // Kev, 2026-09-11: "Last Outreach" reads the REAL send history
   // (outreach_log), not just this planner's own plans — a manual !outreach
@@ -317,7 +320,7 @@ async function listAccounts() {
   const restrictionCountMap = new Map(restrictionCounts.rows.map(row => [row.account_id, Number(row.count)]))
 
   const today = maltaTodayStr()
-  const horizon = await db.query(`SELECT account_id, scheduled_date::text AS day, status, armed, scheduled_at, target_count FROM outreach_plans WHERE scheduled_date >= $1::date AND scheduled_date <= $2::date ORDER BY scheduled_date`, [today, addDaysStr(today, 4)])
+  const horizon = await db.query(`SELECT account_id, scheduled_date::text AS day, status, armed, scheduled_at, target_count, source, message_template FROM outreach_plans WHERE scheduled_date >= $1::date AND scheduled_date <= $2::date ORDER BY scheduled_date`, [today, addDaysStr(today, 4)])
   const accounts = []
   for (const stored of r.rows) {
     let acc = stored
@@ -332,6 +335,11 @@ async function listAccounts() {
       log.debug('outreachPlanner: session status check failed', { session: acc.session_name, err: e.message })
     }
     const restricted = acc.operational_status === 'restricted'
+    const paceRange = outreachPace.savedRange(acc)
+    let quotaToday = null
+    try { quotaToday = await outreachQuota.status(acc.id) } catch (e) {
+      log.debug('outreachPlanner: quota status failed', { accountId: acc.id, err: e.message })
+    }
     accounts.push({
       id: acc.id, sessionName: acc.session_name, phone: acc.phone,
       label: acc.label || acc.session_name, connected,
@@ -339,16 +347,26 @@ async function listAccounts() {
       planningDays: Array.from({ length: 5 }, (_, offset) => {
         const day = addDaysStr(today, offset)
         const plan = horizon.rows.find(p => p.account_id === acc.id && p.day === day)
-        return { day, label: dayLabelFor(day, today), status: plan?.status || 'empty', armed: plan?.armed === true, scheduledAt: plan?.scheduled_at || null, count: plan?.target_count || 0 }
+        const display = plan ? dayDisplayState(plan, { eligible: plan.target_count || 0, total: plan.target_count || 0 }) : { state: 'empty', label: 'Empty' }
+        return { day, label: dayLabelFor(day, today), status: plan?.status || 'empty', armed: plan?.armed === true, scheduledAt: plan?.scheduled_at || null, count: plan?.target_count || 0, display }
       }),
       outreachEnabled: acc.outreach_enabled,
       lastOutreachAt: lastSentMap.get(acc.session_name) || null,
       lastRun: lastRunMap.get(acc.session_name) || null,
       recentRuns: recentRunMap.get(acc.session_name) || [],
       pool: acc.pool || 'top',
-      outreachVolumePercent: acc.outreach_volume_until && new Date(acc.outreach_volume_until) <= new Date()
-        ? 100
-        : Number(acc.outreach_volume_percent || 100),
+      // Kev, 2026-10-29: an expired outreach_volume_until used to display
+      // (and dispatch) as 100 % — the "pace jumps back to 100" bug. The saved
+      // pace is the setting; savedRange ignores the old expiry.
+      outreachVolumePercent: paceRange ? Math.round((paceRange.min + paceRange.max) / 2) : null,
+      outreachPaceMin: paceRange?.min ?? null,
+      outreachPaceMax: paceRange?.max ?? null,
+      outreachAutoEnabled: acc.outreach_auto_enabled === true,
+      outreachAutoRolling: acc.outreach_auto_rolling === true,
+      dailyTargetMin: acc.outreach_daily_target_min == null ? 30 : Number(acc.outreach_daily_target_min),
+      dailyTargetMax: acc.outreach_daily_target_max == null ? 40 : Number(acc.outreach_daily_target_max),
+      persona: acc.account_persona || null,
+      quotaToday,
       outreachVolumeUntil: acc.outreach_volume_until || null,
       sessionStatus,
       operationalStatus: restricted ? 'restricted' : (connected ? 'ready' : 'offline'),
@@ -364,19 +382,10 @@ async function listAccounts() {
   return accounts
 }
 
-async function setAccountVolume(accountId, percent, days = null) {
-  const value = Math.max(10, Math.min(100, Math.round(Number(percent) || 100)))
-  const durationDays = days == null ? null : Math.max(1, Math.min(30, Math.round(Number(days) || 1)))
-  const r = await db.query(
-    `UPDATE whatsapp_accounts
-        SET outreach_volume_percent = $2,
-            outreach_volume_until = CASE WHEN $3::int IS NULL THEN NULL ELSE NOW() + ($3::int * interval '1 day') END
-      WHERE id = $1 AND is_active = TRUE AND outreach_enabled = TRUE
-      RETURNING id, session_name, outreach_volume_percent, outreach_volume_until`,
-    [accountId, value, durationDays]
-  )
-  if (!r.rows.length) throw new Error(`account ${accountId} not found`)
-  return r.rows[0]
+// Kev, 2026-10-29: the old `days` expiry is ignored on purpose — an expiring
+// pace silently became 100 % afterwards. A saved pace now stays until changed.
+async function setAccountVolume(accountId, percent, _days = null, max = percent) {
+  return outreachPace.setAccountPace(accountId, { min: percent, max })
 }
 
 // ── Plan lifecycle ───────────────────────────────────────────────────────────
@@ -708,10 +717,13 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
       let templateSlot = null
       if (persona) templateSlot = await setRotationTemplate(plan.id, accountId, persona, now)
       else if (resolvedMessage) await setMessageTemplate(plan.id, resolvedMessage)
+      // Store what the pool actually yielded: a target above the prepared list
+      // made the later arm fail with insufficient_eligible_contacts.
+      const prepared = Math.min(target, Number(generated.resultEligible) || 0)
       await db.query(
         `UPDATE outreach_plans
             SET scheduled_at=$2, status='saved', source='auto_prepared', armed=FALSE, target_count=$3, updated_at=NOW()
-          WHERE id=$1`, [plan.id, scheduledAt.toISOString(), target]
+          WHERE id=$1`, [plan.id, scheduledAt.toISOString(), Math.max(1, prepared)]
       )
       results.push({
         planId: plan.id, label: plan.label, status: 'prepared', scheduledAt: scheduledAt.toISOString(),
@@ -1106,7 +1118,8 @@ async function armPlan(planId, { time } = {}) {
 
 // ── Auto mode (2026-10-29) ─────────────────────────────────────────────────
 // Day card state for the CRM. Never colour-only: the UI renders the label.
-function dayDisplayState(plan, stats = {}) {
+function dayDisplayState(plan, stats) {
+  stats = stats || {}
   if (!plan) return { state: 'empty', label: 'Not prepared' }
   if (plan.status === 'completed') return { state: 'completed', label: 'Completed' }
   if (plan.status === 'running') return { state: 'running', label: 'Running' }
@@ -1147,15 +1160,19 @@ async function saveAllPrepared(accountId, { actor = 'admin', now = new Date() } 
         await logTransition(plan.id, plan.status, 'ready', 'save_all', actor)
         results.push({ ...base, status: 'scheduled', scheduledAt: r.scheduledAt })
       } else {
-        results.push({ ...base, status: 'failed', reason: r.reason })
+        results.push({ ...base, status: 'failed', reason: r.reason, requested: r.requested, eligible: r.eligible })
       }
     }
     const failed = results.filter(x => x.status === 'failed')
     if (!failed.length) {
       await db.query(`UPDATE whatsapp_accounts SET outreach_auto_rolling = TRUE, outreach_auto_updated_at = NOW() WHERE id = $1 AND outreach_auto_enabled = TRUE`, [accountId])
     }
+    // ok = every horizon day is scheduled (or already finished). Days without
+    // a prepared list are reported, never silently counted as saved.
+    const notPrepared = results.filter(x => x.status === 'not_prepared').length
     return {
-      ok: failed.length === 0,
+      ok: failed.length === 0 && notPrepared === 0,
+      notPrepared,
       scheduled: results.filter(x => x.status === 'scheduled').length,
       alreadyScheduled: results.filter(x => x.status === 'already_scheduled').length,
       failed: failed.length,

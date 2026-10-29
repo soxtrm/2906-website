@@ -71,6 +71,11 @@ async function checkBeforeSend({ phone, accountId, session, now = new Date(), fo
     const same = String(recent.account_used || '').toLowerCase() === String(session || '').toLowerCase()
     return { allowed: false, reason: same ? 'same_account_recent' : 'contacted_by_other_account', detail: recent.account_used }
   }
+  // Spec 11: after N unanswered attempts automation stops; the owner moves to
+  // the manual "Call Candidates" list (services/outreachEngagement.js).
+  if (await require('./outreachEngagement').reachedNoReplyLimit(p)) {
+    return { allowed: false, reason: 'no_reply_limit_reached', contactId: contact?.id || null }
+  }
   if (contact?.last_reply_at && new Date(contact.last_reply_at) > new Date(now.getTime() - 30 * 86400000)) {
     return { allowed: false, reason: 'in_live_conversation', contactId: contact.id }
   }

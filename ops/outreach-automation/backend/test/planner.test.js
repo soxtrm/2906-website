@@ -16,17 +16,17 @@ const at = (d, t) => S.maltaLocalToUTC(d, t)
 const BASE_DAY = '2026-11-16'
 const NOW = at(BASE_DAY, '06:00')
 
-async function seedPool(n = 260) {
+async function seedPool(n = 400) {
   await H.db.query(`INSERT INTO pool_cursors(pool, cursor_id) VALUES ('top', 0), ('bottom', 999999999) ON CONFLICT (pool) DO UPDATE SET cursor_id = EXCLUDED.cursor_id`)
   const values = Array.from({ length: n }, (_, i) => `('3569${String(i).padStart(7, '0')}', 'Owner ${i}', 'new')`).join(',')
   await H.db.query(`INSERT INTO owner_contacts(phone_normalized, name, status) VALUES ${values}`)
 }
 
-test.beforeEach(async () => {
+test.beforeEach(async (t) => {
   await H.reset()
   await H.db.query(`TRUNCATE pool_cursors`)
   await Templates.ensureSeed()
-  await seedPool()
+  await seedPool(t.name.startsWith('short pool') ? 80 : 400)
 })
 
 test('auto prepare: 5 morning days, no drift, persona rotation, target 30–40, all "A"', async () => {
@@ -158,4 +158,20 @@ test('an operator-written text turns that day into free text; greeting still fix
   await P.setMessageTemplate(plan.id, 'Good evening! Kevin here, quick question about your flat. Enjoy your evening!')
   const row = (await H.db.query(`SELECT message_mode, template_slot FROM outreach_plans WHERE id=$1`, [plan.id])).rows[0]
   assert.deepStrictEqual(row, { message_mode: 'free_text', template_slot: null })
+})
+
+test('short pool: Save All schedules the days that have owners and reports the rest explicitly', async () => {
+  const acc = await H.account({ session: 'Argus6', persona: 'kev' })
+  await P.setAutoEnabled(acc.id, true, { now: NOW })
+  const result = await P.saveAllPrepared(acc.id, { now: NOW })
+  assert.strictEqual(result.ok, false)
+  assert.ok(result.scheduled >= 2, JSON.stringify(result.results))
+  assert.ok(result.failed + result.notPrepared >= 1, JSON.stringify(result.results))
+  assert.strictEqual(result.scheduled + result.failed + result.notPrepared, 5)
+  for (const r of result.results.filter(x => x.status === 'failed')) assert.ok(r.reason, JSON.stringify(r))
+  const armed = (await H.db.query(
+    `SELECT p.target_count, COUNT(e.*)::int AS entries FROM outreach_plans p
+       JOIN outreach_plan_entries e ON e.plan_id = p.id AND e.eligibility_status = 'eligible'
+      WHERE p.account_id = $1 AND p.armed GROUP BY p.id`, [acc.id])).rows
+  for (const row of armed) assert.strictEqual(row.entries, row.target_count, 'armed day sends what it prepared')
 })

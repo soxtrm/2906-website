@@ -461,12 +461,15 @@ router.post('/outreach/accounts/:accountId/volume', auth, adminOnly, async (req,
   try {
     const accountId = parseInt(req.params.accountId)
     if (!accountId) return res.status(400).json({ error: 'valid accountId required' })
-    const percent = Number(req.body?.percent)
-    if (!Number.isFinite(percent) || percent < 10 || percent > 100) {
-      return res.status(400).json({ error: 'percent must be between 10 and 100' })
+    // Kev, 2026-10-29: {min,max} saves a pace range (each run draws inside it);
+    // {percent} alone is a fixed pace. `days` is ignored: an expiring pace was
+    // the "speed jumps back to 100" bug.
+    const percent = Number(req.body?.min ?? req.body?.percent)
+    const max = req.body?.max == null ? percent : Number(req.body.max)
+    if (![percent, max].every(v => Number.isFinite(v) && v >= 10 && v <= 100)) {
+      return res.status(400).json({ error: 'pace must be between 10 and 100' })
     }
-    const days = req.body?.days == null ? null : Number(req.body.days)
-    const account = await outreachPlanner.setAccountVolume(accountId, percent, days)
+    const account = await outreachPlanner.setAccountVolume(accountId, percent, null, max)
     res.json({ ok: true, account })
   } catch (err) {
     log.error('crm/outreach/account-volume error', err)
@@ -522,6 +525,78 @@ router.post('/outreach/accounts/:accountId/auto-prepare', auth, adminOnly, async
     const status = ['account_restricted', 'system_manager_not_outreach'].includes(err.code) ? 409 : 500
     res.status(status).json({ error: err.message || 'Failed to auto-prepare account', code: err.code || null })
   }
+})
+
+// ── Outreach automation (Kev, 2026-10-29) ─────────────────────────────────
+// Auto mode, Save All, daily quota, persona template library, engagement.
+// Business rules live in services/outreachPlanner|Quota|Templates|Engagement.
+const outreachAutomationError = (res, err, fallback) => {
+  const known = ['account_restricted', 'system_manager_not_outreach', 'invalid_pace', 'unknown_persona', 'invalid_period', 'invalid_slot', 'invalid_length', 'foreign_persona_signature']
+  const status = known.includes(err.code) ? (err.code.startsWith('account') || err.code.startsWith('system') ? 409 : 400) : 500
+  if (status === 500) log.error(fallback, err)
+  res.status(status).json({ error: status === 500 ? fallback : err.message, code: err.code || null })
+}
+
+router.post('/outreach/accounts/:accountId/auto', auth, adminOnly, async (req, res) => {
+  try {
+    const accountId = Number.parseInt(req.params.accountId, 10)
+    if (!accountId) return res.status(400).json({ error: 'valid accountId required' })
+    if (typeof req.body?.enabled !== 'boolean') return res.status(400).json({ error: 'enabled must be true or false' })
+    res.json(await outreachPlanner.setAutoEnabled(accountId, req.body.enabled, { actor: req.agent?.username || 'admin' }))
+  } catch (err) { outreachAutomationError(res, err, 'Failed to change Auto mode') }
+})
+
+router.post('/outreach/accounts/:accountId/save-all', auth, adminOnly, async (req, res) => {
+  try {
+    const accountId = Number.parseInt(req.params.accountId, 10)
+    if (!accountId) return res.status(400).json({ error: 'valid accountId required' })
+    const result = await outreachPlanner.saveAllPrepared(accountId, { actor: req.agent?.username || 'admin' })
+    // 207: some days were saved and some were not — the body lists each day.
+    res.status(result.ok ? 200 : 207).json(result)
+  } catch (err) { outreachAutomationError(res, err, 'Save All failed') }
+})
+
+router.get('/outreach/accounts/:accountId/quota', auth, adminOnly, async (req, res) => {
+  try {
+    const accountId = Number.parseInt(req.params.accountId, 10)
+    if (!accountId) return res.status(400).json({ error: 'valid accountId required' })
+    res.json(await require('../services/outreachQuota').status(accountId))
+  } catch (err) { outreachAutomationError(res, err, 'Failed to read daily quota') }
+})
+
+router.get('/outreach/persona-templates', auth, adminOnly, async (req, res) => {
+  try {
+    const persona = req.query.persona ? String(req.query.persona).toLowerCase() : null
+    res.json({ templates: await require('../services/outreachTemplates').listLibrary(persona) })
+  } catch (err) { outreachAutomationError(res, err, 'Failed to load template library') }
+})
+
+router.put('/outreach/persona-templates', auth, adminOnly, async (req, res) => {
+  try {
+    const template = await require('../services/outreachTemplates').upsertTemplate({
+      persona: req.body?.persona, period: req.body?.period, slot: req.body?.slot,
+      body: req.body?.body, active: req.body?.active,
+    }, req.agent?.username || 'admin')
+    res.json({ ok: true, template })
+  } catch (err) { outreachAutomationError(res, err, 'Failed to save template') }
+})
+
+router.get('/outreach/engagement', auth, adminOnly, async (req, res) => {
+  try {
+    const session = req.query.session ? String(req.query.session) : null
+    res.json(await require('../services/outreachEngagement').overview({ session }))
+  } catch (err) { outreachAutomationError(res, err, 'Failed to load engagement') }
+})
+
+router.get('/outreach/call-candidates', auth, adminOnly, async (req, res) => {
+  try {
+    const session = req.query.session ? String(req.query.session) : null
+    const minAttempts = req.query.minAttempts == null ? null : Number(req.query.minAttempts)
+    if (minAttempts != null && (!Number.isInteger(minAttempts) || minAttempts < 1 || minAttempts > 50)) {
+      return res.status(400).json({ error: 'minAttempts must be between 1 and 50' })
+    }
+    res.json(await require('../services/outreachEngagement').callCandidates({ session, minAttempts, limit: req.query.limit }))
+  } catch (err) { outreachAutomationError(res, err, 'Failed to load call candidates') }
 })
 
 router.get('/outreach/due-reminders', auth, adminOnly, async (req, res) => {
