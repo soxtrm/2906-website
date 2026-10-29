@@ -1,6 +1,6 @@
 # Għajnsielem edition — sourced research draft
 
-Language: English. Status: **RESEARCH DRAFT — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
+Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -96,25 +96,41 @@ The map must draw no route by default. A ferry connector may appear only as a se
 
 ## Licensed image candidates
 
-The Wikimedia Commons API returned the following candidate originals with reusable licences. They are metadata candidates only: no original has been downloaded, selected, transformed or added to Git in this research step. A later asset step must download candidates outside Git, verify the local SHA-1 against Commons, inspect every full-resolution image and test real 390px and desktop crops before selecting one.
+All six Wikimedia Commons originals below were downloaded outside Git, verified locally against the published Commons SHA-1 and inspected at full resolution on 29 October 2026. The local SHA-256 values provide a second reproducibility check. This comparison selects one source asset only; real 390px and desktop crops, visible in-page attribution and responsive layout remain mandatory before any preview.
 
 1. **Għajnsielem - veduta.jpg** — Luca Aless; captured 12 April 2013; 2812×1905; 812,015 bytes; CC BY-SA 3.0; Commons SHA-1 `910883ADDE55578DE2AFCCA6C547DCC1BCB59890`.
    - https://commons.wikimedia.org/wiki/File:G%C4%A7ajnsielem_-_veduta.jpg
+   - Local SHA-256: `139B4A9633FC9ADDCCF5BE69B2F513ECB454D0FFC2A132C11EB8E9B2FC1D587D`.
 2. **Għajnsielem from Nadur, Gozo.jpg** — Kikku33; captured 19 June 2023; 5184×3456; 13,061,568 bytes; CC BY-SA 4.0; Commons SHA-1 `526FA18BBA4DCD0A78F7A8C43A7DA9D1CC23C7EC`.
    - https://commons.wikimedia.org/wiki/File:G%C4%A7ajnsielem_from_Nadur,_Gozo.jpg
+   - Local SHA-256: `ACB28F895275B3C9712D8EAE8D72573BE9C61354C9B2680311D3348C98DC2871`.
 3. **Ghajnsielem harbour.jpg** — Larsvr6; captured 31 May 2018; 5184×3888; 5,065,221 bytes; CC BY-SA 4.0; Commons SHA-1 `C9F6854BF73E2A582DA7CCA5C0DB867AD698C774`.
    - https://commons.wikimedia.org/wiki/File:Ghajnsielem_harbour.jpg
+   - Local SHA-256: `1BC03C3516527CB626AAC489FA98E07BBD553B074C349D25F55BEDC6D8BA97DA`.
 4. **Malta Gozo Mgarr BW 2011-10-08 09-29-17.JPG** — Berthold Werner; captured 8 October 2011; 3699×2467; 4,366,635 bytes; CC BY-SA 3.0; Commons SHA-1 `E00B0BD70B6EB015D2298212A8713F1405245CDF`.
    - https://commons.wikimedia.org/wiki/File:Malta_Gozo_Mgarr_BW_2011-10-08_09-29-17.JPG
+   - Local SHA-256: `5A57906DA670B243120D40A71E632271381981D9B641367C6BB68A2D476AF108`.
 5. **Parish Church of Madonn of Loreto.jpg** — TheShadow99; captured 1 August 2026; 2667×2967; 1,514,684 bytes; CC BY-SA 4.0; Commons SHA-1 `FA2A08B40A82D69D10ADA931BA4739F78FCE7B8C`.
    - https://commons.wikimedia.org/wiki/File:Parish_Church_of_Madonn_of_Loreto.jpg
+   - Local SHA-256: `1653C1899962ED917428122E9E8B3C762AB8D3682657725A03B07B3F569689D2`.
 6. **Għajnsielem Wikivoyage Banner.jpg** — Michelle Maria; captured 17 June 2013; 5170×753; 2,155,678 bytes; CC BY 3.0; Commons SHA-1 `45AC474AA4473998926B728730BC3323A13A287B`.
    - https://commons.wikimedia.org/wiki/File:G%C4%A7ajnsielem_Wikivoyage_Banner.jpg
+   - Local SHA-256: `78BC0DD0F9448C22CACDF54CC3BF787FC2A4CE8FE8E8C689F969610B3FF4F27B`.
 
-The preferred hero should represent the locality rather than a single restaurant, private residence, ferry brand or temporary event. Harbour candidates must not imply that every Għajnsielem property overlooks or sits beside Mġarr Harbour. The final rendered page must visibly credit the selected author, Wikimedia Commons and licence, with links to the file page and licence.
+### Selected source and transformation boundary
+
+**Selected:** `Għajnsielem from Nadur, Gozo.jpg` by Kikku33 under CC BY-SA 4.0. The 2023 panorama keeps the parish church, surrounding residential fabric, agricultural foreground and sea context legible together. It contains no dominant private person, advertising, vehicle, ferry brand or event. Its elevated viewpoint is from Nadur: it is a locality illustration only and does not prove a property view, exact address, elevation, waterfront setting, walking distance or current construction state.
+
+- Licence: https://creativecommons.org/licenses/by-sa/4.0/
+
+The local derivative `public/link-marketplace/assets/ghajnsielem-village-kikku33.webp` is a proportional 1800×1200 WebP reduction made with quality 84 and encoder effort 6. It has no crop, retouching, compositing, colour treatment or generative edit; it is 318,756 bytes with SHA-256 `2C0E29B88C9237275217B2CAA21AF9935E7920006E8B6D64928231203A4BBA20`. The full derivative passed visual inspection.
+
+The alternatives remain unselected for specific reasons: Luca Aless's view is useful context but has more dated harbour traffic and a prominent vehicle; Larsvr6's harbour frame is dominated by marina activity and a large empty sky; Berthold Werner's frame is centred on a branded ferry and dates from 2011; TheShadow99's portrait-oriented church study is too narrow for a locality hero and includes people, vehicles and temporary seating; Michelle Maria's banner is highly compressed vertically, strongly processed and records extensive older construction. These are editorial selection reasons, not quality rankings.
+
+A future rendered preview must visibly credit **Kikku33**, Wikimedia Commons and **CC BY-SA 4.0**, link both the file page and licence, and verify the real mobile and desktop object-position. Harbour imagery must never imply that every Għajnsielem property overlooks or sits beside Mġarr Harbour.
 
 ## Verification and publication boundary
 
 The inventory, Address Registrar, Visit Gozo, Gozo Channel, Malta Public Transport, both exact MTA filters, Wikimedia Commons category/API and OpenStreetMap Nominatim returned HTTP 200 to a neutral direct client on 29 October 2026. The Local Council, Cultural Heritage Directorate / Gozo Album and Primary HealthCare pages rejected the neutral PowerShell client with HTTP 403 but remained current and readable through browser retrieval/search indexing; no claim was expanded from that transport-layer difference.
 
-No private contact details were copied. No image, preview, public HTML, canonical, sitemap, index, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+No private contact details were copied. One licensed local WebP asset was added to Git for a later private preview. No preview, public HTML, canonical, sitemap, index, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
