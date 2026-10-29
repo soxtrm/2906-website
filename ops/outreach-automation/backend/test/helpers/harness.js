@@ -40,6 +40,11 @@ const stubs = {
     addJob: async (name, data, opts = {}) => { jobs.push({ name, data, opts }); return { id: opts.jobId || `job-${jobs.length}` } },
     QUEUES: new Proxy({}, { get: () => ({ getJob: async () => null, add: async () => ({}) }) }),
   },
+  // The pool's WhatsApp reachability check (services/whatsappReachability.js
+  // is not part of this mirror): every number counts as on WhatsApp.
+  'services/whatsappReachability': {
+    classifyMany: async (_session, phones) => phones.map(() => ({ status: 'VALID' })),
+  },
   waha: {
     sendText: async (session, phone, text) => {
       const fail = wahaBehaviour.failFor.get(String(phone))
