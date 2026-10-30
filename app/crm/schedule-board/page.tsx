@@ -190,6 +190,8 @@ type Listing = {
   // viewed", a separate fact from availableDate.
   viewingDate: string | null
   viewingStatus: string | null; hasViewingLocation: boolean; exclusive: boolean
+  // Latest "Ask for Location" request — state only (2026-10-30).
+  locationRequest?: { status: string; requestedAt: string | null; requestedBy: string | null; account: string | null } | null
   // The upload timestamp. Sorted server-side, but carried here because the
   // client re-groups cards by town to place the pins and would otherwise lose
   // the server's newest-first ordering.
@@ -617,6 +619,13 @@ function Board() {
   const [requesting, setRequesting] = useState<Listing | null>(null)
   const [asking, setAsking] = useState<{ listing: Listing; intent: 'property' | 'owner-inventory' } | null>(null)
   const [chatting, setChatting] = useState<Listing | null>(null)
+  // "Agent opened owner chat — Ref. X" on the property timeline (2026-10-30).
+  // Opening is not sending; a confirmed send is logged by the relay itself.
+  useEffect(() => {
+    if (!chatting) return
+    crmJson(`schedule-board/listings/${encodeURIComponent(chatting.ref)}/chat-opened`, 'POST',
+      { viewingId: (chatting as any).viewing?.id || null }).catch(() => { /* timeline only */ })
+  }, [chatting?.ref])
   const [statusing, setStatusing] = useState<{ r: Listing; action: StatusAction } | null>(null)
   // AV-date-confirm dialog (Kev, 2026-08-31) — the small calendar icon next
   // to the € price, holds the row being edited or null when closed.
@@ -2475,6 +2484,7 @@ function Board() {
         )}
       </AnimatePresence>
 
+      <LocationAttentionBanner />
       {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
       {avNotifications.length > 0 && (
         <AvNotificationStack items={avNotifications} onDismiss={dismissAvNotification} />
@@ -3683,6 +3693,9 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   // verstecken, es gibt einfach buttons die fast niemand nutzt". One popover,
   // closed on outside click same as BoardFilters' own dropdowns.
   const [menuOpen, setMenuOpen] = useState(false)
+  // Kev, 2026-10-30: the location request lives IN the card (persistent, next
+  // to the action) — a toast after the menu closed was easy to miss on mobile.
+  const [locationOpen, setLocationOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!menuOpen) return
@@ -4747,11 +4760,11 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
                 Ask Owner
               </button>
               {(() => {
-                const canAskLocation = !r.isMine && !r.hasViewingLocation && c.canAsk
+                const canAskLocation = !r.hasViewingLocation && c.canAsk
                 return (
                   <button
-                    onClick={() => { canAskLocation ? onAct('request-location', r) : handleLocationReveal(); setMenuOpen(false) }}
-                    title={canAskLocation ? 'Ask the listing agent where the viewing is' : "Show this listing's town / area"}
+                    onClick={() => { canAskLocation || r.locationRequest ? setLocationOpen(true) : handleLocationReveal(); setMenuOpen(false) }}
+                    title={canAskLocation ? 'Ask the owner for the exact location — status stays on this card' : "Show this listing's town / area"}
                     style={menuGridBtn(dark)}>
                     Location
                   </button>
@@ -4887,6 +4900,16 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           onClose={() => setDuplicateOpen(false)}
           onCreated={(message) => { setDuplicateOpen(false); flash(message); onChanged() }}
         />
+      )}
+
+      {(locationOpen || (r.locationRequest && !r.hasViewingLocation)) && (
+        <div style={{ gridColumn: '1 / -1', padding: '8px 11px', borderTop: `1px solid ${dark ? DBORDER : LBORDER}` }}>
+          {locationOpen
+            ? <LocationRequestPanel listingRef={r.ref} dark={dark} onClose={() => setLocationOpen(false)} />
+            : <button type="button" onClick={() => setLocationOpen(true)} style={{ ...subtleLink, fontSize: 10.5 }}>
+                <LocationBadge status={r.locationRequest!.status} /> details
+              </button>}
+        </div>
       )}
 
       {/* Favourites only: the viewing this card is here for, and a way off the
@@ -5222,10 +5245,10 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
                   }}>
                   Ask the owner
                 </button>
-                {!d.isMine && !d.hasViewingLocation && d.contact?.canAsk !== false && (
-                  <button onClick={() => onAct('request-location', d)} style={{ ...btn, background: '#FFF', color: '#7A6534', border: `1px solid ${AB}` }}>
-                    Request viewing location
-                  </button>
+                {!d.hasViewingLocation && d.contact?.canAsk !== false && (
+                  <div style={{ flexBasis: '100%' }}>
+                    <LocationRequestPanel listingRef={d.ref} dark={false} />
+                  </div>
                 )}
 
                 {/* Book, WATag and the star — the rest of what the card offers.
@@ -5483,6 +5506,178 @@ function AgentRequestsPanel({ groups, loading, onClose, onDone }: {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ── Ask for Location (Kev, 2026-10-30) ──────────────────────────────────────
+// The request is stored server-side (services/locationRequest.js); this panel
+// only shows it. States carry a glyph AND a word, never colour alone. "Sent"
+// means WhatsApp accepted the message — delivery/read are not claimed.
+type LocationReq = {
+  id?: number; status: string; label: string; open?: boolean
+  requestedAt?: string | null; requestedBy?: string | null; account?: string | null
+  sentAt?: string | null; error?: string | null
+  lastOwnerReplyAt?: string | null; lastOwnerReply?: string | null
+  answeredAt?: string | null; answerKind?: string | null
+  location?: { mapsUrl: string | null; address: string | null; receivedAt: string | null } | null
+  locationHidden?: boolean
+}
+const LOC_STATE: Record<string, { glyph: string; word: string; tone: 'ok' | 'wait' | 'err' | 'idle' }> = {
+  not_requested: { glyph: '○', word: 'Not requested', tone: 'idle' },
+  preparing: { glyph: '…', word: 'Preparing', tone: 'wait' },
+  queued: { glyph: '⏳', word: 'Queued', tone: 'wait' },
+  sent: { glyph: '↗', word: 'Sent', tone: 'wait' },
+  awaiting_owner: { glyph: '⏳', word: 'Sent · awaiting owner', tone: 'wait' },
+  location_received: { glyph: '📍', word: 'Location received', tone: 'ok' },
+  agent_notified: { glyph: '📍', word: 'Location received', tone: 'ok' },
+  failed: { glyph: '✕', word: 'Failed', tone: 'err' },
+  cancelled: { glyph: '—', word: 'Cancelled', tone: 'idle' },
+  location_available: { glyph: '✓', word: 'Address on file', tone: 'ok' },
+}
+const LOC_TONE = { ok: '#1F7A4D', wait: '#9A6B12', err: '#B42335', idle: '#6B7280' }
+const LOC_ERROR: Record<string, string> = {
+  no_owner_contact: 'No owner number on file — nothing was sent.',
+  owner_dnc: 'The owner opted out — not contacted.',
+  owner_automation_block: 'Automation is blocked for this owner — not contacted.',
+  owner_label_dnc: 'Owner marked do-not-contact — not contacted.',
+  owner_label_angry: 'Owner marked upset — contact them personally.',
+  no_working_account: 'No WhatsApp account is online to reach this owner.',
+}
+function locationErrorText(code?: string | null) {
+  if (!code) return null
+  if (code.startsWith('owner_account_offline:')) return `The owner's WhatsApp account (${code.split(':')[1]}) is offline — try again later.`
+  if (code.startsWith('send_failed')) return 'WhatsApp did not accept the message — nothing was delivered.'
+  return LOC_ERROR[code] || code.replace(/_/g, ' ')
+}
+function fmtMalta(at?: string | null) {
+  if (!at) return ''
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(at))
+}
+
+function LocationBadge({ status }: { status: string }) {
+  const st = LOC_STATE[status] || LOC_STATE.not_requested
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 700, color: LOC_TONE[st.tone] }}>
+      <span aria-hidden>{st.glyph}</span>Location: {st.word}
+    </span>
+  )
+}
+
+function LocationRequestPanel({ listingRef, dark, onClose }: { listingRef: string; dark: boolean; onClose?: () => void }) {
+  const [req, setReq] = useState<LocationReq | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const load = useCallback(async () => {
+    try {
+      const d = await crmFetch(`schedule-board/listings/${encodeURIComponent(listingRef)}/location-request`)
+      setReq(d.request); setErr('')
+    } catch (e: any) { setErr(e?.data?.error || e?.message || 'Could not load the location status') }
+  }, [listingRef])
+  useEffect(() => { load() }, [load])
+  // While a request is open, refresh every 30 s so an owner reply shows up
+  // without a reload.
+  useEffect(() => {
+    if (!req?.open) return
+    const t = setInterval(load, 30_000)
+    return () => clearInterval(t)
+  }, [req?.open, load])
+
+  async function ask() {
+    if (busy) return
+    setBusy(true); setErr('')
+    setReq(r => ({ ...(r || { label: '' }), status: 'preparing', label: 'Preparing', open: true }))
+    try {
+      const d = await crmJson(`schedule-board/listings/${encodeURIComponent(listingRef)}/request-location`, 'POST', {})
+      setReq(d.request)
+    } catch (e: any) {
+      const d = e?.data || {}
+      if (d.request) setReq(d.request)
+      else { setErr(d.error || e?.message || 'Request failed'); await load() }
+    } finally { setBusy(false) }
+  }
+  async function cancel() {
+    setBusy(true)
+    try { const d = await crmJson(`schedule-board/listings/${encodeURIComponent(listingRef)}/location-request/cancel`, 'POST', {}); setReq(d.request) }
+    catch (e: any) { setErr(e?.data?.error || e?.message || 'Could not cancel') }
+    finally { setBusy(false) }
+  }
+
+  const status = req?.status || 'not_requested'
+  const st = LOC_STATE[status] || LOC_STATE.not_requested
+  const received = status === 'location_received' || status === 'agent_notified'
+  const canAsk = ['not_requested', 'failed', 'cancelled'].includes(status)
+  const text = dark ? '#E5E7EB' : '#1F2937'
+  const dim = dark ? '#9CA3AF' : '#6B7280'
+  const btnStyle: React.CSSProperties = {
+    minHeight: 40, padding: '8px 14px', borderRadius: 10, fontWeight: 800, fontSize: 12.5,
+    border: `1px solid ${LOC_TONE[st.tone]}`, background: canAsk ? LOC_TONE.ok : 'transparent',
+    color: canAsk ? '#FFF' : LOC_TONE[st.tone], cursor: busy || (!canAsk && !received) ? 'default' : 'pointer',
+  }
+  let action: React.ReactNode
+  if (received && req?.location?.mapsUrl) action = <a href={req.location.mapsUrl} target="_blank" rel="noreferrer" style={{ ...btnStyle, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>View Location</a>
+  else if (received && req?.location?.address) action = <button type="button" style={btnStyle} onClick={() => navigator.clipboard?.writeText(req.location!.address || '')}>Copy address</button>
+  else if (received) action = <button type="button" style={btnStyle} disabled>Location received</button>
+  else if (status === 'location_available') action = <button type="button" style={btnStyle} disabled>Address on file</button>
+  else if (canAsk) action = <button type="button" style={btnStyle} disabled={busy} onClick={ask}>{busy ? 'Sending…' : status === 'failed' ? 'Retry — Ask for Location' : 'Ask for Location'}</button>
+  else action = <button type="button" style={btnStyle} disabled>Location Request Pending</button>
+
+  return (
+    <div role="status" aria-live="polite" style={{ display: 'grid', gap: 6, fontSize: 11.5, color: text }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {action}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 800, color: LOC_TONE[st.tone] }}>
+          <span aria-hidden style={{ fontSize: 14 }}>{st.glyph}</span>{st.word}
+        </span>
+        {onClose && <button type="button" onClick={onClose} aria-label="Close location status" style={{ marginLeft: 'auto', minWidth: 32, minHeight: 32, border: 'none', background: 'transparent', color: dim, cursor: 'pointer' }}>✕</button>}
+      </div>
+      {req?.requestedAt && (
+        <div style={{ color: dim }}>
+          Requested by {req.requestedBy || 'an agent'} · {fmtMalta(req.requestedAt)}
+          {req.account ? <> · via <b style={{ color: text }}>{req.account}</b></> : null}
+          {req.sentAt ? <> · sent {fmtMalta(req.sentAt)}</> : null}
+        </div>
+      )}
+      {status === 'failed' && <div style={{ color: LOC_TONE.err, fontWeight: 700 }}>{locationErrorText(req?.error)}</div>}
+      {req?.lastOwnerReply && !received && (
+        <div style={{ color: dim }}>Owner replied {fmtMalta(req.lastOwnerReplyAt)}: “{req.lastOwnerReply}” — no exact address yet.</div>
+      )}
+      {received && req?.location?.address && <div><b>Address (from the owner, not verified):</b> {req.location.address}</div>}
+      {received && req?.locationHidden && <div style={{ color: dim }}>The listing agent has the location. Book a viewing to see it here.</div>}
+      {req?.open && <button type="button" onClick={cancel} disabled={busy} style={{ justifySelf: 'start', border: 'none', background: 'transparent', color: dim, textDecoration: 'underline', cursor: 'pointer', padding: 0, minHeight: 28 }}>Cancel request</button>}
+      {err && <div style={{ color: LOC_TONE.err }}>{err}</div>}
+    </div>
+  )
+}
+
+// Confirmed/pending viewings in the next 48 h without an exact address. Shown
+// above the board, before ordinary reminders (Kev, 2026-10-30).
+function LocationAttentionBanner() {
+  const [items, setItems] = useState<any[]>([])
+  const [open, setOpen] = useState<string | null>(null)
+  const load = useCallback(async () => {
+    try { const d = await crmFetch('schedule-board/location-attention'); setItems(d.warnings || []) } catch { /* banner is advisory */ }
+  }, [])
+  useEffect(() => { load(); const t = setInterval(load, 120_000); return () => clearInterval(t) }, [load])
+  if (!items.length) return null
+  return (
+    <div role="alert" style={{
+      position: 'sticky', top: 0, zIndex: 30, margin: '8px 12px', padding: '10px 12px', borderRadius: 12,
+      border: '1px solid #E5A100', background: '#FFF7E0', color: '#5A3E00', display: 'grid', gap: 8,
+    }}>
+      {items.map(w => (
+        <div key={w.viewingId} style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12.5 }}>
+            <b>⚠ {w.warning}</b>
+            <span>#{w.ref} · viewing {fmtMalta(w.startsAt)}{w.urgency === 'urgent' ? ' · URGENT' : ''}</span>
+            <span>{w.request ? `Location request: ${(LOC_STATE[w.request.status] || LOC_STATE.not_requested).word}${w.request.account ? ` via ${w.request.account}` : ''}` : 'Location not requested yet'}</span>
+            <button type="button" onClick={() => setOpen(open === w.ref ? null : w.ref)} style={{ marginLeft: 'auto', minHeight: 36, padding: '6px 12px', borderRadius: 9, border: '1px solid #B07B00', background: '#FFF', fontWeight: 800, cursor: 'pointer' }}>
+              {open === w.ref ? 'Close' : w.request ? 'Track request' : 'Request location'}
+            </button>
+          </div>
+          {open === w.ref && <LocationRequestPanel listingRef={w.ref} dark={false} />}
+        </div>
+      ))}
     </div>
   )
 }

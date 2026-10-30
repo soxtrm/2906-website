@@ -65,6 +65,17 @@ const ACT_LABEL: Record<string, string> = {
   marked_rented_via_av: 'Marked rented (owner said so)',
   returned_to_market:   'Back on market',
   priority_changed:     'Priority changed',
+  // Agent ↔ owner (2026-10-30). "Opened" and "contacted" are different facts:
+  // board_relay_opened is written only after the owner message was sent.
+  owner_chat_opened:           'Agent opened owner chat',
+  board_relay_opened:          'Agent contacted owner via WhatsApp (ARGUS)',
+  board_human_message:         'Agent message sent to owner',
+  board_human_attachment:      'Agent sent the owner an attachment',
+  location_requested:          'Agent requested exact location',
+  location_request_sent:       'Location request sent to owner',
+  location_request_failed:     'Location request failed',
+  location_request_cancelled:  'Location request cancelled',
+  location_received:           'Owner sent the location',
 }
 // Who decided, when it was not the person clicking. 'agent' needs no badge —
 // the row already shows the agent.

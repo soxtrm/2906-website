@@ -261,6 +261,12 @@ const BOARD_COLS = `
   -- whether one exists, which is what drives the "Request
   -- Viewing-Location" button.
   (p.street IS NOT NULL AND btrim(p.street) <> '') AS has_viewing_location,
+  -- Latest "Ask for Location" request (2026-10-30): state only, never the
+  -- received location — that stays behind services/locationRequest's check.
+  (SELECT json_build_object('status', lr.status, 'requestedAt', lr.requested_at,
+                            'requestedBy', lr.requested_by_name, 'account', lr.session_name)
+     FROM property_location_requests lr WHERE lr.property_id = p.id
+    ORDER BY lr.requested_at DESC, lr.id DESC LIMIT 1)  AS location_request,
   -- Read so streetWithoutNumber() can strip it. NEVER emitted raw: shapeCard
   -- turns it into a number-free street name, and only on the viewer's OWN
   -- listing. Putting p.street on a response is a firewall break.
@@ -713,6 +719,7 @@ function shapeCard(row, meId, questionsUsed = 0, canAskOwner = true, canCreateOw
     // when can this be viewed", a separate fact from availableDate.
     viewingDate: row.viewing_date || null,
     hasViewingLocation: !!row.has_viewing_location,
+    locationRequest: row.location_request || null,
     // Variant (a): street name, no number, own listings only. null for
     // everybody else's — see streetWithoutNumber above.
     streetName: isMine ? streetWithoutNumber(row.street_raw) : null,
@@ -1586,6 +1593,36 @@ router.post('/listings/:ref/location-request/cancel', auth, async (req, res) => 
     return locationReply(res, await locationRequest.cancelRequest({ ref: loaded.prop.ref, agent: loaded.me }))
   } catch (err) {
     log.error('board location-request cancel failed', { err: err.message, ref: req.params.ref })
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /listings/:ref/chat-opened (Kev, 2026-10-30) — "Agent opened owner
+// chat — Ref. X". Opening is NOT contacting: the confirmed send is recorded
+// separately by services/bookRelay.js (board_relay_opened / board_human_message,
+// written only after the owner message went out). One entry per agent and
+// listing per 10 minutes so re-opening the dialog does not flood the timeline.
+router.post('/listings/:ref/chat-opened', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    const { prop, me } = loaded
+    const recent = await db.query(
+      `SELECT 1 FROM property_activities WHERE property_id = $1 AND agent_id = $2 AND activity_type = 'owner_chat_opened'
+          AND created_at > NOW() - INTERVAL '10 minutes' LIMIT 1`, [prop.id, me.id])
+    if (recent.rows.length) return res.json({ ok: true, recorded: false })
+    const viewingId = Number.parseInt(req.body?.viewingId, 10) || null
+    const details = { ref: prop.ref, source: 'argus_dashboard', viewingId, agentName: me.name || me.username }
+    await db.query(
+      `INSERT INTO property_activities (property_id, agent_id, activity_type, details, is_significant, created_at)
+       VALUES ($1, $2, 'owner_chat_opened', $3, FALSE, NOW())`, [prop.id, me.id, JSON.stringify(details)])
+    await db.query(
+      `INSERT INTO agent_activity_log (actor_agent_id, actor_role, actor_display_name, action_type, target_property_id, target_ref, details, created_at)
+       VALUES ($1, $2, $3, 'OWNER_CHAT_OPENED', $4, $5, $6, NOW())`,
+      [me.id, me.role, me.name || me.username, prop.id, prop.ref, JSON.stringify(details)])
+    res.json({ ok: true, recorded: true })
+  } catch (err) {
+    log.error('board chat-opened failed', { err: err.message, ref: req.params.ref })
     res.status(500).json({ error: err.message })
   }
 })

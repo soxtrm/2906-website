@@ -65,7 +65,7 @@ const NOT_ASKABLE = new Set(['rented', 'not_available', 'archived'])
 async function getStandDownReason(phone) {
   if (!phone) return null
   try {
-    const [autoConvo, ownerAssist, permanentBlock] = await Promise.all([
+    const [autoConvo, ownerAssist, permanentBlock, agentRelay] = await Promise.all([
       // Most recent row only -- a phone can have many owner_auto_conversations
       // rows across past outreach cycles; an ancient !ca from months ago must
       // never permanently silence a brand new, unrelated conversation.
@@ -81,6 +81,18 @@ async function getStandDownReason(phone) {
         `SELECT reason FROM owner_automation_blocks
           WHERE phone_normalized = $1 AND active = TRUE LIMIT 1`,
         [phone]),
+      // Kev, 2026-10-30: an agent writing to this owner through the board
+      // relay IS a human handling the chat — but the relay sends from a bot
+      // session, so its echo never set human_paused and the automation could
+      // answer the same owner in parallel. Latest open relay thread only.
+      db.query(
+        `SELECT t.updated_at FROM book_relay_threads t
+          WHERE t.status = 'relaying'
+            AND (right(regexp_replace(COALESCE(t.owner_chat_id,''), '\\D', '', 'g'), 9) = right($1, 9)
+                 OR t.owner_id IN (SELECT id FROM owner_contacts
+                                    WHERE right(regexp_replace(COALESCE(phone_normalized,''), '\\D', '', 'g'), 9) = right($1, 9)))
+          ORDER BY t.updated_at DESC NULLS LAST LIMIT 1`,
+        [String(phone).replace(/\D/g, '')]),
     ])
 
     if (permanentBlock.rows[0]) return 'permanent_owner_stop'
@@ -108,6 +120,12 @@ async function getStandDownReason(phone) {
         if (!oa.pause_until || new Date(oa.pause_until).getTime() > Date.now()) return 'human_active'
       }
     }
+    // Same window as a typed human message (ownerPausePolicy, 40 h), counted
+    // from the relay's last activity. Agent actions (relay/viewing) still pass
+    // — see checkOwnerSend; only automated replies stand down. Closing the
+    // relay thread hands the chat back to automation.
+    const relay = agentRelay.rows[0]
+    if (relay && isTemporaryHumanPauseActive(relay.updated_at)) return 'human_active'
     return null
   } catch (err) {
     // Safety-critical contact permission is fail-closed. The caller can put
