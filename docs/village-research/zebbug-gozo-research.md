@@ -1,6 +1,6 @@
 # Iż-Żebbuġ, Gozo edition — sourced research draft
 
-Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Research checked 29 October 2026; image metadata and responsive preview checked 30 October 2026 (Europe/Malta).
+Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Research checked 29 October 2026; image metadata, responsive preview and release candidate checked 30 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -132,3 +132,13 @@ The OpenStreetMap view is inserted only after an explicit click. Before that act
 Chromium verification passed at both viewports with HTTP 200, exactly one H1, the exact robots contract, decoded 1800×1202 hero, visible attribution, no failed requests, no HTTP responses from 400 upwards and no console errors. The final screenshots before and after map loading are stored outside Git under `D:\2906\nexus-bridge-work\artifacts\20261030-zebbug-gozo-preview`. The preview file is 18,475 bytes with SHA-256 `B4BD7CFCB8DBB5440A52016C4897400A8068955C0B43283190954298ED2EB781`.
 
 `git diff --check`, `tests/route-segments.test.cjs`, `tests/property-route-ferry-presentation.test.mjs` and `tests/matrix-routing.test.mjs` passed. The optional `21st search` and `21st review` commands were unavailable because that CLI is not installed in this environment; no external component or generation credit was used. Publication remains a separate clean step requiring a fresh source check, SEO contract, production build, live verification and named rollback basis.
+
+## Release-candidate verification
+
+The verified preview was promoted to `public/link-marketplace/areas/zebbug-gozo.html` with the exact self-canonical and Open Graph URL, one BreadcrumbList, a 1800×1202 social image, the hub entry, exactly one sitemap block and a contextual inbound link from the separate Marsalforn edition. Both Għajnsielem and Iż-Żebbuġ remain permanently available in the hub navigation after the newest-edition card changed. The SEO contract now covers 60 distinct editions.
+
+Immediately before the release build, the Address Registrar, Visit Gozo locality, St Mary's Church, Qbajjar, salt-pans, Malta Public Transport route 309, exact MTA restaurant filter and Commons file page returned HTTP 200. The MTA response still contained `RST-22782`, `RST-27663` and `RST-12876`; the Commons API still contained Matt Hush, CC BY-SA 4.0 and SHA-1 `C5566221CF38679C0299567ABBA8577AF83DA792`. The Local Council and Primary HealthCare pages returned HTTP 403 to the neutral direct client; no claim was expanded from that transport response, and their volatile information remains on the linked live pages.
+
+`npm ci --no-audit --no-fund` changed neither manifest nor lockfile. TypeScript validation, the Next.js webpack production build with 52/52 static pages, the 60-edition SEO contract, route-segment, property-route/ferry-presentation and matrix-routing checks passed. Local Chromium at 390×844 and 1440×1000 returned HTTP 200, one H1, exact canonical and Open Graph URLs, one BreadcrumbList, no robots block, a decoded hero, visible attribution, no horizontal overflow and no initial iframe. After the click exactly one OSM iframe filled the complete 310×320 mobile or 1156×520 desktop frame with `aria-expanded=true`. There were no console or page errors, failed requests or HTTP responses from 400 upwards. Four final screenshots are stored outside Git under `D:\2906\nexus-bridge-work\artifacts\20261030-zebbug-gozo-release`.
+
+Release-candidate SHA-256 values before documentation completion: page `D6B36EA403C1778029FA9E18B3AE32285EDEC0A9D87D574FCA32054C638C7843`, hero `FAF1D0CB9BE2691A7A3C218A3F9B6EC239640279B8654BF1AB774921CB0A4703`, hub `4D7E0C9934426BA5E34D2E1B464C98E54BBC56E8FEB7363E7FEBD9730059D794`, sitemap `887E505EA2B17F8BD7DF7D7E8D27B1306A7D0F130F634EBE08D4AE00B95A4665`, Marsalforn `C3B57B6170DFBB079C53CD07D6CC66457FDCACE5A65C4801995470BE804954DE`. Production is unchanged; publication and live verification remain a separate fast-forward step against rollback basis `b7664b069db155f970444b2a68df34a61f7763b5`.
