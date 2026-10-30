@@ -1,6 +1,6 @@
 # Salina edition — sourced research draft
 
-Language: English. Status: **RESEARCH DRAFT — NOT PUBLISHED**. Research checked 30 October 2026 (Europe/Malta).
+Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Research and asset checks completed 30 October 2026 (Europe/Malta).
 
 ## Why Salina is the next distinct edition
 
@@ -69,22 +69,24 @@ This is a non-ranked register snapshot and usefully demonstrates why the Salina 
 
 ## Licensed image research
 
-The Wikimedia Commons API returned the following reusable candidates. They are research candidates only: no original has yet been downloaded, locally hash-checked or approved for publication, and no derivative exists in Git.
+The six Wikimedia Commons originals below were downloaded outside Git, checked locally against the Commons SHA-1 and inspected at full resolution. Every SHA-1 matched. Local SHA-256 values provide a second reproducibility check.
 
-1. **Salina Bay.jpg** — HH58; captured 31 October 2019; 4608×3456; 4,717,025 bytes; CC BY-SA 4.0; Commons SHA-1 `42213BFF658EAEABE912E0E305914D34C00F3A6C`.
+1. **Salina Bay.jpg** — HH58; captured 31 October 2019; 4608×3456; 4,717,025 bytes; CC BY-SA 4.0; Commons SHA-1 `42213BFF658EAEABE912E0E305914D34C00F3A6C`; local SHA-256 `AF1D65654E4452CC55C2BF150FE19EDCACFAB908FD9E2B5F29D33FC7484B17FD`.
    - https://commons.wikimedia.org/wiki/File:Salina_Bay.jpg
-2. **Salina Bay Panorama.jpg** — HH58; captured 31 October 2019; 2688×720; 684,666 bytes; CC BY-SA 4.0; Commons SHA-1 `0893801B7EFD0E109383F8479B5071FFF73DCC78`.
+2. **Salina Bay Panorama.jpg** — HH58; captured 31 October 2019; 2688×720; 684,666 bytes; CC BY-SA 4.0; Commons SHA-1 `0893801B7EFD0E109383F8479B5071FFF73DCC78`; local SHA-256 `C79F338085B49B59CDA1DDA66712C09FB6A78A0F38A31CFBEAE7D678A320FC42`.
    - https://commons.wikimedia.org/wiki/File:Salina_Bay_Panorama.jpg
-3. **Malta - St. Paul's Bay - Triq tax-Xtut - Salina Salt Pans + Naxxar - Triq is-Salina 01 ies.jpg** — Frank Vincentz; captured 13 April 2014; 5616×3744; 11,628,940 bytes; CC BY-SA 3.0; Commons SHA-1 `DF57F256F40489A5438ACADB7B1E7E28A9097C78`.
+3. **Malta - St. Paul's Bay - Triq tax-Xtut - Salina Salt Pans + Naxxar - Triq is-Salina 01 ies.jpg** — Frank Vincentz; captured 13 April 2014; 5616×3744; 11,628,940 bytes; CC BY-SA 3.0; Commons SHA-1 `DF57F256F40489A5438ACADB7B1E7E28A9097C78`; local SHA-256 `8EA71D98D674353EE265315871432444B52C0B1F25279BFEE269F9EE4DED0913`.
    - https://commons.wikimedia.org/wiki/File:Malta_-_St._Paul%27s_Bay_-_Triq_tax-Xtut_-_Salina_Salt_Pans_%2B_Naxxar_-_Triq_is-Salina_01_ies.jpg
-4. **Malta - Naxxar - Triq is-Salina 03 ies.jpg** — Frank Vincentz; captured 25 April 2014; 5616×3744; 11,934,124 bytes; CC BY-SA 3.0; Commons SHA-1 `F27BA7E973360418A34D6882907C38F5F71B2E3D`.
+4. **Malta - Naxxar - Triq is-Salina 03 ies.jpg** — Frank Vincentz; captured 25 April 2014; 5616×3744; 11,934,124 bytes; CC BY-SA 3.0; Commons SHA-1 `F27BA7E973360418A34D6882907C38F5F71B2E3D`; local SHA-256 `C0323040E4A869E567F7DAC33B05CC8F6BB56602D18E3EFC3C5024D141C8F323`.
    - https://commons.wikimedia.org/wiki/File:Malta_-_Naxxar_-_Triq_is-Salina_03_ies.jpg
-5. **Ximenes Redoubt in Salina, Naxxar, Malta.jpg** — BoneA; captured 8 February 2016; 5472×2744; 6,661,549 bytes; CC BY-SA 4.0; Commons SHA-1 `07CACE6A69A85D33BBCD042DFB886F557516234C`.
+5. **Ximenes Redoubt in Salina, Naxxar, Malta.jpg** — BoneA; captured 8 February 2016; 5472×2744; 6,661,549 bytes; CC BY-SA 4.0; Commons SHA-1 `07CACE6A69A85D33BBCD042DFB886F557516234C`; local SHA-256 `7BDFB7F1819C9E0978D8F7DA35F3A22F420AE280AD1CA820C3B777AD8365AEAF`.
    - https://commons.wikimedia.org/wiki/File:Ximenes_Redoubt_in_Salina,_Naxxar,_Malta.jpg
-6. **Salina Catacombs 1.jpg** — HH58; captured 31 October 2019; 4608×3456; 4,759,809 bytes; CC BY-SA 4.0; Commons SHA-1 `354B78E010E23F1624DB8C271DFF5FD3F654E189`.
+6. **Salina Catacombs 1.jpg** — HH58; captured 31 October 2019; 4608×3456; 4,759,809 bytes; CC BY-SA 4.0; Commons SHA-1 `354B78E010E23F1624DB8C271DFF5FD3F654E189`; local SHA-256 `ABFFBD23C09919ADA4AC8DCB20D501C0C92232849988CA764DE50818F0A637BE`.
    - https://commons.wikimedia.org/wiki/File:Salina_Catacombs_1.jpg
 
-The broad bay and salt-pan candidates are more likely to orient readers than a single monument, but that is not yet a selection. The next image gate must download every serious candidate outside Git, verify local SHA-1 against Commons, record local SHA-256, inspect the full-resolution image for people, plates, private contact data, advertising and misleading crop risk, then test the actual 390px and desktop frames. Any use must visibly name the author, Wikimedia Commons, licence, capture date and transformation. No image may imply a present property view, present access, quietness, parking, water quality or wildlife sighting.
+**Selected lead:** `Salina Bay Panorama.jpg`. Its continuous view of the salt pans, low green edge, settlement and bay entrance gives the clearest neutral orientation without reducing Salina to one monument. No identifiable person, readable vehicle plate, private contact detail or advertising message was found in the full-resolution inspection. `Salina Bay.jpg` covers the same subject but leaves much more empty sky and introduces a foreground shadow; the 2014 salt-pan image centres construction equipment and roads; the Triq is-Salina image is a distant landscape dominated by the Magħtab landfill; Ximenes Redoubt and the catacombs are useful supporting subjects but too narrow for the locality lead. These are editorial-fit decisions, not quality rankings.
+
+The checked-in derivative `public/link-marketplace/assets/salina-bay-panorama-hh58.webp` is a proportional 1800×482 WebP conversion at quality 82. It has 85,452 bytes and SHA-256 `90F8125E86CC41C39115F8F3A93883474BC7E6E7A8F001BD54DF434AA89C37D2`. There was no crop, retouching, compositing, colour treatment or generative change. Any page use must visibly credit `HH58 / Wikimedia Commons / CC BY-SA 4.0`, link the file page and licence, give the capture date, and state the proportional WebP conversion. Real 390px and desktop frames still require a separate preview gate. The image must not imply a present property view, present access, quietness, parking, water quality or wildlife sighting.
 
 ## Fast 2D map and route guardrails
 
@@ -99,12 +101,11 @@ No route should be published at this research stage. A later property route must
 
 The public inventory, Address Registrar, BirdLife Malta, Heritage Malta, Malta Public Transport, both MTA searches, the Superintendence PDF, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client on 30 October 2026. Ambjent Malta and Primary HealthCare returned HTTP 403, while Intangible Cultural Heritage Malta presented its browser security challenge to that client; all three remained current and readable through browser retrieval. No claim was expanded from those transport-layer differences. Volatile access, health, transport, licence, event, nature and operating details remain on the linked live sources.
 
-No private contact details were copied. No image was downloaded or generated. No preview, public page, canonical, social metadata, structured data, index, sitemap, internal link, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
+No private contact details were copied. Six licensed originals were checked outside Git and one proportional WebP derivative was added; no image was generated. No preview, public page, canonical, social metadata, structured data, index, sitemap, internal link, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
 
 ## Next gates
 
-1. Download and visually inspect the strongest Commons originals outside Git; verify licence metadata and hashes before choosing one.
-2. Build an independent English `noindex,nofollow` preview that explicitly separates the Naxxar-side edge, protected salt-pan/reserve context, Kennedy Grove/St Paul's Bay side and neighbouring Qawra/Baħar iċ-Ċagħaq contexts.
-3. Add a fast click-to-load 2D orientation map with no listing pin, boundary, inferred route, distance or travel-time promise.
-4. Verify 390×844 and 1440×1000 layouts, full image framing, visible attribution, zero horizontal overflow and initial zero iframes.
-5. Recheck every source, then add canonical, Open Graph, BreadcrumbList, hub entry, sitemap and contextual internal links only in a separate clean release gate with a named rollback basis.
+1. Build an independent English `noindex,nofollow` preview that explicitly separates the Naxxar-side edge, protected salt-pan/reserve context, Kennedy Grove/St Paul's Bay side and neighbouring Qawra/Baħar iċ-Ċagħaq contexts.
+2. Add a fast click-to-load 2D orientation map with no listing pin, boundary, inferred route, distance or travel-time promise.
+3. Verify 390×844 and 1440×1000 layouts, real responsive image framing, visible attribution, zero horizontal overflow and initial zero iframes.
+4. Recheck every source, then add canonical, Open Graph, BreadcrumbList, hub entry, sitemap and contextual internal links only in a separate clean release gate with a named rollback basis.
