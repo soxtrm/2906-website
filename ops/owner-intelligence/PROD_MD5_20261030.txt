@@ -8,3 +8,6 @@ ca019cae7fad89d8e7c42aebea5f726b  services/listingAgentNotify.js
 ad906064efb003ed7add0c85503409ad  services/outreachIdentity.js
 8cfbb34818826fe050f08a997a61835d  services/reminderCapture.js
 310b5ccc39e37940270f968d18b16c3b  services/boardAsk.js
+00f842df9d7d78518a18ef66f71299c6  services/conversationIntelligence.js
+0a6d683a43c892fec978bec7758aa605  services/conversationPolicy.js
+5a1b64afc1020ad1f6ab493e7120fcf9  services/agentIdentityRegistry.js
