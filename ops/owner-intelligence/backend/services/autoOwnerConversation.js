@@ -33,8 +33,8 @@ const config = require('../config')
 const waha = require('../waha')
 const { addJob, QUEUES } = require('../queues')
 const reminderFromMessage = require('./reminderFromMessage')
-const { resolveIdentityForSession, agencyAnswer, isAgencyQuestion, AGENCY_QUESTION_RE: REGISTRY_AGENCY_QUESTION_RE,
-  PERSONA_IDENTITIES } = require('./agentIdentityRegistry')
+const { resolveIdentityForSession, agencyAnswer, agencyShortAnswer, isAgencyQuestion, AGENCY_QUESTION_RE: REGISTRY_AGENCY_QUESTION_RE,
+  PERSONA_IDENTITIES, isEmailQuestion, emailAnswer, unapprovedEmails } = require('./agentIdentityRegistry')
 const styleLearning = require('./styleLearning')
 const unwatermark = require('./unwatermark')
 const ownerPreferenceProfile = require('./ownerPreferenceProfile')
@@ -141,9 +141,10 @@ async function approvedAgencyAnswer(session) {
   return agencyAnswer(await resolveIdentityForSession(session, db))
 }
 
+// One short restatement per persona lives in agentIdentityRegistry now
+// (Kev's own wording for Kevin), so both conversation paths say the same.
 function agencyRepeatAnswer(identity) {
-  if (!identity || !identity.agency) return null
-  return `Sure — I'm ${identity.fullName || identity.name} from ${identity.agency}, based in Malta.`
+  return agencyShortAnswer(identity)
 }
 
 // Kev, 2026-10-22 (P0): an owner's direct question is never "unclear intent".
@@ -845,6 +846,14 @@ async function gatedSend(session, phone, text, conversationId) {
         WHERE id = $2`,
       [JSON.stringify({ _last_action: { action: 'owner_message', status, session, at: new Date().toISOString(), ...extra } }), conversationId]
     )
+  }
+  // No email address the sending account has not verified (LLM replies have
+  // invented addresses before — Kev, 2026-10-30).
+  const strayEmails = unapprovedEmails(text, await resolveIdentityForSession(session, db))
+  if (strayEmails.length) {
+    await saveProgress('blocked', { reason: 'unverified_email' }).catch(() => {})
+    log.warn('autoOwnerConversation: send blocked, unverified email in draft', { conversationId, session, count: strayEmails.length })
+    return { sent: false, reason: 'unverified_email' }
   }
   const gate = await sendGate(conversationId, phone, session, text)
   if (!gate.allow) {
@@ -3711,6 +3720,13 @@ async function processStep({ conversationId, phone, session }) {
       // (never the intake question, never silence — #5598 asked twice).
       if (agencyAnswer && hasAlreadySentExactText(updatedChecklist, agencyAnswer)) {
         agencyAnswer = agencyRepeatAnswer(await resolveIdentityForSession(session, db))
+        // Asked a third time: both answers are already in the chat. Leave it
+        // for a human instead of a third explanation (Kev, 2026-10-30).
+        if (agencyAnswer && hasAlreadySentExactText(updatedChecklist, agencyAnswer)) {
+          await persistAndReturn({ _agency_question_needs_human: true })
+          await waha.markChatUnread(session, phone).catch(() => {})
+          return
+        }
       }
       if (!agencyAnswer) {
         await persistAndReturn({ _agency_question_needs_human: true })
@@ -3722,6 +3738,24 @@ async function processStep({ conversationId, phone, session }) {
       const gC = await gatedSend(session, phone, agencyAnswer, conversationId)
       if (!gC.sent) return
       log_.push({ from: 'bot', text: agencyAnswer, at: new Date().toISOString() })
+      await persistAndReturn({})
+      return
+    }
+
+    // ── EMAIL (Kev, 2026-10-30): only the sender's verified address, never a
+    // guessed one. No verified address → a human answers.
+    if (isEmailQuestion(combinedText)) {
+      const answer = emailAnswer(await resolveIdentityForSession(session, db))
+      if (!answer || hasAlreadySentExactText(updatedChecklist, answer)) {
+        await persistAndReturn({ _email_question_needs_human: true })
+        await waha.markChatUnread(session, phone).catch(() => {})
+        if (!answer) await notifyAdminEscalation(session, phone, 'EMAIL REQUEST — no verified email configured for this account',
+          `Session: ${session}. Owner asked: "${combinedText.slice(0, 200)}"`)
+        return
+      }
+      const gE = await gatedSend(session, phone, answer, conversationId)
+      if (!gE.sent) return
+      log_.push({ from: 'bot', text: answer, at: new Date().toISOString() })
       await persistAndReturn({})
       return
     }

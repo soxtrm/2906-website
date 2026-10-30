@@ -5,7 +5,7 @@ const db = require('../db')
 const log = require('../logger')
 const waha = require('../waha')
 const { interpretInbound, planDirectReply, validateDraft, OPERATIONAL_STATUS } = require('./conversationPolicy')
-const { resolveAgentIdentity } = require('./agentIdentityRegistry')
+const { resolveAgentIdentity, agencyShortAnswer, emailAnswer } = require('./agentIdentityRegistry')
 
 const normalizePhone = value => String(value || '').replace(/\D/g, '').slice(-12)
 const sourceTimestamp = value => {
@@ -150,6 +150,13 @@ async function removePendingJobs(jobs) {
   }
 }
 
+async function alreadySent(client, stateId, reply) {
+  const r = await client.query(
+    `SELECT 1 FROM conversation_outbound_guard WHERE state_id=$1 AND status IN ('SENT','CLAIMED') AND draft=$2 LIMIT 1`,
+    [stateId, reply])
+  return r.rows.length > 0
+}
+
 async function claimReply(client, stateId, messageId, reply) {
   const key = outboundIdempotencyKey(stateId, messageId, reply)
   const r = await client.query(
@@ -232,7 +239,26 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
       decision.suppressAutomation = true
       log.warn('conversationIntelligence sender identity missing; automated identity reply blocked', { senderAccountId, chatId })
     }
+    // An email question without a verified address goes to a human: no LLM
+    // path may answer it with a guessed address (Kev, 2026-10-30).
+    if (decision.questions.includes('email_request') && !emailAnswer(identity)) {
+      await client.query(`UPDATE conversation_intelligence_state SET human_active=TRUE WHERE id=$1`, [state.id])
+      decision.suppressAutomation = true
+      log.warn('conversationIntelligence email requested but no verified email for sender', { senderAccountId, chatId })
+    }
     reply = planDirectReply(decision, identity, state)
+    // Answer once (Kev, 2026-10-30): the idempotency key includes the inbound
+    // message id, so every repeated "which company?" used to send the full
+    // intro again. Already sent in this conversation → the short form once,
+    // then nothing (the owner already has the answer twice).
+    if (reply && await alreadySent(client, state.id, reply)) {
+      const shorter = decision.questions.includes('agency_identity') ? agencyShortAnswer(identity) : null
+      reply = shorter && !(await alreadySent(client, state.id, shorter)) ? shorter : null
+      if (!reply) {
+        decision.suppressAutomation = true
+        log.info('conversationIntelligence direct answer already given; not repeated', { chatId, senderAccountId })
+      }
+    }
     if (reply) {
       const check = validateDraft({ draft: reply, state: {
         conversationVersion: state.conversation_version, contactOptOut: !!state.contact_opt_out,

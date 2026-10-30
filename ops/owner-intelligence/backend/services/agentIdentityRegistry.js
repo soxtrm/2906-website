@@ -24,11 +24,21 @@
 const CLIENT_DESCRIPTION = 'clients looking for long-term rentals, including working professionals and families depending on the property'
 
 const PERSONA_IDENTITIES = Object.freeze({
+  // Kev, 2026-10-30: Kevin is self-employed and works WITH 2906 Estate, a
+  // collective of independent agents — never "representing"/employed by an
+  // agency. The two answers are Kev's own wording; the email is his verified
+  // address (the account owner's own). Never invent registration details.
   kev: Object.freeze({
     persona: 'kev', name: 'Kevin', fullName: 'Kevin Eich', agency: '2906 Estate', brand: '2906',
     roleNoun: 'a real estate agent', position: 'Independent Real Estate Agent', experience: 'four years',
     clientDescription: CLIENT_DESCRIPTION,
+    introAnswer: "I'm a self-employed real estate agent working with 2906 Estate, a collective of independent property agents here in Malta. We work together to connect property owners with suitable tenants and buyers.",
+    shortIntroAnswer: "I'm an independent real estate agent working with the 2906 Estate collective here in Malta, mainly assisting clients with rentals and property sales.",
+    email: 'kevinsony1@gmail.com',
   }),
+  // Cedric / Gabriela: no email yet. Kev dictated one address for both on
+  // 2026-10-30 and asked to verify its spelling first; until then an email
+  // question goes to a human (ARGUS_AGENT_IDENTITIES_JSON can add it).
   cedric: Object.freeze({
     persona: 'cedric', name: 'Cedric', fullName: 'Cedric Reiter', agency: 'QuickLets',
     roleNoun: 'a rental agent', position: 'Rental Agent', clientDescription: CLIENT_DESCRIPTION,
@@ -115,11 +125,47 @@ async function resolveIdentityForSession(session, db = null) {
 }
 
 // "Of course. I'm Kevin Eich, a real estate agent representing 2906 Estate in Malta."
+// A persona with its own approved wording (introAnswer) always uses that.
 function agencyAnswer(identity) {
+  if (identity && identity.introAnswer) return identity.introAnswer
   if (!identity || !identity.agency) return null
   const who = identity.fullName || identity.name
   const role = identity.roleNoun || (identity.position ? `a ${identity.position.toLowerCase()}` : 'an agent')
   return `Of course. I'm ${who}, ${role} representing ${identity.agency} in Malta.`
+}
+
+// The second time an owner asks: one short line, never the full intro again.
+function agencyShortAnswer(identity) {
+  if (identity && identity.shortIntroAnswer) return identity.shortIntroAnswer
+  if (!identity || !identity.agency) return null
+  return `Sure — I'm ${identity.fullName || identity.name} from ${identity.agency}, based in Malta.`
+}
+
+// ── Email (Kev, 2026-10-30) ─────────────────────────────────────────────────
+// Only a verified, configured address is ever sent. No address → null and the
+// caller hands the question to a human. Never construct one from a name or a
+// domain.
+const EMAIL_QUESTION_RE = /\b(?:your|ur|an?|the)\s+(?:e-?mail|mail\s+address)\b|\be-?mail\s+(?:address|adress|id)\b|\b(?:send|share|give)\s+(?:me\s+)?(?:your\s+)?e-?mail\b|\bwhat(?:'s| is)\s+(?:your\s+)?e-?mail\b/i
+const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
+
+function isEmailQuestion(text) {
+  return EMAIL_QUESTION_RE.test(String(text || ''))
+}
+
+function approvedEmails(identity) {
+  if (!identity) return []
+  return [identity.email, identity.businessEmail].filter(Boolean).map(e => String(e).toLowerCase())
+}
+
+function emailAnswer(identity) {
+  const email = identity && identity.email
+  return email ? `Of course, my email is ${email}.` : null
+}
+
+// Addresses in an outgoing text that are not this sender's approved ones.
+function unapprovedEmails(text, identity) {
+  const allowed = new Set(approvedEmails(identity))
+  return (String(text || '').match(EMAIL_RE) || []).filter(e => !allowed.has(e.toLowerCase()))
 }
 
 function clientTypeAnswer(identity) {
@@ -150,6 +196,7 @@ function isAgencyQuestion(text) {
 function _clearCache() { personaCache.clear() }
 
 module.exports = {
-  PERSONA_IDENTITIES, DEFAULT_IDENTITIES, SESSION_PERSONA_FALLBACK, AGENCY_QUESTION_RE,
-  resolveAgentIdentity, resolveIdentityForSession, resolvePersonaForSession, agencyAnswer, clientTypeAnswer, isAgencyQuestion, _clearCache,
+  PERSONA_IDENTITIES, DEFAULT_IDENTITIES, SESSION_PERSONA_FALLBACK, AGENCY_QUESTION_RE, EMAIL_QUESTION_RE,
+  resolveAgentIdentity, resolveIdentityForSession, resolvePersonaForSession, agencyAnswer, agencyShortAnswer, clientTypeAnswer, isAgencyQuestion,
+  isEmailQuestion, emailAnswer, approvedEmails, unapprovedEmails, _clearCache,
 }

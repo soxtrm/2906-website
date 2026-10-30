@@ -18,7 +18,7 @@ const RENTED_RE = /\b(?:just\s+)?(?:been\s+)?rented\b|\balready rented\b|\bplace
 const SOLD_RE = /\b(?:just\s+)?sold\b|\balready sold\b/i
 // Kev, 2026-10-22: one shared detector (agentIdentityRegistry) for both
 // conversation paths; this local copy missed "name of your agency" etc.
-const { AGENCY_QUESTION_RE } = require('./agentIdentityRegistry')
+const { AGENCY_QUESTION_RE, EMAIL_QUESTION_RE, emailAnswer, unapprovedEmails } = require('./agentIdentityRegistry')
 const CLIENT_QUESTION_RE = /\bwhat (?:type|kind)s? of clients? (?:do )?you (?:have|work with)|\bwhich clients? (?:do )?you (?:have|work with)\b/i
 const CONTACT_REASON_RE = /\bwhy (?:are|do) you (?:contacting|message|text|write)|\bwhat are you contacting me (?:about|for)\b/i
 const CONTRACT_ONLY_RE = /\bcontract only\b|\bneed(?:s|ed)? (?:a )?contract only\b|\bpay(?:s|ing)? monthly for (?:the )?(?:contract|address|documents?)\b|\b(?:paper|document)[ -]?only lease\b/i
@@ -93,6 +93,7 @@ function interpretInbound(input = {}) {
   if (AGENCY_QUESTION_RE.test(text)) questions.push('agency_identity')
   if (CLIENT_QUESTION_RE.test(text)) questions.push('client_types')
   if (CONTACT_REASON_RE.test(text)) questions.push('contact_reason')
+  if (EMAIL_QUESTION_RE.test(text)) questions.push('email_request')
 
   const globalOptOut = OPT_OUT_RE.test(text)
   const rented = RENTED_RE.test(text)
@@ -242,6 +243,7 @@ function planDirectReply(decision, identity, state = {}) {
   if (decision.complianceReview) return null
   if (decision.questions.includes('agency_identity')) return agencyAnswer(identity)
   if (decision.questions.includes('client_types')) return clientTypeAnswer(identity)
+  if (decision.questions.includes('email_request')) return emailAnswer(identity)
   if (decision.questions.includes('contact_reason')) return "I'm contacting you to check the property's current availability for suitable long-term rental clients."
   if (decision.facts.some(f => ['petsAllowed', 'sharingAllowed', 'companySubletting', 'occupancyRestriction'].includes(f.fieldName))) return "Understood, thank you. I'll only consider suitable tenants who meet those conditions."
   return null
@@ -279,6 +281,8 @@ function validateDraft({ draft, state = {}, identity = null, expectedConversatio
   }
   if (facts.get('confirmedBookable')?.fieldValue === false && /\bavailable now|ready to (?:view|occupy|move)|immediately available\b/i.test(text)) return { allow: false, reason: 'tentative_treated_as_confirmed' }
   if (/\bpassport clients?\b|\bfalse address\b|\bsham lease\b/i.test(text)) return { allow: false, reason: 'unauthorized_document_only_transaction' }
+  // Never an email address the sender has not verified (Kev, 2026-10-30).
+  if (unapprovedEmails(text, identity).length) return { allow: false, reason: 'unverified_email' }
   if (/\b(?:i am|i'm|we are|we're) (?:with|from)\b/i.test(text) && identity) {
     const agency = String(identity.agency || '').toLowerCase()
     if (agency && !lower(text).includes(agency)) return { allow: false, reason: 'sender_identity_mismatch' }
