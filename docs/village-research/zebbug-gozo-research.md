@@ -1,6 +1,6 @@
 # Iż-Żebbuġ, Gozo edition — sourced research draft
 
-Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Research checked 29 October 2026; image metadata, responsive preview and release candidate checked 30 October 2026 (Europe/Malta).
+Language: English. Status: **PUBLISHED AND LIVE-VERIFIED**. Research checked 29 October 2026; image metadata, responsive preview, release candidate and production publication checked 30 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -141,4 +141,12 @@ Immediately before the release build, the Address Registrar, Visit Gozo locality
 
 `npm ci --no-audit --no-fund` changed neither manifest nor lockfile. TypeScript validation, the Next.js webpack production build with 52/52 static pages, the 60-edition SEO contract, route-segment, property-route/ferry-presentation and matrix-routing checks passed. Local Chromium at 390×844 and 1440×1000 returned HTTP 200, one H1, exact canonical and Open Graph URLs, one BreadcrumbList, no robots block, a decoded hero, visible attribution, no horizontal overflow and no initial iframe. After the click exactly one OSM iframe filled the complete 310×320 mobile or 1156×520 desktop frame with `aria-expanded=true`. There were no console or page errors, failed requests or HTTP responses from 400 upwards. Four final screenshots are stored outside Git under `D:\2906\nexus-bridge-work\artifacts\20261030-zebbug-gozo-release`.
 
-Release-candidate SHA-256 values before documentation completion: page `D6B36EA403C1778029FA9E18B3AE32285EDEC0A9D87D574FCA32054C638C7843`, hero `FAF1D0CB9BE2691A7A3C218A3F9B6EC239640279B8654BF1AB774921CB0A4703`, hub `4D7E0C9934426BA5E34D2E1B464C98E54BBC56E8FEB7363E7FEBD9730059D794`, sitemap `887E505EA2B17F8BD7DF7D7E8D27B1306A7D0F130F634EBE08D4AE00B95A4665`, Marsalforn `C3B57B6170DFBB079C53CD07D6CC66457FDCACE5A65C4801995470BE804954DE`. Production is unchanged; publication and live verification remain a separate fast-forward step against rollback basis `b7664b069db155f970444b2a68df34a61f7763b5`.
+Release-candidate SHA-256 values before documentation completion: page `D6B36EA403C1778029FA9E18B3AE32285EDEC0A9D87D574FCA32054C638C7843`, hero `FAF1D0CB9BE2691A7A3C218A3F9B6EC239640279B8654BF1AB774921CB0A4703`, hub `4D7E0C9934426BA5E34D2E1B464C98E54BBC56E8FEB7363E7FEBD9730059D794`, sitemap `887E505EA2B17F8BD7DF7D7E8D27B1306A7D0F130F634EBE08D4AE00B95A4665`, Marsalforn `C3B57B6170DFBB079C53CD07D6CC66457FDCACE5A65C4801995470BE804954DE`.
+
+## Publication and live verification
+
+Release commit `0cfed84ec8f30860de6528dc0f9d5af2e8a27649` was fast-forwarded to `main` from the named rollback basis `b7664b069db155f970444b2a68df34a61f7763b5`. The public guide, licensed hero, neighbourhood hub, neighbourhood sitemap and contextual Marsalforn inbound link all returned HTTP 200.
+
+Production matched the release byte-for-byte after CRLF-to-LF normalisation: page SHA-256 `671CA38C23F45B0391B3CE37050D9FE4213BF119E370C12CEBEC33F5F8B016FA`, hub `6A6AFF2F629F7BC7686D97B1B8D73BC96ED922C07B94D62E8096D4BD893D5401`, sitemap `29B0506FC165BC34A18B861E6C0C3A0F37BB6AE7CB0D12A8818094CE039A2B06` and Marsalforn `D546A28C4E85F1141B60BAFBF23CB5CA0C6939EF49BDAF46D9FC1B6672035E73`; the hero binary matched SHA-256 `FAF1D0CB9BE2691A7A3C218A3F9B6EC239640279B8654BF1AB774921CB0A4703`.
+
+Live Chromium at 390×844 and 1440×1000 repeated the release contract: HTTP 200, one H1, exact self-canonical and Open Graph URL, one BreadcrumbList, no robots block, decoded 1800×1202 hero, visible attribution, no horizontal overflow and no initial iframe. The explicit map action created exactly one visible OSM iframe, filled the complete 310×320 mobile or 1156×520 desktop frame and set `aria-expanded=true`. There were no console or page errors, failed requests or HTTP responses from 400 upwards. The live before/after screenshots are stored outside Git under `D:\2906\nexus-bridge-work\artifacts\20261030-zebbug-gozo-release`.
