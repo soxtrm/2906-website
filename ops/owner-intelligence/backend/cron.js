@@ -71,6 +71,26 @@ function startCrons() {
     }
   })
 
+  // CRM → 2906.estate (Kev, 2026-10-31): publish what changed, every minute;
+  // re-queue anything the public projection disagrees with, hourly. See
+  // services/websitePublication.js — failures stay visible as Sync failed.
+  cron.schedule('* * * * *', async () => {
+    try {
+      const done = await require('./services/websitePublication').processDue({ limit: 25 })
+      if (done.length) log.info('Cron: website publication', { processed: done.length, failed: done.filter(d => d.status === 'failed').length })
+    } catch (err) {
+      log.error('Cron website-publication error', err)
+    }
+  })
+  cron.schedule('17 * * * *', async () => {
+    try {
+      const r = await require('./services/websitePublication').reconcile()
+      if (r.requeued) log.info('Cron: website reconcile re-queued drifted listings', r)
+    } catch (err) {
+      log.error('Cron website-reconcile error', err)
+    }
+  })
+
   // ── ARGUS Agent Layer scheduled messages — every minute (Kev, 2026-09-17)
   // Each message gets its own mandatory pre-send recheck inside
   // services/scheduledMessages.js (WA session health, property still

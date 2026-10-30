@@ -267,6 +267,8 @@ const BOARD_COLS = `
                             'requestedBy', lr.requested_by_name, 'account', lr.session_name)
      FROM property_location_requests lr WHERE lr.property_id = p.id
     ORDER BY lr.requested_at DESC, lr.id DESC LIMIT 1)  AS location_request,
+  -- 2906.estate publication state (2026-10-31, services/websitePublication).
+  (SELECT row_to_json(ws) FROM website_publication_state ws WHERE ws.property_id = p.id) AS website_sync,
   -- Read so streetWithoutNumber() can strip it. NEVER emitted raw: shapeCard
   -- turns it into a number-free street name, and only on the viewer's OWN
   -- listing. Putting p.street on a response is a firewall break.
@@ -720,6 +722,9 @@ function shapeCard(row, meId, questionsUsed = 0, canAskOwner = true, canCreateOw
     viewingDate: row.viewing_date || null,
     hasViewingLocation: !!row.has_viewing_location,
     locationRequest: row.location_request || null,
+    // Draft / Needs approval / Sync pending / Published / Sync failed / Unpublished.
+    // Error text only on the admin endpoint below.
+    websiteSync: require('../services/websitePublication').chipFor(row.website_sync),
     // Variant (a): street name, no number, own listings only. null for
     // everybody else's — see streetWithoutNumber above.
     streetName: isMine ? streetWithoutNumber(row.street_raw) : null,
@@ -1623,6 +1628,32 @@ router.post('/listings/:ref/chat-opened', auth, async (req, res) => {
     res.json({ ok: true, recorded: true })
   } catch (err) {
     log.error('board chat-opened failed', { err: err.message, ref: req.params.ref })
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /website-sync — admin: publication counts, drift still visible on
+// 2906.estate, dead-lettered listings with their error (2026-10-31).
+router.get('/website-sync', auth, async (req, res) => {
+  try {
+    const me = await liveAgent(req.agent.id)
+    if (!me || me.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
+    res.json(await require('../services/websitePublication').summary())
+  } catch (err) {
+    log.error('board website-sync summary failed', { err: err.message })
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /listings/:ref/website-sync/retry — admin: re-queue a failed listing.
+router.post('/listings/:ref/website-sync/retry', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    if (loaded.me.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
+    res.json(await require('../services/websitePublication').retryFailed(loaded.prop.id))
+  } catch (err) {
+    log.error('board website-sync retry failed', { err: err.message, ref: req.params.ref })
     res.status(500).json({ error: err.message })
   }
 })

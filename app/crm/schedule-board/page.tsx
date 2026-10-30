@@ -192,6 +192,8 @@ type Listing = {
   viewingStatus: string | null; hasViewingLocation: boolean; exclusive: boolean
   // Latest "Ask for Location" request — state only (2026-10-30).
   locationRequest?: { status: string; requestedAt: string | null; requestedBy: string | null; account: string | null } | null
+  // 2906.estate publication (2026-10-31): Draft / Needs approval / Sync pending / Published / Sync failed / Unpublished
+  websiteSync?: { status: string; label: string; lastPublishedAt: string | null; websiteStatus: string | null } | null
   // The upload timestamp. Sorted server-side, but carried here because the
   // client re-groups cards by town to place the pins and would otherwise lose
   // the server's newest-first ordering.
@@ -4902,6 +4904,9 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
         />
       )}
 
+      {r.websiteSync && (
+        <div style={{ gridColumn: '1 / -1', padding: '4px 11px 0' }}><WebsiteSyncChip sync={r.websiteSync} /></div>
+      )}
       {(locationOpen || (r.locationRequest && !r.hasViewingLocation)) && (
         <div style={{ gridColumn: '1 / -1', padding: '8px 11px', borderTop: `1px solid ${dark ? DBORDER : LBORDER}` }}>
           {locationOpen
@@ -5206,6 +5211,7 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
                 {d.isMine && <span style={{ color: GREEN, fontWeight: 700 }}> · yours</span>}
                 {' · '}
                 {d.hasViewingLocation ? 'viewing location on file' : 'no viewing location on file'}
+                {d.websiteSync && <> · <WebsiteSyncChip sync={d.websiteSync} /></>}
               </div>
 
               {/* Same verdict the cards use, so the modal cannot offer a
@@ -5553,6 +5559,18 @@ function locationErrorText(code?: string | null) {
 function fmtMalta(at?: string | null) {
   if (!at) return ''
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(at))
+}
+
+// 2906.estate publication chip — glyph + word; red only for a real failure.
+const SYNC_GLYPH: Record<string, string> = { published: '●', marked_unavailable: '◐', sync_pending: '⟳', failed: '✕', not_ready: '○', unpublished: '—', draft: '○' }
+function WebsiteSyncChip({ sync }: { sync: { status: string; label: string; lastPublishedAt: string | null } }) {
+  const color = sync.status === 'failed' ? '#B42335' : sync.status === 'published' ? '#1F7A4D' : sync.status === 'sync_pending' ? '#9A6B12' : '#6B7280'
+  return (
+    <span title={sync.lastPublishedAt ? `Last published ${fmtMalta(sync.lastPublishedAt)}` : 'Never published'}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 700, color }}>
+      <span aria-hidden>{SYNC_GLYPH[sync.status] || '○'}</span>2906.estate: {sync.label}
+    </span>
+  )
 }
 
 function LocationBadge({ status }: { status: string }) {
