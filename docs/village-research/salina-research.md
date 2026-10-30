@@ -1,6 +1,6 @@
 # Salina edition — sourced research draft
 
-Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Research and asset checks completed 30 October 2026 (Europe/Malta).
+Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Research, asset and responsive preview checks completed 30 October 2026 (Europe/Malta).
 
 ## Why Salina is the next distinct edition
 
@@ -86,11 +86,17 @@ The six Wikimedia Commons originals below were downloaded outside Git, checked l
 
 **Selected lead:** `Salina Bay Panorama.jpg`. Its continuous view of the salt pans, low green edge, settlement and bay entrance gives the clearest neutral orientation without reducing Salina to one monument. No identifiable person, readable vehicle plate, private contact detail or advertising message was found in the full-resolution inspection. `Salina Bay.jpg` covers the same subject but leaves much more empty sky and introduces a foreground shadow; the 2014 salt-pan image centres construction equipment and roads; the Triq is-Salina image is a distant landscape dominated by the Magħtab landfill; Ximenes Redoubt and the catacombs are useful supporting subjects but too narrow for the locality lead. These are editorial-fit decisions, not quality rankings.
 
-The checked-in derivative `public/link-marketplace/assets/salina-bay-panorama-hh58.webp` is a proportional 1800×482 WebP conversion at quality 82. It has 85,452 bytes and SHA-256 `90F8125E86CC41C39115F8F3A93883474BC7E6E7A8F001BD54DF434AA89C37D2`. There was no crop, retouching, compositing, colour treatment or generative change. Any page use must visibly credit `HH58 / Wikimedia Commons / CC BY-SA 4.0`, link the file page and licence, give the capture date, and state the proportional WebP conversion. Real 390px and desktop frames still require a separate preview gate. The image must not imply a present property view, present access, quietness, parking, water quality or wildlife sighting.
+The checked-in derivative `public/link-marketplace/assets/salina-bay-panorama-hh58.webp` is a proportional 1800×482 WebP conversion at quality 82. It has 85,452 bytes and SHA-256 `90F8125E86CC41C39115F8F3A93883474BC7E6E7A8F001BD54DF434AA89C37D2`. There was no crop, retouching, compositing, colour treatment or generative change. The private preview visibly credits `HH58 / Wikimedia Commons / CC BY-SA 4.0`, links the file page and licence, gives the capture date, and states the proportional WebP conversion. Its real 390×844 and 1440×1000 frames were visually checked: the desktop frame retains the complete panorama, while the mobile frame deliberately crops the displayed edges without modifying the source file. The image does not imply a present property view, present access, quietness, parking, water quality or wildlife sighting.
+
+## Private preview and responsive verification
+
+`public/link-marketplace/areas/salina-preview.html` is an independent English editorial preview with `noindex,nofollow`, no canonical and no Open Graph URL. It was not added to the public neighbourhood hub, navigation or sitemap. The page keeps the Naxxar-side road, protected salt-pan/reserve context, Kennedy Grove / St Paul's Bay side and Qawra / bay approach separate, and gives mutable address, transport, health, access and trading details back to the live sources.
+
+Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, zero horizontal overflow, a fully decoded 1800×482 hero, visible attribution and initially zero iframes. After an intentional click, exactly one visible OpenStreetMap iframe filled a 310×320 mobile frame or 1156×520 desktop frame, set `aria-expanded=true` and produced no console error, failed request or HTTP response at or above 400. The responsive neutral overview uses `14.399,35.938,14.438,35.966` on compact screens and `14.391,35.943,14.445,35.962` on wider screens so the map canvas is filled at both aspect ratios. These are orientation extents only, not locality boundaries.
 
 ## Fast 2D map and route guardrails
 
-A future preview should use a click-to-load OpenStreetMap orientation frame spanning the Naxxar-side edge, salt pans/reserve, Kennedy Grove side and Qawra approach. It must not draw a council boundary, property pin, straight-line connection, distance or journey time. The reserve's OSM search result is an orientation feature, not administrative proof.
+The preview uses a click-to-load OpenStreetMap orientation frame spanning the Naxxar-side edge, salt pans/reserve, Kennedy Grove side and Qawra approach. It draws no council boundary, property pin, straight-line connection, distance or journey time. The reserve's OSM search result is an orientation feature, not administrative proof.
 
 No route should be published at this research stage. A later property route must use exact verified endpoints and real routed geometry. It must not cut across salt pans, protected wetland, fields, canals or Salina Bay, and no line over water may be described as walking or driving. There is no assumed ferry mode for this locality.
 
@@ -101,11 +107,10 @@ No route should be published at this research stage. A later property route must
 
 The public inventory, Address Registrar, BirdLife Malta, Heritage Malta, Malta Public Transport, both MTA searches, the Superintendence PDF, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client on 30 October 2026. Ambjent Malta and Primary HealthCare returned HTTP 403, while Intangible Cultural Heritage Malta presented its browser security challenge to that client; all three remained current and readable through browser retrieval. No claim was expanded from those transport-layer differences. Volatile access, health, transport, licence, event, nature and operating details remain on the linked live sources.
 
-No private contact details were copied. Six licensed originals were checked outside Git and one proportional WebP derivative was added; no image was generated. No preview, public page, canonical, social metadata, structured data, index, sitemap, internal link, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
+No private contact details were copied. Six licensed originals were checked outside Git and one proportional WebP derivative was added; no image was generated. One private noindex preview was created and verified. No public page, canonical, social metadata, structured data, index, sitemap, internal link, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
 
 ## Next gates
 
-1. Build an independent English `noindex,nofollow` preview that explicitly separates the Naxxar-side edge, protected salt-pan/reserve context, Kennedy Grove/St Paul's Bay side and neighbouring Qawra/Baħar iċ-Ċagħaq contexts.
-2. Add a fast click-to-load 2D orientation map with no listing pin, boundary, inferred route, distance or travel-time promise.
-3. Verify 390×844 and 1440×1000 layouts, real responsive image framing, visible attribution, zero horizontal overflow and initial zero iframes.
-4. Recheck every source, then add canonical, Open Graph, BreadcrumbList, hub entry, sitemap and contextual internal links only in a separate clean release gate with a named rollback basis.
+1. Recheck every source immediately before release work and keep volatile access, transport, health and licence details behind their live links.
+2. Build the public release candidate in a separate clean worktree with canonical, Open Graph, BreadcrumbList, hub entry, sitemap and contextual internal links.
+3. Repeat responsive, SEO, route/ferry-presentation and production-build verification, then name the rollback basis before any publication.
