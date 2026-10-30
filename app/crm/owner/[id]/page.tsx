@@ -6,6 +6,7 @@ import {
   CrmProvider, CrmShell, Masked, Thumbs, A, AD, AB, NAVY, F, FM, fmtMoney, fmtDate, useCrm, describe,
   DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
 } from '@/lib/crm/ui'
+import { OwnerAttributionPanel } from '@/components/crm/owner-attribution'
 
 export default function OwnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -225,6 +226,23 @@ function OwnerDetail({ id }: { id: number }) {
               )}
             </div>
             {msg && <div style={{ marginTop: 10, fontSize: 11, color: '#4ADE80', fontWeight: 600 }}>{msg}</div>}
+            {/* Kev, 2026-10-31: who is talking to this owner, under which account. */}
+            {d.attribution && (
+              <div style={{ marginTop: 16 }}>
+                <OwnerAttributionPanel a={d.attribution} onAssign={me?.role === 'admin' ? async () => {
+                  const session = window.prompt('Assign handler — WhatsApp account (e.g. Cedric, Kevsecond):', d.attribution.assignedTo?.account || d.attribution.lastMessageBy?.account || '')
+                  if (!session) return
+                  const reason = window.prompt('Reason (kept in the history):', '') || null
+                  try { await crmJson(`owners/${o.id}/assign`, 'POST', { session, reason }); setMsg(`Handler set to ${session}.`); load() }
+                  catch (e: any) { setMsg(e?.message || 'Assignment failed') }
+                } : undefined} />
+                {d.assignmentHistory?.length > 0 && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: '#8A94A8' }}>
+                    Handler history: {d.assignmentHistory.map((h: any) => `${h.to_agent || h.to_session} (${fmtDate(h.created_at)} by ${h.actor_name || '?'})`).join(' ← ')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         ) })()}
