@@ -1,0 +1,3 @@
+# Byte-exact mirror of /opt/2906-system/backend (some prod files use CRLF).
+# md5 parity with production requires git to never rewrite line endings here.
+* -text
