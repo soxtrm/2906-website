@@ -64,7 +64,7 @@ async function captureFromReply(phone, text, ctx = {}) {
 
   let hit
   try {
-    hit = detector.detectReminderPhrase(body)
+    hit = detector.detectReminderPhrase(body, { now: ctx.now || new Date() })
   } catch (e) {
     log.warn('reminderFromMessage: detector crashed', { err: e.message })
     return null
@@ -114,24 +114,32 @@ async function captureFromReply(phone, text, ctx = {}) {
       }
     }
 
-    // Avoid obvious duplicates: same phone, same due date, same note start.
+    // Avoid duplicates: the same source message (webhook redelivery, chat
+    // re-sync) never creates a second row; otherwise same phone + due date +
+    // note start, as before.
     const dupe = await db.query(
       `SELECT id FROM reminders
         WHERE owner_phone = $1
-          AND contact_due_date = $2
-          AND original_note ILIKE $3
+          AND (($4::text IS NOT NULL AND source_message_id = $4)
+               OR (contact_due_date = $2 AND original_note ILIKE $3))
         LIMIT 1`,
-      [phoneNorm, dueAt, body.slice(0, 40) + '%'])
+      [phoneNorm, dueAt, body.slice(0, 40) + '%', sourceMessageId])
     if (dupe.rows.length) {
       log.debug('reminderFromMessage: dedup hit, skipping insert', { id: dupe.rows[0].id })
       return null
     }
+    // Context (Kev, 2026-10-30, migration 20261030_reminder_context): how
+    // precise the owner was, the window, why, what they said about
+    // availability and — when the owner has exactly one listing — which
+    // property. Never more certain than the owner was.
+    const propertyId = ctx.propertyId || await singlePropertyFor(phoneNorm)
     const ins = await db.query(
       `INSERT INTO reminders
          (source_session, source_phone, source_message_id,
           owner_phone, owner_name, original_note, parsed_timing,
-          contact_due_date, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+          contact_due_date, status,
+          due_precision, due_window_end, property_id, reason, availability_state)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12, $13)
        RETURNING id`,
       [ctx.session || 'default',
        phoneNorm,
@@ -140,7 +148,12 @@ async function captureFromReply(phone, text, ctx = {}) {
        ownerName,
        body,
        parsedTiming,
-       dueAt])
+       dueAt,
+       hit.dueAt ? (hit.precision || 'day') : 'fallback_7_days',
+       hit.windowEnd || null,
+       propertyId,
+       `Owner said: "${String(hit.phrase || '').slice(0, 80)}"`,
+       hit.availability || 'unknown'])
     const id = ins.rows[0].id
     log.info('reminderFromMessage: created', { id, phone: phoneNorm.slice(-4), dueAt, phrase: parsedTiming })
     // OG-4 (Kev, 2026-09-04): "bei Reminder ... nach Outreach" -- one of the
@@ -157,6 +170,18 @@ async function captureFromReply(phone, text, ctx = {}) {
     log.warn('reminderFromMessage: insert failed', { err: e.message, phone: phoneNorm.slice(-4) })
     return null
   }
+}
+
+// The owner's listing when there is exactly one; several → null (an agent
+// links it), so a reminder is never attached to the wrong unit.
+async function singlePropertyFor(phoneNorm) {
+  try {
+    const r = await db.query(
+      `SELECT p.id FROM properties p JOIN owner_contacts oc ON oc.id = p.owner_id
+        WHERE right(regexp_replace(COALESCE(oc.phone_normalized,''), '\\D', '', 'g'), 8) = right($1, 8)
+        LIMIT 2`, [phoneNorm])
+    return r.rows.length === 1 ? r.rows[0].id : null
+  } catch (_) { return null }
 }
 
 module.exports = { captureFromReply, adjustFarFutureDueDate }

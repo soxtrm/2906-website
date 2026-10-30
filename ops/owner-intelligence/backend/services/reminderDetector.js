@@ -35,9 +35,11 @@ const SCHREIB_RE = /\bschreib\s+mir\b[^.\n!?]{0,80}?\b(wieder|nochmal)\b/i
 // property follow-ups produces confusing, context-free outreach. Keep the
 // detector deterministic: a reminder needs either an explicit request to
 // contact us again or a property/listing commitment around the date.
-const CONTACT_AGAIN_RE = /\b(?:contact|message|text|write|call|remind|reach\s+out|get\s+back\s+to)\s+(?:me|us)?\b/i
-const PROPERTY_CONTEXT_RE = /\b(?:property|flat|apartment|house|villa|maisonette|penthouse|listing|market|rent(?:ed|al)?|tenant|lease|available|availability|viewing|photo(?:s)?|picture(?:s)?|detail(?:s)?|key(?:s)?|price|bedroom(?:s)?|bathroom(?:s)?|document(?:s)?)\b/i
-const PROPERTY_ACTION_RE = /\b(?:send|share|provide|list|market|rent|release|confirm|update|know|ready|available|vacant|free|view|show|come(?:s)?\s+on)\b/i
+// Kev, 2026-10-30: owners also say "check back next month", "let me know
+// closer to the end of the month", "follow up after the weekend".
+const CONTACT_AGAIN_RE = /\b(?:contact|message|text|write|call|remind|reach\s+out|get\s+back\s+to)\s+(?:me|us)?\b|\bcheck\s+(?:back|again)\b|\blet\s+me\s+know\b|\bfollow\s+up\b|\btouch\s+base\b|\bask\s+(?:me\s+)?again\b/i
+const PROPERTY_CONTEXT_RE = /\b(?:property|flat|apartment|house|villa|maisonette|penthouse|listing|market|rent(?:ed|al)?|tenants?|lease|available|availability|viewing|photo(?:s)?|picture(?:s)?|detail(?:s)?|key(?:s)?|price|bedroom(?:s)?|bathroom(?:s)?|document(?:s)?)\b/i
+const PROPERTY_ACTION_RE = /\b(?:send|share|provide|list|market|rent|release|confirm|update|know|ready|available|vacant|free|view|show|come(?:s)?\s+on|decide|renew|move\s+out|leave)\b/i
 const SOCIAL_OR_TRAVEL_RE = /\b(?:abroad|holiday|vacation|travell?ing|travel|coffee|lunch|dinner|party|meet\s+up|friends?)\b/i
 
 function isBusinessReminderIntent(text) {
@@ -53,6 +55,19 @@ function isBusinessReminderIntent(text) {
   return false
 }
 
+// What the owner said about availability — never upgraded: "might",
+// "depending on the tenants" stays tentative (Kev, 2026-10-30).
+function classifyAvailability(text) {
+  const s = String(text || '')
+  if (/\b(?:no\s+longer|not)\s+available\b|\b(?:already\s+)?rented\s+out\b|\bsold\b/i.test(s)) return 'unavailable'
+  if (/\btenants?\b[^.]{0,60}\b(?:decide|renew|leave|stay|move\s+out)\b|\bdepend(?:s|ing)?\s+on\b[^.]{0,40}\btenants?\b/i.test(s)) return 'awaiting_tenant_decision'
+  if (/\b(?:might|may|maybe|possibly|perhaps|could|hopefully|probably|not\s+sure)\b/i.test(s)) return 'possibly_available'
+  if (/\bavailable\s+(?:now|immediately|right\s+away)\b/i.test(s)) return 'available_now'
+  if (/\bavailable\s+(?:from|on|as\s+of)\b/i.test(s)) return 'available_from_date'
+  if (CONTACT_AGAIN_RE.test(s)) return 'contact_later'
+  return 'unknown'
+}
+
 function isoDate(d) {
   if (!d) return null
   if (typeof d === 'string') return d.length >= 10 ? d.slice(0, 10) : d
@@ -63,11 +78,45 @@ function isoDate(d) {
 // phrase and return { dueAt, phrase } — or null. We pick the FIRST match so
 // the operator's intent isn't quietly stolen by a later phrase in the
 // message.
+// "in two months" → "in 2 months" for parseRelativePhrase (digits only).
+const NUMBER_WORDS = { one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, couple: 2, few: 3 }
+function digitsForWords(text) {
+  return String(text).replace(/\bin\s+(?:a\s+)?(one|a|an|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|couple|few)(\s+of)?\s+(day|days|week|weeks|month|months)\b/gi,
+    (_, w, _of, unit) => `in ${NUMBER_WORDS[w.toLowerCase()]} ${unit}`)
+}
+
+function endOfMonth(now) {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0))
+  return d
+}
+
 function scanDatePhrase(text, now) {
   // 1) "in N weeks/months/days" — short-circuit because it's exact.
-  const rel = parseRelativePhrase(text, now)
+  const numeric = digitsForWords(text)
+  const rel = parseRelativePhrase(numeric, now)
   if (rel) {
-    return { dueAt: isoDate(rel), phrase: text.match(/in\s+\d{1,3}\s+(day|days|week|weeks|month|months)/i)[0] }
+    const unit = numeric.match(/in\s+\d{1,3}\s+(day|days|week|weeks|month|months)/i)
+    return { dueAt: isoDate(rel), phrase: unit[0], precision: /month/i.test(unit[1]) ? 'month' : /week/i.test(unit[1]) ? 'week' : 'day' }
+  }
+
+  // "after the weekend" → the coming Monday; "(closer to / towards) the end
+  // of the month" → the last week of this month (Kev, 2026-10-30).
+  const weekend = text.match(/\bafter\s+the\s+weekend\b/i)
+  if (weekend) {
+    const base = new Date(now)
+    base.setUTCHours(0, 0, 0, 0)
+    let days = (1 - base.getUTCDay() + 7) % 7
+    if (days === 0) days = 7
+    base.setUTCDate(base.getUTCDate() + days)
+    return { dueAt: isoDate(base), phrase: weekend[0], precision: 'day' }
+  }
+  const monthEnd = text.match(/\b(?:closer\s+to|towards?|by|at|around|near)?\s*the\s+end\s+of\s+(?:the|this)\s+month\b/i)
+  if (monthEnd) {
+    const end = endOfMonth(now)
+    const start = new Date(end); start.setUTCDate(end.getUTCDate() - 6)
+    const today = new Date(now); today.setUTCHours(0, 0, 0, 0)
+    const due = start < today ? today : start
+    return { dueAt: isoDate(due), windowEnd: isoDate(end), phrase: monthEnd[0].trim(), precision: 'week' }
   }
 
   // Kev, 2026-09-01 (catalog test): "contact me next month" / "try me in 2
@@ -81,7 +130,7 @@ function scanDatePhrase(text, now) {
     base.setUTCHours(0, 0, 0, 0)
     if (unit === 'week') base.setUTCDate(base.getUTCDate() + 7)
     else base.setUTCMonth(base.getUTCMonth() + 1)
-    return { dueAt: isoDate(base), phrase: nextM[0] }
+    return { dueAt: isoDate(base), phrase: nextM[0], precision: unit }
   }
 
   // Owner commitments are often phrased with a weekday ("I will send the
@@ -133,7 +182,13 @@ function scanDatePhrase(text, now) {
     else if (phaseHit) phrase = `${phaseHit[1]} ${phaseHit[2]}${phaseHit[3] ? ' ' + phaseHit[3] : ''}`
     else if (explicitHit) phrase = `${explicitHit[1]} ${explicitHit[2]}${explicitHit[3] ? ' ' + explicitHit[3] : ''}`
     else phrase = (text.match(/[A-Za-zÄÖÜäöüß]+(?:\s+\d{4})?/i) || [''])[0]
-    return { dueAt: isoDate(month), phrase }
+    // A bare month ("in January") is a month, not the 1st: keep the window
+    // so nobody reads it as the owner's exact date (Kev, 2026-10-30).
+    const explicitDay = explicitHit && !inHit && !phaseHit
+    const monthEndDate = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 0))
+    return explicitDay
+      ? { dueAt: isoDate(month), phrase, precision: 'day' }
+      : { dueAt: isoDate(month), windowEnd: phaseHit ? null : isoDate(monthEndDate), phrase, precision: phaseHit ? 'part_of_month' : 'month' }
   }
 
   return null
@@ -156,12 +211,16 @@ function detectReminderPhrase(text, opts) {
   // 1) "schreib mir ... wieder/nochmal" wins outright. We then look for an
   //    embedded date inside the same message — if found, that's dueAt.
   //    If not, dueAt is null and the caller decides.
+  const availability = classifyAvailability(raw)
   const schreibHit = raw.match(SCHREIB_RE)
   if (schreibHit) {
     const datePart = scanDatePhrase(raw, now)
     return {
       matched: true,
       dueAt: datePart ? datePart.dueAt : null,
+      windowEnd: datePart ? datePart.windowEnd || null : null,
+      precision: datePart ? datePart.precision || 'day' : null,
+      availability,
       phrase: schreibHit[0],
       remainder: (raw.slice(0, schreibHit.index) + ' ' + raw.slice(schreibHit.index + schreibHit[0].length)).trim(),
     }
@@ -173,6 +232,9 @@ function detectReminderPhrase(text, opts) {
     return {
       matched: true,
       dueAt: datePart.dueAt,
+      windowEnd: datePart.windowEnd || null,
+      precision: datePart.precision || 'day',
+      availability,
       phrase: datePart.phrase,
       remainder: raw,
     }
@@ -184,6 +246,7 @@ function detectReminderPhrase(text, opts) {
 module.exports = {
   detectReminderPhrase,
   isBusinessReminderIntent,
+  classifyAvailability,
   // exposed for tests
   _scanDatePhrase: scanDatePhrase,
   SCHREIB_RE,
