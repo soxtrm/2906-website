@@ -1,6 +1,6 @@
 # Iż-Żebbuġ, Gozo edition — sourced research draft
 
-Language: English. Status: **RESEARCH DRAFT — NOT PUBLISHED**. Checked 29 October 2026 (Europe/Malta).
+Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Research checked 29 October 2026; image metadata rechecked 30 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -82,25 +82,41 @@ The map must draw no route by default. If routing is offered later, it must use 
 
 ## Licensed image candidates
 
-The Wikimedia Commons API returned the following candidate originals with reusable licences. They are metadata candidates only: no original has been downloaded, selected, transformed or added to Git in this research step. A later asset step must download candidates outside Git, verify each local SHA-1 against Commons, inspect every full-resolution image and test real 390px and desktop crops before selecting one.
+The Wikimedia Commons API returned the following candidate originals with reusable licences. All six originals were downloaded outside Git, their local SHA-1 values matched the Commons records and the full-resolution files were visually compared. The local SHA-256 values below make that review reproducible. Responsive 390px and desktop framing remains a separate preview step.
 
 1. **Malta – Gozo – Zeebugg - panoramio.jpg** — giggel; captured 28 September 2014; 4320×3240; 3,782,611 bytes; CC BY 3.0; Commons SHA-1 `F9B8DD98510DBFB390F19A9AF31B59F9D7C1B486`.
    - https://commons.wikimedia.org/wiki/File:Malta_%E2%80%93_Gozo_%E2%80%93_Zeebugg_-_panoramio.jpg
+   - Local SHA-256: `A0890E7D56A78ED416453D9FD7F21C3805BE4A1F3699D32D7EA773EFA069343D`.
 2. **Zebbug Parish Church.jpg** — Matt Hush; captured 30 May 2017; 7358×4910; 33,033,430 bytes; CC BY-SA 4.0; Commons SHA-1 `C5566221CF38679C0299567ABBA8577AF83DA792`.
    - https://commons.wikimedia.org/wiki/File:Zebbug_Parish_Church.jpg
+   - Local SHA-256: `8ED800DED5F6F8585800D4BBCFEB44D2313B2066B659B7AA079CBAD909351A22`.
 3. **Parish Church of St Mary, Żebbuġ, Gozo 002.jpg** — Matthew Axiak; captured 10 August 2020; 4032×2268; 4,867,312 bytes; CC BY-SA 4.0; Commons SHA-1 `CB5F8921B9AC1AF4234718A304EABBC4CD199BD2`.
    - https://commons.wikimedia.org/wiki/File:Parish_Church_of_St_Mary,_%C5%BBebbu%C4%A1,_Gozo_002.jpg
+   - Local SHA-256: `2FA53E1E94C228C872616143D80424B65118B8829381105FE62A1A6526063CA9`.
 4. **Malte, Gozo, Zebugg 2011-04-19.JPG** — Florival fr; captured 19 April 2011; 4608×3072; 3,682,545 bytes; CC BY-SA 3.0; Commons SHA-1 `E0A46D4B8DDFE8E46D717C647534348060167470`.
    - https://commons.wikimedia.org/wiki/File:Malte,_Gozo,_Zebugg_2011-04-19.JPG
+   - Local SHA-256: `04D8913579E1E855739A05F45C5A8DC2137B2BC11C719D8FEEC0EF43EECDC9FE`.
 5. **Melħ@Iż-Żebbuġ(Għawdex).jpg** — Eric Bézine; captured 24 December 2008; 3733×2500; 4,018,839 bytes; CC BY-SA 3.0; Commons SHA-1 `593BD4CB659EF928C76BF074489D99576FB37549`.
    - https://commons.wikimedia.org/wiki/File:Mel%C4%A7@I%C5%BC-%C5%BBebbu%C4%A1(G%C4%A7awdex).jpg
+   - Local SHA-256: `9EEF0A87808D541DDE3C5339330CDED9DEBE9E948C208CDCBF4A407540000635`.
 6. **Qolla l-Bajda Battery, Żebbuġ, Gozo 003.jpg** — Matthew Axiak; captured 14 August 2018; 4032×2268; 2,124,905 bytes; CC BY-SA 4.0; Commons SHA-1 `6B4E98EE1E4A693007E5E0DA7B41FBB927FEF3BA`.
    - https://commons.wikimedia.org/wiki/File:Qolla_l-Bajda_Battery,_%C5%BBebbu%C4%A1,_Gozo_003.jpg
+   - Local SHA-256: `2D585E9276312CF0E8578A7465C9FE5ADEF63ED2752D5B245CED6ECDABC220A1`.
 
-The preferred hero should represent the hill village rather than only a church façade, restaurant, private residence, cemetery, bay or salt-pan operator. A coastal candidate must not imply that every Iż-Żebbuġ property overlooks or sits beside the sea. The final rendered page must visibly credit the selected author, Wikimedia Commons and licence, with links to the file page and licence.
+### Selected hero and publication limits
+
+`Zebbug Parish Church.jpg` by Matt Hush was selected. The church, square, adjoining façades and red telephone box create a readable village-core scene without visible private people, vehicle plates, an event or commercial advertising. The image does not represent the entire locality and must be labelled as a dated Pjazza l-Assunta context, never as a property view, current access statement, parking promise, quietness claim or proof of proximity.
+
+The wide panoramio view was rejected for severe haze, distance and an overprocessed look. The Matthew Axiak and Florival church views are more façade-focused; the Florival frame also contains several vehicles and overhead wires. The salt-pan and Qolla l-Bajda images document the separate coastal context rather than the hill village. These are editorial-fit decisions, not quality rankings.
+
+- Selected original: 7358×4910, 33,033,430 bytes; Commons/local SHA-1 `C5566221CF38679C0299567ABBA8577AF83DA792`; local SHA-256 `8ED800DED5F6F8585800D4BBCFEB44D2313B2066B659B7AA079CBAD909351A22`.
+- Rechecked Commons metadata: Matt Hush, captured 30 May 2017, CC BY-SA 4.0, original dimensions and SHA-1 unchanged on 30 October 2026.
+- Local web derivative: `public/link-marketplace/assets/zebbug-gozo-parish-matt-hush.webp`, 1800×1202, 302,364 bytes, SHA-256 `FAF1D0CB9BE2691A7A3C218A3F9B6EC239640279B8654BF1AB774921CB0A4703`.
+- Transformation: proportional resize and WebP conversion without deliberate crop, retouching, compositing, colour adjustment or generative alteration. The derivative was visually inspected at full frame.
+- Required visible credit on any preview or publication: Matt Hush / Wikimedia Commons, `Zebbug Parish Church.jpg`, CC BY-SA 4.0, with file-page and licence links and an explicit note that the image was resized and converted.
 
 ## Verification and publication boundary
 
 The inventory, Address Registrar, Visit Gozo locality/heritage/coast pages, Malta Public Transport route 309, both exact MTA filters, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client on 29 October 2026. The Local Council and Primary HealthCare pages rejected that client with HTTP 403 but remained current and readable through browser retrieval; Gozo Album was likewise readable through the current browser source. No claim was expanded from those transport-layer differences. Volatile health, transport, event, bathing and operating information remains on the linked live sources.
 
-No private contact details were copied. No image, preview, public HTML, canonical, sitemap, index, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed in this step.
+No private contact details were copied. The licensed local web derivative is the only public-tree asset created in this step; it is not referenced by any public page yet. No preview, public HTML, canonical, sitemap, index, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed.
