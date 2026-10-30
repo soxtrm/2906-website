@@ -709,7 +709,10 @@ router.post('/waha', async (req, res) => {
     const _activeUpload = (!text && _payloadHasMedia)
       ? await uploadListing.hasActiveSessionForChat(payload.from).catch(() => false)
       : false
-    if (!text && !isAutoAdvGroup && !(_isInboundDM && _payloadHasMedia) && !_activeUpload) return // skip media-only that isn't AutoAdvertise, owner-DM image, or active uploadlisting
+    // A shared location pin carries no body and no media (2026-10-30): owner
+    // DMs with a pin must reach services/locationRequest.js.
+    const _payloadIsLocation = !!(payload.location || payload._data?.Message?.locationMessage || payload.type === 'location')
+    if (!text && !isAutoAdvGroup && !(_isInboundDM && (_payloadHasMedia || _payloadIsLocation)) && !_activeUpload) return // skip media-only that isn't AutoAdvertise, owner-DM image/pin, or active uploadlisting
 
     // WAHA group message layout:
     //   payload.from        → group JID  (xxxxx@g.us)
@@ -954,6 +957,18 @@ router.post('/waha', async (req, res) => {
     // Returns true only for !av / !avstatus / a Yes-No reping answer. Owner
     // replies are handled inside but never consumed — the owner-DM pipeline
     // below (outreach, labels, avCapture) still runs for them.
+    // ── Location requests (2026-10-30, services/locationRequest.js) ──────────
+    // An owner's pin / map link / address answers the open "Ask for Location"
+    // request and notifies the requesting agent. Records only — never replies
+    // to the owner, so it cannot contradict the agent or the automation.
+    // A pin arrives without text, so this is not gated on `text`. Runs before
+    // availability.handleWebhookMessage, which may consume the same reply.
+    if (!isGroup && !payload.fromMe && phone) {
+      require('../services/locationRequest').handleOwnerMessage({
+        phone, chatId: payload.from, text, payload, messageId: payload.id,
+      }).catch(e => log.warn('locationRequest hook error', { err: e.message }))
+    }
+
     try {
       const consumed = await availability.handleWebhookMessage({
         payload, session, text, isGroup, chatId: payload.from, senderPhone: phone,

@@ -1538,22 +1538,67 @@ router.post('/listings/:ref/request-availability', auth, async (req, res) => {
   }
 })
 
-// ── POST /listings/:ref/request-location ────────────────────────────────────
-// Always Fall B by nature: on your own listing you already have the address,
-// so there is nobody to ask.
+// ── Location requests (Kev, 2026-10-30) ─────────────────────────────────────
+// Was: a WhatsApp relay to the listing agent (usually Kev's own account) with
+// nothing stored — the requesting agent could not see whether anything was
+// sent, from which account, whether the owner answered or where the address
+// went. Now services/locationRequest.js asks the OWNER from the owner's source
+// account and keeps one persistent request with a real status. The owner's
+// number never reaches the board; the exact location is shown only to the
+// listing agent, admins and an agent with a recorded viewing (see the service).
+const locationRequest = require('../services/locationRequest')
+const locationReply = (res, result) =>
+  res.status(result.httpStatus || 200).json(result.error && !result.request ? { error: result.error } : { ok: result.ok, existing: !!result.existing, request: result.request })
+
+// POST /listings/:ref/request-location — idempotent: an open request is
+// returned instead of sending a second message.
 router.post('/listings/:ref/request-location', auth, async (req, res) => {
   try {
     const loaded = await loadForAction(req, res)
     if (!loaded) return
     const { prop, me } = loaded
-    if (prop.listed_by_agent_id === me.id) {
-      return res.status(409).json({
-        error: `#${prop.ref} is your own listing — add the address in Inventory instead.`,
-      })
-    }
-    return relayToListingAgent({ res, kind: 'location', prop, me, note: null })
+    // Same permission every owner question on this board respects.
+    if (me.can_ask_owner === false) return res.status(403).json({ error: 'You are not allowed to contact owners from the board.' })
+    return locationReply(res, await locationRequest.requestLocation({ ref: prop.ref, agent: me }))
   } catch (err) {
     log.error('board request-location failed', { err: err.message, ref: req.params.ref })
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /listings/:ref/location-request — current state, survives reloads.
+router.get('/listings/:ref/location-request', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    return locationReply(res, await locationRequest.getStatus({ ref: loaded.prop.ref, agent: loaded.me }))
+  } catch (err) {
+    log.error('board location-request status failed', { err: err.message, ref: req.params.ref })
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /listings/:ref/location-request/cancel — requester or admin only.
+router.post('/listings/:ref/location-request/cancel', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    return locationReply(res, await locationRequest.cancelRequest({ ref: loaded.prop.ref, agent: loaded.me }))
+  } catch (err) {
+    log.error('board location-request cancel failed', { err: err.message, ref: req.params.ref })
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /location-attention — "Viewing scheduled — exact location missing" for
+// the logged-in agent's viewings in the next 48 h (all of them for an admin).
+router.get('/location-attention', auth, async (req, res) => {
+  try {
+    const me = await liveAgent(req.agent.id)
+    if (!me || !me.active) return res.status(401).json({ error: 'Account inactive' })
+    res.json({ warnings: await locationRequest.viewingLocationWarnings({ agent: me }) })
+  } catch (err) {
+    log.error('board location-attention failed', { err: err.message })
     res.status(500).json({ error: err.message })
   }
 })
