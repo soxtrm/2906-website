@@ -10,6 +10,7 @@ Stabilise ARGUS outreach end-to-end, then work through `REPAIR_BACKLOG.md` one b
 ## In flight / ownership
 - Outreach approval + `!createlist`: this branch. Files: `services/adminCommands.js`, `services/outreachApproval.js`, `services/outreachApprovalStore.js`, `services/whatsappReachability.js`, `services/listBuilder.js`, migration `20261017_outreach_pending_approvals.sql`.
 - **Conflict warning:** Codex's untracked `link-mobile-cards/ops/outreach-control/backend/services/outreachApproval.js` has the same path and different content. Do not deploy that folder without diffing against production.
+- Outreach automation (2026-10-29, branch `claude/outreach-automation`, NOT deployed): `ops/outreach-automation/backend/` owns `services/{outreachPlanner,adminCommands,outreachRunEngine,cooldownRules,listBuilder}.js`, `routes/crm.js` and 7 new services. On deploy, sync `ops/outreach-approval-fix/backend/services/{adminCommands,listBuilder}.js` to the deployed version (same path, different content until then). `ops/owner-group-flow/backend/routes/crm.js` is already stale vs production — never deploy it.
 - Property distribution: `ops/property-distribution-fix/backend/` owns `services/{sanitizer,categoryFormatter,autoOwnerConversation,rentedDetector,ownerPortfolioCheck,availability}.js` and `routes/webhook.js` (all = production as of 2026-10-18 01:22 UTC). **`ops/owner-group-flow/backend/routes/webhook.js` is stale** (not production) — never deploy it.
 
 ### 2026-10-18 Property distribution repair (Claude)
@@ -114,3 +115,25 @@ Tests: node test/categoryRules.20261022.test.js → 7/7 (production 0/7). Contai
 Deployed: yes 2026-10-22 02:35Z (backup /opt/2906-system/backups/category-rules-20261022T023516Z; md5 classifier 54c4dfc5…, upload 3de5f7ac… = repo). The stale production seafrontHint.test.js (August rules, 4 red) was replaced by the mirror version (old copy is in the same backup).
 Not verified / risks: #2906-9519 is still posted in the Luxury group (repost needs Kev's OK). 1BR listings at €2,000–2,499 now go to bed1 instead of Luxury (intended by the new rule).
 Update 02:43Z: every house type → Houses at any price; luxury only for apartment types (apartment/maisonette/penthouse/studio/duplex …) from €2,500. House is decided by the type or by the agent headline naming a house; the Gemini own-entrance → house path is removed. Deployed (backup /opt/2906-system/backups/category-rules-20261022T024314Z, classifier md5 b555a2c2… = repo). Container: categoryRules 11/11, seafrontHint 19/19, agentPermissions 8/8. In 14 days of posting logs every luxury/villas post already followed this rule; the two closed paths are the ones that could break it.
+
+### 2026-10-29 Outreach automation rebuild (Claude)
+Changed (branch `claude/outreach-automation`; prod snapshot eab7791, -text mirror 8086b6a, then 71ef8d3, 569273c, e86081d, 963088d):
+`ops/outreach-automation/backend/` services/outreachPlanner.js, adminCommands.js (CRLF kept), outreachRunEngine.js, cooldownRules.js, listBuilder.js, routes/crm.js (CRLF); new services outreachSchedule, outreachPace, outreachQuota, outreachTemplates, outreachTemplateSeed (36 texts), outreachEligibility, outreachEngagement; migration 20261029_outreach_automation(.down).sql; `app/crm/outreach/page.tsx` + `outreach-console.css`; deploy.sh.
+Why (evidence from production data):
+- Pace "resets to 100": an expired `outreach_volume_until` was read as 100 % by dispatch and listAccounts. Now the saved pace (or min–max range) never expires; no pace → the run is refused (`pace_unavailable`), never 100.
+- Evening drift: 24h15 after the last send +16 min a day, no cutoff. Replaced (Kev's choice) by the calendar-day rule: max 40 unique owners per account per Malta day (atomic quota table), sends only 08:30–19:30 (checked before each message; a run reaching 19:30 is held and resumes 08:30). Day chain is +16 min per day from a chosen or auto morning start, and only if 30 min remain in the window.
+- Greeting frozen at preparation time: now chosen at send time (persona rotation by period, free text normalised; never "Good night").
+- DNC: 210 owners have status='do_not_contact' with the boolean false; pool + canContact only read the boolean; 57 of them were messaged in the last 30 days. Both forms are DNC now, plus a fresh eligibility check before every send (DNC, blocks, dnc/angry labels, pause, unreachable, other-account 20 days, live conversation, no-reply limit 5).
+- Hung batches #354–356 (status running since 10-2x): NOT reconciled; the deploy guard ignores running batches older than 2 h.
+- Auto/Save All/rolling: autoPrepareAccount (5 days, target 30–40, persona LRU rotation, no consecutive repeat), saveAllPrepared (advisory lock, idempotent, per-day results, ok only when every day scheduled), maintainAutoSchedules from the existing 5-min cron (cron.js unchanged). Engagement + Call Candidates are derived from outreach_log/owner_contacts; opted-out owners are never listed.
+Tests: `node --test test/` in the isolated container (argus-outreach-testnet, pgvector pg16 with the prod schema + migration) → 44/44; the same dispatch+planner suites on the eab7791 prod files → 21/26 fail (the 5 that pass call the new modules directly). Migration up/down/up/idempotent on the test DB. `tsc --noEmit` clean. HTTP check of every new route via scripts/outreach-preview-server.js (real routes/crm.js, stubbed WAHA): pace range, invalid pace 400, Auto on → 5×A with variants 1-2-3-4-1, Save All ×2 → 5 scheduled then 5 already_scheduled, quota, template validation (foreign persona 400), engagement, call candidates, Auto off → 5 paused, no token 401. Live: nothing sent.
+Deployed: no — needs the operator's OK (migration + restart). Prod md5 still = snapshot for all 6 files (checked 2026-10-29).
+Not verified / risks:
+- the UI was not rendered in a browser (the local Next dev server hung on a borrowed node_modules); only tsc and the HTTP contract were checked
+- the old-code comparison used LF-normalised eab7791 blobs for adminCommands/crm (same content)
+- no live run exercised the 19:30 hold/resume or the quota with real WAHA
+- the planner keeps proposing owners that dispatch then skips (no_reply_limit, cross-account) — visible as skips, not as a smaller list
+- 20-day cross-account window is a setting (outreach_settings), not confirmed with Kev
+- 'Rented'-reason DNC owners: decision pending
+- outreachPlanner.js was changed in production on 10-28 with no handoff entry (that version is the snapshot base)
+Next: with Kev's OK run `ops/outreach-automation/deploy.sh`, enable Auto on one account, watch one morning run in the logs, then sync the outreach-approval-fix mirror copies.
