@@ -12,3 +12,6 @@ ad906064efb003ed7add0c85503409ad  services/outreachIdentity.js
 0a6d683a43c892fec978bec7758aa605  services/conversationPolicy.js
 5a1b64afc1020ad1f6ab493e7120fcf9  services/agentIdentityRegistry.js
 a659363c06b5c86c06b819d10a8f03f5  services/ownerSendGate.js
+1b1774c8c4170412c130f7b133474593  services/reminderDetector.js
+2510673b413ea565358fda8b6e88e6ee  services/reminderFromMessage.js
+e1a0299c939937c332bb8ebb5e69a274  services/reminderParse.js
