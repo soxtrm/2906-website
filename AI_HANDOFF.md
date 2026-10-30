@@ -139,3 +139,25 @@ Not verified / risks:
 - 'Rented'-reason DNC owners: decision pending
 - outreachPlanner.js was changed in production on 10-28 with no handoff entry (that version is the snapshot base)
 Next: with Kev's OK run `ops/outreach-automation/deploy.sh`, enable Auto on one account, watch one morning run in the logs, then sync the outreach-approval-fix mirror copies.
+
+### 2026-10-30 Owner intelligence: location requests, greetings, answer-once, verified emails, agent chats, reminders (Claude)
+Changed (branch `claude/owner-intelligence-main`, mirror `ops/owner-intelligence/backend/`, prod snapshot 906017b/10f5ada/…, md5 list in `ops/owner-intelligence/PROD_MD5_20261030.txt`):
+waha.js, routes/webhook.js, routes/crmScheduleBoard.js (CRLF), services/{agentIdentityRegistry,autoOwnerConversation,availability,conversationIntelligence,conversationPolicy,ownerSendGate,reminderDetector (CRLF),reminderFromMessage}.js; new services/{timeGreeting,locationRequest}.js; migrations 20261030_location_requests(.down).sql, 20261030_reminder_context(.down).sql; frontend app/crm/schedule-board/page.tsx, lib/crm/ui.tsx; deploy.sh.
+Why (evidence):
+- "Ask for Location": the route only relayed a WhatsApp line to the listing agent (usually Kev's account) via listingAgentNotify; nothing stored, owner never asked, toast only. Now a persistent property_location_requests row, owner asked from the owner's source account, real status, reply matching (pin / map link / street), in-app notification, timeline, viewing warning ("Viewing scheduled — exact location missing").
+- "Good evening" at 12:53: five local maltaGreeting() copies, LLM replies without a clock, FALL1 text with a fixed "have a good evening", and availability.sendTextAs bypasses waha.sendText. All direct-chat sends now pass timeGreeting.fixForSend at send time.
+- Repeated explanations: conversationIntelligence's idempotency key contains the inbound message id, so every repeated "which company?" sent the full intro again. Now full answer once, short form once, then nothing. Duplicate webhook delivery was already deduplicated (test H passes on prod).
+- Identity/email: Kevin = self-employed agent working with the 2906 Estate collective (Kev's wording), email kevinsony1@gmail.com. Cedric/Gabriela keep QuickLets/Sotheby's, NO email until Kev confirms the dictated address (services/email.js already sends to "verizonesports@gmail.com" — likely the right spelling of "rarrysonesports"; not assumed). Unverified addresses are blocked in every owner draft.
+- Agent chats: board relay sends from a bot session, so automation could answer an owner in parallel with the agent. An active relay (40 h window, same as a typed human message) is now human_active in ownerSendGate. "Agent opened owner chat" is logged separately from "contacted" (board_relay_opened = after a confirmed send).
+- Reminders: detector missed "check back next month", "tenants will decide next week", "in two months", "after the weekend", "end of the month"; "January" was stored as an exact 1 Jan. Now precision + window + availability state + property (only when the owner has exactly one listing) + source-message dedup.
+Tests: 27/27 in the isolated container (timeGreeting 6, ownerIdentity 5, locationRequest 7, agentChat 5, ownerReminder 4). Production files: greeting 3/6, identity 2/5, agentChat 4/5, reminder 1/4 (the failing ones are the new behaviour). Migrations up/down/up/idempotent on the test DB. tsc --noEmit clean.
+Deployed: no — needs Kev's OK. Order: backend (deploy.sh, migrations first), THEN frontend (main → Vercel); the board UI calls the new routes.
+Not verified / risks:
+- the board UI was not rendered (Test J mobile): only tsc; needs a look after deploy
+- WAHA/GOWS location-pin payload shape assumed (payload.location or _data.Message.locationMessage); no real pin tested
+- who may see a received exact location: listing agent, admins, an agent with a recorded viewing — confirm with Kev
+- reminders.auto_send_enabled still defaults to TRUE: conversation reminders are auto-sent by reminderOutreach when due (after its gates). Brief says internal reminders must not imply a message — decision for Kev
+- P1-8/10/11 conversational acknowledgement ("I'll make a note…", one follow-up question) and tentative property-fact extraction into inventory are NOT implemented (reminder + availability state only)
+- conversationIntelligence direct answers do not consult the relay stand-down
+Next: Kev's OK → deploy.sh, then merge this branch to main for the board UI; then one live location request on a test listing with the authorised test number.
+
