@@ -41,8 +41,13 @@ type Account = {
   restrictionsThisWeek?: number
   outreachAutoBaseCount?: number | null; outreachAutoMessage?: string
   recentRuns?: { id: number; status: string; total_contacts: number; sent_count: number; skip_count: number; started_at: string | null; completed_at: string | null; updated_at: string | null; volume_percent_snapshot: number | null }[]
-  planningDays?: {day: string; label: string; status: string; armed: boolean; scheduledAt: string | null; count: number}[]
+  planningDays?: {day: string; label: string; status: string; armed: boolean; scheduledAt: string | null; count: number; display?: DayDisplay}[]
+  outreachPaceMin?: number | null; outreachPaceMax?: number | null
+  outreachAutoEnabled?: boolean; outreachAutoRolling?: boolean
+  dailyTargetMin?: number; dailyTargetMax?: number; persona?: string | null
+  quotaToday?: { day: string; target: number; cap: number; used: number; sent: number; remaining: number; remainingToTarget: number } | null
 }
+type DayDisplay = { state: 'empty' | 'auto_prepared' | 'scheduled' | 'running' | 'completed' | 'paused' | 'attention' | 'failed' | 'cancelled'; label: string }
 type Template = { id: number; label: string; text: string; created_at: string }
 type Entry = {
   id: number; normalized_phone: string; display_name: string | null
@@ -55,6 +60,8 @@ type Plan = {
   label: 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS' | string
   stats: { total: number; eligible: number; hot: number; cold: number; skip: number; sent: number }
   entries?: Entry[]
+  message_mode?: 'free_text' | 'persona_rotation' | null; template_slot?: number | null
+  target_count?: number | null; display?: DayDisplay
 }
 type DueReminder = {
   id: number; owner_name: string | null; phone_last4: string | null; note: string
@@ -99,10 +106,34 @@ function outreachTimeLabel(value: string | null) {
   return `${outreachDaypart(time)} · ${time}`
 }
 
-const OUTREACH_COOLDOWN_MS = (24 * 60 + 15) * 60_000
-const OUTREACH_LIST_MAX = 45
 const OUTREACH_DAY_LABELS = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS'] as const
 type OutreachDayLabel = typeof OUTREACH_DAY_LABELS[number]
+const OUTREACH_LIST_MAX = 45
+// Kev, 2026-10-29: the 24h 15m chain is gone. Rule: max 40 unique owners per
+// account per Malta day, sends only 08:30–19:30 (backend enforces both).
+const SEND_WINDOW = { start: 8 * 60 + 30, end: 19 * 60 + 30 }
+function maltaMinutes(d: Date) {
+  const [h, m] = maltaHM(d).split(':').map(Number)
+  return h * 60 + m
+}
+
+// One glyph + one word per day state: never colour alone (spec 7).
+const DAY_BADGE: Record<DayDisplay['state'], { glyph: string; word: string }> = {
+  empty: { glyph: '—', word: 'Empty' },
+  auto_prepared: { glyph: 'A', word: 'Auto' },
+  scheduled: { glyph: '✓', word: 'Saved' },
+  running: { glyph: '▶', word: 'Running' },
+  completed: { glyph: '✔', word: 'Done' },
+  paused: { glyph: 'Ⅱ', word: 'Paused' },
+  attention: { glyph: '!', word: 'Check' },
+  failed: { glyph: '✕', word: 'Error' },
+  cancelled: { glyph: '✕', word: 'Cancelled' },
+}
+function DayBadge({ display, compact = false }: { display?: DayDisplay; compact?: boolean }) {
+  const d = display || { state: 'empty' as const, label: 'Not prepared' }
+  const badge = DAY_BADGE[d.state] || DAY_BADGE.empty
+  return <span className={`day-badge is-${d.state}`} title={d.label} aria-label={d.label}><b aria-hidden>{badge.glyph}</b>{!compact && <span>{badge.word}</span>}</span>
+}
 function isArgusManager(account: Account) {
   return /argus\s*1|argus[_-]?1/i.test(`${account.label} ${account.sessionName}`)
 }
@@ -122,30 +153,30 @@ function accountPriority(account: Account) {
   return 10
 }
 function cooldownState(account: Account) {
-  if (!account.lastOutreachAt) return { ready: true, label: 'Ready · no previous outreach' }
-  const readyAt = new Date(new Date(account.lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS)
-  const ready = readyAt.getTime() <= Date.now()
-  const moment = `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(readyAt)} · ${maltaHM(readyAt)}`
-  return { ready, label: ready ? 'Ready after 24h 15m check' : `Protected until ${moment}` }
+  const q = account.quotaToday
+  if (q && q.remaining <= 0) return { ready: false, label: `Daily cap ${q.used}/${q.cap} · resumes 08:30` }
+  const minutes = maltaMinutes(new Date())
+  const open = minutes >= SEND_WINDOW.start && minutes < SEND_WINDOW.end
+  const used = q ? `${q.used}/${q.cap} today` : 'quota —'
+  return { ready: open, label: open ? `Window open · ${used}` : `Window 08:30–19:30 · ${used}` }
 }
 
-// Kev, 2026-09-11: "checkt wann der letzte !outreach gemacht wurde und
-// setzt das naechste Fenster mindestens 24h15 nach dem echten letzten Send.
-// The real last send comes from outreach_log —
-// covers a manual !outreach typed straight into WhatsApp too, not just
-// ARGUS's own plans). Only falls back to chaining off a previous ARGUS day
-// (+20min, spec point 19) when there's no real send history at all yet.
-function suggestTime(plans: Plan[] | null, label: string, lastOutreachAt: string | null): string {
-  if (lastOutreachAt) {
-    return maltaHM(new Date(new Date(lastOutreachAt).getTime() + OUTREACH_COOLDOWN_MS + 60_000))
-  }
+// Kev, 2026-10-29: no more "last send + 24h15" chain. Instead each day follows
+// the day before it +16 min ("sobald ich ne zeit bei today setze, morgen +16
+// min"); the backend applies the same rule when ARM sets a time and when Auto
+// prepares. Without an earlier day the suggestion is a morning start.
+const DAILY_SHIFT_MIN = 16
+function suggestTime(plans: Plan[] | null, label: string, _lastOutreachAt: string | null): string {
   const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS']
   const idx = order.indexOf(label)
-  if (idx > 0 && plans) {
-    const prev = plans.find(p => p.label === order[idx - 1])
-    if (prev?.scheduled_at) return maltaHM(new Date(new Date(prev.scheduled_at).getTime() + 20 * 60_000))
+  for (let back = 1; idx - back >= 0 && plans; back++) {
+    const prev = plans.find(p => p.label === order[idx - back])
+    if (!prev?.scheduled_at) continue
+    const minutes = maltaMinutes(new Date(prev.scheduled_at)) + DAILY_SHIFT_MIN * back
+    if (minutes + 30 > SEND_WINDOW.end) break
+    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
   }
-  return '14:15'
+  return '08:45'
 }
 
 // ── AUTO button: per-account "what I used last time" memory ─────────────────
@@ -205,7 +236,7 @@ function ArgusConsole() {
   // lifted here, not per-console, so saving one in DEFAULT's card makes it
   // immediately available in every other account's card too.
   const [templates, setTemplates] = useState<Template[]>([])
-  const [activeTab, setActiveTab] = useState<'tools' | 'reminders'>('tools')
+  const [activeTab, setActiveTab] = useState<'tools' | 'reminders' | 'engagement' | 'templates'>('tools')
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
@@ -266,7 +297,7 @@ function ArgusConsole() {
           <p>One control layer for outreach identities, protected timing and reviewed owner contact.</p>
           <div className="outreach-hero-signals" aria-label="System principles">
             <span><ShieldCheck size={13} /> Reviewed sends</span>
-            <span><Clock3 size={13} /> 24h 15m protection</span>
+            <span><Clock3 size={13} /> 08:30–19:30 Malta · max 40/day</span>
             <span><Layers size={13} /> Separate identities</span>
           </div>
         </div>
@@ -297,6 +328,8 @@ function ArgusConsole() {
       <nav className="outreach-main-tabs" aria-label="Outreach workspace">
         <button aria-pressed={activeTab === 'tools'} onClick={() => setActiveTab('tools')}>Outreach tools <span>{outreachAccounts.length}</span></button>
         <button aria-pressed={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')}>Outreach reminders <span>{dueReminders.rows.length + rechecks.tasks.length}</span></button>
+        <button aria-pressed={activeTab === 'engagement'} onClick={() => setActiveTab('engagement')}>Engagement</button>
+        <button aria-pressed={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>Templates</button>
       </nav>
 
       {error && <div style={{ padding: '10px 24px', color: 'var(--crm-danger)', fontSize: 12 }}>{error}</div>}
@@ -306,6 +339,8 @@ function ArgusConsole() {
         <OwnerRecheckLane data={rechecks} onChanged={load} />
         <DueReminderLane data={dueReminders} />
       </>}
+      {accounts && activeTab === 'engagement' && <EngagementLane accounts={outreachAccounts} />}
+      {accounts && activeTab === 'templates' && <TemplateLibrary />}
 
       {accounts && activeTab === 'tools' && <>
         <div className="outreach-control-layout">
@@ -318,7 +353,8 @@ function ArgusConsole() {
                 <i aria-hidden>{manager ? '⌘' : selectable ? '↗' : '◇'}</i><span><b>{accountDisplayName(account)}</b><small>{manager ? 'SYSTEM MANAGER · NOT IN ROTATION' : selectable ? `${account.pool === 'bottom' ? 'Z→A' : 'A→Z'} OUTREACH` : 'SUPPORT · NOT IN ROTATION'}</small></span>
                 <em className={restricted ? 'is-restricted' : account.connected ? 'is-online' : ''}>{restricted ? 'RESTRICTED' : account.connected ? 'ONLINE' : 'OFFLINE'}</em>
                 <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{selectable && <strong className={cooldown.ready ? 'is-ready' : ''}>{restricted ? `Held${account.restrictionUntil ? ` until ${maltaHM(new Date(account.restrictionUntil))}` : ''}` : cooldown.label}</strong>}</footer>
-                {selectable && <span className="account-plan-strip">{account.planningDays?.map((day,index)=><span key={day.day} title={`${day.day}: ${day.status}${day.scheduledAt ? ' · '+maltaHM(new Date(day.scheduledAt)) : ''} · ${day.count} contacts`}><span>{index===0?'T':index===1?'T+1':`T+${index}`}</span><b>{day.status==='completed'?'✓':day.status==='running'?'▶':day.status==='blocked_session'?'!':day.armed?'✓':day.status==='failed'?'!':'—'}</b></span>)}</span>}
+                {selectable && <span className="account-plan-strip" aria-label="Next five days">{account.planningDays?.map((day,index)=><span key={day.day} title={`${day.day}: ${day.display?.label || day.status}${day.scheduledAt ? ' · '+maltaHM(new Date(day.scheduledAt)) : ''} · ${day.count} contacts`}><span>{index===0?'T':index===1?'T+1':`T+${index}`}</span><DayBadge display={day.display} compact /></span>)}</span>}
+                {selectable && <span className="account-auto-line"><b className={account.outreachAutoEnabled ? 'is-on' : ''}>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'AUTO · ROLLING' : 'AUTO · NOT SAVED') : 'MANUAL'}</b><small>Pace {account.outreachPaceMin ?? account.outreachVolumePercent ?? '—'}{account.outreachPaceMax && account.outreachPaceMax !== account.outreachPaceMin ? `–${account.outreachPaceMax}` : ''}%</small></span>}
               </button></div>
             })}
             <button className="account-add" onClick={()=>setAdding(true)}><b>+</b><span>Add account<small>Expand your network</small></span></button>
@@ -333,7 +369,7 @@ function ArgusConsole() {
         </section>
 
         {selectedAccount && <div className="outreach-active-console">
-          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Drafts prepare automatically 2h before the 24h 15m window. Send remains reviewed and runs the final owner checks.</small></div>
+          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Auto keeps five morning days prepared. SAVE ALL schedules them; every send re-checks the owner, the 08:30–19:30 window and the 40/day cap.</small></div>
           <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
         </div>
         }
@@ -542,19 +578,19 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [armTime, setArmTime] = useState('14:15')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
-  const initialVolume = account.outreachVolumePercent || 100
-  const [volume, setVolume] = useState(initialVolume)
-  const [savedVolume, setSavedVolume] = useState(initialVolume)
-  const [volumeFeedback, setVolumeFeedback] = useState<'saved' | 'saving' | 'error'>('saved')
+  // Kev, 2026-10-29: never fall back to 100 — an unset pace shows empty and
+  // the backend refuses to send without one (the old reset-to-100 bug).
+  const savedMin = account.outreachPaceMin ?? account.outreachVolumePercent ?? null
+  const savedMax = account.outreachPaceMax ?? savedMin
+  const [paceMin, setPaceMin] = useState<number | ''>(savedMin ?? '')
+  const [paceMax, setPaceMax] = useState<number | ''>(savedMax ?? '')
   const [volumeBusy, setVolumeBusy] = useState(false)
+  const [autoBusy, setAutoBusy] = useState(false)
+  const [saveAll, setSaveAll] = useState<{ busy: boolean; result: any | null; error: string }>({ busy: false, result: null, error: '' })
   const [autoSummary, setAutoSummary] = useState('')
   const pickedInitialPlan = useRef(false)
 
-  useEffect(() => {
-    const persisted = account.outreachVolumePercent || 100
-    setVolume(persisted)
-    setSavedVolume(persisted)
-  }, [account.id, account.outreachVolumePercent])
+  useEffect(() => { setPaceMin(savedMin ?? ''); setPaceMax(savedMax ?? '') }, [savedMin, savedMax])
 
   const loadPlans = useCallback(async () => {
     const r = await crmGet(`outreach/plans?accountId=${account.id}`)
@@ -689,7 +725,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const contacts = prepared.reduce((sum: number, plan: any) => sum + Number(plan.preparedCount || 0), 0)
       const preparedTimes = prepared.map((plan: any) => outreachTimeLabel(plan.scheduledAt)).filter(Boolean)
       const timeSummary = preparedTimes.length ? ` · ${preparedTimes.join(' → ')}` : ''
-      setAutoSummary(`✓ AUTO SAVED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +16 min daily${timeSummary}`)
+      setAutoSummary(`✓ AUTO PREPARED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +16 min daily${timeSummary} · press SAVE ALL to schedule`)
       setNote(`Auto prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${contacts} previews · ${preserved.length} preserved${blocked.length ? ` · ${blocked.length} blocked by time/safety` : ''}.`)
       setSelectedPrepareDays([])
       setPrepareDaysOpen(false)
@@ -740,9 +776,13 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     try {
       const r = await crmJson(`outreach/plans/${activePlan.id}/arm`, 'POST', { time: armTime })
       if (r.ok === false) {
-        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', account_24h15_cooldown: 'This account is still inside its 24h 15m protection window.', account_restricted: 'This account is restricted and held from outreach.', queue_lock_conflict: 'Some contacts were taken by another armed queue. Regenerate before arming.', insufficient_eligible_contacts: 'The pool no longer has enough eligible contacts. The plan remains unarmed.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
+        const reasons: Record<string, string> = { no_message: 'Set a message first.', no_eligible_entries: 'No eligible entries in this queue.', time_in_past: 'That time has already passed.', outside_send_window: 'Outreach only runs 08:30–19:30 Malta time.', daily_cap_reached: 'This account already reached 40 owners that day.', account_restricted: 'This account is restricted and held from outreach.', queue_lock_conflict: 'Some contacts were taken by another armed queue. Regenerate before arming.', insufficient_eligible_contacts: 'The pool no longer has enough eligible contacts. The plan remains unarmed.', starter_batch_limit: `A plan allows up to ${OUTREACH_LIST_MAX} eligible contacts.` }
         setNote(reasons[r.reason] || r.reason)
-      } else { setNote(`Armed for ${armTime}.`) }
+      } else {
+        const moved = (r.following || []).filter((f: any) => f.status === 'rescheduled' || f.status === 'retimed')
+        const failed = (r.following || []).filter((f: any) => f.status === 'failed')
+        setNote(`Armed for ${armTime}.${moved.length ? ` Following days moved: ${moved.map((f: any) => f.time).join(' → ')} (+${DAILY_SHIFT_MIN} min each).` : ''}${failed.length ? ` ${failed.length} following day(s) could not be re-armed — check them.` : ''}`)
+      }
       await refresh()
     } finally { setBusy(false) }
   }
@@ -750,20 +790,36 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function pause() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/pause`, 'POST', {}); await refresh() } finally { setBusy(false) } }
   async function cancel() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/cancel`, 'POST', {}); await refresh() } finally { setBusy(false) } }
 
-  async function saveVolume(days: number | null = null) {
-    setVolumeBusy(true); setVolumeFeedback('saving'); setNote('')
+  async function saveVolume() {
+    if (paceMin === '') { setNote('Enter a pace between 10 and 100.'); return }
+    const min = paceMin, max = paceMax === '' ? paceMin : paceMax
+    setVolumeBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { percent: volume, days })
-      const persisted = Number(r?.account?.outreach_volume_percent ?? volume)
-      setVolume(persisted)
-      setSavedVolume(persisted)
-      setVolumeFeedback('saved')
-      setNote(days ? `Pace ${persisted}% saved for ${days} days.` : `Pace ${persisted}% saved.`)
+      await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { min, max })
+      setNote(min === max ? `Pace ${min}% saved — stays until you change it.` : `Pace ${Math.min(min, max)}–${Math.max(min, max)}% saved — each run draws inside it.`)
+      onChanged()
+    } catch (e: any) { setNote(e?.message || 'Failed to save pace') } finally { setVolumeBusy(false) }
+  }
+
+  async function toggleAuto(enabled: boolean) {
+    setAutoBusy(true); setNote('')
+    try {
+      const r = await crmJson(`outreach/accounts/${account.id}/auto`, 'POST', { enabled })
+      if (r.rollingPlans) setPlans(r.rollingPlans)
+      else await loadPlans()
+      setNote(enabled ? 'Auto on — five days prepared (A). Press SAVE ALL to schedule them.' : `Auto off — ${(r.paused || []).length} future auto day(s) paused. Nothing new is sent.`)
       await onChanged()
-    } catch (e: any) {
-      setVolumeFeedback('error')
-      setNote(e?.message || 'Failed to save pace')
-    } finally { setVolumeBusy(false) }
+    } catch (e: any) { setNote(e?.message || 'Could not change Auto') } finally { setAutoBusy(false) }
+  }
+
+  async function saveAllDays() {
+    setSaveAll({ busy: true, result: null, error: '' })
+    try {
+      const r = await crmJson(`outreach/accounts/${account.id}/save-all`, 'POST', {})
+      if (r.rollingPlans) setPlans(r.rollingPlans)
+      setSaveAll({ busy: false, result: r, error: '' })
+      await onChanged()
+    } catch (e: any) { setSaveAll({ busy: false, result: null, error: e?.message || 'Save All failed' }) }
   }
 
   async function setRestriction(restricted: boolean) {
@@ -796,7 +852,25 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <span className="queue-eyebrow"><Radio size={13} /> OUTREACH / WORKSPACE</span>
         <h2>Prepare. Review. Connect.</h2>
         <p>One account. One queue. Every step in view.</p>
-        <button className="queue-autosetup" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={() => setPrepareDaysOpen(open => !open)} aria-expanded={prepareDaysOpen}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>Choose the days first</span></button>
+        <div className="queue-automation" aria-label="Automation">
+          <button type="button" role="switch" aria-checked={Boolean(account.outreachAutoEnabled)} className={`auto-switch${account.outreachAutoEnabled ? ' is-on' : ''}`} disabled={autoBusy || account.operationalStatus === 'restricted'} onClick={() => toggleAuto(!account.outreachAutoEnabled)}>
+            <i aria-hidden /><span><b>{autoBusy ? 'Working…' : account.outreachAutoEnabled ? 'Auto ON' : 'Auto OFF'}</b><small>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Rolling 5 days · keeps itself scheduled' : 'Prepared · press SAVE ALL') : '30–40 owners · 08:30–09:15 start'}</small></span>
+          </button>
+          <button type="button" className="queue-autosetup" disabled={saveAll.busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={saveAllDays}><ShieldCheck size={17} />{saveAll.busy ? 'Saving…' : 'SAVE ALL'}<span>Schedule every prepared day</span></button>
+          <button className="queue-autosetup is-secondary" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={() => setPrepareDaysOpen(open => !open)} aria-expanded={prepareDaysOpen}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>Choose days by hand</span></button>
+          {account.quotaToday && <div className="quota-meter" aria-label={`Today ${account.quotaToday.used} of ${account.quotaToday.cap} owners used`}>
+            <span>TODAY</span><b>{account.quotaToday.used}<small>/{account.quotaToday.cap}</small></b>
+            <i><em style={{ width: `${Math.min(100, (account.quotaToday.used / Math.max(1, account.quotaToday.cap)) * 100)}%` }} /></i>
+            <small>target {account.quotaToday.target} · {account.quotaToday.remaining} left</small>
+          </div>}
+        </div>
+        {(saveAll.result || saveAll.error) && <div className={`save-all-result${saveAll.error || !saveAll.result?.ok ? ' is-warning' : ''}`} role="status">
+          {saveAll.error ? <b>✕ {saveAll.error}</b> : <>
+            <b>{saveAll.result.ok ? '✓ All days scheduled' : '! Some days were not scheduled'}</b>
+            <span>{saveAll.result.scheduled} newly scheduled · {saveAll.result.alreadyScheduled} already scheduled{saveAll.result.failed ? ` · ${saveAll.result.failed} failed` : ''}{saveAll.result.notPrepared ? ` · ${saveAll.result.notPrepared} not prepared` : ''}</span>
+            {(saveAll.result.results || []).filter((r: any) => r.status === 'failed' || r.status === 'not_prepared').map((r: any) => <small key={r.planId}>{dayLabelText(r.label)}: {r.status === 'failed' ? (r.reason || 'failed').replace(/_/g, ' ') : 'no list prepared'}</small>)}
+          </>}
+        </div>}
       </div>
       <div className="queue-progress" aria-label="Queue preparation progress">
         {[{icon: Users, label: 'Contacts', value: `${s?.eligible || 0} eligible`, done: Boolean(s?.eligible)}, {icon: MessageSquare, label: 'Message', value: activePlan?.message_template ? 'Saved' : 'Needs text', done: Boolean(activePlan?.message_template)}, {icon: Clock3, label: 'Window', value: armTime + ' · Malta', done: Boolean(activePlan?.scheduled_at)}, {icon: ShieldCheck, label: 'Release', value: activePlan?.armed ? 'Armed' : 'Review first', done: Boolean(activePlan?.armed)}].map((step, i) => <div key={step.label} className={step.done ? 'is-done' : ''}><step.icon size={17} /><span><small>0{i + 1} / {step.label}</small><b>{step.value}</b></span></div>)}
@@ -815,7 +889,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             {account.operationalStatus === 'restricted' ? 'RESTRICTED' : account.connected ? 'CONNECTED' : 'DISCONNECTED'}
           </div>
           {/* Real last-send time from outreach_log; the next window observes
-              the shared 24h15 account cooldown. */}
+              the 08:30–19:30 window and the 40/day cap. */}
           <div style={{ fontSize: 9.5, color: FAINT, textAlign: 'right' }}>
             Last outreach: {account.lastOutreachAt
               ? `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} · ${maltaHM(new Date(account.lastOutreachAt))}`
@@ -827,12 +901,14 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       <div className="account-safety-panel">
         <div className="account-volume-compact">
           <span>PACE · {account.pool === 'bottom' ? 'Z→A' : 'A→Z'}</span>
-          <input aria-label={`${account.label} outreach volume percent`} type="number" min={10} max={100} value={volume} onChange={e => setVolume(Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
+          <input aria-label={`${account.label} pace from percent`} type="number" min={10} max={100} value={paceMin} placeholder="—" onChange={e => setPaceMin(e.target.value === '' ? '' : Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
+          <b>–</b>
+          <input aria-label={`${account.label} pace to percent`} type="number" min={10} max={100} value={paceMax} placeholder="—" onChange={e => setPaceMax(e.target.value === '' ? '' : Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
           <b>%</b>
-          <input aria-label={`${account.label} outreach volume`} type="range" min={10} max={100} step={1} value={volume} onChange={e => setVolume(Number(e.target.value))} />
-          <button disabled={volumeBusy || volume === savedVolume} onClick={() => saveVolume(null)} style={btnGhost}>{volumeBusy ? 'Saving…' : volume === savedVolume ? 'Saved' : 'Save pace'}</button>
-          <span className={`account-pace-status ${volumeFeedback === 'error' ? 'is-error' : volume !== savedVolume ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
-            {volumeFeedback === 'error' ? '× Save failed' : volumeBusy ? '… Saving' : volume !== savedVolume ? `● Unsaved · ${volume}%` : `✓ Saved · ${savedVolume}%`}
+          <button disabled={volumeBusy || paceMin === ''} onClick={() => saveVolume()} style={btnGhost}>{volumeBusy ? 'Saving…' : 'Save'}</button>
+          {savedMin == null && <small className="pace-missing">No pace saved — runs are refused until one is set.</small>}
+          <span className={`account-pace-status ${paceMin === '' ? 'is-error' : (paceMin !== (savedMin ?? '') || paceMax !== (savedMax ?? '')) ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
+            {volumeBusy ? '… Saving' : savedMin == null ? '× No pace saved' : (paceMin !== savedMin || paceMax !== savedMax) ? `● Unsaved · ${paceMin}${paceMax !== '' && paceMax !== paceMin ? `–${paceMax}` : ''}%` : `✓ Saved · ${savedMin}${savedMax !== savedMin ? `–${savedMax}` : ''}%`}
           </span>
         </div>
         <div className="account-restriction-line">
@@ -859,7 +935,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             }}>
               <span>{dayLabelText(label)}</span>
-              <span style={{ fontSize: 8, opacity: 0.8 }}>{p?.status === 'completed' ? '✓ DONE' : p?.armed ? '✓ ARMED' : p?.status === 'ready' ? '● READY' : p?.status === 'running' ? '▶ RUNNING' : p?.source?.startsWith('auto_blocked:') ? '⊘ BLOCKED' : '○ DRAFT'}</span>
+              <DayBadge display={p?.display} />
             </button>
           )
         })}
@@ -949,7 +1025,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
       </section>
       <section className="queue-message"><h3><MessageSquare size={17} /> Your message <span>02</span></h3>
-      <p className="queue-help">Review the account identity and wording before scheduling.</p>
+      <p className="queue-help">{activePlan?.message_mode === 'persona_rotation'
+        ? `Persona rotation · variant ${activePlan.template_slot ?? '—'}. The greeting and closing are chosen at the moment of sending (Malta time). Editing the text below switches this day to your own wording.`
+        : 'Your own wording. A leading greeting and the closing are corrected to the Malta time of sending.'}</p>
       {/* message + save */}
       {!isCompleted && (
         <div style={{ display: 'flex', gap: 6 }}>
@@ -988,16 +1066,16 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       )}
 
       </section>
-      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · 24h 15m account cooldown. Auto proposes the next day exactly 16 minutes later, so Morning, Afternoon and Evening stay one minute clear of the gate. Owner checks run again before sending.</p>
+      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · sends only 08:30–19:30, max 40 owners per account per day. Each following day starts 16 minutes later than the day before. A run reaching 19:30 pauses and resumes 08:30 next morning. Owner checks run again before every message.</p>
       {/* schedule / arm */}
       {!isCompleted && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Outreach Plan</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: activePlan?.armed ? accent.a : FAINT }}>{activePlan?.armed ? '● ARMED' : '○ NOT ARMED'}</span>
+            <DayBadge display={activePlan?.display} />
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input type="time" value={armTime} onChange={e => setArmTime(e.target.value)} style={{ ...inputSmall, flex: 1 }} />
+            <input type="time" min="08:30" max="19:29" value={armTime} onChange={e => setArmTime(e.target.value)} style={{ ...inputSmall, flex: 1 }} />
             <button disabled={busy || activePlan?.armed || account.operationalStatus === 'restricted' || !account.connected} onClick={arm} style={btnPrimary(accent)}>ARM</button>
             <button disabled={busy || !activePlan?.armed} onClick={pause} style={btnGhost}>PAUSE</button>
             <button disabled={busy} onClick={cancel} style={{ ...btnGhost, color: 'var(--crm-danger)' }}>CANCEL</button>
@@ -1012,6 +1090,95 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       )}
       </section>
     </div>
+  )
+}
+
+
+// ── Engagement & Call Candidates (Kev, 2026-10-29) ─────────────────────────
+// Derived from the send log; the call list is manual follow-up only and never
+// contains anyone who opted out on WhatsApp.
+const ENGAGEMENT_LEVELS = [1, 3, 5, 6, 7]
+function EngagementLane({ accounts }: { accounts: Account[] }) {
+  const [session, setSession] = useState('')
+  const [minAttempts, setMinAttempts] = useState(3)
+  const [overview, setOverview] = useState<any>(null)
+  const [calls, setCalls] = useState<any>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let live = true
+    const q = session ? `session=${encodeURIComponent(session)}&` : ''
+    setError('')
+    Promise.all([crmGet(`outreach/engagement?${q}`), crmGet(`outreach/call-candidates?${q}minAttempts=${minAttempts}`)])
+      .then(([o, c]) => { if (live) { setOverview(o); setCalls(c) } })
+      .catch(e => { if (live) setError(e?.message || 'Failed to load engagement') })
+    return () => { live = false }
+  }, [session, minAttempts])
+  return (
+    <section className="engagement-lane">
+      <header><div><span>ENGAGEMENT</span><h2>Replies & call candidates</h2></div>
+        <label>Account<select value={session} onChange={e => setSession(e.target.value)}><option value="">All accounts</option>{accounts.map(a => <option key={a.id} value={a.sessionName}>{accountDisplayName(a)}</option>)}</select></label>
+      </header>
+      {error && <p className="lane-error" role="alert">{error}</p>}
+      {overview && <div className="engagement-stats">
+        <div><small>Owners contacted</small><b>{overview.ownersContacted}</b></div>
+        <div><small>Replied</small><b>{overview.ownersReplied}</b><span>{overview.replyRate}%</span></div>
+        <div><small>Opted out</small><b>{overview.optedOut}</b></div>
+        <div><small>Auto stops after</small><b>{overview.autoRetryStopsAt}</b><span>unanswered</span></div>
+      </div>}
+      {overview && <div className="engagement-levels" role="group" aria-label="No reply after N attempts">
+        {overview.noReplyByAttempts.map((l: any) => <button key={l.attempts} aria-pressed={minAttempts === l.attempts} onClick={() => setMinAttempts(l.attempts)}><small>≥ {l.attempts} attempt{l.attempts === 1 ? '' : 's'}</small><b>{l.owners}</b></button>)}
+      </div>}
+      <h3>Call Candidates — No WhatsApp Response <span>{calls?.candidates?.length ?? '—'}</span></h3>
+      <p className="queue-help">Manual follow-up list. Owners who opted out, are blocked or were marked angry are never listed — a WhatsApp opt-out is not permission to call.</p>
+      <div className="call-list">
+        {(calls?.candidates || []).map((c: any) => <div key={c.phone}>
+          <span><b>{c.name || 'Unknown owner'}</b><small>{[c.location, c.propertyType].filter(Boolean).join(' · ') || '—'}</small></span>
+          <a href={`tel:+${c.phone}`}>+{c.phone}</a>
+          <small>{c.attempts} attempts · last {c.lastSentAt ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(c.lastSentAt)) : '—'} · {c.lastAccount}</small>
+        </div>)}
+        {calls && !calls.candidates.length && <small>No owners at this threshold.</small>}
+      </div>
+    </section>
+  )
+}
+
+// ── Persona template library: 3 personas × 3 periods × 4 variants ─────────
+const PERSONAS = [{ key: 'kev', label: 'Kevin' }, { key: 'cedric', label: 'Cedric' }, { key: 'gabriela', label: 'Gabriela' }]
+const PERIODS = ['morning', 'afternoon', 'evening'] as const
+function TemplateLibrary() {
+  const [persona, setPersona] = useState('kev')
+  const [rows, setRows] = useState<any[]>([])
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [status, setStatus] = useState<Record<string, string>>({})
+  const load = useCallback(async () => {
+    const r = await crmGet(`outreach/persona-templates?persona=${persona}`)
+    setRows(r.templates || []); setDrafts({}); setStatus({})
+  }, [persona])
+  useEffect(() => { load().catch(() => setRows([])) }, [load])
+  const key = (t: any) => `${t.persona}:${t.period}:${t.slot}`
+  async function save(t: any, active = t.active) {
+    const k = key(t)
+    setStatus(s => ({ ...s, [k]: 'Saving…' }))
+    try {
+      await crmJson('outreach/persona-templates', 'PUT', { persona: t.persona, period: t.period, slot: t.slot, body: drafts[k] ?? t.body, active })
+      setStatus(s => ({ ...s, [k]: '✓ Saved' }))
+      await load()
+    } catch (e: any) { setStatus(s => ({ ...s, [k]: `✕ ${e?.message || 'Failed'}` })) }
+  }
+  return (
+    <section className="template-library">
+      <header><div><span>TEMPLATES</span><h2>Persona rotation library</h2></div>
+        <div className="persona-tabs" role="group" aria-label="Persona">{PERSONAS.map(p => <button key={p.key} aria-pressed={persona === p.key} onClick={() => setPersona(p.key)}>{p.label}</button>)}</div>
+      </header>
+      <p className="queue-help">Four variants per time of day. Rotation never repeats the previous variant and prefers the least recently used. The greeting must match its period; other personas' names are refused.</p>
+      {PERIODS.map(period => <div key={period} className="template-period"><h3>{period === 'morning' ? 'Morning · 08:00–11:59' : period === 'afternoon' ? 'Afternoon · 12:00–17:59' : 'Evening · 18:00–23:59'}</h3>
+        {rows.filter(t => t.period === period).map(t => { const k = key(t); return <div key={k} className={`template-card${t.active ? '' : ' is-off'}`}>
+          <header><b>Variant {t.slot}</b><label><input type="checkbox" checked={t.active} onChange={e => save(t, e.target.checked)} /> Active</label></header>
+          <textarea value={drafts[k] ?? t.body} onChange={e => setDrafts(d => ({ ...d, [k]: e.target.value }))} rows={5} />
+          <footer><small>{status[k] || (t.updated_by ? `Edited by ${t.updated_by}` : 'Seed text')}</small><button disabled={(drafts[k] ?? t.body) === t.body} onClick={() => save(t)} style={btnGhost}>Save</button></footer>
+        </div> })}
+      </div>)}
+    </section>
   )
 }
 
