@@ -29,15 +29,17 @@ test.beforeEach(async (t) => {
   await seedPool(t.name.startsWith('short pool') ? 80 : 400)
 })
 
-test('auto prepare: 5 morning days, no drift, persona rotation, target 30–40, all "A"', async () => {
+test('auto prepare: morning start, each next day +16 min, persona rotation, target 30–40, all "A"', async () => {
   const acc = await H.account({ session: 'Gabriela', persona: 'gabriela', pace: 33 })
   await P.setAutoEnabled(acc.id, true, { now: NOW })
   const plans = await P.listRollingPlans(acc.id, 'test', NOW)
   assert.strictEqual(plans.length, 5)
   const slots = []
-  for (const plan of plans) {
+  const first = S.maltaParts(new Date(plans[0].scheduled_at)).minutes
+  assert.ok(first >= 8 * 60 + 30 && first <= 9 * 60 + 15, `first day starts ${first}`)
+  for (const [i, plan] of plans.entries()) {
     const local = S.maltaParts(new Date(plan.scheduled_at))
-    assert.ok(local.minutes >= 8 * 60 + 30 && local.minutes <= 9 * 60 + 15, `${plan.label} starts ${local.hour}:${local.minute}`)
+    assert.strictEqual(local.minutes, first + 16 * i, `${plan.label}: day before +16 min`)
     assert.strictEqual(plan.message_mode, 'persona_rotation')
     assert.ok(plan.target_count >= 30 && plan.target_count <= 40, String(plan.target_count))
     assert.ok(plan.stats.eligible >= 30 && plan.stats.eligible <= 40, String(plan.stats.eligible))
@@ -174,4 +176,39 @@ test('short pool: Save All schedules the days that have owners and reports the r
        JOIN outreach_plan_entries e ON e.plan_id = p.id AND e.eligibility_status = 'eligible'
       WHERE p.account_id = $1 AND p.armed GROUP BY p.id`, [acc.id])).rows
   for (const row of armed) assert.strictEqual(row.entries, row.target_count, 'armed day sends what it prepared')
+})
+
+test('ARM a time on TODAY: tomorrow +16, then +32 … scheduled days are re-armed, nothing leaves 08:30–19:30', async () => {
+  const acc = await H.account({ session: 'Argus7', persona: 'kev' })
+  await P.setAutoEnabled(acc.id, true, { now: NOW })
+  await P.saveAllPrepared(acc.id, { now: NOW })
+  const today = (await P.listRollingPlans(acc.id, 'test', NOW)).find(p => p.label === 'TODAY')
+  const r = await P.armPlan(today.id, { time: '10:00' })
+  assert.strictEqual(r.ok, true, JSON.stringify(r))
+  assert.deepStrictEqual(r.following.map(f => [f.status, f.time]), [
+    ['rescheduled', '10:16'], ['rescheduled', '10:32'], ['rescheduled', '10:48'], ['rescheduled', '11:04'],
+  ])
+  const plans = await P.listRollingPlans(acc.id, 'test', NOW)
+  assert.deepStrictEqual(plans.map(p => S.maltaParts(new Date(p.scheduled_at)).minutes), [600, 616, 632, 648, 664])
+  for (const plan of plans) assert.strictEqual(P.dayDisplayState(plan, plan.stats).state, 'scheduled', plan.label)
+  // One job per day, keyed by the NEW time (re-arm replaces the old job).
+  assert.strictEqual(new Set(plans.map(p => p.job_id)).size, 5)
+  const queued = new Set(H.jobs.filter(j => j.name === 'outreach-plan').map(j => j.opts.jobId))
+  for (const plan of plans) assert.ok(queued.has(plan.job_id), plan.label)
+
+  const late = await P.armPlan(today.id, { time: '19:00' })
+  assert.strictEqual(late.ok, true)
+  assert.ok(late.following.every(f => f.status === 'unchanged' && f.reason === 'outside_send_window'), JSON.stringify(late.following))
+})
+
+test('unsaved auto days only move their time when TODAY is armed', async () => {
+  const acc = await H.account({ session: 'Argus8', persona: 'kev' })
+  await P.setAutoEnabled(acc.id, true, { now: NOW })
+  const today = (await P.listRollingPlans(acc.id, 'test', NOW)).find(p => p.label === 'TODAY')
+  const r = await P.armPlan(today.id, { time: '09:40' })
+  assert.deepStrictEqual(r.following.map(f => [f.status, f.time]), [
+    ['retimed', '09:56'], ['retimed', '10:12'], ['retimed', '10:28'], ['retimed', '10:44'],
+  ])
+  const plans = await P.listRollingPlans(acc.id, 'test', NOW)
+  assert.deepStrictEqual(plans.slice(1).map(p => P.dayDisplayState(p, p.stats).state), ['auto_prepared', 'auto_prepared', 'auto_prepared', 'auto_prepared'])
 })

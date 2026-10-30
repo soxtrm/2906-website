@@ -104,6 +104,21 @@ function autoStartTime(accountId, dateStr) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 }
 
+// Kev, 2026-10-29: "sobald ich ne zeit bei today setze, morgen +16 min" —
+// each following day starts 16 minutes later than the day before it. Unlike
+// the old 24h15 chain this is anchored to a chosen start, not to the last
+// send, and the result must still leave 30 minutes inside 08:30–19:30.
+const DAILY_SHIFT_MIN = 16
+const hhmm = minutes => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+function chainedStart(baseStart, offsetDays) {
+  const base = maltaParts(baseStart).minutes
+  const minutes = base + DAILY_SHIFT_MIN * offsetDays
+  if (minutes < WINDOW_START_MIN || minutes + 30 > WINDOW_END_MIN) return null
+  return hhmm(minutes)
+}
+const dayDiff = (fromDateStr, toDateStr) =>
+  Math.round((Date.parse(`${toDateStr}T12:00:00Z`) - Date.parse(`${fromDateStr}T12:00:00Z`)) / 86400000)
+
 // ── Send-time greeting/closing for FREE-TEXT messages ────────────────────
 // Persona-library templates are chosen per period (outreachTemplates.js).
 // Free text (manual plans, older drafts) is corrected here: only a leading
@@ -137,5 +152,6 @@ module.exports = {
   TZ, WINDOW_START_MIN, WINDOW_END_MIN, AUTO_START_EARLIEST_MIN, AUTO_START_LATEST_MIN,
   maltaParts, maltaDateStr, addDays, maltaLocalToUTC,
   isSendAllowed, nextSendWindowStart, windowEndFor, greetingPeriod, autoStartTime,
+  DAILY_SHIFT_MIN, chainedStart, dayDiff,
   normalizeGreeting, OPENING, CLOSING,
 }

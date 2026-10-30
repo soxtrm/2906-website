@@ -78,3 +78,13 @@ test('auto start time is a stable morning slot per account+day, varies across da
     assert.ok(h * 60 + m >= 8 * 60 + 30 && h * 60 + m <= 9 * 60 + 15, t)
   }
 })
+
+test('+16 min chain: day+1, day+2 … and never past 19:00 start (needs 30 min in the window)', () => {
+  const base = S.maltaLocalToUTC('2026-11-16', '10:00')
+  assert.deepStrictEqual([1, 2, 3, 4].map(n => S.chainedStart(base, n)), ['10:16', '10:32', '10:48', '11:04'])
+  assert.strictEqual(S.chainedStart(S.maltaLocalToUTC('2026-11-16', '18:44'), 1), '19:00')
+  assert.strictEqual(S.chainedStart(S.maltaLocalToUTC('2026-11-16', '18:45'), 1), null)
+  // Across the DST change the chain keeps Malta wall-clock time.
+  assert.strictEqual(S.chainedStart(S.maltaLocalToUTC('2026-10-24', '09:00'), 2), '09:32')
+  assert.strictEqual(S.dayDiff('2026-10-24', '2026-10-26'), 2)
+})

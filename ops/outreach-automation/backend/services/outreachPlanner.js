@@ -424,7 +424,7 @@ async function listRollingPlans(accountId, createdBy, now = new Date()) {
   for (const d of dates) {
     const plan = await ensurePlan(accountId, d, createdBy)
     const stats = await computeStats(plan.id)
-    out.push({ ...plan, label: dayLabelFor(d, today), stats })
+    out.push({ ...plan, label: dayLabelFor(d, today), stats, display: dayDisplayState(plan, stats) })
   }
   return out
 }
@@ -658,7 +658,7 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
         // kept for the next morning); move them onto the persona rotation.
         if (persona && plan.message_mode !== outreachTemplates.MODE_ROTATION) await setRotationTemplate(plan.id, accountId, persona, now)
         results.push({
-          planId: plan.id, label: plan.label,
+          day: toDateStr(plan.scheduled_date), planId: plan.id, label: plan.label,
           status: refreshed.stats.eligible >= savedTarget ? 'prepared' : 'pool_shortage',
           scheduledAt: plan.scheduled_at, targetCount: savedTarget,
           preparedCount: refreshed.stats.eligible,
@@ -666,7 +666,7 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
         })
       } catch (err) {
         log.warn('outreachPlanner: auto plan top-up failed', { accountId, planId: plan.id, err: err.message })
-        results.push({ planId: plan.id, label: plan.label, status: 'failed', reason: err.code || err.message, scheduledAt: plan.scheduled_at, targetCount: savedTarget, preparedCount: plan.stats.eligible })
+        results.push({ day: toDateStr(plan.scheduled_date), planId: plan.id, label: plan.label, status: 'failed', reason: err.code || err.message, scheduledAt: plan.scheduled_at, targetCount: savedTarget, preparedCount: plan.stats.eligible })
       }
       continue
     }
@@ -681,15 +681,18 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
         const phone = normPhone(entry.normalized_phone)
         if (phone) excludedPhones.add(phone)
       }
-      results.push({ planId: plan.id, label: plan.label, status: 'preserved', scheduledAt: plan.scheduled_at, targetCount: plan.stats.eligible, preparedCount: 0 })
+      results.push({ day: toDateStr(plan.scheduled_date), planId: plan.id, label: plan.label, status: 'preserved', scheduledAt: plan.scheduled_at, targetCount: plan.stats.eligible, preparedCount: 0 })
       continue
     }
 
-    // Every auto day starts in the morning (08:30–09:15, stable per account
-    // and day). If today's morning slot has already passed and the window is
+    // The first auto day starts in the morning (08:30–09:15, stable per
+    // account and day); every later day follows the day before it +16 min
+    // (Kev, 2026-10-29). If today's slot already passed and the window is
     // still open, today starts in ten minutes instead.
     const scheduledDateStr = toDateStr(plan.scheduled_date)
-    let scheduledAt = outreachSchedule.maltaLocalToUTC(scheduledDateStr, outreachSchedule.autoStartTime(accountId, scheduledDateStr))
+    const previous = [...results].reverse().find(r => r.scheduledAt && r.status !== 'blocked' && r.day)
+    const chained = previous ? outreachSchedule.chainedStart(new Date(previous.scheduledAt), outreachSchedule.dayDiff(previous.day, scheduledDateStr)) : null
+    let scheduledAt = outreachSchedule.maltaLocalToUTC(scheduledDateStr, chained || outreachSchedule.autoStartTime(accountId, scheduledDateStr))
     if (scheduledAt <= now && scheduledDateStr === outreachSchedule.maltaDateStr(now)) {
       const soon = new Date(now.getTime() + 10 * 60_000)
       soon.setUTCSeconds(0, 0)
@@ -703,7 +706,7 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
             SET scheduled_at=$2, source=$3, status='draft', armed=FALSE, updated_at=NOW()
           WHERE id=$1`, [plan.id, scheduledAt.toISOString(), `auto_blocked:${reason}`]
       )
-      results.push({ planId: plan.id, label: plan.label, status: 'blocked', reason, scheduledAt: scheduledAt.toISOString(), targetCount: 0, preparedCount: 0 })
+      results.push({ day: toDateStr(plan.scheduled_date), planId: plan.id, label: plan.label, status: 'blocked', reason, scheduledAt: scheduledAt.toISOString(), targetCount: 0, preparedCount: 0 })
       continue
     }
 
@@ -726,13 +729,13 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
           WHERE id=$1`, [plan.id, scheduledAt.toISOString(), Math.max(1, prepared)]
       )
       results.push({
-        planId: plan.id, label: plan.label, status: 'prepared', scheduledAt: scheduledAt.toISOString(),
+        day: toDateStr(plan.scheduled_date), planId: plan.id, label: plan.label, status: 'prepared', scheduledAt: scheduledAt.toISOString(),
         targetCount: target, preparedCount: generated.resultEligible, templateSlot,
       })
     } catch (err) {
       await clearEntries(plan.id).catch(() => {})
       log.warn('outreachPlanner: account auto preparation failed', { accountId, planId: plan.id, err: err.message })
-      results.push({ planId: plan.id, label: plan.label, status: 'failed', reason: err.code || err.message, scheduledAt: null, targetCount: target, preparedCount: 0 })
+      results.push({ day: toDateStr(plan.scheduled_date), planId: plan.id, label: plan.label, status: 'failed', reason: err.code || err.message, scheduledAt: null, targetCount: target, preparedCount: 0 })
     }
   }
 
@@ -1039,7 +1042,7 @@ async function saveDraft(planId) {
   return getPlanWithEntries(planId)
 }
 
-async function armPlan(planId, { time } = {}) {
+async function armPlan(planId, { time, chain = true } = {}) {
   const plan = await db.query(`SELECT * FROM outreach_plans WHERE id = $1`, [planId])
   if (!plan.rows.length) throw new Error('plan not found')
   const p = plan.rows[0]
@@ -1113,7 +1116,42 @@ async function armPlan(planId, { time } = {}) {
     [planId, scheduledAt.toISOString(), String(job.id), idempotencyKey])
   await logTransition(planId, p.status, 'ready', 'armed_by_user', 'admin', { job_id: String(job.id) })
   await commitPoolCursorForPlan(planId)
-  return { ok: true, scheduledAt: scheduledAt.toISOString() }
+  // An explicitly chosen time re-times the following days (+16 min each).
+  const following = time && chain ? await chainFollowingDays(p, scheduledAt) : []
+  return { ok: true, scheduledAt: scheduledAt.toISOString(), following }
+}
+
+// Kev, 2026-10-29: "sobald ich ne zeit bei today setze, morgen +16 min mehr".
+// Later days of the same account that have not run yet follow the chosen
+// start: day+1 = +16 min, day+2 = +32 min … Scheduled days are re-armed at
+// the new time (same checks as a manual ARM); prepared but unsaved days only
+// move their time; empty days are left for Auto, which chains the same way.
+async function chainFollowingDays(plan, baseAt) {
+  const baseDay = toDateStr(plan.scheduled_date)
+  const later = (await db.query(
+    `SELECT p.*, (SELECT COUNT(*)::int FROM outreach_plan_entries e WHERE e.plan_id = p.id) AS entry_count
+       FROM outreach_plans p
+      WHERE p.account_id = $1 AND p.scheduled_date > $2::date AND p.scheduled_date <= $2::date + 4
+      ORDER BY p.scheduled_date`, [plan.account_id, baseDay])).rows
+  const out = []
+  for (const next of later) {
+    const day = toDateStr(next.scheduled_date)
+    const base = { planId: next.id, day }
+    if (['running', 'completed', 'cancelled'].includes(next.status)) { out.push({ ...base, status: 'unchanged', reason: next.status }); continue }
+    const time = outreachSchedule.chainedStart(baseAt, outreachSchedule.dayDiff(baseDay, day))
+    if (!time) { out.push({ ...base, status: 'unchanged', reason: 'outside_send_window' }); continue }
+    if (next.armed) {
+      const r = await armPlan(next.id, { time, chain: false })
+      out.push({ ...base, time, status: r.ok ? 'rescheduled' : 'failed', reason: r.ok ? null : r.reason })
+    } else if (next.scheduled_at || next.entry_count > 0) {
+      await db.query(`UPDATE outreach_plans SET scheduled_at = $2, updated_at = NOW() WHERE id = $1`,
+        [next.id, maltaLocalToUTC(day, time).toISOString()])
+      out.push({ ...base, time, status: 'retimed' })
+    } else {
+      out.push({ ...base, status: 'unchanged', reason: 'empty' })
+    }
+  }
+  return out
 }
 
 // ── Auto mode (2026-10-29) ─────────────────────────────────────────────────
@@ -1193,12 +1231,15 @@ async function setAutoEnabled(accountId, enabled, { actor = 'admin', now = new D
         SET outreach_auto_enabled = $2, outreach_auto_rolling = CASE WHEN $2 THEN outreach_auto_rolling ELSE FALSE END,
             outreach_auto_updated_at = NOW()
       WHERE id = $1 AND is_active = TRUE AND outreach_enabled = TRUE`, [accountId, enabled === true])
-  if (enabled === true) return { enabled: true, preparation: await autoPrepareAccount(accountId, { actor, now }) }
+  if (enabled === true) {
+    const preparation = await autoPrepareAccount(accountId, { actor, now })
+    return { enabled: true, preparation, rollingPlans: preparation.rollingPlans }
+  }
   const paused = []
   const armed = (await db.query(
     `SELECT id FROM outreach_plans WHERE account_id = $1 AND armed = TRUE AND status IN ('ready','blocked_session') AND source = 'auto_prepared'`, [accountId])).rows
   for (const plan of armed) { await pausePlan(plan.id); paused.push(plan.id) }
-  return { enabled: false, paused }
+  return { enabled: false, paused, rollingPlans: await listRollingPlans(accountId, actor, now) }
 }
 
 // Rolling schedule (cron, every 5 minutes): for every Auto account, keep the
