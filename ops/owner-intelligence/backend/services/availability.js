@@ -314,6 +314,8 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 // later on the SAME session), never silently reroute the owner's conversation to
 // another account (2026-09-22: "never silently reroute through default").
 async function sendTextAs(session, chatId, text, replyToMessageId = null, opts = {}) {
+  // Same send-time wording rule as waha.sendText (this path bypasses it).
+  text = require('./timeGreeting').fixForSend(toChatId(chatId), text)
   const body = { session, chatId: toChatId(chatId), text }
   if (replyToMessageId) body.reply_to = replyToMessageId
   await require('./outreachIdentity').assertOutboundIdentity(session, body.chatId, text)
@@ -2282,6 +2284,7 @@ const NOTIFY_TEXT = {
 // flat "204" was. This adds ONE best-effort photo message with the listing's
 // own public facts, on top of the (unchanged, tested) text notify above.
 async function sendImageAs(session, chatId, base64Data, mimeType, caption) {
+  caption = require('./timeGreeting').fixForSend(toChatId(chatId), caption)
   const body = {
     session, chatId: toChatId(chatId), caption: caption || '',
     file: { mimetype: mimeType || 'image/jpeg', filename: 'property.jpg', data: base64Data },
