@@ -1,6 +1,6 @@
 # Iż-Żebbuġ, Gozo edition — sourced research draft
 
-Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Research checked 29 October 2026; image metadata rechecked 30 October 2026 (Europe/Malta).
+Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Research checked 29 October 2026; image metadata and responsive preview checked 30 October 2026 (Europe/Malta).
 
 ## Why this locality is next
 
@@ -119,4 +119,16 @@ The wide panoramio view was rejected for severe haze, distance and an overproces
 
 The inventory, Address Registrar, Visit Gozo locality/heritage/coast pages, Malta Public Transport route 309, both exact MTA filters, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client on 29 October 2026. The Local Council and Primary HealthCare pages rejected that client with HTTP 403 but remained current and readable through browser retrieval; Gozo Album was likewise readable through the current browser source. No claim was expanded from those transport-layer differences. Volatile health, transport, event, bathing and operating information remains on the linked live sources.
 
-No private contact details were copied. The licensed local web derivative is the only public-tree asset created in this step; it is not referenced by any public page yet. No preview, public HTML, canonical, sitemap, index, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed.
+No private contact details were copied. The licensed local web derivative remains unreferenced by every public page. No public HTML, canonical, sitemap, index, route, deployment, backlink, external account, outreach message, WhatsApp message or scheduler was created or changed.
+
+## Responsive preview verification
+
+The private English preview is `public/link-marketplace/areas/zebbug-gozo-preview.html`. It deliberately carries `noindex,nofollow`, has no canonical and no `og:url`, and is not linked from the neighbourhood index, navigation or sitemap. It follows the established 2906 editorial page pattern while keeping the agency identity distinct from the supporting Nexus attribution.
+
+The selected Matt Hush image is visibly credited in the responsive frame with direct Commons file and CC BY-SA 4.0 licence links. The real 390×844 and 1440×1000 crops were visually inspected: the church, village square and red telephone box remain legible, and the image is explicitly presented as dated village context rather than a property view, address, access, parking, quietness or proximity claim.
+
+The OpenStreetMap view is inserted only after an explicit click. Before that action the document contains no iframe. The neutral `14.226,36.049,14.266,36.083` viewport contains no listing pin, council boundary, route, distance, journey time or guaranteed view. After the click the iframe filled the complete 310×320 mobile frame and 1156×520 desktop frame without horizontal overflow.
+
+Chromium verification passed at both viewports with HTTP 200, exactly one H1, the exact robots contract, decoded 1800×1202 hero, visible attribution, no failed requests, no HTTP responses from 400 upwards and no console errors. The final screenshots before and after map loading are stored outside Git under `D:\2906\nexus-bridge-work\artifacts\20261030-zebbug-gozo-preview`. The preview file is 18,475 bytes with SHA-256 `B4BD7CFCB8DBB5440A52016C4897400A8068955C0B43283190954298ED2EB781`.
+
+`git diff --check`, `tests/route-segments.test.cjs`, `tests/property-route-ferry-presentation.test.mjs` and `tests/matrix-routing.test.mjs` passed. The optional `21st search` and `21st review` commands were unavailable because that CLI is not installed in this environment; no external component or generation credit was used. Publication remains a separate clean step requiring a fresh source check, SEO contract, production build, live verification and named rollback basis.
