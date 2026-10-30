@@ -15,3 +15,8 @@ a659363c06b5c86c06b819d10a8f03f5  services/ownerSendGate.js
 1b1774c8c4170412c130f7b133474593  services/reminderDetector.js
 2510673b413ea565358fda8b6e88e6ee  services/reminderFromMessage.js
 e1a0299c939937c332bb8ebb5e69a274  services/reminderParse.js
+bd0c920e0dcc5d1e2091a977caa212d3  services/websiteSync.js
+4c7399d1bdfcc8335586ad2621d62af3  services/webPost.js
+543ad009bfc0038b12a08fefef6e84fe  services/imageRanker.js
+5bb203733bf46e359c7ad4003119852b  services/rentalModes.js
+784a54d03b95d1d653f6b528e18562d1  cron.js
