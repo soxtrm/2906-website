@@ -340,6 +340,9 @@ function wasSentByBackend(id) {
 async function sendText(session, phone, text, { timeoutMs, replyToMessageId } = {}) {
   // phone can be raw number or @c.us JID
   const chatId = phone.includes('@') ? phone : `${phone}@c.us`
+  // Kev, 2026-10-30: time-of-day wording follows the Malta time of THIS send
+  // ("Good evening" went out at 12:53). Direct chats only; never throws.
+  text = require('./services/timeGreeting').fixForSend(chatId, text)
   // One sender, one name (2026-09-24): throws on a foreign persona signature.
   await require('./services/outreachIdentity').assertOutboundIdentity(session, chatId, text)
   log.debug('Sending message via WAHA', { session, chatId: chatId.slice(-8) })
@@ -881,6 +884,7 @@ async function getChats(session, limit = 500) {
 // Send an image to a chat using base64-encoded data.
 async function sendImage(session, chatId, base64Data, mimeType, caption) {
   const cid = chatId.includes('@') ? chatId : `${chatId}@c.us`
+  caption = require('./services/timeGreeting').fixForSend(cid, caption)
   await require('./services/outreachIdentity').assertOutboundIdentity(session, cid, caption)
   // 45s, not the 15s default — this call's body carries the full image, and
   // WAHA has to upload that to WhatsApp before it responds, not just answer
@@ -903,6 +907,7 @@ async function sendImage(session, chatId, base64Data, mimeType, caption) {
 // Send a document or other binary file to a chat.
 async function sendFile(session, chatId, base64Data, mimeType, filename, caption) {
   const cid = chatId.includes('@') ? chatId : `${chatId}@c.us`
+  caption = require('./services/timeGreeting').fixForSend(cid, caption)
   await require('./services/outreachIdentity').assertOutboundIdentity(session, cid, caption || filename)
   const result = await wahaRequest('POST', '/api/sendFile', {
     session,
@@ -932,6 +937,7 @@ async function sendFile(session, chatId, base64Data, mimeType, filename, caption
 // an undownloadable grey box otherwise.
 async function sendVideo(session, chatId, base64Data, mimeType, caption, filename) {
   const cid = chatId.includes('@') ? chatId : `${chatId}@c.us`
+  caption = require('./services/timeGreeting').fixForSend(cid, caption)
   await require('./services/outreachIdentity').assertOutboundIdentity(session, cid, caption)
   const mime = (mimeType || 'video/mp4').split(';')[0].trim()
   // 120s — WAHA re-encodes via ffmpeg (convert:true) on top of the upload
