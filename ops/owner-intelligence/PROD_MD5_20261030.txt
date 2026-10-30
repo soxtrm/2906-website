@@ -20,3 +20,4 @@ bd0c920e0dcc5d1e2091a977caa212d3  services/websiteSync.js
 543ad009bfc0038b12a08fefef6e84fe  services/imageRanker.js
 5bb203733bf46e359c7ad4003119852b  services/rentalModes.js
 784a54d03b95d1d653f6b528e18562d1  cron.js
+5bdb4e31132e1a444fd4755dc2205ee3  routes/crm.js
