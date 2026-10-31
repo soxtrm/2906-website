@@ -934,6 +934,14 @@ function shapeProperty(row, { full = false, favSet = null } = {}) {
     availableUntil: row.available_until || null,
     hasBalcony: row.has_balcony, balconySize: row.balcony_size, hasStudyRoom: row.has_study_room,
     parkingAvailable: row.parking_available,
+    // Scorecard (2026-10-31) + where each value came from (latest provenance
+    // entry: owner chat / CRM correction, when, evidence). Internal CRM only.
+    floorLevel: row.floor_level ?? null,
+    parkingType: row.parking_type ?? null,
+    scorecardSources: Object.fromEntries(['rental_modes', 'available_from', 'availability', 'floor', 'parking', 'parking_type', 'subletting', 'address']
+      .map(k => [k, Array.isArray(row.field_provenance?.[k]) ? row.field_provenance[k][row.field_provenance[k].length - 1] : null])
+      .filter(([, v]) => v)
+      .map(([k, v]) => [k, { source: v.source_type || null, at: v.observed_at || null, evidence: v.evidence || null }])),
     beds: row.bedrooms, baths: row.bathrooms, sizeSqm: numOrNull(row.size_sqm),
     availableStatus: row.available_status,
     availableDate: row.available_date,
@@ -1446,6 +1454,8 @@ router.patch('/properties/:id', auth, async (req, res) => {
       // scorePropertyType), so they only ever change here. lease_type is
       // handled above (admin-direct / pending-approval), not in this list.
       'has_balcony','balcony_size','has_study_room','parking_available',
+      // Scorecard (2026-10-31): floor and kind of parking.
+      'floor_level','parking_type',
       // Owner-Kadenz #4 "Bis" (restored 2026-09-21, see shapeProperty): longlet
       // termination date, independent of available_date.
       'available_until',
@@ -1715,6 +1725,8 @@ router.patch('/properties/:id', auth, async (req, res) => {
       town: 'locality', street: 'address', property_type: 'property_type',
       bedrooms: 'bedrooms', bathrooms: 'bathrooms', size_sqm: 'sqm',
       longlet_price: 'price', lease_type: 'lease_type', available_date: 'availability',
+      // same keys ownerFactEngine writes, so the latest entry is comparable
+      floor_level: 'floor', parking_available: 'parking', parking_type: 'parking_type', rental_modes: 'rental_modes',
       // ARGUS property intelligence (2026-09-23): a DIRECT feature_tags PATCH
       // only — the auto-re-extraction above writes its own
       // 'feature_tags_reextracted'/'feature_tags_conflict' property_activities

@@ -58,6 +58,8 @@ function Detail({ id }: { id: number }) {
       balcony_size: p.balconySize || '',
       has_study_room: p.hasStudyRoom === true ? 'true' : p.hasStudyRoom === false ? 'false' : '',
       parking_available: p.parkingAvailable === true ? 'true' : p.parkingAvailable === false ? 'false' : '',
+      floor_level: p.floorLevel || '',
+      parking_type: p.parkingType || '',
     })
   }).catch(() => {})
   useEffect(() => { load() }, [id])
@@ -103,6 +105,8 @@ function Detail({ id }: { id: number }) {
         has_study_room: triState(form.has_study_room),
         parking_available: triState(form.parking_available),
         balcony_size: form.balcony_size || null,
+        floor_level: form.floor_level || null,
+        parking_type: form.parking_type || null,
       }
       const r = await crmJson(`properties/${id}`, 'PATCH', payload)
       let webNote = ''
@@ -281,7 +285,27 @@ function Detail({ id }: { id: number }) {
                       <option value="">Unverified</option><option value="true">Yes</option><option value="false">No</option>
                     </select>
                   </Field>
+                  {/* Scorecard (2026-10-31): floor and kind of parking; unknown stays empty. */}
+                  <Field label="Parking type">
+                    <select style={inp} value={form.parking_type} onChange={e => set('parking_type', e.target.value)}>
+                      <option value="">Unknown</option><option value="garage">Garage</option><option value="parking_space">Parking space</option><option value="carport">Carport</option>
+                    </select>
+                  </Field>
+                  <Field label="Floor">
+                    <select style={inp} value={form.floor_level} onChange={e => set('floor_level', e.target.value)}>
+                      <option value="">Unknown</option><option value="basement">Basement</option><option value="ground">Ground</option>
+                      {Array.from({ length: 15 }, (_, i) => String(i + 1)).map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="top">Top floor</option><option value="penthouse">Penthouse</option>
+                    </select>
+                  </Field>
                 </div>
+                {p?.scorecardSources && Object.keys(p.scorecardSources).length > 0 && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: '#8A94A8', lineHeight: 1.5 }}>
+                    {Object.entries(p.scorecardSources as Record<string, { source: string | null; at: string | null; evidence: string | null }>).map(([k, v]) => (
+                      <div key={k}>{k.replace(/_/g, ' ')}: {v.source === 'crm_correction' ? 'set in CRM' : v.source === 'owner_chat' ? 'from owner chat' : (v.source || 'source unknown')}{v.at ? ` · ${new Date(v.at).toLocaleDateString('en-GB')}` : ''}{v.evidence ? ` · “${v.evidence}”` : ''}</div>
+                    ))}
+                  </div>
+                )}
                 <div style={{ marginTop: 14, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                   <label style={chk}><input type="checkbox" checked={form.published} onChange={e => set('published', e.target.checked)} style={{ accentColor: A }} /> Published (LIVE)</label>
                   <label style={chk}><input type="checkbox" checked={form.shortlet} onChange={e => set('shortlet', e.target.checked)} style={{ accentColor: A }} /> Short-let available</label>
