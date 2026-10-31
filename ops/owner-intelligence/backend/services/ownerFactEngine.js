@@ -38,6 +38,11 @@ const FIELD_COLUMNS = {
   sharing_price: 'sharing_price',   // conditional sharing rent — never the general rent
   available_from: 'available_date',
   contact_pause_until: 'property_contact_paused_until',
+  // Scorecard (Kev, 2026-10-31; migration 20261031_scorecard_fields)
+  floor: 'floor_level',
+  parking: 'parking_available',
+  parking_type: 'parking_type',
+  rental_modes: 'rental_modes',
 }
 
 const LIVE = `p.ref IS NOT NULL AND COALESCE(p.available_status,'available') NOT IN ('rented','archived')`

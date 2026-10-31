@@ -99,7 +99,9 @@ function fieldOrderFor(checklist) {
 // (photos is MUST-adjacent, map is "almost always ask"); 'pets'/'sharing' are
 // Stage 3 (gated on cooperation, see optionalFieldEligible below);
 // 'subletting' is Stage 4 (rare, last-question-only, gated even harder).
-const OPTIONAL_FIELDS = ['photos', 'map', 'pets', 'sharing', 'subletting']
+// Kev, 2026-10-31: floor (with the address), rent type (with available-from)
+// and parking (with subletting) — bundled by services/ownerQuestionPlan.js.
+const OPTIONAL_FIELDS = ['photos', 'map', 'floor', 'rent_type', 'pets', 'sharing', 'parking', 'subletting']
 
 function randomDelayMs() {
   return Math.floor(Math.random() * (DELAY_MAX_MS - DELAY_MIN_MS + 1)) + DELAY_MIN_MS
@@ -1056,7 +1058,7 @@ function politeClosing() {
 // again" gate the old map/pets_sharing_insurance fields already used.
 // Everything else (including the two new date fields) is asked until an
 // actual value lands in checklist[f].
-const ASK_ONCE_FIELDS = new Set(['map', 'photos', 'plans', 'pets', 'sharing', 'subletting'])
+const ASK_ONCE_FIELDS = new Set(['map', 'photos', 'plans', 'pets', 'sharing', 'subletting', 'floor', 'rent_type', 'parking'])
 
 // Kev, 2026-09-01 (Gestufte Fragen-Priorität): the checklist key actually
 // populated by extraction for the map/address question is `address`, not
@@ -1087,6 +1089,11 @@ function optionalFieldEligible(field, checklist) {
   if (checklist._optional_questions_closed) return false
   if (field === 'sharing') return sharingEligible(checklist) && mapFieldAnswered(checklist)
   if (field === 'pets') return mapFieldAnswered(checklist)
+  // Floor travels with the address; rent type with available-from (rentals
+  // only); parking is Stage 3 like pets.
+  if (field === 'floor') return true
+  if (field === 'rent_type') return checklist.transaction_type !== 'sale'
+  if (field === 'parking') return mapFieldAnswered(checklist)
   if (field === 'subletting') {
     // A 1-bedroom property permanently skips sharing (see sharingEligible
     // above) -- checklist.sharing will never become non-null for it, so
@@ -1169,6 +1176,27 @@ function computeEngagementLevel(log_) {
   return avgWords <= 2 ? 'low' : 'high'
 }
 
+const questionPlan = require('./ownerQuestionPlan')
+// The question set for the field nextMissingField chose: related missing
+// facts are asked together (address+floor, rent type+available-from,
+// parking+subletting); companions obey the same stage gates.
+function planQuestion(field, checklist) {
+  return questionPlan.bundleFor(field, checklist, {
+    eligible: f => (ASK_ONCE_FIELDS.has(f) ? optionalFieldEligible(f, checklist) : true),
+    verbatim: { subletting: FALLBACK_QUESTIONS.subletting[0] },
+  })
+}
+// Companions asked in the same message count as asked (never asked twice).
+function markBundledAsked(checklist, plan, primary) {
+  const next = { ...checklist }
+  for (const f of (plan && plan.fields) || []) {
+    if (f === primary) continue
+    next[`_ask_count_${f}`] = (next[`_ask_count_${f}`] || 0) + 1
+    if (ASK_ONCE_FIELDS.has(f)) next[`_asked_${f}`] = true
+  }
+  return next
+}
+
 function nextMissingField(checklist) {
   for (const f of fieldOrderFor(checklist)) {
     if (checklist[`_unresolved_${f}`]) continue
@@ -1202,6 +1230,9 @@ const FIELD_LABEL = {
   pets: 'whether they would consider tenants with pets',
   sharing: 'whether sharing with other tenants would be an option',
   subletting: 'whether they would consider subletting through a serious company, as a very last, carefully-framed question',
+  floor: 'which floor the apartment is on',
+  rent_type: 'whether it is for a long let or a winter let',
+  parking: 'whether there is a garage or parking space',
 }
 
 // ── Local extraction fallback (Kev, 2026-08-30) ──────────────────
@@ -2506,6 +2537,9 @@ const FALLBACK_QUESTIONS = {
   pets: ['Is there any chance you may consider pets in any scenario, if the clients are very good &/or the pet is insured?'],
   sharing: ['Do you consider professional sharing in the apartment?'],
   subletting: ["One last question, sorry for the spam, but I want to make sure I ask before I don't and you somehow accept it. If I have super serious subletting companies with very interesting offers for you, would you may consider it?"],
+  floor: ['which floor is the apartment on?', 'and which floor is it on?'],
+  rent_type: ['is it for a long let or a winter let?'],
+  parking: ['is there a garage or a parking space with it?'],
 }
 function pickOne(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 
@@ -2537,8 +2571,10 @@ function stripListFormatting(text) {
     .join(' ')
 }
 
-async function buildNextMessage(askAboutField, conversationLog, ownerLatestText) {
-  const askAbout = FIELD_LABEL[askAboutField] || askAboutField
+// plan (services/ownerQuestionPlan.bundleFor): when several related facts
+// are missing they go into ONE question; the fallback uses the plan's text.
+async function buildNextMessage(askAboutField, conversationLog, ownerLatestText, plan = null) {
+  const askAbout = (plan && plan.label) || FIELD_LABEL[askAboutField] || askAboutField
   const prompt = NEXT_MESSAGE_PROMPT.replace('{{ASK_ABOUT}}', askAbout)
   const context = `Conversation so far:\n${conversationLog}\n\nOwner's latest message(s):\n${ownerLatestText}`
   const result = await callGemini(prompt, context)
@@ -2561,7 +2597,7 @@ async function buildNextMessage(askAboutField, conversationLog, ownerLatestText)
     return { reply_message: styleLearning.stripEmDash(stripListFormatting(result.reply_message)), extracted: mergeLocalOverKimi(localExtracted, result.extracted) }
   }
   // Deterministic fallback if Gemini is unavailable.
-  const replyMessage = styleLearning.stripEmDash(buildFallbackQuestion(askAboutField))
+  const replyMessage = styleLearning.stripEmDash(plan && plan.text ? plan.text : buildFallbackQuestion(askAboutField))
   return { reply_message: replyMessage, extracted: localExtracted }
 }
 
@@ -3505,6 +3541,9 @@ async function writeDraftProperty(phone, checklist) {
     if (checklist.pets) notes.push(`Pets: ${checklist.pets}`)
     if (checklist.sharing) notes.push(`Sharing: ${checklist.sharing}`)
     if (checklist.subletting) notes.push(`Subletting: ${checklist.subletting}`)
+    if (checklist.floor) notes.push(`Floor: ${checklist.floor}`)
+    if (checklist.parking) notes.push(`Parking: ${checklist.parking}${checklist.parking_type ? ` (${checklist.parking_type})` : ''}`)
+    if (Array.isArray(checklist.rent_type)) notes.push(`Rent type: ${checklist.rent_type.join(' + ')}`)
     notes.push(...extraIntelligenceNotes(checklist))
     const unresolvedNote = unresolvedFieldNote(checklist)
     if (unresolvedNote) notes.push(unresolvedNote)
@@ -3581,8 +3620,9 @@ async function writeDraftProperty(phone, checklist) {
         longlet_price, sale_price, available_status, listed_by_agent_id, published,
         internal_notes, viewing_notes, is_staging, chat_extracted_fields,
         locality_id, locality_resolution_status,
-        pets_allowed, sharing_allowed, subletting_allowed, subletting_considered, subletting_note, field_provenance)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending_check',1,false,$10,$11,TRUE,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+        pets_allowed, sharing_allowed, subletting_allowed, subletting_considered, subletting_note, field_provenance,
+        floor_level, parking_available, parking_type, rental_modes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending_check',1,false,$10,$11,TRUE,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
      RETURNING id`,
     [ownerId, propertyType, town, checklist.address || null,
      checklist.bedrooms || null, checklist.bathrooms || null,
@@ -3592,7 +3632,11 @@ async function writeDraftProperty(phone, checklist) {
      notes.join(' | '), checklist.viewable_date || null, JSON.stringify(structuredIntake),
      localityId, localityStatus,
      rules.pets_allowed, rules.sharing_allowed, rules.subletting_allowed, rules.subletting_considered, rules.subletting_note,
-     JSON.stringify(provenance)]
+     JSON.stringify(provenance),
+     checklist.floor || null,
+     checklist.parking === 'yes' ? true : checklist.parking === 'no' ? false : null,
+     checklist.parking_type || null,
+     Array.isArray(checklist.rent_type) && checklist.rent_type.length ? checklist.rent_type : null]
   )
   for (const [index, url] of (checklist._plans || []).entries()) {
     await db.query(
@@ -4158,12 +4202,16 @@ async function processStep({ conversationId, phone, session }) {
         .catch(err => log.warn('autoOwnerConversation: Fall 4 tenant-preference capture failed', { err: err.message }))
     }
 
+    // Floor / parking / rent type the owner stated (deterministic extractor,
+    // services/ownerFacts) — never asked again once known (Kev, 2026-10-31).
+    updatedChecklist = questionPlan.factsIntoChecklist(updatedChecklist, require('./ownerFacts').extractFacts(combinedText))
     const askAbout = nextMissingField(updatedChecklist)
     if (!askAbout) {
       finished = true
     } else {
       const logText = log_.map(l => `${l.from}: ${l.text}`).join('\n')
-      const built0 = await buildNextMessage(askAbout, logText, combinedText)
+      const plan0 = planQuestion(askAbout, updatedChecklist)
+      const built0 = await buildNextMessage(askAbout, logText, combinedText, plan0)
       const { reply_message, extracted } = applySublettingInferenceOverride(askAbout, updatedChecklist, built0.reply_message, built0.extracted, combinedText)
       updatedChecklist = mergeExtracted(updatedChecklist, extracted, combinedText)
       const priorAskCount = updatedChecklist[`_ask_count_${askAbout}`] || 0
@@ -4202,6 +4250,7 @@ async function processStep({ conversationId, phone, session }) {
       if (sendThisQuestion) {
         const g9 = await gatedSend(session, phone, reply_message, conversationId)
         if (!g9.sent) return
+        updatedChecklist = markBundledAsked(updatedChecklist, plan0, askAbout)
         log_.push({ from: 'bot', text: reply_message, at: new Date().toISOString() })
         // Kev, 2026-09-01 (Gestufte Fragen-Priorität, real bug found while
         // testing): an ASK_ONCE field JUST asked for the first time this
@@ -4219,13 +4268,15 @@ async function processStep({ conversationId, phone, session }) {
         } else {
           const nextIsAskOnce = ASK_ONCE_FIELDS.has(next)
           const nextNeverAskedBefore = nextIsAskOnce && !updatedChecklist[`_asked_${next}`]
-          const builtRaw = await buildNextMessage(next, logText, combinedText)
+          const planNext = planQuestion(next, updatedChecklist)
+          const builtRaw = await buildNextMessage(next, logText, combinedText, planNext)
           const built = applySublettingInferenceOverride(next, updatedChecklist, builtRaw.reply_message, builtRaw.extracted, combinedText)
           updatedChecklist = mergeExtracted(updatedChecklist, built.extracted, combinedText)
           updatedChecklist[`_ask_count_${next}`] = (updatedChecklist[`_ask_count_${next}`] || 0) + 1
           if (nextIsAskOnce) updatedChecklist[`_asked_${next}`] = true
           const g10 = await gatedSend(session, phone, built.reply_message, conversationId)
           if (!g10.sent) return
+          updatedChecklist = markBundledAsked(updatedChecklist, planNext, next)
           log_.push({ from: 'bot', text: built.reply_message, at: new Date().toISOString() })
           if (nextMissingField(updatedChecklist) === null && !nextNeverAskedBefore) finished = true
         }

@@ -24,3 +24,4 @@ bd0c920e0dcc5d1e2091a977caa212d3  services/websiteSync.js
 462e63bb14b5b02d09a45237de1d4c83  services/ownerFacts.js
 69895893196372bed22a37afff3d88cf  services/ownerFactEngine.js
 e0ca99c9bb14af4256189529c9c648d6  services/viewingWindows.js
+809519ca200810ca56c242bc1bc1d5bb  lib/maltaTime.js

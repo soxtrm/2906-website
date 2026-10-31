@@ -322,6 +322,56 @@ function extractContactPause(t, now) {
   return { value: ymd(d), evidence: m[0] }
 }
 
+// ── Scorecard facts (Kev, 2026-10-31) ─────────────────────────────────────────
+// Floor, parking/garage and rent type, only when the owner says so explicitly.
+const ORDINAL = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10, eleventh: 11, twelfth: 12 }
+function extractFloor(t) {
+  const m = firstMatch(t, [
+    /\b(ground|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|top|(\d{1,2})(?:st|nd|rd|th)?)\s+floor\b/i,
+    /\bfloor\s+(?:no\.?\s*|number\s+)?(\d{1,2})\b/i,
+    /\b(?:it'?s|it\s+is|this\s+is|located\s+(?:on|in))\s+(?:the\s+)?(penthouse|basement)\b/i,
+  ])
+  if (!m) return null
+  const word = String(m[1]).toLowerCase()
+  let value
+  if (word === 'ground') value = 'ground'
+  else if (word === 'top') value = 'top'
+  else if (word === 'penthouse' || word === 'basement') value = word
+  else if (ORDINAL[word]) value = String(ORDINAL[word])
+  else if (/^\d{1,2}/.test(word)) value = String(parseInt(word, 10))
+  if (!value) return null
+  return { value, evidence: m[0] }
+}
+
+const PARKING_NOUN = '(?:a\\s+|an\\s+|the\\s+|own\\s+|private\\s+)?(?:garage|parking(?:\\s+space|\\s+spot)?|car\\s*(?:space|spot|port)|car\\s+park)'
+function extractParking(t) {
+  const no = firstMatch(t, [
+    new RegExp(`\\b(?:no|without(?:\\s+a)?)\\s+${PARKING_NOUN}\\b`, 'i'),
+    new RegExp(`\\b(?:there\\s+is|there'?s|it\\s+has|it\\s+does\\s+not\\s+have|doesn'?t\\s+have)\\s+no\\s+${PARKING_NOUN}`, 'i'),
+    new RegExp(`\\b(?:doesn'?t|does\\s+not|don'?t|do\\s+not)\\s+(?:have|come\\s+with)\\s+${PARKING_NOUN}`, 'i'),
+    new RegExp(`\\b${PARKING_NOUN}\\s+(?:is\\s+)?not\\s+(?:included|available)\\b`, 'i'),
+  ])
+  if (no) return { value: false, evidence: no[0] }
+  const yes = firstMatch(t, [
+    new RegExp(`\\b(?:there\\s+is|there'?s|it\\s+has|has|with|comes\\s+with|includes?)\\s+${PARKING_NOUN}\\b`, 'i'),
+    new RegExp(`\\b${PARKING_NOUN}\\s+(?:is\\s+)?(?:included|available|provided)\\b`, 'i'),
+  ])
+  if (yes) return { value: true, evidence: yes[0], type: /garage/i.test(yes[0]) ? 'garage' : /car\s*port/i.test(yes[0]) ? 'carport' : 'parking_space' }
+  return null
+}
+
+// Rent type (properties.rental_modes). "short let" is not taken from chat:
+// the public site never claims it without an explicit setting.
+function extractRentType(t) {
+  const winter = /\bwinter[\s-]?let(?:ting)?\b|\bfor\s+the\s+winter\s+(?:months|season)\b/i.exec(t)
+  const long = /\blong[\s-]?(?:term\s+)?let(?:ting)?\b|\blong[\s-]term\s+(?:rent(?:al)?|tenants?|lease)\b/i.exec(t)
+  const onlyWinter = /\bonly\s+(?:as\s+a\s+|for\s+)?winter\b/i.test(t)
+  if (winter && long && !onlyWinter) return { value: ['long_let', 'winter_let'], evidence: `${long[0]} / ${winter[0]}` }
+  if (winter) return { value: ['winter_let'], evidence: winter[0] }
+  if (long) return { value: ['long_let'], evidence: long[0] }
+  return null
+}
+
 // ── public ──────────────────────────────────────────────────────────────────
 function extractFacts(text, now = new Date()) {
   const t = String(text || '').trim()
@@ -342,9 +392,14 @@ function extractFacts(text, now = new Date()) {
     else push('price', price)
   }
   push('available_from', extractAvailableFrom(t, now))
+  push('floor', extractFloor(t))
+  const parking = extractParking(t)
+  push('parking', parking)
+  if (parking && parking.type) push('parking_type', { value: parking.type, evidence: parking.evidence })
+  push('rental_modes', extractRentType(t))
   push('contact_pause_until', extractContactPause(t, now))
   facts.push(...extractViewing(t, now))
   return facts
 }
 
-module.exports = { extractFacts, parseDate, parseTime, extractViewing, DEFAULT_WINDOW_MIN }
+module.exports = { extractFacts, parseDate, parseTime, extractViewing, extractFloor, extractParking, extractRentType, DEFAULT_WINDOW_MIN }
