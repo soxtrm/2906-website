@@ -25,12 +25,17 @@ declare -A EXPECTED=(
   [services/ownerSendGate.js]=a659363c06b5c86c06b819d10a8f03f5
   [services/reminderDetector.js]=1b1774c8c4170412c130f7b133474593
   [services/reminderFromMessage.js]=2510673b413ea565358fda8b6e88e6ee
+  # owner pipeline (2026-10-31, branch claude/owner-pipeline)
+  [routes/crm.js]=5bdb4e31132e1a444fd4755dc2205ee3
+  [cron.js]=784a54d03b95d1d653f6b528e18562d1
+  [services/ownerFacts.js]=462e63bb14b5b02d09a45237de1d4c83
+  [services/ownerFactEngine.js]=69895893196372bed22a37afff3d88cf
 )
 for f in "${!EXPECTED[@]}"; do
   A=$(md5sum $B/$f | cut -d' ' -f1)
   [ "$A" = "${EXPECTED[$f]}" ] || { echo "ABORT: production $f changed ($A) — rebase first"; exit 1; }
 done
-NEW=(services/timeGreeting.js services/locationRequest.js)
+NEW=(services/timeGreeting.js services/locationRequest.js services/websitePublication.js services/ownerAttribution.js services/ownerQuestionPlan.js)
 for f in "${NEW[@]}"; do [ ! -e $B/$f ] || { echo "ABORT: $f already exists in production"; exit 1; }; done
 # timeGreeting needs the outreach automation's central time module.
 [ -e $B/services/outreachSchedule.js ] || { echo "ABORT: services/outreachSchedule.js missing (deploy outreach automation first)"; exit 1; }
@@ -40,13 +45,13 @@ RUNNING=$(q "SELECT (SELECT count(*) FROM outreach_batches WHERE status = 'runni
 [ "$RUNNING" = "0" ] || { echo "ABORT: $RUNNING outreach batch/run(s) active — deploy after they finish"; exit 1; }
 
 # 3. Backup.
-mkdir -p $BK/services $BK/routes
+mkdir -p $BK/services $BK/routes $BK/lib
 for f in "${!EXPECTED[@]}"; do cp -p $B/$f $BK/$f; done
 docker exec 2906_postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t reminders --schema-only' > $BK/reminders_schema.sql
 echo "backup: $BK"
 
 # 4. Migrations (each one transaction, idempotent), then code.
-for m in 20261030_location_requests.sql 20261030_reminder_context.sql; do
+for m in 20261030_location_requests.sql 20261030_reminder_context.sql 20261031_website_publication.sql 20261031_owner_attribution.sql 20261031_scorecard_fields.sql; do
   docker exec -i 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' < $SRC/migrations/$m
 done
 for f in "${!EXPECTED[@]}" "${NEW[@]}"; do cp $SRC/$f $B/$f; done
@@ -58,6 +63,9 @@ docker restart 2906_backend
 for i in $(seq 1 30); do docker logs 2906_backend --since 60s 2>&1 | grep -q "HTTP server listening" && break; sleep 2; done
 docker logs 2906_backend --since 90s 2>&1 | grep -E "HTTP server listening|ERROR" | grep -v Classifier | head -5
 q "SELECT COUNT(*) FROM property_location_requests"
+# Website: the trigger only fires on new changes; the hourly reconcile queues the
+# existing drift (≈175 falsely-available, 42 prices). Report it, do not force it.
+q "SELECT status, COUNT(*) FROM website_publication_state GROUP BY 1"
 md5sum $B/waha.js $B/routes/crmScheduleBoard.js $B/services/locationRequest.js
 
 echo "rollback: for f in ${!EXPECTED[*]}; do cp -p $BK/\$f $B/\$f; done; rm -f ${NEW[*]/#/$B/}; docker restart 2906_backend; then (optional) psql < $SRC/migrations/20261030_reminder_context.down.sql and 20261030_location_requests.down.sql"
