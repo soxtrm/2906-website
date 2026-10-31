@@ -161,3 +161,38 @@ Not verified / risks:
 - conversationIntelligence direct answers do not consult the relay stand-down
 Next: Kev's OK → deploy.sh, then merge this branch to main for the board UI; then one live location request on a test listing with the authorised test number.
 
+### 2026-10-31 Owner pipeline: attribution, scorecard, question bundling, greetings, 2906.estate publication (Claude)
+Changed (branch `claude/owner-pipeline`, stacked on `claude/owner-intelligence-main`; mirror `ops/owner-intelligence/backend/`, prod md5 in `PROD_MD5_20261030.txt`):
+- backend: routes/crm.js, cron.js, routes/crmScheduleBoard.js, services/{ownerFacts,ownerFactEngine,autoOwnerConversation,timeGreeting}.js
+- new: services/{websitePublication,ownerAttribution,ownerQuestionPlan}.js
+- migrations: 20261031_{website_publication,owner_attribution,scorecard_fields}(.down).sql
+- frontend: app/crm/{owners,owner/[id],property/[id],schedule-board}/page.tsx, components/crm/owner-attribution.tsx
+- docs: docs/architecture/*_2026-10-31.md, docs/QA/ARGUS_OWNER_PIPELINE_VERIFICATION_2026-10-31.md
+
+The brief named D:/2906/NExususu as canonical. It is the NEXUS repo (Codex branch); Kev chose 2906-website + VPS.
+
+Why (evidence, production read-only 2026-10-31):
+- 175 listings online as AVAILABLE while the CRM says rented/archived/not available (websiteSync was only called from the CRM edit routes); 42 price drifts; 89 legacy website rows.
+- 3,537 owners were written to by 2+ accounts, but the owner list showed only the record creator.
+- Floor was missing from the schema.
+- Owner questions went one field at a time, with no floor, parking or rent type.
+
+Tests:
+- 57/57 owner suite in the isolated container.
+- Production-copy proofs (full backend copy, read-only node_modules, test DB): identical before/after.
+- tsc clean; all migrations up/down/up/idempotent.
+
+Deployed: no — needs Kev's OK.
+- deploy.sh covers both branches (owner intelligence + pipeline) and runs all migrations before the code.
+- The FIRST HOURLY RECONCILE CHANGES LIVE PUBLIC PAGES (≈175 listings to unavailable, 42 prices). This is intended, but it is a website publication.
+- On deploy also sync the mirrors: ops/outreach-automation/backend/{cron.js,routes/crm.js} ← the ops/owner-intelligence/backend copies.
+
+Not verified / risks:
+- No browser run of the new UI (owner list, owner page, property page, board chips).
+- ownerFactEngine is newest-wins, not "CRM correction > owner chat" (pre-existing).
+- The multi-unit photo/address "which apartment?" prompt was not built.
+- The owner list agent/status filters apply to the top 200 search results only.
+- Website: the 89 legacy rows without a CRM record are untouched.
+- Greetings: evening from 18:00 per Kev (the brief proposed 17:00); configurable via ARGUS_GREETING_HOURS.
+
+Next: Kev reviews → deploy.sh (both packages) → merge to main for the UI → watch the first reconcile in the logs and GET /schedule-board/website-sync.
