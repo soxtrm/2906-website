@@ -83,11 +83,12 @@ test('only real greetings and time-bound wishes change; everything else stays by
     'Evening viewings are possible after 18:00.',
     'Morning, I can do Tuesday.', // bare word: not a greeting we rewrite
     'Have a great weekend!',
-    'Enjoy the rest of your week.',
     'The owner said good evening to the tenants yesterday and left.',
     'Rent is €1,200, available from 1 December.',
   ]
   for (const t of keep) assert.strictEqual(fixTimeWording(t, noon).text, t, t)
+  // mid-week the week wish stays (on a Friday it becomes the weekend — see the 2026-10-31 test)
+  assert.strictEqual(fixTimeWording('Enjoy the rest of your week.', at('2026-10-28', '13:00')).text, 'Enjoy the rest of your week.')
   assert.strictEqual(fixTimeWording('Hi, good evening! Is it still available?', noon).text, 'Hi, good afternoon! Is it still available?')
   assert.strictEqual(fixTimeWording('Thanks a lot — have a lovely evening!', noon).text, 'Thanks a lot — have a lovely afternoon!')
   assert.strictEqual(fixTimeWording('Thanks, good night', noon).text, 'Thanks, have a nice afternoon')
@@ -107,4 +108,28 @@ test('captions to owners are corrected too', async () => {
   await withClock(at('2026-10-30', '12:53'), () =>
     waha.sendImage('default', '35699811819', 'aGVsbG8=', 'image/jpeg', 'Good evening, here are the photos.'))
   assert.strictEqual(sent[0].body.caption || sent[0].body.file?.caption, 'Good afternoon, here are the photos.')
+})
+
+test('2026-10-31 brief: 11:00 / 12:00 / 17:00 / 18:30, Friday vs Monday closings, night "Hello", DST', () => {
+  const f = (d, t, x) => fixTimeWording(x, at(d, t)).text
+  // 30 Oct 2026 = Friday, 26 Oct = Monday, 1 Nov = Sunday
+  assert.strictEqual(f('2026-10-30', '11:00', 'Good evening! Have a great weekend!'), 'Good morning! Have a great weekend!')
+  assert.strictEqual(f('2026-10-30', '12:00', 'Good morning, thanks!'), 'Good afternoon, thanks!')
+  assert.strictEqual(f('2026-10-30', '17:00', 'Good evening, thanks!'), 'Good afternoon, thanks!', 'evening starts at 18:00 (Kev)')
+  assert.strictEqual(f('2026-10-30', '18:30', 'Good afternoon, have a nice day!'), 'Good evening, have a nice evening!')
+  assert.strictEqual(f('2026-10-26', '11:00', 'Good morning, have a great weekend!'), 'Good morning, have a great day!', 'no weekend wish on a Monday')
+  assert.strictEqual(f('2026-10-30', '19:00', 'Thanks, have a great week!'), 'Thanks, have a great weekend!', 'no "good week" on a Friday evening')
+  assert.strictEqual(f('2026-10-28', '10:00', 'Enjoy the rest of your week!'), 'Enjoy the rest of your week!')
+  assert.strictEqual(f('2026-11-01', '19:00', 'Have a lovely weekend!'), 'Have a lovely evening!', 'Sunday evening: the weekend is over')
+  assert.strictEqual(f('2026-10-31', '01:30', 'Good evening! Is it free?'), 'Hello! Is it free?')
+  assert.strictEqual(f('2026-10-31', '01:30', 'Hi, good evening! Is it free?'), 'Hi! Is it free?')
+  // DST (25 Oct 2026): 11:00 Malta is 09:00Z in summer and 10:00Z in winter — both morning.
+  assert.strictEqual(fixTimeWording('Good evening', new Date('2026-10-24T09:00:00Z')).text, 'Good morning')
+  assert.strictEqual(fixTimeWording('Good evening', new Date('2026-10-26T10:00:00Z')).text, 'Good morning')
+})
+
+test('a draft queued the night before gets the greeting of the actual send (real waha.sendText)', async () => {
+  const draft = 'Good evening! Just checking if the flat is still available.' // written 22:40 the day before
+  await withClock(at('2026-10-30', '11:00'), () => waha.sendText('default', '35699811819', draft))
+  assert.strictEqual(sent[0].body.text, 'Good morning! Just checking if the flat is still available.')
 })

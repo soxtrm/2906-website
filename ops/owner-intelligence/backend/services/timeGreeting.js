@@ -25,11 +25,28 @@
 // ============================================================================
 const { maltaParts } = require('./outreachSchedule')
 
-function periodAt(now = new Date()) {
+// Kev, 2026-10-31: boundaries configurable per tenant via
+// ARGUS_GREETING_HOURS="morningStart,afternoonStart,eveningStart,eveningEnd"
+// (default 5,12,18,24 — Kev's decision: evening from 18:00). Outside them
+// ('night', default 00:00–04:59) an opening "Good …" becomes "Hello".
+function greetingHours(env = process.env) {
+  const parts = String(env.ARGUS_GREETING_HOURS || '').split(',').map(Number)
+  const ok = parts.length === 4 && parts.every(Number.isInteger) && parts[0] < parts[1] && parts[1] < parts[2] && parts[2] < parts[3] && parts[3] <= 24
+  const [morning, afternoon, evening, end] = ok ? parts : [5, 12, 18, 24]
+  return { morning, afternoon, evening, end }
+}
+
+function periodAt(now = new Date(), hours = greetingHours()) {
   const h = maltaParts(now).hour
-  if (h >= 5 && h < 12) return 'morning'
-  if (h >= 12 && h < 18) return 'afternoon'
-  return 'evening'
+  if (h >= hours.morning && h < hours.afternoon) return 'morning'
+  if (h >= hours.afternoon && h < hours.evening) return 'afternoon'
+  if (h >= hours.evening && h < hours.end) return 'evening'
+  return 'night'
+}
+
+// 0 = Sunday … 6 = Saturday, in Malta.
+function maltaWeekday(now) {
+  return new Date(`${maltaParts(now).date}T12:00:00Z`).getUTCDay()
 }
 
 const OPENING_RE = /^(\s*(?:(?:hi|hello|hey)[\s,!]+)?)(good)(\s+)(morning|afternoon|evening|night|day)\b/i
@@ -37,6 +54,8 @@ const OPENING_RE = /^(\s*(?:(?:hi|hello|hey)[\s,!]+)?)(good)(\s+)(morning|aftern
 // morning", "wishing you a pleasant evening" — the time word is group 3.
 const CLOSING_RE = /\b((?:have|enjoy|wishing\s+you)\s+(?:a\s+|an\s+|your\s+|the\s+)?(?:(?:very|really|lovely|nice|great|wonderful|good|pleasant|beautiful|relaxing|productive|fantastic|blessed)\s+){0,2}(?:rest\s+of\s+(?:your|the)\s+)?)(day|morning|afternoon|evening|night)\b/gi
 const GOOD_NIGHT_RE = /\bgood\s*night\b(?=[\s!.,]*$)/i
+// "have a great weekend", "enjoy the rest of your week" — group 2 is the word.
+const WEEK_RE = /\b((?:have|enjoy|wishing\s+you)\s+(?:a\s+|an\s+|your\s+|the\s+)?(?:(?:very|really|lovely|nice|great|wonderful|good|pleasant|beautiful|relaxing|fantastic|blessed)\s+){0,2}(?:rest\s+of\s+(?:your|the)\s+)?)(weekend|week)\b/gi
 
 const matchCase = (sample, word) => (sample[0] === sample[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word)
 
@@ -51,7 +70,24 @@ function fixTimeWording(text, now = new Date()) {
   const period = periodAt(now)
   if (!original.trim()) return { text: original, changed: false, period }
   const opening = { morning: 'morning', afternoon: 'afternoon', evening: 'evening' }[period]
-  let out = original.replace(OPENING_RE, (_, lead, good, space, word) => `${lead}${good}${space}${matchCase(word, opening)}`)
+  let out = original.replace(OPENING_RE, (_, lead, good, space, word) => {
+    if (period === 'night') return lead.trim() ? lead.replace(/[\s,]+$/, '') : `${lead}${matchCase(good, 'hello')}`
+    return `${lead}${good}${space}${matchCase(word, opening)}`
+  })
+  // A weekend wish only from Friday to Sunday afternoon; "have a great week"
+  // on a Friday/Saturday becomes the weekend; on other days a weekend wish
+  // falls back to the time of day (Kev, 2026-10-31).
+  const wd = maltaWeekday(now)
+  const hour = maltaParts(now).hour
+  const weekendOk = wd === 5 || wd === 6 || (wd === 0 && hour < 18)
+  const dayWord = period === 'evening' || period === 'night' ? 'evening' : 'day'
+  out = out.replace(WEEK_RE, (whole, lead, word) => {
+    const w = word.toLowerCase()
+    if (w === 'weekend') return weekendOk ? whole : `${lead}${matchCase(word, dayWord)}`
+    if (/rest\s+of/i.test(lead)) return wd >= 1 && wd <= 4 ? whole : `${lead.replace(/rest\s+of\s+(?:your|the)\s+/i, '')}${matchCase(word, weekendOk ? 'weekend' : dayWord)}`
+    return wd === 5 || wd === 6 ? `${lead}${matchCase(word, 'weekend')}` : whole
+  })
+  if (period === 'night') return { text: out, changed: out !== original, period }
   // Closings: "day" is fine until 18:00; in the evening it becomes "evening".
   // A morning/afternoon/evening/night wish is moved to the current period.
   out = out.replace(CLOSING_RE, (whole, lead, word) => {
@@ -71,4 +107,4 @@ function fixForSend(chatId, text, now = new Date()) {
   try { return fixTimeWording(text, now).text } catch (_) { return text }
 }
 
-module.exports = { periodAt, fixTimeWording, fixForSend, isDirectChat }
+module.exports = { periodAt, greetingHours, fixTimeWording, fixForSend, isDirectChat }
