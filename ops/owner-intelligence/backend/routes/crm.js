@@ -966,6 +966,14 @@ function shapeProperty(row, { full = false, favSet = null } = {}) {
     availableUntil: row.available_until || null,
     hasBalcony: row.has_balcony, balconySize: row.balcony_size, hasStudyRoom: row.has_study_room,
     parkingAvailable: row.parking_available,
+    // Scorecard (2026-10-31) + where each value came from (latest provenance
+    // entry: owner chat / CRM correction, when, evidence). Internal CRM only.
+    floorLevel: row.floor_level ?? null,
+    parkingType: row.parking_type ?? null,
+    scorecardSources: Object.fromEntries(['rental_modes', 'available_from', 'availability', 'floor', 'parking', 'parking_type', 'subletting', 'address']
+      .map(k => [k, Array.isArray(row.field_provenance?.[k]) ? row.field_provenance[k][row.field_provenance[k].length - 1] : null])
+      .filter(([, v]) => v)
+      .map(([k, v]) => [k, { source: v.source_type || null, at: v.observed_at || null, evidence: v.evidence || null }])),
     beds: row.bedrooms, baths: row.bathrooms, sizeSqm: numOrNull(row.size_sqm),
     availableStatus: row.available_status,
     availableDate: row.available_date,
@@ -1478,6 +1486,8 @@ router.patch('/properties/:id', auth, async (req, res) => {
       // scorePropertyType), so they only ever change here. lease_type is
       // handled above (admin-direct / pending-approval), not in this list.
       'has_balcony','balcony_size','has_study_room','parking_available',
+      // Scorecard (2026-10-31): floor and kind of parking.
+      'floor_level','parking_type',
       // Owner-Kadenz #4 "Bis" (restored 2026-09-21, see shapeProperty): longlet
       // termination date, independent of available_date.
       'available_until',
@@ -1747,6 +1757,8 @@ router.patch('/properties/:id', auth, async (req, res) => {
       town: 'locality', street: 'address', property_type: 'property_type',
       bedrooms: 'bedrooms', bathrooms: 'bathrooms', size_sqm: 'sqm',
       longlet_price: 'price', lease_type: 'lease_type', available_date: 'availability',
+      // same keys ownerFactEngine writes, so the latest entry is comparable
+      floor_level: 'floor', parking_available: 'parking', parking_type: 'parking_type', rental_modes: 'rental_modes',
       // ARGUS property intelligence (2026-09-23): a DIRECT feature_tags PATCH
       // only — the auto-re-extraction above writes its own
       // 'feature_tags_reextracted'/'feature_tags_conflict' property_activities
@@ -2105,11 +2117,19 @@ router.get('/owners', auth, async (req, res) => {
   try {
     const s = (req.query.search || '').trim()
     const params = []
-    let where = ''
+    const clauses = []
     if (s) {
       params.push(`%${s}%`, `%${digits(s) || '___nomatch___'}%`)
-      where = `WHERE oc.name ILIKE $1 OR oc.phone_normalized ILIKE $2`
+      clauses.push(`(oc.name ILIKE $1 OR oc.phone_normalized ILIKE $2)`)
     }
+    // Kev, 2026-10-31: filter by the WhatsApp account that has a conversation
+    // with the owner (owner_account_labels — metadata, not message text).
+    const account = String(req.query.account || '').trim()
+    if (account) {
+      params.push(account)
+      clauses.push(`EXISTS (SELECT 1 FROM owner_account_labels l WHERE l.contact_id = oc.id AND lower(l.account_session) = lower($${params.length}))`)
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
     const r = await db.query(`
       SELECT oc.id, oc.name, oc.phone_normalized, oc.email, oc.created_at,
              cre.name AS created_by_name, cre.username AS created_by_username,
@@ -2119,18 +2139,56 @@ router.get('/owners', auth, async (req, res) => {
         ${where}
         ORDER BY (SELECT COUNT(*) FROM properties p WHERE p.owner_id = oc.id AND NOT p.is_staging) DESC, oc.created_at DESC
         LIMIT 200`, params)
-    res.json({
-      owners: r.rows.map(o => ({
-        id: o.id, name: o.name,
-        phoneMasked: maskPhone(o.phone_normalized), emailMasked: maskEmail(o.email),
-        hasPhone: !!o.phone_normalized, hasEmail: !!o.email,
-        props: Number(o.prop_count) || 0,
-        by: o.created_by_name || o.created_by_username || null,
-        since: o.created_at,
-      })),
-    })
+    // Who is talking to each owner, under which account, and the chat state
+    // (services/ownerAttribution.js). UNKNOWN stays UNKNOWN.
+    const attribution = await require('../services/ownerAttribution').loadFor(r.rows.map(o => o.id))
+    const refs = r.rows.length ? (await db.query(
+      `SELECT owner_id, array_agg(ref ORDER BY created_at DESC) AS refs FROM properties
+        WHERE owner_id = ANY($1::int[]) AND ref IS NOT NULL AND NOT is_staging GROUP BY owner_id`, [r.rows.map(o => o.id)])).rows : []
+    const refsBy = new Map(refs.map(x => [x.owner_id, x.refs.slice(0, 12)]))
+    let owners = r.rows.map(o => ({
+      id: o.id, name: o.name,
+      phoneMasked: maskPhone(o.phone_normalized), emailMasked: maskEmail(o.email),
+      hasPhone: !!o.phone_normalized, hasEmail: !!o.email,
+      props: Number(o.prop_count) || 0,
+      by: o.created_by_name || o.created_by_username || null,
+      since: o.created_at,
+      propertyRefs: refsBy.get(o.id) || [],
+      attribution: attribution.get(o.id) || null,
+    }))
+    const person = String(req.query.agent || '').trim().toLowerCase()
+    if (person) owners = owners.filter(o => (o.attribution?.accounts || []).some(a => a.person.toLowerCase() === person)
+      || (o.attribution?.assignedTo?.person || '').toLowerCase() === person)
+    const status = String(req.query.status || '').trim()
+    if (status) owners = owners.filter(o => o.attribution?.status === status)
+    res.json({ owners })
   } catch (err) {
     log.error('crm/owners list error', err)
+    res.status(500).json({ error: 'Failed' })
+  }
+})
+
+// POST /api/crm/owners/:id/assign { agentId?, session?, reason } — admin:
+// designate the current handler. Audited; the history keeps every handler.
+router.post('/owners/:id/assign', auth, async (req, res) => {
+  try {
+    const a = await liveAgent(req.agent.id)
+    if (!a || a.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
+    const id = parseInt(req.params.id)
+    const agentId = req.body?.agentId == null ? null : parseInt(req.body.agentId)
+    const session = req.body?.session ? String(req.body.session).slice(0, 60) : null
+    if (session) {
+      const known = await db.query(`SELECT 1 FROM whatsapp_accounts WHERE lower(session_name) = lower($1)`, [session])
+      if (!known.rows.length) return res.status(400).json({ error: 'Unknown WhatsApp account' })
+    }
+    const attribution = await require('../services/ownerAttribution').assign(id, {
+      agentId, session, reason: req.body?.reason ? String(req.body.reason).slice(0, 300) : null, actor: a,
+    })
+    res.json({ ok: true, attribution })
+  } catch (err) {
+    if (err.code === 'invalid_assignment') return res.status(400).json({ error: err.message })
+    if (err.code === 'not_found') return res.status(404).json({ error: err.message })
+    log.error('crm/owners assign error', err)
     res.status(500).json({ error: 'Failed' })
   }
 })
@@ -2221,6 +2279,22 @@ router.get('/owners/:id', auth, async (req, res) => {
       scheduledOutreach.listForOwner(id),
     ])
 
+    // Kev, 2026-10-31: attribution (who / which account / state), the audited
+    // handler history and the "new owner chat started" events.
+    const [attributionMap, assignmentHistory, chatEvents] = await Promise.all([
+      require('../services/ownerAttribution').loadFor([id]),
+      db.query(`SELECT e.created_at, e.from_session, e.to_session, e.reason, e.actor_name,
+                       COALESCE(fa.name, fa.username) AS from_agent, COALESCE(ta.name, ta.username) AS to_agent
+                  FROM owner_assignment_events e
+                  LEFT JOIN agents fa ON fa.id = e.from_agent_id LEFT JOIN agents ta ON ta.id = e.to_agent_id
+                 WHERE e.contact_id = $1 ORDER BY e.created_at DESC LIMIT 30`, [id]),
+      db.query(`SELECT kind, account, source, property_id, created_at FROM owner_chat_events
+                 WHERE contact_id = $1 ORDER BY created_at DESC LIMIT 30`, [id]),
+    ])
+    row.attribution = attributionMap.get(id) || null
+    row.assignmentHistory = assignmentHistory.rows
+    row.chatEvents = chatEvents.rows
+
     // Merge automation events with the properties' own activity log into one
     // timeline (History tab) — same "one place, not six tabs" principle the
     // whole redesign is about. Capped and sorted client-agnostic (server
@@ -2302,6 +2376,7 @@ router.get('/owners/:id', auth, async (req, res) => {
       properties: shapedProperties,
       incompleteCount: incompleteCount.rows[0].n,
       accountLabels: accountLabels.rows,
+      attribution: row.attribution, assignmentHistory: row.assignmentHistory, chatEvents: row.chatEvents,
       preferences: preferenceComparison,
       documents: documents.rows,
       automation: {

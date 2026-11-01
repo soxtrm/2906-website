@@ -15,19 +15,19 @@ q() { docker exec -e SQL="$1" 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "
 # 1. Production must still be the snapshot this change is based on.
 declare -A EXPECTED=(
   [waha.js]=a52a8861d95136d3c4701a0fd6b2e5a3
-  [routes/webhook.js]=9588c2fc74fbfe02661f4d40e2f22202
+  [routes/webhook.js]=289d22dfe30e1a94179564337e3c7d51
   [routes/crmScheduleBoard.js]=bc0a1459a648b093d6cb691f02320e83
   [services/agentIdentityRegistry.js]=5a1b64afc1020ad1f6ab493e7120fcf9
   [services/autoOwnerConversation.js]=0134df180530a9b92aae30663ed504d7
-  [services/availability.js]=22f2dbb339e779e3ba577225aff87343
+  [services/availability.js]=3f2f7364ce87c097f98f3621ec4166ba
   [services/conversationIntelligence.js]=00f842df9d7d78518a18ef66f71299c6
   [services/conversationPolicy.js]=0a6d683a43c892fec978bec7758aa605
   [services/ownerSendGate.js]=a659363c06b5c86c06b819d10a8f03f5
   [services/reminderDetector.js]=1b1774c8c4170412c130f7b133474593
   [services/reminderFromMessage.js]=2510673b413ea565358fda8b6e88e6ee
   # owner pipeline (2026-10-31, branch claude/owner-pipeline)
-  [routes/crm.js]=5bdb4e31132e1a444fd4755dc2205ee3
-  [cron.js]=784a54d03b95d1d653f6b528e18562d1
+  [routes/crm.js]=dcd5f9d62580c6c86560d01ae58d5df2
+  [cron.js]=4d54178f54635f62dcb659432c3959cb
   [services/ownerFacts.js]=462e63bb14b5b02d09a45237de1d4c83
   [services/ownerFactEngine.js]=69895893196372bed22a37afff3d88cf
   [services/reminderOutreach.js]=07ca8530ee7fb575b06c29c3f2452cf4
