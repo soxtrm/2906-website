@@ -115,16 +115,29 @@ function buildOutreminderMessage(row) {
 // NEITHER the original account nor 'default' is up (a case Kev's spec
 // doesn't cover — this file refuses to guess and reports it as skipped
 // rather than silently picking some other account).
-async function resolveSendSession(row) {
+// Kev, 2026-11-01: automated reminder messages went out (26 on 2026-10-31)
+// although Auto was off for every account — this path only honoured the
+// global owner_automation_mode. Automated sending now needs BOTH an explicit
+// settings.reminder_auto_send = 'ENABLED' (off by default) AND an account with
+// Auto switched on. The manual !outreminder route (human YES) is unchanged.
+async function reminderAutoSendEnabled() {
+  try {
+    const r = await db.query(`SELECT value FROM settings WHERE key = 'reminder_auto_send' LIMIT 1`)
+    return String(r.rows[0]?.value || '').trim().toUpperCase() === 'ENABLED'
+  } catch (_) { return false }
+}
+
+async function resolveSendSession(row, { requireAuto = false } = {}) {
   const working = await waha.getWorkingSessions()
   const eligible = (await db.query(
     `SELECT session_name FROM whatsapp_accounts
       WHERE is_active = TRUE AND outreach_enabled = TRUE
+        AND ($1::boolean = FALSE OR outreach_auto_enabled = TRUE)
         AND NOT (
           COALESCE(operational_status, 'active') = 'restricted'
           AND (restriction_until IS NULL OR restriction_until > NOW())
         )
-      ORDER BY priority, id`)).rows.map(r => r.session_name)
+      ORDER BY priority, id`, [requireAuto])).rows.map(r => r.session_name)
   const liveEligible = eligible
     .map(wanted => working.find(s => String(s.name || '').toLowerCase() === String(wanted).toLowerCase()))
     .filter(Boolean)
@@ -152,6 +165,7 @@ async function classifyReminderContact(row) {
 
 async function stageUnplannedReminders({ limit = 500 } = {}) {
   const ownerSendGate = require('./ownerSendGate')
+  if (!(await reminderAutoSendEnabled())) return { queued: 0, blocked: 0, autoSendDisabled: true }
   if (await ownerSendGate.getAutomationMode() === 'REVIEW_ONLY') {
     const reviewed = await require('./ownerRecheck').recheckDueReminders({ limit })
     return { queued: 0, blocked: 0, reviewOnly: true, reviewed }
@@ -228,6 +242,9 @@ async function stageUnplannedReminders({ limit = 500 } = {}) {
 // blindly replayed, avoiding duplicate owner messages after ambiguous errors.
 async function runDueAutoBatch({ limit = 5, dryRun = false } = {}) {
   const ownerSendGate = require('./ownerSendGate')
+  if (!(await reminderAutoSendEnabled())) {
+    return { due: 0, sent: [], blocked: [], waiting: [], failed: [], autoSendDisabled: true }
+  }
   if (await ownerSendGate.getAutomationMode() === 'REVIEW_ONLY') {
     return { due: 0, sent: [], blocked: [], waiting: [], failed: [], reviewOnly: true }
   }
@@ -268,7 +285,7 @@ async function runDueAutoBatch({ limit = 5, dryRun = false } = {}) {
       continue
     }
 
-    const sendSession = await resolveSendSession(claim)
+    const sendSession = await resolveSendSession(claim, { requireAuto: true })
     if (!sendSession) {
       await db.query(
         `UPDATE reminders SET auto_send_status='queued', auto_send_attempted_at=NULL,
