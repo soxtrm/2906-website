@@ -196,3 +196,39 @@ Not verified / risks:
 - Greetings: evening from 18:00 per Kev (the brief proposed 17:00); configurable via ARGUS_GREETING_HOURS.
 
 Next: Kev reviews → deploy.sh (both packages) → merge to main for the UI → watch the first reconcile in the logs and GET /schedule-board/website-sync.
+
+### 2026-11-01 Pre-deploy hardening: opt-outs, reminder pause, mobile + sandbox checks, rebase (Claude)
+Branch `claude/owner-pipeline` (pushed). Commits since the previous entry:
+- 90d8595 opt-out detector
+- 732ec77 reminder gating
+- 8277397 no-greeting-in-ongoing
+- 187c2de mobile banner fix + sandbox kit
+- 9e2dd70 rebase
+
+Production data changes (Kev's explicit instructions, reversible, with backups):
+- 2026-10-31: 11 owners who explicitly asked to stop → do_not_contact (backup ops_backup_owner_dnc_20261031). One of them is the 2026-10-30 "remove me from your list … data protection law" complaint, re-contacted by Argus3 from a manual list after an earlier "How did you get my number?".
+- 2026-11-01 03:10 Malta, before the 08:00 reminder window:
+  - 681 pending queued / review-blocked reminders → paused_manual (backup ops_backup_reminder_pause_20261101). The backlog is NOT released.
+  - reminders defaults → auto_send_enabled=false, auto_send_status='manual_approval' (checked with a rolled-back insert).
+  - Reason: 26 automated reminder messages went out on 2026-10-31 although Auto was off for every account (the dispatcher only honoured the global owner_automation_mode=LIVE).
+
+Code:
+- services/ownerOptOut.js: one detector; every explicit opt-out → do-not-contact; a data-source question → human review.
+- reminderOutreach: automated reminders need settings.reminder_auto_send='ENABLED' AND an account with Auto on.
+- Location request: no new greeting inside an ongoing conversation.
+- Board: the viewing-location warning moved to the top (it was at the page bottom on mobile).
+
+Tests:
+- Owner suite 67/67 after the rebase.
+- Sandbox (full production code + overlay, internal network, test DB, own Redis, no .env): 12/12 end-to-end through the real routes and the real /webhook/waha. Covered: location request Failed (not Sent) without WhatsApp, vague reply, pin, agent notification, duplicate webhook, visibility, warning resolved, owner attribution.
+- 375 px browser check against the sandbox: board banner and location panel (Failed + reason + Retry, persisted after reload), owner list with filter, owner page panel, property page floor/parking type saved and reloaded.
+- Outreach suite on the combined code: 43 pass, 0 fail. dispatch.test.js is cancelled after 60 s by an open handle, identical on pure production code — environment, not a regression.
+
+Rebase: another session deployed owner-listing-freshness / owner-message-wording / owner-freshness-sla on 2026-10-31 (cron.js, crm.js, webhook.js, availability.js). 3-way merged with no conflicts; the deploy guard is updated; all 16 guarded files = production.
+
+Deployed: no.
+
+Not verified / risks:
+- The sandbox end-to-end ran before the rebase (the other session's webhook/availability changes were covered by unit tests, not end-to-end).
+- No real WAHA pin payload has been tested.
+- The 55 other owners with automation blocks (confusion, not opt-outs) are untouched.
