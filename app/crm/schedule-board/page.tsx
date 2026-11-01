@@ -1958,6 +1958,8 @@ function Board() {
       sidebar={<div id="crm-board-filter-rail" className="crm-board-filter-rail-slot" />}
     >
       <div className="crm-board-content" style={{ padding: isMobile ? 14 : 18 }}>
+        {/* Viewing without an exact address: first thing on the board (2026-11-01 mobile check). */}
+        <LocationAttentionBanner />
         {err && <Notice text={err} />}
 
         {/* Two primary workspaces, then compact utility views. Rented stays
@@ -2486,7 +2488,6 @@ function Board() {
         )}
       </AnimatePresence>
 
-      <LocationAttentionBanner />
       {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
       {avNotifications.length > 0 && (
         <AvNotificationStack items={avNotifications} onDismiss={dismissAvNotification} />
@@ -5582,7 +5583,7 @@ function LocationBadge({ status }: { status: string }) {
   )
 }
 
-function LocationRequestPanel({ listingRef, dark, onClose }: { listingRef: string; dark: boolean; onClose?: () => void }) {
+function LocationRequestPanel({ listingRef, dark, onClose, onChange }: { listingRef: string; dark: boolean; onClose?: () => void; onChange?: () => void }) {
   const [req, setReq] = useState<LocationReq | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -5612,13 +5613,13 @@ function LocationRequestPanel({ listingRef, dark, onClose }: { listingRef: strin
       const d = e?.data || {}
       if (d.request) setReq(d.request)
       else { setErr(d.error || e?.message || 'Request failed'); await load() }
-    } finally { setBusy(false) }
+    } finally { setBusy(false); onChange?.() }
   }
   async function cancel() {
     setBusy(true)
     try { const d = await crmJson(`schedule-board/listings/${encodeURIComponent(listingRef)}/location-request/cancel`, 'POST', {}); setReq(d.request) }
     catch (e: any) { setErr(e?.data?.error || e?.message || 'Could not cancel') }
-    finally { setBusy(false) }
+    finally { setBusy(false); onChange?.() }
   }
 
   const status = req?.status || 'not_requested'
@@ -5680,7 +5681,7 @@ function LocationAttentionBanner() {
   if (!items.length) return null
   return (
     <div role="alert" style={{
-      position: 'sticky', top: 0, zIndex: 30, margin: '8px 12px', padding: '10px 12px', borderRadius: 12,
+      margin: '0 0 12px', padding: '10px 12px', borderRadius: 12,
       border: '1px solid #E5A100', background: '#FFF7E0', color: '#5A3E00', display: 'grid', gap: 8,
     }}>
       {items.map(w => (
@@ -5693,7 +5694,7 @@ function LocationAttentionBanner() {
               {open === w.ref ? 'Close' : w.request ? 'Track request' : 'Request location'}
             </button>
           </div>
-          {open === w.ref && <LocationRequestPanel listingRef={w.ref} dark={false} />}
+          {open === w.ref && <LocationRequestPanel listingRef={w.ref} dark={false} onChange={load} />}
         </div>
       ))}
     </div>
