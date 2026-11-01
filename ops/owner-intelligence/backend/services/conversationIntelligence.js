@@ -97,7 +97,12 @@ async function applyActions(client, state, decision, properties, meta) {
   const pendingJobs = []
   for (const action of decision.actions) {
     if (action.type === 'CONTACT_OPT_OUT') {
-      await client.query(`UPDATE owner_contacts SET do_not_contact=TRUE,updated_at=NOW() WHERE id=$1`, [state.owner_contact_id])
+      // status + reason too, so every list and dashboard reads it as DNC (2026-10-31)
+      await client.query(
+        `UPDATE owner_contacts SET do_not_contact=TRUE, status='do_not_contact',
+                do_not_contact_reason=COALESCE(NULLIF(do_not_contact_reason,''), $2),
+                do_not_contact_at=COALESCE(do_not_contact_at, NOW()), updated_at=NOW() WHERE id=$1`,
+        [state.owner_contact_id, `Owner asked to stop contact: "${String(action.reason || '').replace(/\s+/g, ' ').slice(0, 160)}"`])
       await client.query(`UPDATE conversation_intelligence_state SET contact_opt_out=TRUE WHERE id=$1`, [state.id])
     }
     if (action.type === 'HUMAN_COMPLIANCE_REVIEW') {

@@ -95,7 +95,7 @@ function interpretInbound(input = {}) {
   if (CONTACT_REASON_RE.test(text)) questions.push('contact_reason')
   if (EMAIL_QUESTION_RE.test(text)) questions.push('email_request')
 
-  const globalOptOut = OPT_OUT_RE.test(text)
+  const globalOptOut = OPT_OUT_RE.test(text) || require('./ownerOptOut').isOptOut(text)
   const rented = RENTED_RE.test(text)
   const sold = SOLD_RE.test(text)
   const propertyRemoval = PROPERTY_REMOVAL_RE.test(text)

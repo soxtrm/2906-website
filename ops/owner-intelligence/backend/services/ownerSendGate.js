@@ -418,15 +418,20 @@ const EXPLICIT_OPT_OUT_RES = [
   /^\s*(?:stop|unsubscribe|remove\s+me|opt\s*out)\s*[.!?]*\s*$/i,
 ]
 
+// Kev, 2026-10-31: the shared detector (services/ownerOptOut.js) also knows
+// "remove me from your list", "remove my number from your database" and
+// data-protection complaints, which these local patterns missed.
 function isExplicitOptOut(text) {
   const s = String(text || '').trim()
-  return !!s && EXPLICIT_OPT_OUT_RES.some(re => re.test(s))
+  return !!s && (EXPLICIT_OPT_OUT_RES.some(re => re.test(s)) || require('./ownerOptOut').isOptOut(s))
 }
 
+// A data-source question ("how did you get my number?") is not an opt-out,
+// but it stops the bot and goes to a human like any complaint.
 function isFrustratedText(text) {
   const s = String(text || '').trim()
   if (!s) return false
-  return FRUSTRATION_RES.some(re => re.test(s))
+  return FRUSTRATION_RES.some(re => re.test(s)) || require('./ownerOptOut').isDataSourceQuestion(s)
 }
 
 // ── sweep: cancel every queued / open thing for one owner ───────────────────
@@ -593,6 +598,12 @@ async function handleFrustratedOwner({ phone, chatId = null, session = null, tex
     phone: p, chatId, session,
     reason: `auto-stop: owner complaint/confusion — ${String(text).replace(/\s+/g, ' ').slice(0, 180)}`,
   })
+  // An explicit "stop / remove me" is more than a paused chat: the owner is
+  // taken out of every list for good (do-not-contact), not only this flow.
+  if (require('./ownerOptOut').isOptOut(text)) {
+    await require('./ownerOptOut').markDoNotContact(p, `Owner asked to stop contact: "${String(text).replace(/\s+/g, ' ').slice(0, 160)}"`)
+      .catch(err => log.warn('ownerSendGate: do-not-contact write failed', { phone: p.slice(-4), err: err.message }))
+  }
 
   // The marker is the LATEST row for the phone, which is what every gate reads.
   await db.query(
