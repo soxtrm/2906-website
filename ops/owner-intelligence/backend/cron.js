@@ -71,26 +71,6 @@ function startCrons() {
     }
   })
 
-  // CRM → 2906.estate (Kev, 2026-10-31): publish what changed, every minute;
-  // re-queue anything the public projection disagrees with, hourly. See
-  // services/websitePublication.js — failures stay visible as Sync failed.
-  cron.schedule('* * * * *', async () => {
-    try {
-      const done = await require('./services/websitePublication').processDue({ limit: 25 })
-      if (done.length) log.info('Cron: website publication', { processed: done.length, failed: done.filter(d => d.status === 'failed').length })
-    } catch (err) {
-      log.error('Cron website-publication error', err)
-    }
-  })
-  cron.schedule('17 * * * *', async () => {
-    try {
-      const r = await require('./services/websitePublication').reconcile()
-      if (r.requeued) log.info('Cron: website reconcile re-queued drifted listings', r)
-    } catch (err) {
-      log.error('Cron website-reconcile error', err)
-    }
-  })
-
   // ── ARGUS Agent Layer scheduled messages — every minute (Kev, 2026-09-17)
   // Each message gets its own mandatory pre-send recheck inside
   // services/scheduledMessages.js (WA session health, property still
@@ -346,21 +326,32 @@ function startCrons() {
     }
   })
 
-  // ── availability auto-reachout — REMOVED FROM CRON (Kev, 2026-08-30) ──
-  // This used to run unattended every 30 minutes forever (scanAndReachOut,
-  // plus routeNeverContactedToReview). After an incident where an
-  // already-armed env flag combined with newly-armed properties sent real
-  // availability checks to 15 owners with nobody having pressed a button
-  // that day, Kev's explicit call: this mechanism must never run
-  // unattended again, in any form — not just the sending half.
-  // scanAndReachOut/routeNeverContactedToReview still exist in
-  // services/availabilityReachout.js and are reachable ONLY from the new
-  // !reachoutbatch admin command (services/adminCommands.js) — an explicit
-  // command, an explicit YES, nothing else calls them. If a scheduled
-  // version of this is ever wanted again, that is a deliberate future
-  // decision, not a default to restore.
+  // ── property-specific owner availability refresh — :16/:46 Malta daytime ──
+  // Reuses the existing guarded availability pipeline. The service keeps the
+  // 7-10 day per-listing clock, one-owner-per-run pacing, DNC/pause/lifecycle
+  // gates, daily cap and durable run ledger. AVAILABILITY_AUTO_REACHOUT is the
+  // break-glass switch: when it is not 1 this still records a dry-run, proving
+  // the scheduler is alive without contacting an owner.
+  cron.schedule('16,46 8-19 * * *', async () => {
+    try {
+      const result = await require('./services/availabilityReachout').runScheduledInactivity({
+        trigger: 'daily_cron',
+      })
+      log.info('Cron owner listing freshness complete', {
+        runId: result.runId || null,
+        skipped: result.skipped || null,
+        candidates: result.candidates || 0,
+        sent: (result.sent || []).length,
+        waiting: (result.waiting || []).length,
+        refused: (result.refused || []).length,
+        dryRun: result.dryRun,
+      })
+    } catch (err) {
+      log.error('Cron owner listing freshness error', err)
+    }
+  }, { timezone: 'Europe/Malta' })
 
-  // ── Availability: queue flush + 7-9 day inactivity scan (Kev, 2026-09-22) ──
+  // ── Availability source-session queue flush ─────────────────────────────
   // 1. Every 2 min: release "Still Available" checks that were queued because the
   //    owner's SOURCE WhatsApp session was offline — only when that same session is
   //    live again, never through another account (services/availability.js
@@ -369,22 +360,7 @@ function startCrons() {
     try { await require('./services/availability').flushQueuedChecks() }
     catch (err) { log.error('Cron availability queue flush error', err) }
   })
-  // 2. Every 30 min: the 7-9 day inactivity check (services/availabilityReachout
-  //    scanInactivity). This is Kev's explicit 2026-09-22 spec and the deliberate
-  //    "future decision" the 2026-08-30 note above reserved. It stays INERT until the
-  //    break-glass env flag is set: without AVAILABILITY_AUTO_REACHOUT=1 it is a dry
-  //    run (selects, logs "wouldSend", sends nothing). With it: 08-20 Malta window,
-  //    daily cap from reachout_settings, 2 sends per pass with a gap, source-session
-  //    only, full pre-send gate.
-  cron.schedule('*/30 * * * *', async () => {
-    try {
-      const r = await require('./services/availabilityReachout').scanInactivity()
-      if (!r.skipped && (r.sent.length || r.wouldSend.length)) {
-        log.info('Cron inactivity scan', { armed: r.armed, sent: r.sent.length, wouldSend: r.wouldSend.length, waiting: r.waiting.length })
-      }
-    } catch (err) { log.error('Cron inactivity scan error', err) }
-  })
-  // 3. Every 5 min: ask the owner to OK proposed / re-confirm withdrawn booking
+  // 2. Every 5 min: ask the owner to OK proposed / re-confirm withdrawn booking
   //    slots (services/bookingOwnerAsk.js, Kev 2026-09-25). Viewings from tomorrow
   //    on, 15-40 min after booking, 08-20 Malta, source session + pre-send gate.
   //    BOOKING_OWNER_ASK=0 turns it into a dry run.

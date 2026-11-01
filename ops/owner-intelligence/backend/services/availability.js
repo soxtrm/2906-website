@@ -161,7 +161,10 @@ function isMoreThanMonthsAway(dateStr) { return isFarFuture(dateStr) }
 function buildOwnerCheckMessage(prop, { urgent = false } = {}) {
   const days = daysUntilAvailable(prop.available_date)
   const tier = farFutureTier(days, prop.available_date)
-  let base = MSG_OWNER_CHECK
+  // The legacy !av path shares the same polite, time-appropriate wording as
+  // the board and scheduled freshness paths. This prevents an old command
+  // route from bringing back the retired "Hi! Quick one" rotation.
+  let base = ownerMessageVariants.pickVariant('availability_check', { now: new Date() }).text
   if (tier === 'soft') {
     base = MSG_OWNER_CHECK_FUTURE_TEMPLATE.replace('{{GREETING}}', maltaGreeting())
   } else if (tier === 'confirm') {
@@ -314,8 +317,6 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 // later on the SAME session), never silently reroute the owner's conversation to
 // another account (2026-09-22: "never silently reroute through default").
 async function sendTextAs(session, chatId, text, replyToMessageId = null, opts = {}) {
-  // Same send-time wording rule as waha.sendText (this path bypasses it).
-  text = require('./timeGreeting').fixForSend(toChatId(chatId), text)
   const body = { session, chatId: toChatId(chatId), text }
   if (replyToMessageId) body.reply_to = replyToMessageId
   await require('./outreachIdentity').assertOutboundIdentity(session, body.chatId, text)
@@ -1458,7 +1459,10 @@ async function handleOwnerReply({ payload, session, text, senderPhone, chatId })
         WHERE ac.status = 'awaiting'
           AND (oc.phone_normalized = $1 OR oc.phone_normalized = $2)
           AND LOWER(ac.account_session) = LOWER($3)
-          AND ac.sent_at >= NOW() - INTERVAL '5 days'
+          AND ac.sent_at >= NOW() - CASE
+                WHEN ac.source IN ('auto_inactivity','auto_reachout') THEN INTERVAL '14 days'
+                ELSE INTERVAL '5 days'
+              END
           AND (
             ac.owner_chat_id = $4
             OR right(regexp_replace(COALESCE(ac.owner_chat_id,''), '\\D', '', 'g'), 9)
@@ -1514,7 +1518,10 @@ async function handleOwnerReply({ payload, session, text, senderPhone, chatId })
         WHERE ac.status = 'awaiting'
           AND LOWER(ac.account_session) = LOWER($1)
           AND ac.owner_chat_id = $2
-          AND ac.sent_at >= NOW() - INTERVAL '5 days'
+          AND ac.sent_at >= NOW() - CASE
+                WHEN ac.source IN ('auto_inactivity','auto_reachout') THEN INTERVAL '14 days'
+                ELSE INTERVAL '5 days'
+              END
         ORDER BY ac.id DESC`, [session, _chatStr])
     if (bySession.rows.length === 1) {
       log.info('[av] owner reply matched by session fallback — sender had no phone alt (first-contact LID)', {
@@ -2284,7 +2291,6 @@ const NOTIFY_TEXT = {
 // flat "204" was. This adds ONE best-effort photo message with the listing's
 // own public facts, on top of the (unchanged, tested) text notify above.
 async function sendImageAs(session, chatId, base64Data, mimeType, caption) {
-  caption = require('./timeGreeting').fixForSend(toChatId(chatId), caption)
   const body = {
     session, chatId: toChatId(chatId), caption: caption || '',
     file: { mimetype: mimeType || 'image/jpeg', filename: 'property.jpg', data: base64Data },
@@ -3273,7 +3279,7 @@ async function processAvailabilityJob(data) {
   const check = r.rows[0]
   if (!check) return { skipped: 'check_gone' }
 
-  // The 7-9 day robot asks ONCE and waits: it never gets the call ping / next-morning
+  // The 7-10 day robot never gets the call ping / next-morning
   // nudge (executeOwnerCheck does not arm them; this refuses any that exist anyway).
   if (String(check.source) === 'auto_inactivity') {
     log.info('[av] follow-up skipped — robot checks are one message only', { checkId, kind })
@@ -3947,19 +3953,22 @@ async function composeCheckText({ prop, ownerChatId, session, opts = {} }) {
   return { scan, chosen, textToSend }
 }
 
-// ── one pending check per property / owner ──────────────────────────────────
+// ── one pending check per property ──────────────────────────────────────────
 // 'queued'  waiting for its source session         (blocks: always)
 // 'sending' a send is in flight                    (blocks: while fresh — a crash
 //           mid-send leaves this behind, so it stops blocking after 10 minutes and
 //           the reaper in flushQueuedChecks marks it for review)
-// 'awaiting' asked, no answer yet                  (blocks the ROBOT for 14 days;
+// 'awaiting' asked, no answer yet                  (blocks the ROBOT for 10 days;
 //           an agent's manual ask is governed by the existing once-a-day rule, so
 //           asking again the next day still works exactly as before)
 // The state of a check whose source WhatsApp session is offline: kept, never dropped and
 // never rerouted; sent automatically when that exact session is WORKING again.
 const WAITING = 'waiting_for_source_session'
 const AUTO_SOURCES = new Set(['auto_inactivity', 'auto_reachout'])
-const AWAITING_BLOCKS_ROBOT_DAYS = 14
+// A robot may re-check an unanswered listing at the ten-day deadline. Reply
+// matching remains open for 14 days, but the old row must not postpone the
+// next property-specific question beyond the freshness SLA.
+const AWAITING_BLOCKS_ROBOT_DAYS = 10
 const SENDING_STALE_MINUTES = 10
 
 async function claimOwnerCheck({ prop, picked, ownerChatId, requester, requesterChatId, checkSource, opts, force = false }) {
@@ -3975,13 +3984,13 @@ async function claimOwnerCheck({ prop, picked, ownerChatId, requester, requester
     const pend = await client.query(
       `SELECT id, status, property_id, owner_id FROM availability_checks
         WHERE account_session <> 'skipped_fresh'
-          AND (property_id = $1 OR ($3::boolean AND owner_id = $2))
+          AND property_id = $1
           AND ( status = '${WAITING}'
-             OR (status = 'sending' AND COALESCE(updated_at, created_at) > NOW() - ($4 || ' minutes')::interval)
-             OR ($3::boolean AND status = 'awaiting'
-                 AND COALESCE(sent_at, created_at) > NOW() - ($5 || ' days')::interval) )
+             OR (status = 'sending' AND COALESCE(updated_at, created_at) > NOW() - ($3 || ' minutes')::interval)
+             OR ($2::boolean AND status = 'awaiting'
+                 AND COALESCE(sent_at, created_at) > NOW() - ($4 || ' days')::interval) )
         ORDER BY id DESC LIMIT 1`,
-      [prop.id, prop.owner_id, robot, String(SENDING_STALE_MINUTES), String(AWAITING_BLOCKS_ROBOT_DAYS)])
+      [prop.id, robot, String(SENDING_STALE_MINUTES), String(AWAITING_BLOCKS_ROBOT_DAYS)])
     if (pend.rows.length) {
       await client.query('ROLLBACK')
       return { duplicate: pend.rows[0] }
@@ -4074,7 +4083,7 @@ async function claimOwnerCheck({ prop, picked, ownerChatId, requester, requester
 }
 
 // ── the one send path ───────────────────────────────────────────────────────
-// Used by the board button, by !av (via requestOwnerAvailability), by the 7-9 day
+// Used by the board button, by !av (via requestOwnerAvailability), by the 7-10 day
 // robot AND by the queue flush. A check is always sent by the session it was
 // claimed for (check.account_session) and by no other: offline → it stays
 // 'waiting_for_source_session' (or goes back to it), send error → it does NOT fail over
@@ -4135,7 +4144,7 @@ async function executeOwnerCheck(checkId, { fromClaim = false } = {}) {
 
   // A robot check that sat in the queue: is the owner STILL silent? Anything since it was
   // queued (Kev/an agent typing, a software message, an owner reply, a request) restarted
-  // the 7-9 day timer — asking now would break the "shut up for 7-9 days" rule.
+  // the 7-10 day timer — asking now would break the freshness cadence.
   if (robot && !fromClaim && row.queued_at) {
     const c = await db.query(
       `SELECT (${require('./contactTouch').lastContactSql('oc', 'p')}) > ($3::timestamptz + interval '2 seconds') AS touched

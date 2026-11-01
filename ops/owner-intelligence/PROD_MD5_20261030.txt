@@ -26,3 +26,7 @@ bd0c920e0dcc5d1e2091a977caa212d3  services/websiteSync.js
 e0ca99c9bb14af4256189529c9c648d6  services/viewingWindows.js
 809519ca200810ca56c242bc1bc1d5bb  lib/maltaTime.js
 07ca8530ee7fb575b06c29c3f2452cf4  services/reminderOutreach.js
+4d54178f54635f62dcb659432c3959cb  cron.js
+dcd5f9d62580c6c86560d01ae58d5df2  routes/crm.js
+289d22dfe30e1a94179564337e3c7d51  routes/webhook.js
+3f2f7364ce87c097f98f3621ec4166ba  services/availability.js
