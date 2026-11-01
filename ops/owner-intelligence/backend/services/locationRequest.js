@@ -60,7 +60,20 @@ function chatIdFor(phone) {
 // ── message wording ─────────────────────────────────────────────────────────
 // Greeting/closing follow the send time (waha.sendText → timeGreeting); the
 // texts are Kev's examples. Viewing wording only when a viewing is recorded.
-function composeMessage({ viewing = null, now = new Date() } = {}) {
+// ongoing: the owner and we exchanged messages within the last 12 hours —
+// then no new greeting is put in front (Kev, 2026-11-01); the rest of the
+// wording is the same.
+function composeMessage({ viewing = null, now = new Date(), ongoing = false } = {}) {
+  const text = composeGreeted({ viewing, now })
+  return ongoing ? stripLeadingGreeting(text) : text
+}
+
+function stripLeadingGreeting(text) {
+  const rest = String(text).replace(/^\s*good\s+(?:morning|afternoon|evening)!\s*/i, '')
+  return rest.charAt(0).toUpperCase() + rest.slice(1)
+}
+
+function composeGreeted({ viewing = null, now = new Date() } = {}) {
   const h = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Europe/Malta' }).format(now))
   const greeting = h >= 5 && h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
   if (viewing) {
@@ -223,7 +236,11 @@ async function requestLocation({ ref, agent, now = new Date() }) {
     return fail(picked?.waiting ? `owner_account_offline:${picked.dbSession}` : 'no_working_account')
   }
 
-  const text = composeMessage({ viewing, now })
+  const recent = (await db.query(
+    `SELECT 1 FROM owner_account_labels
+      WHERE contact_id = $1 AND GREATEST(last_we_sent_at, last_reply_at) > ($2::timestamptz - INTERVAL '12 hours') AT TIME ZONE 'UTC'
+      LIMIT 1`, [owner.id, now.toISOString()])).rows.length > 0
+  const text = composeMessage({ viewing, now, ongoing: recent })
   const chatId = chatIdFor(owner.phone_normalized)
   row = await setStatus(row.id, 'queued', { session_name: picked.dbSession || picked.session, owner_chat_id: chatId, message_text: text })
   let result
@@ -354,6 +371,6 @@ async function viewingLocationWarnings({ agent, now = new Date() }) {
 }
 
 module.exports = {
-  LABEL, OPEN, composeMessage, locationFrom, requestLocation, getStatus, cancelRequest,
+  LABEL, OPEN, composeMessage, stripLeadingGreeting, locationFrom, requestLocation, getStatus, cancelRequest,
   handleOwnerMessage, viewingLocationWarnings,
 }

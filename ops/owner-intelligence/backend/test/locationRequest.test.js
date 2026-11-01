@@ -154,3 +154,14 @@ test('Test I: confirmed viewing at 19:30 without an address → visible warning 
   assert.strictEqual((await L.viewingLocationWarnings({ agent: ids.jason, now })).length, 0, 'warning resolved')
   assert.strictEqual((await L.viewingLocationWarnings({ agent: ids.lister, now })).length, 0, 'not shown to an unrelated agent')
 })
+
+test('ongoing conversation (message within 12 h) → no new greeting in front; fresh contact → greeting', async () => {
+  await seed()
+  await H.db.query(
+    `INSERT INTO owner_account_labels (contact_id, account_session, label, source, last_we_sent_at, last_reply_at)
+     VALUES ($1, 'Kevsecond', 'warm', 'outreach', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour')`, [ids.owner.id])
+  await L.requestLocation({ ref: '2906-9520', agent: ids.jason })
+  assert.doesNotMatch(H.sent[0].text, /^Good (morning|afternoon|evening)/)
+  assert.match(H.sent[0].text, /^(Just|Could)/)
+  assert.strictEqual(L.composeMessage({ now: maltaLocalToUTC('2026-10-30', '15:00') }).startsWith('Good afternoon!'), true)
+})
