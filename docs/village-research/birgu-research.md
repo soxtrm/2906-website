@@ -1,6 +1,6 @@
 # Birgu edition — sourced research draft
 
-Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Sources, licensed image asset, public metadata contract and responsive release candidate checked 4 November 2026 (Europe/Malta).
+Language: English. Status: **PUBLISHED AND LIVE-VERIFIED**. Sources, licensed image asset, public metadata contract, production response and responsive live page checked 4 November 2026 (Europe/Malta).
 
 ## Why Birgu is the next distinct edition
 
@@ -138,13 +138,12 @@ The Address Registrar, Birgu Local Council, all three Heritage Malta pages, Vall
 
 The 62-edition SEO/sitemap/hub/social-image/deferred-map contract passed, as did the route-segment, property/ferry-presentation and matrix-routing tests. `npm ci` changed neither manifest nor lockfile; `npx tsc --noEmit` and `next build --webpack` completed with all 52 static pages. Local Chromium at 390×844 and 1440×1000 confirmed HTTP 200, one H1, exact canonical and Open Graph URL, one BreadcrumbList, zero horizontal overflow, a decoded 1800×1063 hero and initially no iframe. After user activation the OSM iframe measured 310×320 and 1156×520 respectively, used the expected neutral extents and produced no console errors or warnings. Four full-page captures were visually checked.
 
-## Verification and publication boundary
+## Verification and publication record
 
 On 4 November 2026 the Address Registrar, all three Heritage Malta pages, Valletta Ferry Services, Malta Public Transport, both exact MTA searches, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client. Birgu Local Council and Primary HealthCare returned HTTP 403 to that client while remaining current browser sources; no claim was inferred from the access difference.
 
-No private contact details or property-level data were copied. Six licensed originals were checked outside Git, one proportional WebP derivative was added, one private noindex preview was verified and one public release candidate was prepared; no image was generated. The candidate changes only the Birgu page, hub link, one sitemap block, one contextual Bormla inbound link and the explicit 62-edition test count. No deployment, external backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
+No private contact details or property-level data were copied. Six licensed originals were checked outside Git, one proportional WebP derivative was added, one private noindex preview was verified and one public edition was published; no image was generated. The release changes only the Birgu page, hub link, one sitemap block, one contextual Bormla inbound link and the explicit 62-edition test count.
 
-## Next gates
+Immediately before publication, `origin/main` still matched rollback basis `fb0f25fb31ea6388736eb18e3e6b27dbcdefe3c1`; release commit `906e60d8266b39e67e44c36050f132edce3fe834` was then pushed as a fast-forward. After the normal deployment rollout, the public Birgu page, licensed hero, neighbourhood hub, sitemap and Bormla inbound-link page all returned HTTP 200 and matched the release content. The hero's live binary SHA-256 is `2F93B795FDE4D0454B9540F250D6CC811147EA3C8601A62935D4AF23E41DCF1C`.
 
-1. Confirm `origin/main` still equals the named rollback basis immediately before the release push.
-2. Publish only as a fast-forward, then verify the exact live page, hero, hub, sitemap and Bormla link plus mobile/desktop rendering and deferred-map behaviour.
+Live Chromium verification passed at 390×844 and 1440×1000: HTTP 200, one H1, exact self-canonical, zero horizontal overflow, decoded 1800×1063 hero and initially zero iframes. After user activation, exactly one OSM iframe filled 310×320 on mobile and 1156×520 on desktop, with no console errors or warnings. Live captures were visually checked. Rollback remains the named pre-release basis above. No external backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
