@@ -1,6 +1,6 @@
 # Birgu edition — sourced research draft
 
-Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Sources, licensed image asset and private responsive preview checked 4 November 2026 (Europe/Malta).
+Language: English. Status: **RELEASE CANDIDATE — NOT PUBLISHED**. Sources, licensed image asset, public metadata contract and responsive release candidate checked 4 November 2026 (Europe/Malta).
 
 ## Why Birgu is the next distinct edition
 
@@ -84,7 +84,7 @@ There is no evidence here for a private water taxi, guaranteed crossing, fixed t
 
 ## Fast 2D map plan
 
-OpenStreetMap Nominatim returned the administrative search result `Il-Birgu, Reġjun tal-Port, Malta` centred at `35.8881119, 14.5238445`, with the orientation extent `14.5166388,35.8801564,14.5312147,35.8931184`. A future preview may use a click-to-load OpenStreetMap frame around that neutral extent.
+OpenStreetMap Nominatim returned the administrative search result `Il-Birgu, Reġjun tal-Port, Malta` centred at `35.8881119, 14.5238445`, with the orientation extent `14.5166388,35.8801564,14.5312147,35.8931184`. The edition uses a click-to-load OpenStreetMap frame around that neutral extent.
 
 The frame is for orientation only. It must not draw a council boundary, property position, straight-line connection, distance, journey time or ferry route. It must load only after user intent, preserve visible OpenStreetMap attribution and use a compact-screen extent that fills the frame without inventing geometry.
 
@@ -116,7 +116,7 @@ The Wikimedia Commons API returned the following technically suitable candidates
 
 **Selected lead:** `Birgu-Vittoriosa - Malta.jpg` by MrPanyGoff. Its broad, level view shows the waterfront edge, dense residential fabric, church profiles and fortifications together without reducing the locality to one monument or event. Full-resolution inspection found no identifiable foreground person, readable vehicle plate, private contact detail or advertising message. The age of the capture is disclosed and the image must not be used as evidence of present businesses, traffic, parking, building condition, property views or harbour activity.
 
-The checked-in derivative `public/link-marketplace/assets/birgu-vittoriosa-mrpanygoff.webp` is a proportional 1800×1063 WebP conversion at quality 82: 168,546 bytes and SHA-256 `2F93B795FDE4D0454B9540F250D6CC811147EA3C8601A62935D4AF23E41DCF1C`. There was no crop, retouching, compositing, colour treatment or generative change. A future preview must visibly credit `MrPanyGoff / Wikimedia Commons / CC BY-SA 3.0`, link the file page and licence, give the capture date and explain the proportional WebP conversion.
+The checked-in derivative `public/link-marketplace/assets/birgu-vittoriosa-mrpanygoff.webp` is a proportional 1800×1063 WebP conversion at quality 82: 168,546 bytes and SHA-256 `2F93B795FDE4D0454B9540F250D6CC811147EA3C8601A62935D4AF23E41DCF1C`. There was no crop, retouching, compositing, colour treatment or generative change. The edition visibly credits `MrPanyGoff / Wikimedia Commons / CC BY-SA 3.0`, links the file page and licence, gives the capture date and explains the proportional WebP conversion.
 
 The Karelj waterfront view contains dominant marina hardware and extensive empty sky; Jaakko.kulta's vertical waterfront image foregrounds flags, vehicles, signs and identifiable people; the wet-ditch view is an excellent supporting subject but too narrow for a locality lead; Admiralty Gate is monument-specific and includes signs and people; the Senglea viewpoint has a dominant red foreground boat carrying a visible `Senglea berthing permit` label. The sixth candidate therefore remains explicitly a view from neighbouring Senglea with Birgu in the background and must not imply that its foreground belongs to Birgu. These are editorial-fit decisions, not quality rankings. Event, feast, market and conference images were not shortlisted because they could misstate the everyday locality or foreground identifiable people.
 
@@ -130,13 +130,21 @@ The deferred OpenStreetMap orientation has no iframe before user intent. After t
 
 Chromium verification passed at 390×844 and 1440×1000: HTTP 200, exactly one H1, exact robots metadata, no canonical or social URL, zero horizontal overflow, fully decoded hero, visible attribution and initially zero iframes. After user activation there was exactly one visible iframe, measuring 310×320 on mobile and 1156×520 on desktop, with `aria-expanded=true`; the expected viewport-specific bounding boxes were loaded. Both states were visually checked at both sizes, and the final browser run reported no console errors or warnings. The route-segment, property/ferry-presentation and matrix-routing tests, plus `git diff --check`, passed.
 
+## Release candidate and SEO contract
+
+The private filename was replaced by `public/link-marketplace/areas/birgu.html`. The release candidate has the exact self-canonical and `og:url` `https://www.2906.estate/link-marketplace/areas/birgu.html`, complete Open Graph image metadata matching the licensed 1800×1063 hero, a `summary_large_image` Twitter card and one BreadcrumbList ending at Birgu (Vittoriosa). The public hub points to the new edition while retaining the previous Salina link, the neighbourhood sitemap contains exactly one Birgu URL/image block dated 4 November 2026, and Bormla provides a contextual inbound link without merging the two localities.
+
+The Address Registrar, Birgu Local Council, all three Heritage Malta pages, Valletta Ferry Services, Malta Public Transport, both exact MTA searches and the Commons file page were rechecked immediately before release work. The Maritime Museum remains explicitly temporarily closed for major transformation; the ferry schedule still names Cospicua as the Three Cities departure; the Primary HealthCare browser record still includes Vittoriosa in the Cospicua catchment. The two MTA pages returned HTTP 200 to the neutral direct client and still contained `RST-24198`, `RST-21468` and `SBR-27438`. Primary HealthCare returned HTTP 403 to that same direct client while its current official page remained browser-verifiable, so no additional mutable hours were copied.
+
+The 62-edition SEO/sitemap/hub/social-image/deferred-map contract passed, as did the route-segment, property/ferry-presentation and matrix-routing tests. `npm ci` changed neither manifest nor lockfile; `npx tsc --noEmit` and `next build --webpack` completed with all 52 static pages. Local Chromium at 390×844 and 1440×1000 confirmed HTTP 200, one H1, exact canonical and Open Graph URL, one BreadcrumbList, zero horizontal overflow, a decoded 1800×1063 hero and initially no iframe. After user activation the OSM iframe measured 310×320 and 1156×520 respectively, used the expected neutral extents and produced no console errors or warnings. Four full-page captures were visually checked.
+
 ## Verification and publication boundary
 
 On 4 November 2026 the Address Registrar, all three Heritage Malta pages, Valletta Ferry Services, Malta Public Transport, both exact MTA searches, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client. Birgu Local Council and Primary HealthCare returned HTTP 403 to that client while remaining current browser sources; no claim was inferred from the access difference.
 
-No private contact details or property-level data were copied. Six licensed originals were checked outside Git, one proportional WebP derivative was added and one private noindex preview was verified; no image was generated. No public page, canonical, social metadata, structured data, navigation, sitemap, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
+No private contact details or property-level data were copied. Six licensed originals were checked outside Git, one proportional WebP derivative was added, one private noindex preview was verified and one public release candidate was prepared; no image was generated. The candidate changes only the Birgu page, hub link, one sitemap block, one contextual Bormla inbound link and the explicit 62-edition test count. No deployment, external backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
 
 ## Next gates
 
-1. Recheck all sources, especially the Maritime Museum status, ferry operation, health service and MTA register, immediately before release work.
-2. Treat any public release as a separate clean-worktree step with exact canonical, social metadata, BreadcrumbList, sitemap, contextual internal links, production build, named rollback commit and live verification.
+1. Confirm `origin/main` still equals the named rollback basis immediately before the release push.
+2. Publish only as a fast-forward, then verify the exact live page, hero, hub, sitemap and Bormla link plus mobile/desktop rendering and deferred-map behaviour.
