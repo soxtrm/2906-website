@@ -1,6 +1,6 @@
 # Birgu edition — sourced research draft
 
-Language: English. Status: **RESEARCH DRAFT — NOT PUBLISHED**. Sources checked 4 November 2026 (Europe/Malta).
+Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Sources and licensed image asset checked 4 November 2026 (Europe/Malta).
 
 ## Why Birgu is the next distinct edition
 
@@ -93,33 +93,42 @@ The frame is for orientation only. It must not draw a council boundary, property
 
 ## Licensed image candidates
 
-The Wikimedia Commons API returned the following technically suitable candidates. Metadata is recorded before any download or editorial selection; no image has yet been added to Git. A later asset step must download originals outside Git, match the Commons SHA-1, calculate local SHA-256, inspect full resolution for privacy and misleading context, compare real mobile/desktop crops, and preserve visible author/licence attribution.
+The Wikimedia Commons API returned the following technically suitable candidates. All six originals were downloaded outside Git, matched against the Commons SHA-1, assigned a local SHA-256 and inspected at full resolution for privacy, misleading context and editorial fit.
 
 1. **Birgu from boat Malta 2014 1.jpg** — Karelj; 11 August 2014; 3000×1922; 3,727,570 bytes; CC BY-SA 3.0; Commons SHA-1 `dc7d6dde60b93cb9972ea9bd5e26cbb3827ed497`.
+   - Local SHA-256 `999EE6D9B8460029FCBF4AAE40243B235355B23986FE29AAF1C1C25F3416632F`.
    - https://commons.wikimedia.org/wiki/File:Birgu_from_boat_Malta_2014_1.jpg
 2. **Birgu waterfront.jpg** — Jaakko.kulta; 14 October 2023; 2986×3981; 2,903,734 bytes; CC BY 4.0; Commons SHA-1 `66d53a474375b00245756ba3ed4210f85cee1acb`.
+   - Local SHA-256 `E4F638053118F5B15CB505D454D347D6DC5D7CF41543B138E1B9090EE6ECA6E0`.
    - https://commons.wikimedia.org/wiki/File:Birgu_waterfront.jpg
 3. **Birgu-Vittoriosa - Malta.jpg** — MrPanyGoff; 5 May 2008; 2540×1500; 1,953,242 bytes; CC BY-SA 3.0; Commons SHA-1 `2437188ac4cb6a5197610dfe879ef8fff1f8239e`.
+   - Local SHA-256 `095EB15549B3AD5285F2B8DCD8FE44831D13B8BE00C95CF3FB42CAE16A1338C2`.
    - https://commons.wikimedia.org/wiki/File:Birgu-Vittoriosa_-_Malta.jpg
 4. **Wet ditch, Birgu, Malta julesvernex2.jpg** — Jules Verne Times Two; 4 October 2018; 5537×4160; 14,457,386 bytes; CC BY-SA 4.0; Commons SHA-1 `882c4a4fc46913fb0fb448d5a154e5cdffb3c2a8`.
+   - Local SHA-256 `7AAAF83267D29904A5334674248708917CC0C599A03EAED1D1B78F4BE965957F`.
    - https://commons.wikimedia.org/wiki/File:Wet_ditch,_Birgu,_Malta_julesvernex2.jpg
 5. **Admiralty Gate (Birgu, Malta) 01.jpg** — Kritzolina; 26 November 2019; 3648×5472; 9,490,432 bytes; CC BY-SA 4.0; Commons SHA-1 `b500f30c34d2e8e1a0f33b72be00c6c502cd7111`.
+   - Local SHA-256 `6962848D21357F010E697A9C47B4E3E169BED6DD89815DC451F2EA9B5EC52520`.
    - https://commons.wikimedia.org/wiki/File:Admiralty_Gate_(Birgu,_Malta)_01.jpg
 6. **Small boat at the Senglea waterfront with Birgu in the background, Malta (PPL1-Corrected) julesvernex2.jpg** — Jules Verne Times Two; 4 October 2018; 5904×4105; 9,768,354 bytes; CC BY-SA 4.0; Commons SHA-1 `71809ea26f05071196176538673653ee000238b1`.
+   - Local SHA-256 `0C621583BDCD7EAF3BF5A9EB636AF6BF3815508862DDF77BE09E4B056699B4FC`.
    - https://commons.wikimedia.org/wiki/File:Small_boat_at_the_Senglea_waterfront_with_Birgu_in_the_background,_Malta_(PPL1-Corrected)_julesvernex2.jpg
 
-The sixth candidate is explicitly a view from neighbouring Senglea with Birgu in the background. It can be considered only if the caption preserves that viewpoint; it must not be used as evidence that the foreground belongs to Birgu. Event, feast, market and conference images were not shortlisted because they could misstate the everyday locality or foreground identifiable people. Monument-only images remain possible supporting assets but should not automatically become the locality lead.
+**Selected lead:** `Birgu-Vittoriosa - Malta.jpg` by MrPanyGoff. Its broad, level view shows the waterfront edge, dense residential fabric, church profiles and fortifications together without reducing the locality to one monument or event. Full-resolution inspection found no identifiable foreground person, readable vehicle plate, private contact detail or advertising message. The age of the capture is disclosed and the image must not be used as evidence of present businesses, traffic, parking, building condition, property views or harbour activity.
+
+The checked-in derivative `public/link-marketplace/assets/birgu-vittoriosa-mrpanygoff.webp` is a proportional 1800×1063 WebP conversion at quality 82: 168,546 bytes and SHA-256 `2F93B795FDE4D0454B9540F250D6CC811147EA3C8601A62935D4AF23E41DCF1C`. There was no crop, retouching, compositing, colour treatment or generative change. A future preview must visibly credit `MrPanyGoff / Wikimedia Commons / CC BY-SA 3.0`, link the file page and licence, give the capture date and explain the proportional WebP conversion.
+
+The Karelj waterfront view contains dominant marina hardware and extensive empty sky; Jaakko.kulta's vertical waterfront image foregrounds flags, vehicles, signs and identifiable people; the wet-ditch view is an excellent supporting subject but too narrow for a locality lead; Admiralty Gate is monument-specific and includes signs and people; the Senglea viewpoint has a dominant red foreground boat carrying a visible `Senglea berthing permit` label. The sixth candidate therefore remains explicitly a view from neighbouring Senglea with Birgu in the background and must not imply that its foreground belongs to Birgu. These are editorial-fit decisions, not quality rankings. Event, feast, market and conference images were not shortlisted because they could misstate the everyday locality or foreground identifiable people.
 
 ## Verification and publication boundary
 
 On 4 November 2026 the Address Registrar, all three Heritage Malta pages, Valletta Ferry Services, Malta Public Transport, both exact MTA searches, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client. Birgu Local Council and Primary HealthCare returned HTTP 403 to that client while remaining current browser sources; no claim was inferred from the access difference.
 
-No private contact details or property-level data were copied. No image was downloaded or generated. No public page, preview, canonical, social metadata, structured data, navigation, sitemap, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
+No private contact details or property-level data were copied. Six licensed originals were checked outside Git and one proportional WebP derivative was added; no image was generated. No public page, preview, canonical, social metadata, structured data, navigation, sitemap, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
 
 ## Next gates
 
 1. Recheck all sources, especially the Maritime Museum status, ferry operation, health service and MTA register, immediately before preview or release work.
-2. Download and inspect all six Commons originals outside Git; verify hashes, select a neutral lead, create only a proportional derivative and document exact attribution and crop behaviour.
-3. Build a private `noindex,nofollow` preview in a separate clean worktree with a deferred fast 2D map and explicit ferry/land-mode separation.
-4. Verify real 390-pixel and desktop frames, attribution, accessibility, overflow, network failures and route presentation before considering a public release.
-5. Treat any public release as a separate clean-worktree step with exact canonical, social metadata, BreadcrumbList, sitemap, contextual internal links, production build, named rollback commit and live verification.
+2. Build a private `noindex,nofollow` preview in a separate clean worktree with the selected derivative, visible attribution, a deferred fast 2D map and explicit ferry/land-mode separation.
+3. Verify real 390-pixel and desktop frames, displayed crop behaviour, attribution, accessibility, overflow, network failures and route presentation before considering a public release.
+4. Treat any public release as a separate clean-worktree step with exact canonical, social metadata, BreadcrumbList, sitemap, contextual internal links, production build, named rollback commit and live verification.
