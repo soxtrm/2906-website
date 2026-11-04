@@ -39,12 +39,13 @@ test('7b: explicit authorized Resume AI passes the owner gate and re-enables the
   assert.match(route, /setAutomationStatus\(\{ \.\.\.ctx, agentId:loaded\.me\.id, action/)
 })
 
-test('9/10/14: reopening is agent-scoped and changes only relay workflow state', () => {
+test('9/10/14: reopening is agency-scoped, access-checked and changes only relay workflow state', () => {
   const start = route.indexOf("router.post('/listings/:ref/relay/reopen'")
   const end = route.indexOf("router.get('/listings/:ref/owner-facts'", start)
   const block = route.slice(start, end)
   assert.match(block, /book_relay_threads/)
-  assert.match(block, /agent_id=\$2/)
+  assert.match(block, /sharedOwnerHistory\.propertyAccess/)
+  assert.match(block, /agency_id=\$2/)
   assert.match(block, /status='relaying'/)
   assert.doesNotMatch(block, /UPDATE\s+properties/i)
 })

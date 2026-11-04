@@ -27,6 +27,7 @@ import { crmFetch, crmJson } from '@/lib/crm/api'
 import { cn } from '@/lib/utils'
 import { SHEET_SPRING } from '@/lib/crm/motion'
 import { useCrm, canCreateGroup } from '@/lib/crm/ui'
+import { SharedOwnerHistory } from '@/components/crm/shared-owner-history'
 
 // ── shared shell ────────────────────────────────────────────────────────────
 const FIELD =
@@ -488,20 +489,12 @@ type OwnerFactsState = {
   facts: OwnerFact[]
   pendingReview: { id: number; type: string; reason: string; evidence?: string | null; createdAt: string }[]
 }
-type TimelineItem =
-  | { kind: 'message'; at: string; sortKey: number; message: ChatMessage }
-  | { kind: 'event'; at: string; sortKey: number; event: ChatEvent }
-
 const POLL_MS = 2000
 
 const EVENT_COPY: Record<ChatEvent['kind'], { icon: typeof Home; label: string }> = {
   av:   { icon: Home,       label: 'Availability check sent' },
   ask:  { icon: HelpCircle, label: 'You asked a question' },
   book: { icon: Calendar,   label: 'You booked a viewing' },
-}
-
-function timeOnly(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 const AUTOMATION_COPY: Record<AutomationControl['status'], { label: string; icon: typeof Bot; tone: string }> = {
@@ -794,14 +787,6 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
   const closed = state?.open === false && state?.messages && state.messages.length > 0
   const chatBusy = state?.presence?.state === 'super_active'
 
-  // Messages + this agent's own events, one chronological timeline. The
-  // backend keeps them as two arrays (different tables, no shared shape) —
-  // merging is a client-side concern, not a SQL one.
-  const timeline: TimelineItem[] = [
-    ...(state?.messages || []).map(m => ({ kind: 'message' as const, at: m.at, sortKey: Date.parse(m.at), message: m })),
-    ...(state?.events || []).map(e => ({ kind: 'event' as const, at: e.at, sortKey: Date.parse(e.at), event: e })),
-  ].sort((a, b) => a.sortKey - b.sortKey)
-
   const fade = reduceMotion
     ? { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 }, transition: { duration: 0 } }
     : { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
@@ -1066,55 +1051,7 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
             <div className="flex h-full items-center justify-center text-sm font-medium text-white/70" role="status">Loading conversation…</div>
           )}
 
-          {state && timeline.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <MessageCircle className="mb-3 h-9 w-9 text-white/25" />
-              <p className="max-w-sm text-[15px] font-medium leading-6 text-white/75">
-                No conversation yet — just type below to start one, or use{' '}
-                <span className="font-semibold text-white/55">Ask</span> / <span className="font-semibold text-white/55">Book</span>{' '}
-                if you'd rather compose something first. Either way it goes straight to the owner.
-              </p>
-            </div>
-          )}
-
-          {timeline.map(item => {
-            if (item.kind === 'event') {
-              const copy = EVENT_COPY[item.event.kind]
-              const Icon = copy?.icon || MessageCircle
-              return (
-                <div key={`ev-${item.at}-${item.event.kind}`} className="flex justify-center py-1">
-                  <div className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs text-white/70">
-                    <Icon className="w-3 h-3" />
-                    <span>{copy?.label || item.event.kind}</span>
-                    <span className="text-white/55">· {timeOnly(item.at)}</span>
-                  </div>
-                </div>
-              )
-            }
-            const m = item.message
-            const mine = m.direction === 'agent_to_owner'
-            return (
-              <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
-                <div className={cn(
-                  'crm-chat-bubble min-w-0 max-w-[91%] rounded-lg px-3.5 py-2.5 text-[15px] leading-[1.48] whitespace-pre-wrap break-words sm:max-w-[76%]',
-                  mine ? 'crm-chat-bubble-outgoing' : 'crm-chat-bubble-incoming',
-                )}>
-                  <div className="crm-chat-message-sender mb-1 text-[11px] font-bold uppercase tracking-[0.08em]">
-                    {mine ? 'You' : state?.ownerLabel || 'Owner'}
-                  </div>
-                  {m.redacted ? (
-                    <div className="min-w-[112px] py-0.5" aria-label="Private message content hidden">
-                      <div className="h-2 w-[88%] rounded-full bg-current opacity-25 blur-[2.5px]" />
-                      <div className="mt-1.5 h-2 w-[62%] rounded-full bg-current opacity-20 blur-[2.5px]" />
-                    </div>
-                  ) : m.text}
-                  <div className="crm-chat-message-time mt-1.5 text-right text-[11px] font-semibold tabular-nums">
-                    {timeOnly(m.at)}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          <SharedOwnerHistory propertyRef={refId} embedded pollMs={4000} />
           <AnimatePresence>
             {unseen > 0 && (
               <motion.button type="button" onClick={jumpToLatest}

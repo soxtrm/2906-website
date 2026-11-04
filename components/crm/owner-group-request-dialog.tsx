@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, Clock3, ShieldCheck, Star, Users, X } from 'lucide-react'
+import { Check, Clock3, History, ShieldCheck, Star, Users, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
+import { SharedOwnerHistory } from '@/components/crm/shared-owner-history'
 
 type RequestState = {
   requestId: string; status: string; approvalPolicy: string; expiresAt: string
@@ -41,6 +42,7 @@ export function OwnerGroupRequestDialog({ propertyRef, viewingId, onClose, onCha
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now())
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const load = useCallback(async () => {
     const d = await crmFetch(`schedule-board/listings/${encodeURIComponent(propertyRef)}/group-request-context`)
@@ -93,6 +95,11 @@ export function OwnerGroupRequestDialog({ propertyRef, viewingId, onClose, onCha
       </div>
 
       {!context && !error && <div className="py-12 text-center text-sm text-white/50">Loading request context…</div>}
+      {context && <button type="button" onClick={() => setHistoryOpen(value => !value)} aria-expanded={historyOpen}
+        className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-4 text-sm font-semibold text-white/75 hover:bg-white/[.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B8953F]">
+        <History size={15}/>{historyOpen ? 'Hide Owner History' : 'View Owner History'}
+      </button>}
+      {context && historyOpen && <div className="mt-3 max-h-[52dvh] overflow-hidden rounded-2xl"><SharedOwnerHistory propertyRef={propertyRef} /></div>}
       {context && !request && <div className="mt-5 space-y-4">
         <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/8 bg-white/[.035] p-3 text-xs">
           <Info label="Property" value={`#${context.property.ref}${context.property.town ? ` · ${context.property.town}` : ''}`}/>

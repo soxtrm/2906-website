@@ -173,7 +173,7 @@ function adminOnly(req, res, next) {
 // Fetch a live agent row by id (role/limit may change after token issued).
 async function liveAgent(id) {
   const r = await db.query(
-    `SELECT id, username, email, name, role, active, board_access, daily_reveal_limit,
+    `SELECT id, username, email, name, role, active, agency_id, board_access, daily_reveal_limit,
             can_create_owner_group FROM agents WHERE id=$1`, [id])
   return r.rows[0] || null
 }
@@ -2389,6 +2389,30 @@ router.get('/owners/:id', auth, async (req, res) => {
   } catch (err) {
     log.error('crm/owner detail error', err)
     res.status(500).json({ error: 'Failed' })
+  }
+})
+
+// Persistent original business conversation for the owner profile.  This is
+// intentionally separate from the AI summary and from the complete-property
+// filter used by GET /owners/:id.
+router.get('/owners/:id/history', auth, async (req,res) => {
+  try {
+    const viewer = await liveAgent(req.agent.id)
+    if (!viewer || !viewer.active) return res.status(401).json({ error:'Account inactive' })
+    const history = require('../services/sharedOwnerHistory')
+    const out = await history.getOwnerHistory({
+      ownerId:Number(req.params.id),viewer,cursor:req.query.cursor,limit:req.query.limit,search:req.query.search,
+    })
+    if (!out.result) {
+      const status = out.reason === 'not_found' ? 404 : out.reason === 'forbidden' ? 403 : 500
+      const code = out.reason === 'not_found' ? 'history_not_found' : out.reason === 'forbidden' ? 'history_forbidden' : 'history_error'
+      return res.status(status).json({ error:status === 403 ? 'You are not authorized for this owner conversation.' : 'Conversation history source not found.',code })
+    }
+    res.set('Cache-Control','private, no-store')
+    res.json(out.result)
+  } catch(err) {
+    log.error('crm owner history error',{ err:err.message,ownerId:req.params.id,agentId:req.agent.id })
+    res.status(500).json({ error:'Could not load owner history.',code:'history_error' })
   }
 })
 

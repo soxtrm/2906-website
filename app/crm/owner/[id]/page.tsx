@@ -7,6 +7,7 @@ import {
   DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
 } from '@/lib/crm/ui'
 import { OwnerAttributionPanel } from '@/components/crm/owner-attribution'
+import { SharedOwnerHistory } from '@/components/crm/shared-owner-history'
 
 export default function OwnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -112,6 +113,7 @@ function Badge({ children, tone = 'gold' }: { children: React.ReactNode; tone?: 
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
+  { key: 'conversation', label: 'Owner Conversation' },
   { key: 'properties', label: 'Properties' },
   { key: 'insights', label: 'Contact & Insights' },
   { key: 'flows', label: 'Flows' },
@@ -286,6 +288,7 @@ function OwnerDetail({ id }: { id: number }) {
 
         <div style={{ marginTop: 18 }}>
           {tab === 'overview' && <OverviewPanel d={d} onGoto={setTab} />}
+          {tab === 'conversation' && <SharedOwnerHistory ownerId={id} />}
           {tab === 'properties' && <PropertiesPanel props={props} incompleteCount={d.incompleteCount} owner={o} router={router} />}
           {tab === 'insights' && <InsightsPanel d={d} owner={o} onSaved={load} setMsg={setMsg} />}
           {tab === 'flows' && <FlowsPanel d={d} ownerId={id} onSaved={load} setMsg={setMsg} onGoto={setTab} />}

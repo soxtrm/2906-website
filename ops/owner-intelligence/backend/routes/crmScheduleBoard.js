@@ -167,7 +167,7 @@ async function auth(req, res, next) {
 // token was issued, and we need whatsapp_phones for the Fall A reply echo.
 async function liveAgent(id) {
   const r = await db.query(
-    `SELECT id, username, email, name, role, active, whatsapp_phones, whatsapp_session,
+    `SELECT id, username, email, name, role, active, agency_id, whatsapp_phones, whatsapp_session,
             notify_whatsapp, board_tour_completed_at, can_create_owner_group,
             COALESCE(can_ask_owner, TRUE) AS can_ask_owner
        FROM agents WHERE id = $1`, [id])
@@ -2370,15 +2370,61 @@ router.post('/listings/:ref/create-group', auth, async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════
 // RELAY CHAT — the WhatsApp-style chat window Ask/Book open onto.
 //
-// Anonymised, owner-identity-free, phone numbers masked — see
-// services/bookRelay.js `getBoardMessages` / `maskPhonesForDisplay`. Firewall:
-// every read and write below is scoped to `me.id`, so an agent only ever sees
-// their own thread with an owner, never a colleague's.
+// The legacy composer/snapshot remains scoped to the current agent so its
+// takeover state and drafts do not leak between agents.  The authorized,
+// server-redacted cross-agent business history is the separate
+// /owner-history projection below; it never exposes the original private
+// identity fields.
 //
 // The owner label, persona and milchglas summary are all computed in
 // services/bookRelay.js getBoardSnapshot() — this route is just auth +
 // property resolution in front of it.
 // ════════════════════════════════════════════════════════════════════════════
+
+const sharedOwnerHistory = require('../services/sharedOwnerHistory')
+function sharedHistoryError(res, reason) {
+  if (reason === 'not_found') return res.status(404).json({ error:'Conversation history source not found.', code:'history_not_found' })
+  if (reason === 'forbidden') return res.status(403).json({ error:'You are not authorized for this owner conversation.', code:'history_forbidden' })
+  if (reason === 'invalid_action') return res.status(400).json({ error:'Unsupported follow-up action.', code:'invalid_action' })
+  return res.status(500).json({ error:'Could not load owner history.', code:'history_error' })
+}
+
+// Actual persisted business history.  Unlike /relay this deliberately spans
+// every thread for the property that the viewer is authorized to work on.
+// Conversation status and property completeness are not access predicates.
+router.get('/listings/:ref/owner-history', auth, async (req,res) => {
+  try {
+    const me = await liveAgent(req.agent.id)
+    if (!me || !me.active) return res.status(401).json({ error:'Account inactive' })
+    const out = await sharedOwnerHistory.getPropertyHistory({
+      ref:req.params.ref,viewer:me,cursor:req.query.cursor,limit:req.query.limit,search:req.query.search,
+    })
+    if (!out.result) return sharedHistoryError(res,out.reason)
+    res.set('Cache-Control','private, no-store')
+    res.json(out.result)
+  } catch(err) {
+    log.error('shared owner history read failed',{ err:err.message,ref:req.params.ref,agentId:req.agent.id })
+    res.status(500).json({ error:'Could not load owner history.',code:'history_error' })
+  }
+})
+
+// These are workflow notes only.  They never send WhatsApp messages or start
+// calls; a future compliant proxy can consume REQUEST_CALLBACK tasks.
+router.post('/listings/:ref/owner-history/actions', auth, async (req,res) => {
+  try {
+    const me = await liveAgent(req.agent.id)
+    if (!me || !me.active) return res.status(401).json({ error:'Account inactive' })
+    const out = await sharedOwnerHistory.createFollowUpAction({
+      ref:req.params.ref,viewer:me,action:req.body?.action,dueAt:req.body?.dueAt,
+      note:req.body?.note,assignedAgentId:req.body?.assignedAgentId,
+    })
+    if (!out.result) return sharedHistoryError(res,out.reason)
+    res.status(201).json(out.result)
+  } catch(err) {
+    log.error('owner history action failed',{ err:err.message,ref:req.params.ref,agentId:req.agent.id })
+    res.status(500).json({ error:'Could not save follow-up action.' })
+  }
+})
 
 // ── GET /listings/:ref/relay ─────────────────────────────────────────────────
 router.get('/listings/:ref/relay', auth, async (req, res) => {
@@ -2460,12 +2506,14 @@ router.post('/listings/:ref/relay/reopen', auth, async (req, res) => {
   try {
     const loaded = await loadForAction(req, res)
     if (!loaded) return
+    const access = await sharedOwnerHistory.propertyAccess(loaded.prop.ref,loaded.me)
+    if (!access.resource) return sharedHistoryError(res,access.reason)
     const row = (await db.query(
       `UPDATE book_relay_threads SET status='relaying',reopened_at=NOW(),reopened_by_agent_id=$3,
               close_reason=NULL,closed_at=NULL,updated_at=NOW()
-        WHERE id=(SELECT id FROM book_relay_threads WHERE property_id=$1 AND agent_id=$2 ORDER BY updated_at DESC,id DESC LIMIT 1)
+        WHERE id=(SELECT id FROM book_relay_threads WHERE property_id=$1 AND agency_id=$2 ORDER BY updated_at DESC,id DESC LIMIT 1)
           AND status='closed'
-        RETURNING id,status`, [loaded.prop.id,loaded.me.id,loaded.me.id])).rows[0]
+        RETURNING id,status`, [loaded.prop.id,loaded.me.agency_id,loaded.me.id])).rows[0]
     if (!row) return res.status(409).json({ error:'No closed conversation is available to reopen.' })
     await db.query(
       `INSERT INTO property_activities(property_id,agent_id,activity_type,details,is_significant,created_at)
@@ -2554,6 +2602,13 @@ router.post('/listings/:ref/relay/attachments', auth, relayAttachmentUpload.arra
            VALUES ($1,$2,$3,$4,$5,'Board relay attachment')`,
           [prop.owner_id, file.originalname, url, me.username || me.name || 'board', prop.id])
       }
+      await db.query(
+        `UPDATE book_relay_messages SET sender_role='AGENT',actor_agent_id=$2,is_ai=FALSE,
+                provenance_source='ARGUS_BOARD',attachment_metadata=$3::jsonb
+          WHERE id=(SELECT id FROM book_relay_messages
+                     WHERE thread_id=$1 AND direction='agent_to_owner'
+                     ORDER BY created_at DESC,id DESC LIMIT 1)`,
+        [thread.id,me.id,JSON.stringify({ filename:file.originalname,mimeType:file.mimetype,url,sensitivity:'business' })])
       sent.push({ filename: file.originalname, archived: !!url })
     }
     await markBoardAgentTakeover(thread.id).catch(err => {
@@ -2606,6 +2661,11 @@ router.post('/listings/:ref/relay/message', auth, async (req, res) => {
       await markBoardAgentTakeover(opened.threadId).catch(err => {
         log.warn('board relay opened but AI takeover marker failed', { ref: prop.ref, err: err.message })
       })
+      await db.query(
+        `UPDATE book_relay_messages SET sender_role='AGENT',actor_agent_id=$2,is_ai=FALSE,provenance_source='ARGUS_BOARD'
+          WHERE id=(SELECT id FROM book_relay_messages
+                     WHERE thread_id=$1 AND direction='agent_to_owner'
+                     ORDER BY created_at DESC,id DESC LIMIT 1)`, [opened.threadId,me.id])
       return res.json({ ok: true, opened: true, scrubbed: false, persona: opened.persona })
     }
 
@@ -2622,6 +2682,11 @@ router.post('/listings/:ref/relay/message', auth, async (req, res) => {
     await markBoardAgentTakeover(thread.id).catch(err => {
       log.warn('board relay sent but AI takeover marker failed', { ref: prop.ref, err: err.message })
     })
+    await db.query(
+      `UPDATE book_relay_messages SET sender_role='AGENT',actor_agent_id=$2,is_ai=FALSE,provenance_source='ARGUS_BOARD'
+        WHERE id=(SELECT id FROM book_relay_messages
+                   WHERE thread_id=$1 AND direction='agent_to_owner'
+                   ORDER BY created_at DESC,id DESC LIMIT 1)`, [thread.id,me.id])
     res.json({ ok: true, scrubbed: !!sent.scrubbed })
   } catch (err) {
     log.error('board relay send failed', { err: err.message, ref: req.params.ref })

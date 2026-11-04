@@ -3590,7 +3590,7 @@ function AgentFeed({ rows, mobile, onOpen, onChat, onBook, onTag, onConfirm, bus
               </button>
               <div style={{ gridColumn: mobile ? '1 / -1' : undefined, display: 'flex', gap: 6, justifyContent: mobile ? 'stretch' : 'flex-end' }}>
                 <FeedAction label="Open" onClick={() => onOpen(r)} />
-                <FeedAction label="Chat" onClick={() => onChat(r)} />
+                <FeedAction label="Owner history" onClick={() => onChat(r)} />
                 <FeedAction label="Book" accent={bookable} onClick={() => onBook(r)} />
                 <FeedAction label="@ Tag" icon={<AtSign size={11} />} onClick={() => onTag(r)} />
                 {needsAction && <FeedAction label={busyRef === r.ref ? '…' : 'Confirm'} disabled={!!busyRef} onClick={() => onConfirm(r)} />}
@@ -4704,8 +4704,8 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
             <HelpCircle size={17} />
           </button>
           <button className="crm-card-action-button" onClick={() => guardedFutureAction('Open owner chat', onChat)} disabled={futureLocked && !isAdmin}
-            aria-label={r.lastChatAt ? `Owner chat, last active ${ago(r.lastChatAt)}` : 'Owner chat'}
-            title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Chat with the owner'}
+            aria-label={r.lastChatAt ? `Owner conversation and history, last active ${ago(r.lastChatAt)}` : 'Owner conversation and history'}
+            title={futureLocked ? `Coming ${fmtDateDots(r.availableDate) || 'later'}` : 'Owner Conversation / History'}
             style={{ ...trayPrimaryBtn(dark), ...futureActionStyle }}>
             <MessageCircle size={17} />
           </button>
