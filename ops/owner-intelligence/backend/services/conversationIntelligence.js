@@ -5,6 +5,7 @@ const db = require('../db')
 const log = require('../logger')
 const waha = require('../waha')
 const { interpretInbound, planDirectReply, validateDraft, OPERATIONAL_STATUS } = require('./conversationPolicy')
+const { nearDuplicate } = require('./responseDedup')
 const { resolveAgentIdentity, agencyShortAnswer, emailAnswer } = require('./agentIdentityRegistry')
 
 const normalizePhone = value => String(value || '').replace(/\D/g, '').slice(-12)
@@ -34,7 +35,9 @@ async function ownerFor(phone, chatId) {
 async function resolveProperties(ownerId, text, chatId) {
   if (!ownerId) return []
   const all = (await db.query(
-    `SELECT id, ref, town, sub_location, available_status FROM properties
+    `SELECT id, ref, town, sub_location, available_status, operational_status,
+            property_type, bedrooms, floor_level, apt
+       FROM properties
       WHERE owner_id=$1 AND ref IS NOT NULL ORDER BY updated_at DESC`, [ownerId])).rows
   const explicit = all.filter(p => {
     if (!p.ref) return false
@@ -43,12 +46,23 @@ async function resolveProperties(ownerId, text, chatId) {
     return new RegExp(`\\b(?:${escaped}|${suffix})\\b`, 'i').test(String(text || ''))
   })
   if (explicit.length) return explicit
-  const live = all.filter(p => !['rented', 'sold', 'archived', 'not_available'].includes(String(p.available_status || '').toLowerCase()))
-  if (live.length === 1) return live
+  // A later explicit correction ("it is still available") must be able to
+  // recover a property that an earlier classifier marked rented.  Therefore
+  // the owner portfolio is retained here; live-only filtering made those
+  // corrections impossible to associate with their canonical property.
+  if (all.length === 1) return all
   const ctx = await db.query(
     `SELECT property_ids FROM conversation_intelligence_state WHERE chat_id=$1 LIMIT 1`, [chatId]).catch(() => ({ rows: [] }))
   const ids = Array.isArray(ctx.rows[0]?.property_ids) ? ctx.rows[0].property_ids.map(Number) : []
-  return live.filter(p => ids.includes(Number(p.id)))
+  return all.filter(p => ids.includes(Number(p.id)))
+}
+
+async function allOwnerProperties(ownerId) {
+  if (!ownerId) return []
+  return (await db.query(
+    `SELECT id, ref, town, sub_location, available_status, operational_status,
+            property_type, bedrooms, floor_level, apt
+       FROM properties WHERE owner_id=$1 AND ref IS NOT NULL ORDER BY updated_at DESC`, [ownerId])).rows
 }
 
 async function loadState(client, chatId, senderAccountId, ownerId) {
@@ -78,18 +92,22 @@ async function persistFacts(client, state, decision, properties, meta) {
       `UPDATE conversation_facts SET fact_status='SUPERSEDED',superseded_by=$2,updated_at=NOW()
         WHERE state_id=$1 AND source_message_id=$2 AND fact_status<>'SUPERSEDED'`, [state.id, meta.messageId])
   }
-  const propertyId = properties.length === 1 ? properties[0].id : null
   for (const fact of decision.facts) {
+    const factIds = Array.isArray(fact.propertyIds) ? fact.propertyIds.map(Number).filter(Number.isFinite) : []
+    const propertyId = factIds.length === 1 ? factIds[0] : properties.length === 1 ? properties[0].id : null
     await client.query(
       `UPDATE conversation_facts SET fact_status='SUPERSEDED',superseded_by=$3,updated_at=NOW()
-        WHERE state_id=$1 AND field_name=$2 AND fact_status<>'SUPERSEDED'`, [state.id, fact.fieldName, meta.messageId])
+        WHERE state_id=$1 AND field_name=$2 AND fact_status<>'SUPERSEDED'
+          AND property_id IS NOT DISTINCT FROM $4`,
+      [state.id, fact.fieldName, meta.messageId, propertyId])
     await client.query(
       `INSERT INTO conversation_facts
        (state_id,entity_id,property_id,sender_account_id,field_name,field_value,fact_status,
-        source_message_id,source_type,source_timestamp,confidence,effective_timestamp,last_confirmed_at,evidence)
-       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,'owner_reported',$9,$10,$9,CASE WHEN $7='KNOWN' THEN $9 ELSE NULL END,$11)`,
+        source_message_id,source_type,source_timestamp,confidence,effective_timestamp,last_confirmed_at,evidence,access_scope)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,'owner_reported',$9,$10,$9,CASE WHEN $7='KNOWN' THEN $9 ELSE NULL END,$11,$12)`,
       [state.id, state.owner_contact_id, propertyId, meta.senderAccountId, fact.fieldName,
-       JSON.stringify(fact.fieldValue), fact.factStatus, meta.messageId, meta.timestamp, fact.confidence, fact.evidence])
+       JSON.stringify(fact.fieldValue), fact.factStatus, meta.messageId, meta.timestamp, fact.confidence, fact.evidence,
+       fact.restricted ? 'COMPLIANCE_RESTRICTED' : 'AUTHORIZED_AGENT'])
   }
 }
 
@@ -110,12 +128,21 @@ async function applyActions(client, state, decision, properties, meta) {
     }
     if (action.type === 'HUMAN_REVIEW') {
       await client.query(`UPDATE conversation_intelligence_state SET human_active=TRUE WHERE id=$1`, [state.id])
+      await client.query(
+        `INSERT INTO conversation_review_tasks
+           (state_id,owner_contact_id,source_message_id,review_type,status,reason,evidence,candidate_property_ids,created_at,updated_at)
+         VALUES ($1,$2,$3,'PROPERTY_ASSOCIATION','OPEN',$4,$5,$6::jsonb,NOW(),NOW())
+         ON CONFLICT (state_id,source_message_id,review_type) DO UPDATE SET
+           reason=EXCLUDED.reason,evidence=EXCLUDED.evidence,candidate_property_ids=EXCLUDED.candidate_property_ids,updated_at=NOW()`,
+        [state.id,state.owner_contact_id,meta.messageId,action.reason || 'ambiguous',action.evidence || action.reason || '',
+         JSON.stringify(action.details?.candidatePropertyIds || action.details?.selectedPropertyIds || [])])
     }
     if (action.type === 'PROPERTY_STATUS') {
       const ids = action.propertyIds?.length ? action.propertyIds : properties.map(p => p.id)
       if (!ids.length) continue
       const dbStatus = action.status === OPERATIONAL_STATUS.RENTED ? 'rented'
-        : action.status === OPERATIONAL_STATUS.SOLD ? 'sold' : 'archived'
+        : action.status === OPERATIONAL_STATUS.SOLD ? 'sold'
+        : action.status === OPERATIONAL_STATUS.AVAILABLE ? 'available' : 'archived'
       const queued = await client.query(
         `SELECT pending_job_id,checklist FROM owner_auto_conversations
           WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g')=regexp_replace($1, '\\D', '', 'g')
@@ -124,14 +151,22 @@ async function applyActions(client, state, decision, properties, meta) {
         if (row.pending_job_id) pendingJobs.push({ queue:'auto-conversation', id:row.pending_job_id })
         if (row.checklist?._publish_job_id) pendingJobs.push({ queue:'owner-auto-publish', id:row.checklist._publish_job_id })
       }
-      await client.query(
-        `UPDATE properties SET available_status=$2,operational_status=$3,published=FALSE,updated_at=NOW() WHERE id=ANY($1::int[])`, [ids, dbStatus, action.status])
-      await client.query(
-        `UPDATE owner_auto_conversations SET status='cancelled_property_status',automation_disabled=TRUE,
-                cancelled_reason=$2,pending_job_id=NULL,updated_at=NOW()
-          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g')=regexp_replace($1, '\\D', '', 'g')
-            AND status IN ('active_collecting','awaiting_auto_publish')`,
-        [meta.phone, `conversation_intelligence:${action.status}`]).catch(() => {})
+      if (action.status === OPERATIONAL_STATUS.AVAILABLE) {
+        // Availability corrections restore the canonical status but never
+        // auto-publish. Publication is a separate, deliberate workflow.
+        await client.query(
+          `UPDATE properties SET available_status='available',operational_status='AVAILABLE',updated_at=NOW()
+            WHERE id=ANY($1::int[])`, [ids])
+      } else {
+        await client.query(
+          `UPDATE properties SET available_status=$2,operational_status=$3,published=FALSE,updated_at=NOW() WHERE id=ANY($1::int[])`, [ids, dbStatus, action.status])
+        await client.query(
+          `UPDATE owner_auto_conversations SET status='cancelled_property_status',automation_disabled=TRUE,
+                  cancelled_reason=$2,pending_job_id=NULL,updated_at=NOW()
+            WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g')=regexp_replace($1, '\\D', '', 'g')
+              AND status IN ('active_collecting','awaiting_auto_publish')`,
+          [meta.phone, `conversation_intelligence:${action.status}`]).catch(() => {})
+      }
       for (const id of ids) {
         await client.query(
           `INSERT INTO property_operational_status_history(property_id,status,source_message_id,source_timestamp,reason)
@@ -157,9 +192,10 @@ async function removePendingJobs(jobs) {
 
 async function alreadySent(client, stateId, reply) {
   const r = await client.query(
-    `SELECT 1 FROM conversation_outbound_guard WHERE state_id=$1 AND status IN ('SENT','CLAIMED') AND draft=$2 LIMIT 1`,
-    [stateId, reply])
-  return r.rows.length > 0
+    `SELECT draft FROM conversation_outbound_guard
+      WHERE state_id=$1 AND status IN ('SENT','CLAIMED')
+      ORDER BY created_at DESC LIMIT 12`, [stateId])
+  return r.rows.some(row => nearDuplicate(row.draft, reply))
 }
 
 async function claimReply(client, stateId, messageId, reply) {
@@ -171,35 +207,58 @@ async function claimReply(client, stateId, messageId, reply) {
   return r.rows[0]?.id || null
 }
 
+async function recordProcessingOutcome({ stateId, messageId, status, reasonCode, detail, senderAccountId, propertyIds }) {
+  await db.query(
+    `INSERT INTO conversation_processing_events
+       (state_id,source_message_id,processing_status,reason_code,reason_detail,automation_status,sender_account_id,property_ids,created_at)
+     VALUES($1,$2,$3,$4,$5,'AI_PAUSED',$6,$7::jsonb,NOW())
+     ON CONFLICT(state_id,source_message_id,processing_status,reason_code) DO NOTHING`,
+    [stateId,messageId,status,reasonCode,detail,senderAccountId,JSON.stringify(propertyIds || [])]
+  ).catch(err => log.warn('conversationIntelligence outcome audit failed', { stateId, messageId, err:err.message }))
+}
+
 async function applyCanonicalPropertyFacts(properties, decision, meta) {
-  if (properties.length !== 1) return
-  const propertyId = properties[0].id
-  const mapped = []
+  const fallbackId = properties.length === 1 ? Number(properties[0].id) : null
+  const grouped = new Map()
   for (const fact of decision.facts) {
-    if (fact.fieldName === 'petsAllowed') mapped.push({ field:'pets', value:fact.fieldValue ? 'yes' : 'no', confidence:fact.confidence, evidence:fact.evidence })
-    if (fact.fieldName === 'sharingAllowed') mapped.push({ field:'sharing', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
-    if (fact.fieldName === 'companySubletting') mapped.push({ field:'subletting', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
-    if (fact.fieldName === 'askingPrice') mapped.push({ field:'price', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
-    if (fact.fieldName === 'availabilityFrom' && fact.factStatus === 'KNOWN') mapped.push({ field:'available_from', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
-    if (fact.fieldName === 'address' && fact.fieldValue) {
-      await db.query(`UPDATE properties SET street=$2,updated_at=NOW() WHERE id=$1`, [propertyId, String(fact.fieldValue)])
-    }
-    if (fact.fieldName === 'locality' && fact.fieldValue) {
-      await db.query(`UPDATE properties SET town=$2,updated_at=NOW() WHERE id=$1`, [propertyId, String(fact.fieldValue)])
-    }
+    const ids = Array.isArray(fact.propertyIds) && fact.propertyIds.length ? fact.propertyIds.map(Number) : fallbackId ? [fallbackId] : []
+    // Canonical fields are only written when a fact resolves to one unit.
+    // Multi-unit facts remain in the sourced conversation timeline until a
+    // human confirms the mapping.
+    if (ids.length !== 1) continue
+    const list = grouped.get(ids[0]) || []
+    list.push(fact)
+    grouped.set(ids[0], list)
   }
-  const compliance = decision.facts.find(f => f.fieldName === 'complianceStatus' && f.fieldValue === OPERATIONAL_STATUS.COMPLIANCE_PENDING)
-  const notReady = decision.facts.find(f => f.fieldName === 'availabilityStatus' && f.fieldValue === OPERATIONAL_STATUS.NOT_READY)
-  const upcoming = decision.facts.find(f => f.fieldName === 'availabilityFrom' && f.factStatus === 'CONDITIONAL')
-  const operationalStatus = compliance ? OPERATIONAL_STATUS.COMPLIANCE_PENDING
-    : notReady ? OPERATIONAL_STATUS.NOT_READY : upcoming ? OPERATIONAL_STATUS.UPCOMING : null
-  if (operationalStatus) {
-    await db.query(`UPDATE properties SET operational_status=$2,updated_at=NOW() WHERE id=$1`, [propertyId, operationalStatus])
-  }
-  if (mapped.length) {
-    await require('./ownerFactEngine').applyFacts(propertyId, mapped, {
-      observedAt: meta.timestamp, sourceType: 'conversation_intelligence', reference: meta.messageId,
-    })
+  for (const [propertyId, facts] of grouped) {
+    const mapped = []
+    for (const fact of facts) {
+      if (fact.fieldName === 'petsAllowed') mapped.push({ field:'pets', value:fact.fieldValue ? 'yes' : 'no', confidence:fact.confidence, evidence:fact.evidence })
+      if (fact.fieldName === 'sharingAllowed') mapped.push({ field:'sharing', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
+      if (fact.fieldName === 'companySubletting') mapped.push({ field:'subletting', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
+      if (fact.fieldName === 'askingPrice') mapped.push({ field:'price', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
+      if (fact.fieldName === 'availabilityFrom' && fact.factStatus === 'KNOWN') mapped.push({ field:'available_from', value:fact.fieldValue, confidence:fact.confidence, evidence:fact.evidence })
+      if (fact.fieldName === 'address' && fact.fieldValue) {
+        await db.query(`UPDATE properties SET street=$2,updated_at=NOW() WHERE id=$1`, [propertyId, String(fact.fieldValue)])
+      }
+      if (fact.fieldName === 'locality' && fact.fieldValue) {
+        await db.query(`UPDATE properties SET town=$2,updated_at=NOW() WHERE id=$1`, [propertyId, String(fact.fieldValue)])
+      }
+    }
+    const compliance = facts.find(f => f.fieldName === 'complianceStatus' && f.fieldValue === OPERATIONAL_STATUS.COMPLIANCE_PENDING)
+    const notReady = facts.find(f => f.fieldName === 'availabilityStatus' && f.fieldValue === OPERATIONAL_STATUS.NOT_READY)
+      || facts.find(f => f.fieldName === 'refurbishmentStatus' && f.fieldValue === 'IN_PROGRESS')
+    const upcoming = facts.find(f => f.fieldName === 'availabilityFrom' && f.factStatus === 'CONDITIONAL')
+    const operationalStatus = compliance ? OPERATIONAL_STATUS.COMPLIANCE_PENDING
+      : notReady ? OPERATIONAL_STATUS.NOT_READY : upcoming ? OPERATIONAL_STATUS.UPCOMING : null
+    if (operationalStatus) {
+      await db.query(`UPDATE properties SET operational_status=$2,updated_at=NOW() WHERE id=$1`, [propertyId, operationalStatus])
+    }
+    if (mapped.length) {
+      await require('./ownerFactEngine').applyFacts(propertyId, mapped, {
+        observedAt: meta.timestamp, sourceType: 'conversation_intelligence', reference: meta.messageId,
+      })
+    }
   }
 }
 
@@ -208,6 +267,7 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
   const owner = await ownerFor(phone, chatId)
   if (!owner) return { suppressAutomation: false, skipped: 'unknown_owner' }
   const properties = await resolveProperties(owner.id, text, chatId)
+  const portfolio = await allOwnerProperties(owner.id)
   const edited = event === 'message.edited' || !!payload?.edited
   const senderAccountId = String(session || 'default').toLowerCase()
   const client = await db.connect()
@@ -227,11 +287,21 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
     if (!revision.rows.length) { await client.query('ROLLBACK'); return { suppressAutomation: true, duplicate: true } }
     decision = interpretInbound({ text, edited, context: {
       referencedPropertyIds: properties.map(p => p.id), lastQuestionType: state.last_question_type,
-      lastAskedField: state.last_asked_field,
+      lastAskedField: state.last_asked_field, properties: portfolio,
     } })
     const ts = sourceTimestamp(timestamp)
     await persistFacts(client, state, decision, properties, { edited, messageId, timestamp: ts, senderAccountId })
     pendingJobs = await applyActions(client, state, decision, properties, { messageId, timestamp: ts, phone })
+    const reviewAction = decision.actions.find(a => a.type === 'HUMAN_REVIEW' || a.type === 'HUMAN_COMPLIANCE_REVIEW')
+    let processingStatus = reviewAction ? 'REVIEW_REQUIRED' : 'PROCESSED'
+    let processingReasonCode = reviewAction?.reason || null
+    let processingReasonDetail = reviewAction?.evidence || null
+    let processingAutomationStatus = reviewAction ? 'AI_PAUSED' : (state.human_active ? 'AGENT_TAKEOVER' : 'AI_ACTIVE')
+    if (!reviewAction && state.human_active) {
+      processingStatus = 'SKIPPED'
+      processingReasonCode = 'agent_takeover_active'
+      processingReasonDetail = 'An agent is handling this owner; AI did not answer automatically.'
+    }
     await client.query(
       `UPDATE conversation_intelligence_state SET conversation_version=conversation_version+1,
        property_ids=$2::jsonb,last_inbound_message_id=$3,last_inbound_at=$4,updated_at=NOW() WHERE id=$1`,
@@ -242,6 +312,10 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
     if (!identity && decision.questions.some(q => q === 'agency_identity' || q === 'client_types')) {
       await client.query(`UPDATE conversation_intelligence_state SET human_active=TRUE WHERE id=$1`, [state.id])
       decision.suppressAutomation = true
+      processingStatus = 'SKIPPED'
+      processingReasonCode = 'unverified_sender_identity'
+      processingReasonDetail = 'The sending account has no verified agent identity; a human must answer.'
+      processingAutomationStatus = 'AI_PAUSED'
       log.warn('conversationIntelligence sender identity missing; automated identity reply blocked', { senderAccountId, chatId })
     }
     // An email question without a verified address goes to a human: no LLM
@@ -249,6 +323,10 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
     if (decision.questions.includes('email_request') && !emailAnswer(identity)) {
       await client.query(`UPDATE conversation_intelligence_state SET human_active=TRUE WHERE id=$1`, [state.id])
       decision.suppressAutomation = true
+      processingStatus = 'SKIPPED'
+      processingReasonCode = 'unverified_sender_email'
+      processingReasonDetail = 'No verified email exists for this sending identity; a human must answer.'
+      processingAutomationStatus = 'AI_PAUSED'
       log.warn('conversationIntelligence email requested but no verified email for sender', { senderAccountId, chatId })
     }
     reply = planDirectReply(decision, identity, state)
@@ -261,6 +339,9 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
       reply = shorter && !(await alreadySent(client, state.id, shorter)) ? shorter : null
       if (!reply) {
         decision.suppressAutomation = true
+        processingStatus = 'SKIPPED'
+        processingReasonCode = 'near_duplicate_response'
+        processingReasonDetail = 'A materially equivalent reply was already sent; ARGUS suppressed the repeat.'
         log.info('conversationIntelligence direct answer already given; not repeated', { chatId, senderAccountId })
       }
     }
@@ -270,9 +351,37 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
         humanActive: !!state.human_active, humanComplianceReview: decision.complianceReview || !!state.compliance_review_required,
         facts: state.facts,
       }, identity, expectedConversationVersion: state.conversation_version })
-      if (check.allow) guardId = await claimReply(client, state.id, messageId, reply)
-      else reply = null
+      if (check.allow) {
+        guardId = await claimReply(client, state.id, messageId, reply)
+        if (guardId) processingStatus = 'REPLY_PLANNED'
+        else {
+          processingStatus = 'SKIPPED'
+          processingReasonCode = 'duplicate_outbound_claim'
+          processingReasonDetail = 'This inbound event already claimed the same outbound reply.'
+          reply = null
+        }
+      } else {
+        processingStatus = 'SKIPPED'
+        processingReasonCode = check.reason
+        processingReasonDetail = check.reason === 'human_operator_active'
+          ? 'An agent is handling this owner; AI did not answer automatically.'
+          : `The reply was blocked by ${String(check.reason || 'conversation policy').replaceAll('_', ' ')}.`
+        if (check.reason === 'human_operator_active') processingAutomationStatus = 'AGENT_TAKEOVER'
+        reply = null
+      }
     }
+    if (!reply && decision.suppressAutomation && !processingReasonCode) {
+      processingStatus = 'SKIPPED'
+      processingReasonCode = 'automation_suppressed_by_policy'
+      processingReasonDetail = 'Conversation policy intentionally suppressed an automatic reply.'
+    }
+    await client.query(
+      `INSERT INTO conversation_processing_events
+         (state_id,source_message_id,processing_status,reason_code,reason_detail,automation_status,sender_account_id,property_ids,created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,NOW())
+       ON CONFLICT (state_id,source_message_id,processing_status,reason_code) DO NOTHING`,
+      [state.id,messageId,processingStatus,processingReasonCode,processingReasonDetail,processingAutomationStatus,
+       senderAccountId,JSON.stringify(properties.map(p => p.id))])
     await client.query('COMMIT')
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
@@ -283,12 +392,13 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
   await removePendingJobs(pendingJobs)
 
   try {
-    await applyCanonicalPropertyFacts(properties, decision, { messageId, timestamp: sourceTimestamp(timestamp) })
+    await applyCanonicalPropertyFacts(portfolio, decision, { messageId, timestamp: sourceTimestamp(timestamp) })
   } catch (err) {
     log.warn('conversationIntelligence canonical property sync failed', { err: err.message, chatId })
   }
   if (decision.actions.some(action => action.type === 'PROPERTY_STATUS')) {
-    for (const property of properties) {
+    const changedIds = new Set(decision.actions.filter(a => a.type === 'PROPERTY_STATUS').flatMap(a => a.propertyIds || []).map(Number))
+    for (const property of portfolio.filter(p => changedIds.has(Number(p.id)))) {
       try { await require('./matchEngine').invalidateMatchesForProperty(property.id, 'conversation_intelligence_status') }
       catch (err) { log.warn('conversationIntelligence match invalidation failed', { propertyId:property.id, err:err.message }) }
     }
@@ -305,8 +415,20 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
         replySent = true
       } catch (err) {
         await db.query(`UPDATE conversation_outbound_guard SET status='FAILED',failure_reason=$2 WHERE id=$1`, [guardId, String(err.message || err).slice(0,500)]).catch(()=>{})
+        await recordProcessingOutcome({
+          stateId:state.id,messageId,status:'SEND_FAILED',reasonCode:'outbound_dispatch_failed',
+          detail:String(err.message || err).slice(0,500),senderAccountId,
+          propertyIds:properties.map(p => p.id),
+        })
       }
-    } else await db.query(`UPDATE conversation_outbound_guard SET status='BLOCKED',failure_reason=$2 WHERE id=$1`, [guardId, preflight.reason]).catch(()=>{})
+    } else {
+      await db.query(`UPDATE conversation_outbound_guard SET status='BLOCKED',failure_reason=$2 WHERE id=$1`, [guardId, preflight.reason]).catch(()=>{})
+      await recordProcessingOutcome({
+        stateId:state.id,messageId,status:'SKIPPED',reasonCode:preflight.reason,
+        detail:`Outbound preflight blocked the reply: ${String(preflight.reason || 'conversation policy').replaceAll('_', ' ')}.`,
+        senderAccountId,propertyIds:properties.map(p => p.id),
+      })
+    }
   }
   return { suppressAutomation: decision.suppressAutomation || !!reply, replySent, decision }
 }

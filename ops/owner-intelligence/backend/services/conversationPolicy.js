@@ -9,13 +9,22 @@ const FACT_STATUS = Object.freeze({
 const OPERATIONAL_STATUS = Object.freeze({
   AVAILABLE: 'AVAILABLE', UPCOMING: 'UPCOMING', NOT_READY: 'NOT_READY',
   COMPLIANCE_PENDING: 'COMPLIANCE_PENDING', RENTED: 'RENTED', SOLD: 'SOLD',
-  WITHDRAWN: 'WITHDRAWN', NEEDS_HUMAN_REVIEW: 'NEEDS_HUMAN_REVIEW',
+  WITHDRAWN: 'WITHDRAWN', VIEWING_PAUSED: 'VIEWING_PAUSED',
+  NEEDS_HUMAN_REVIEW: 'NEEDS_HUMAN_REVIEW',
 })
 
 const OPT_OUT_RE = /\b(stop (?:contacting|messaging|texting) me|don'?t (?:contact|message|text) me again|do not (?:contact|message|text) me|unsubscribe)\b/i
 const PROPERTY_REMOVAL_RE = /\b(remove (?:it|the (?:property|place|listing))|take (?:it|the (?:property|place|listing)) off|remove me from the list)\b/i
 const RENTED_RE = /\b(?:just\s+)?(?:been\s+)?rented\b|\balready rented\b|\bplace (?:is|has been) taken\b/i
 const SOLD_RE = /\b(?:just\s+)?sold\b|\balready sold\b/i
+const HISTORICAL_RE = /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+years?\s+ago\b|\b(?:previously|formerly|back then|used to be|when (?:it|the (?:flat|apartment|property|place)) (?:was|had been|got) (?:finished|completed|built|renovated))\b/i
+const CURRENT_AVAILABLE_RE = /\b(?:is|are)\s+(?:still\s+|currently\s+|now\s+)?available\b|\b(?:remains?|still|currently|now)\s+(?:both\s+|all\s+)?available\b|\b(?:studio|apartment|flat|unit|number\s*(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)|no\.?\s*\d+)\b.{0,45}\bavailable\b|^\s*available\s*[.!]?\s*$/i
+const FUTURE_AVAILABLE_RE = /\bavailable\s+(?:again\s+)?from\b/i
+const VIEWING_ONLY_RE = /\bnot\s+available\s+for\s+viewings?\b|\bviewings?\s+(?:are\s+)?(?:not\s+possible|paused|unavailable)\b/i
+const REFURBISHMENT_RE = /\b(?:currently\s+)?(?:being\s+)?(?:refurbished|renovated|painted|cleaned)\b|\b(?:painting|cleaning|refurbishment|renovation)\s+(?:is\s+)?(?:ongoing|in progress|pending)\b/i
+const PHOTOS_PENDING_RE = /\b(?:new\s+)?photos?\s+(?:will be|to be|are being)\s+(?:taken|made|done)\b|\bphotos?\s+(?:after|once|when)\b/i
+const TENANT_MOVED_OUT_RE = /\b(?:the\s+)?tenant\s+(?:has\s+)?moved\s+out\b/i
+const PROTECTED_PREFERENCE_RE = /\b(?:no|not|won'?t accept|do not accept|only)\s+(?:[a-z]+\s+){0,3}(?:nationalit(?:y|ies)|ethnic(?:ity|ities)|race|racial|africans?|arabs?|asians?|indians?|pakistanis?|maltese|italians?|british|germans?|french|russians?|ukrainians?)\b/i
 // Kev, 2026-10-22: one shared detector (agentIdentityRegistry) for both
 // conversation paths; this local copy missed "name of your agency" etc.
 const { AGENCY_QUESTION_RE, EMAIL_QUESTION_RE, emailAnswer, unapprovedEmails } = require('./agentIdentityRegistry')
@@ -30,17 +39,18 @@ function uniq(values) { return [...new Set((values || []).filter(Boolean))] }
 
 function extractMoney(text) {
   const s = cleanText(text)
-  const matches = [...s.matchAll(/(?:€|eur\s*)?([1-9]\d{2,4})(?:\s*(?:euro|eur))?/ig)]
-    .map(m => Number(m[1])).filter(n => n >= 300 && n <= 50000)
+  const amount = /(?:€|eur\s*)?([1-9](?:\d{2,4}|\d{0,2}(?:,|\s)\d{3}))(?:\s*(?:euro|eur))?/ig
+  const matches = [...s.matchAll(amount)]
+    .map(m => Number(m[1].replace(/[,\s]/g, ''))).filter(n => n >= 300 && n <= 50000)
   if (!matches.length) return null
   const correction = /\b(?:not|instead of|rather than|correction|actually)\b/i.test(s)
   // In "2100, not 2000" the first amount is the corrected value; in
   // "not 2000, it is 2100" the amount after the correction marker is.
   // Do not use a generic "last number wins" rule: it reverses the first form.
-  const positiveThenRejected = s.match(/(?:€|eur\s*)?([1-9]\d{2,4})\s*(?:euro|eur)?\s*[,;:-]?\s*not\s+(?:€|eur\s*)?([1-9]\d{2,4})/i)
-  const rejectedThenPositive = s.match(/not\s+(?:€|eur\s*)?([1-9]\d{2,4}).{0,40}?(?:actually|now|is|should be|but)\s*(?:€|eur\s*)?([1-9]\d{2,4})/i)
-  const value = positiveThenRejected ? Number(positiveThenRejected[1])
-    : rejectedThenPositive ? Number(rejectedThenPositive[2])
+  const positiveThenRejected = s.match(/(?:€|eur\s*)?([1-9][\d,\s]{2,6})\s*(?:euro|eur)?\s*[,;:-]?\s*not\s+(?:€|eur\s*)?([1-9][\d,\s]{2,6})/i)
+  const rejectedThenPositive = s.match(/not\s+(?:€|eur\s*)?([1-9][\d,\s]{2,6}).{0,40}?(?:actually|now|is|should be|but)\s*(?:€|eur\s*)?([1-9][\d,\s]{2,6})/i)
+  const value = positiveThenRejected ? Number(positiveThenRejected[1].replace(/[,\s]/g, ''))
+    : rejectedThenPositive ? Number(rejectedThenPositive[2].replace(/[,\s]/g, ''))
     : correction ? matches[matches.length - 1] : matches[0]
   return { value, correction, mentioned: matches }
 }
@@ -76,7 +86,71 @@ function makeFact(fieldName, fieldValue, opts = {}) {
     correction: !!opts.correction,
     negative: !!opts.negative,
     evidence: opts.evidence || null,
+    propertyIds: uniq(opts.propertyIds),
+    restricted: !!opts.restricted,
   }
+}
+
+function propertyNumber(p) {
+  const candidates = [p.apt, p.unit_number, p.unitNumber, p.floor_unit]
+  for (const value of candidates) {
+    const hit = String(value || '').match(/\b(\d{1,3})\b/)
+    if (hit) return Number(hit[1])
+  }
+  return null
+}
+
+function propertyFloor(p) {
+  const raw = String(p.floor_level ?? p.floor ?? '').toLowerCase().trim()
+  const words = { ground: 0, first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10 }
+  if (Object.prototype.hasOwnProperty.call(words, raw)) return words[raw]
+  const hit = raw.match(/\d{1,2}/)
+  return hit ? Number(hit[0]) : null
+}
+
+function unitSelector(text, properties = []) {
+  const s = lower(text)
+  let candidates = properties.slice()
+  let constrained = false
+  const explicitRefs = candidates.filter(p => {
+    const ref = String(p.ref || '')
+    const suffix = ref.replace(/^2906-/i, '')
+    return (ref && new RegExp(`\\b${ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text))
+      || (suffix && new RegExp(`\\b${suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(text))
+  })
+  if (explicitRefs.length) return { ids: explicitRefs.map(p => p.id), reason: 'explicit_reference', constrained: true }
+
+  if (/\bstudio\b/i.test(text)) {
+    candidates = candidates.filter(p => /\bstudio\b/i.test(String(p.property_type || p.type || '')) || Number(p.bedrooms) === 0)
+    constrained = true
+  }
+  const bed = s.match(/\b(?:one|1)[ -]?beds?\b|\b1\s*(?:bed|bedroom)s?\b/)
+  if (bed) {
+    candidates = candidates.filter(p => Number(p.bedrooms) === 1)
+    constrained = true
+  }
+  const floorWords = { ground: 0, first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10 }
+  const floorHit = s.match(/\b(ground|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\d{1,2}(?:st|nd|rd|th)?)\s+floor\b/)
+  if (floorHit) {
+    const floor = floorWords[floorHit[1]] ?? Number(floorHit[1].replace(/\D/g, ''))
+    candidates = candidates.filter(p => propertyFloor(p) === floor)
+    constrained = true
+  }
+  const numberHit = s.match(/\b(?:number|no\.?|unit|apartment|flat)\s*#?\s*(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten)\b/)
+  if (numberHit) {
+    const numberWords = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10 }
+    const number = numberWords[numberHit[1]] ?? Number(numberHit[1])
+    candidates = candidates.filter(p => propertyNumber(p) === number)
+    constrained = true
+  }
+  return { ids: candidates.map(p => p.id), reason: constrained ? 'unit_descriptor' : 'conversation_context', constrained }
+}
+
+function addReview(actions, reason, text, details = {}) {
+  actions.push({
+    type: 'HUMAN_REVIEW', status: OPERATIONAL_STATUS.NEEDS_HUMAN_REVIEW,
+    reason, evidence: text, details,
+  })
 }
 
 function interpretInbound(input = {}) {
@@ -101,25 +175,65 @@ function interpretInbound(input = {}) {
   const propertyRemoval = PROPERTY_REMOVAL_RE.test(text)
   const replyNone = /^none[.!\s]*$/i.test(text)
   const referencedPropertyIds = uniq(context.referencedPropertyIds)
+  const properties = Array.isArray(context.properties) ? context.properties : []
+  const historical = HISTORICAL_RE.test(text)
+  const viewingOnly = VIEWING_ONLY_RE.test(text)
+  const currentAvailable = !viewingOnly && CURRENT_AVAILABLE_RE.test(text)
+  const futureAvailable = FUTURE_AVAILABLE_RE.test(text)
+  // Unit descriptors remain useful even when the owner did not quote a
+  // listing reference. An unconstrained status statement, however, must
+  // remain inside the already-resolved conversation context so a bare
+  // "rented" can never mutate the owner's whole portfolio.
+  const referencedProperties = properties.filter(p => referencedPropertyIds.includes(p.id))
+  const selector = unitSelector(text, referencedProperties.length ? referencedProperties : properties)
+  const selectedIds = uniq(selector.constrained ? selector.ids : referencedPropertyIds)
 
   if (globalOptOut) {
     actions.push({ type: 'CONTACT_OPT_OUT', scope: 'CONTACT', reason: text })
     terminal = true
     suppressAutomation = true
   }
-  if (rented || sold || propertyRemoval) {
-    if (referencedPropertyIds.length) {
+  if (historical && (rented || sold)) {
+    facts.push(makeFact('historicalPropertyEvent', sold ? 'sold' : 'rented', {
+      factStatus: FACT_STATUS.KNOWN, confidence: 0.98, evidence: text, propertyIds: selectedIds.length === 1 ? selectedIds : [],
+    }))
+  } else if (rented || sold || propertyRemoval) {
+    const countedMixedState = /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:of\s+the\s+)?(?:apartments?|flats?|units?)?\s*(?:have\s+been\s+|are\s+)?rented\b/i.test(text)
+      && /\b(?:one|a|the|studio|apartment|flat|unit)\b.{0,50}\bavailable\b/i.test(text)
+    const explicitAll = /\ball\s+(?:of\s+them\s+)?(?:are\s+|have\s+been\s+)?rented\b/i.test(text)
+    const targetIds = selectedIds
+    const safeTargets = targetIds.length === 1 || (explicitAll && targetIds.length > 1) || (selector.constrained && targetIds.length > 0)
+    if (countedMixedState || !safeTargets) {
+      addReview(actions, countedMixedState ? 'mixed_unit_status_requires_mapping' : 'ambiguous_property_status', text, {
+        candidatePropertyIds: referencedPropertyIds, selectedPropertyIds: targetIds,
+      })
+    } else {
       actions.push({
         type: 'PROPERTY_STATUS', scope: 'PROPERTY',
         status: sold ? OPERATIONAL_STATUS.SOLD : rented ? OPERATIONAL_STATUS.RENTED : OPERATIONAL_STATUS.WITHDRAWN,
-        propertyIds: referencedPropertyIds,
+        propertyIds: targetIds,
         reason: text,
       })
-    } else {
-      actions.push({ type: 'HUMAN_REVIEW', status: OPERATIONAL_STATUS.NEEDS_HUMAN_REVIEW, reason: 'ambiguous_property_status' })
     }
     terminal = true
     suppressAutomation = true
+  }
+
+  if (currentAvailable) {
+    const targetIds = selectedIds
+    if (targetIds.length === 1 || (selector.constrained && targetIds.length > 0)) {
+      actions.push({ type: 'PROPERTY_STATUS', scope: 'PROPERTY', status: OPERATIONAL_STATUS.AVAILABLE, propertyIds: targetIds, reason: text, correction: /\bstill\b|\bactually\b|\bcorrection\b/i.test(text) })
+      facts.push(makeFact('availabilityStatus', OPERATIONAL_STATUS.AVAILABLE, { correction: true, evidence: text, propertyIds: targetIds }))
+      facts.push(makeFact('confirmedBookable', true, { correction: true, evidence: text, propertyIds: targetIds }))
+    } else {
+      addReview(actions, 'available_unit_requires_mapping', text, { candidatePropertyIds: referencedPropertyIds })
+      suppressAutomation = true
+    }
+  }
+
+  if (TENANT_MOVED_OUT_RE.test(text)) {
+    facts.push(makeFact('tenancyStatus', 'VACATED', { evidence: text, propertyIds: selectedIds }))
+    if (selectedIds.length !== 1) addReview(actions, 'vacated_unit_requires_mapping', text, { candidatePropertyIds: referencedPropertyIds })
   }
   if (replyNone && context.lastQuestionType === 'numbered_availability' && referencedPropertyIds.length) {
     actions.push({ type: 'PROPERTY_STATUS', scope: 'REFERENCED_PROPERTIES', status: OPERATIONAL_STATUS.WITHDRAWN, propertyIds: referencedPropertyIds, reason: text })
@@ -129,14 +243,19 @@ function interpretInbound(input = {}) {
 
   if (/\bno pets?\b|\bpets? (?:are )?not allowed\b/i.test(text)) facts.push(makeFact('petsAllowed', false, { negative: true, evidence: text }))
   if (/\bno sharing\b|\b(?:don'?t|do not|won'?t|will not) (?:allow|accept|consider) sharing\b/i.test(text)) facts.push(makeFact('sharingAllowed', false, { negative: true, evidence: text }))
-  if (/\b(?:only )?famil(?:y|ies)(?: or close friends?)?\b|\bclose friends?\b/i.test(text)) facts.push(makeFact('occupancyRestriction', /close friends?/i.test(text) ? 'family_or_close_friends' : 'families_only', { evidence: text }))
+  if (PROTECTED_PREFERENCE_RE.test(text)) {
+    facts.push(makeFact('restrictedComplianceNote', text, { factStatus: FACT_STATUS.CONDITIONAL, confidence: 1, evidence: text, restricted: true, propertyIds: selectedIds }))
+    actions.push({ type: 'HUMAN_COMPLIANCE_REVIEW', status: OPERATIONAL_STATUS.NEEDS_HUMAN_REVIEW, reason: 'protected_group_preference', evidence: text })
+    complianceReview = true
+    suppressAutomation = true
+  } else if (/\b(?:only )?famil(?:y|ies)(?: or close friends?)?\b|\bclose friends?\b/i.test(text)) facts.push(makeFact('occupancyRestriction', /close friends?/i.test(text) ? 'family_or_close_friends' : 'families_only', { evidence: text, propertyIds: selectedIds }))
   if (/\bno (?:company )?subletting\b|\b(?:don'?t|do not|won'?t|will not) (?:allow|accept|consider) (?:company )?subletting\b|\bcompany (?:cannot|can'?t|may not) sublet\b/i.test(text)) facts.push(makeFact('companySubletting', false, { negative: true, evidence: text }))
   if (/\bno compan(?:y|ies)\b/i.test(text)) facts.push(makeFact('companiesAllowed', false, { negative: true, evidence: text }))
 
   const money = extractMoney(text)
   if (money) {
-    facts.push(makeFact('askingPrice', money.value, { correction: money.correction, evidence: text }))
-    if (/\bnegotiable\b/i.test(text) && !/\bnot\s+\d{3,5}\s+negotiable\b/i.test(text)) facts.push(makeFact('priceNegotiable', true, { evidence: text }))
+    facts.push(makeFact('askingPrice', money.value, { correction: money.correction, evidence: text, propertyIds: selectedIds }))
+    if (/\bnegotiable\b/i.test(text) && !/\bnot\s+\d{3,5}\s+negotiable\b/i.test(text)) facts.push(makeFact('priceNegotiable', true, { evidence: text, propertyIds: selectedIds }))
     else if (money.correction) facts.push(makeFact('priceNegotiable', null, { factStatus: FACT_STATUS.UNKNOWN, correction: true, evidence: text }))
   }
 
@@ -154,6 +273,18 @@ function interpretInbound(input = {}) {
   }
 
   const window = extractTentativeWindow(text)
+  if (REFURBISHMENT_RE.test(text)) {
+    facts.push(makeFact('refurbishmentStatus', 'IN_PROGRESS', { evidence: text, propertyIds: selectedIds }))
+    facts.push(makeFact('photosStatus', 'PENDING', { evidence: text, propertyIds: selectedIds }))
+    facts.push(makeFact('confirmedBookable', false, { negative: true, evidence: text, propertyIds: selectedIds }))
+  } else if (PHOTOS_PENDING_RE.test(text)) {
+    facts.push(makeFact('photosStatus', 'PENDING', { evidence: text, propertyIds: selectedIds }))
+  }
+  if (viewingOnly) {
+    facts.push(makeFact('viewingStatus', OPERATIONAL_STATUS.VIEWING_PAUSED, { evidence: text, propertyIds: selectedIds }))
+    const until = /\buntil\s+(.+)$/i.exec(text)?.[1]?.replace(/[.!]+$/, '').trim() || null
+    if (until) facts.push(makeFact('viewingsFrom', until, { factStatus: FACT_STATUS.CONDITIONAL, confidence: 0.8, evidence: text, propertyIds: selectedIds }))
+  }
   if (/\balmost ready\b|\bnot ready\b/i.test(text)) {
     facts.push(makeFact('availabilityStatus', OPERATIONAL_STATUS.NOT_READY, { evidence: text }))
     facts.push(makeFact('confirmedBookable', false, { negative: true, evidence: text }))
@@ -163,7 +294,7 @@ function interpretInbound(input = {}) {
     facts.push(makeFact('confirmedBookable', false, { negative: true, evidence: text }))
     suppressAutomation = true
   }
-  if (window) facts.push(makeFact('availabilityFrom', window.label, { factStatus: window.tentative ? FACT_STATUS.CONDITIONAL : FACT_STATUS.KNOWN, confidence: window.tentative ? 0.65 : 0.95, evidence: text }))
+  if (window && !historical) facts.push(makeFact(viewingOnly ? 'viewingsFrom' : 'availabilityFrom', window.label, { factStatus: window.tentative || futureAvailable ? FACT_STATUS.CONDITIONAL : FACT_STATUS.KNOWN, confidence: window.tentative ? 0.65 : 0.95, evidence: text, propertyIds: selectedIds }))
 
   if (/\bnew property\b/i.test(text)) facts.push(makeFact('listingCondition', 'new', { evidence: text }))
   const beds = s.match(/\b(\d+)\s*(?:bed|bedroom)s?\b/)
@@ -176,6 +307,8 @@ function interpretInbound(input = {}) {
     const negative = /^(no|none)/i.test(text)
     facts.push(makeFact(context.lastAskedField, !negative, { negative, evidence: text }))
   }
+
+  if (actions.some(a => a.type === 'HUMAN_REVIEW' || a.type === 'HUMAN_COMPLIANCE_REVIEW')) suppressAutomation = true
 
   const priority = actions.some(a => a.type === 'CONTACT_OPT_OUT' || a.type === 'PROPERTY_STATUS') ? 1
     : questions.length ? 2
@@ -239,7 +372,7 @@ function applyDecision(state = {}, decision, meta = {}) {
 
 function planDirectReply(decision, identity, state = {}) {
   if (decision.actions.some(a => a.type === 'CONTACT_OPT_OUT')) return 'Understood. I will not contact you again.'
-  if (decision.actions.some(a => a.type === 'PROPERTY_STATUS' && a.propertyIds?.length)) return "Thanks for letting me know. I've updated our records and removed the property from our available listings."
+  if (decision.actions.some(a => a.type === 'PROPERTY_STATUS' && [OPERATIONAL_STATUS.RENTED, OPERATIONAL_STATUS.SOLD, OPERATIONAL_STATUS.WITHDRAWN].includes(a.status) && a.propertyIds?.length)) return "Thanks for letting me know. I've updated our records and removed the property from our available listings."
   if (decision.complianceReview) return null
   if (decision.questions.includes('agency_identity')) return agencyAnswer(identity)
   if (decision.questions.includes('client_types')) return clientTypeAnswer(identity)
@@ -293,4 +426,5 @@ function validateDraft({ draft, state = {}, identity = null, expectedConversatio
 module.exports = {
   FACT_STATUS, OPERATIONAL_STATUS, interpretInbound, applyDecision,
   planDirectReply, validateDraft, extractMoney, extractAddress, activeFactMap,
+  unitSelector,
 }

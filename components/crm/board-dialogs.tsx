@@ -19,8 +19,8 @@
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
 import {
-  AlertTriangle, ArrowDown, Calendar, Clock, EyeOff, FileText, HelpCircle, Home, ImagePlus,
-  Images, Loader2, MessageCircle, Plus, Send, Sparkles, Users, X,
+  Activity, AlertTriangle, ArrowDown, Bot, Calendar, Check, CircleAlert, Clock, EyeOff, FileText, HelpCircle, Home, ImagePlus,
+  Images, Loader2, MessageCircle, Pause, Pencil, Play, Plus, RotateCcw, Send, ShieldCheck, Sparkles, Trash2, Users, WifiOff, X,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { crmFetch, crmJson } from '@/lib/crm/api'
@@ -469,6 +469,25 @@ type ChatState = {
   presence?: PropertyPresence
   expiresHours?: number
 }
+type AutomationControl = {
+  status: 'AI_ACTIVE' | 'AGENT_TAKEOVER' | 'AI_PAUSED' | 'CONNECTION_ERROR'
+  reason?: string | null
+  connection?: string | null
+  session?: string | null
+  assistantState?: string | null
+  lastInbound?: { status?: string; reasonCode?: string | null; reason?: string | null; at?: string | null } | null
+  canPause?: boolean
+  canResume?: boolean
+}
+type OwnerFact = {
+  id: number; propertyId?: number | null; ref?: string | null; field: string; value: unknown
+  status: string; confidence: number; sourceMessageId?: string | null; sourceTimestamp?: string | null
+  lastConfirmedAt?: string | null; evidence?: string | null; restricted?: boolean
+}
+type OwnerFactsState = {
+  facts: OwnerFact[]
+  pendingReview: { id: number; type: string; reason: string; evidence?: string | null; createdAt: string }[]
+}
 type TimelineItem =
   | { kind: 'message'; at: string; sortKey: number; message: ChatMessage }
   | { kind: 'event'; at: string; sortKey: number; event: ChatEvent }
@@ -483,6 +502,29 @@ const EVENT_COPY: Record<ChatEvent['kind'], { icon: typeof Home; label: string }
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const AUTOMATION_COPY: Record<AutomationControl['status'], { label: string; icon: typeof Bot; tone: string }> = {
+  AI_ACTIVE: { label: 'AI Active', icon: Bot, tone: 'active' },
+  AGENT_TAKEOVER: { label: 'Agent Takeover', icon: Activity, tone: 'takeover' },
+  AI_PAUSED: { label: 'AI Paused', icon: Pause, tone: 'paused' },
+  CONNECTION_ERROR: { label: 'Connection Error', icon: WifiOff, tone: 'error' },
+}
+
+const FACT_LABELS: Record<string, string> = {
+  availabilityStatus: 'Available', askingPrice: 'Asking', priceNegotiable: 'Negotiable',
+  photosStatus: 'Photos', availabilityFrom: 'Next availability', viewingStatus: 'Viewings',
+  viewingsFrom: 'Viewings from', refurbishmentStatus: 'Refurbishment', tenancyStatus: 'Tenancy',
+  petsAllowed: 'Pets', sharingAllowed: 'Sharing', companySubletting: 'Subletting',
+  historicalPropertyEvent: 'Historical note', restrictedComplianceNote: 'Compliance note',
+}
+function factValue(fact: OwnerFact) {
+  const value = fact.value as any
+  if (fact.field === 'askingPrice' && Number.isFinite(Number(value))) return `€${Number(value).toLocaleString('en-GB')}`
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (value == null) return 'Unknown'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value).replaceAll('_', ' ').toLowerCase().replace(/^./, s => s.toUpperCase())
 }
 
 // Local, not imported from page.tsx — the milchglas strip only ever needs a
@@ -518,6 +560,10 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
   const isAdmin = me?.role === 'admin'
   const canCreateGroupBtn = canCreateGroup(me)
   const [state, setState] = useState<ChatState | null>(null)
+  const [automation, setAutomation] = useState<AutomationControl | null>(null)
+  const [ownerFacts, setOwnerFacts] = useState<OwnerFactsState>({ facts: [], pendingReview: [] })
+  const [factsExpanded, setFactsExpanded] = useState(false)
+  const [controlBusy, setControlBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [draft, setDraft] = useState(() => {
     try { return sessionStorage.getItem(chatDraftKey(refId)) || '' } catch { return '' }
@@ -546,8 +592,14 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
 
   async function load() {
     try {
-      const d = await crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/relay`)
+      const [d, control, facts] = await Promise.all([
+        crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/relay`),
+        crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/conversation-control`).catch(() => null),
+        crmFetch(`schedule-board/listings/${encodeURIComponent(refId)}/owner-facts`).catch(() => ({ facts: [], pendingReview: [] })),
+      ])
       setState(d)
+      setAutomation(control?.automation || null)
+      setOwnerFacts({ facts: Array.isArray(facts?.facts) ? facts.facts : [], pendingReview: Array.isArray(facts?.pendingReview) ? facts.pendingReview : [] })
       setErr(null)
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not load this conversation.')
@@ -644,6 +696,52 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not send that.')
     } finally { setSending(false) }
+  }
+
+  async function changeAutomation(action: 'pause' | 'resume') {
+    if (controlBusy) return
+    setControlBusy(true)
+    setErr(null)
+    try {
+      const result = await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/conversation-control`, 'POST', {
+        action,
+        reason: action === 'pause' ? 'Paused from ARGUS conversation header' : 'Resumed explicitly from ARGUS conversation header',
+      })
+      setAutomation(result.automation || null)
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || `Could not ${action} AI.`)
+    } finally { setControlBusy(false) }
+  }
+
+  async function reopenConversation() {
+    if (controlBusy) return
+    setControlBusy(true)
+    setErr(null)
+    try {
+      await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/relay/reopen`, 'POST', {})
+      await load()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not reopen this conversation.')
+    } finally { setControlBusy(false) }
+  }
+
+  async function changeFact(fact: OwnerFact, action: 'dismiss' | 'correct') {
+    let value: unknown = undefined
+    let note = action === 'dismiss' ? 'Dismissed from Owner Facts' : 'Corrected from Owner Facts'
+    if (action === 'correct') {
+      const entered = window.prompt(`Correct ${FACT_LABELS[fact.field] || fact.field}`, factValue(fact))
+      if (entered == null || entered.trim() === '') return
+      const trimmed = entered.trim()
+      value = fact.field === 'askingPrice' ? Number(trimmed.replace(/[^\d.]/g, ''))
+        : /^(yes|true)$/i.test(trimmed) ? true : /^(no|false)$/i.test(trimmed) ? false : trimmed
+      note = `Corrected from ${factValue(fact)} to ${trimmed}`
+    }
+    try {
+      await crmJson(`schedule-board/listings/${encodeURIComponent(refId)}/owner-facts/${fact.id}`, 'PATCH', { action, value, note })
+      await load()
+    } catch (e: any) {
+      setErr(e?.data?.error || e?.message || 'Could not update this fact.')
+    }
   }
 
   async function sendAttachments(files: FileList | null) {
@@ -811,6 +909,92 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
               )
             })()}
           </div>
+        )}
+
+        {/* Automation is not inferred from WAHA connectivity or chat closure.
+            The server returns each state independently, including the latest
+            reason an inbound message was not answered. */}
+        {automation && (() => {
+          const meta = AUTOMATION_COPY[automation.status]
+          const StatusIcon = meta.icon
+          return (
+            <section className="crm-chat-automation" data-tone={meta.tone} aria-label="Conversation automation status">
+              <div className="crm-chat-automation-main">
+                <span className="crm-chat-automation-badge"><StatusIcon aria-hidden className="h-3.5 w-3.5" /> {meta.label}</span>
+                <span className="crm-chat-connection"><span aria-hidden /> WhatsApp {automation.connection?.toLowerCase() || 'unknown'}</span>
+              </div>
+              {(automation.reason || automation.lastInbound?.reason) && (
+                <p>{automation.lastInbound?.reason || automation.reason}</p>
+              )}
+              <div className="crm-chat-automation-actions">
+                {automation.canPause && (
+                  <button type="button" onClick={() => changeAutomation('pause')} disabled={controlBusy}>
+                    {controlBusy ? <Loader2 className="animate-spin" /> : <Pause />} Pause AI
+                  </button>
+                )}
+                {automation.canResume && (
+                  <button type="button" onClick={() => changeAutomation('resume')} disabled={controlBusy}>
+                    {controlBusy ? <Loader2 className="animate-spin" /> : <Play />} Resume AI
+                  </button>
+                )}
+                {closed && (
+                  <button type="button" onClick={reopenConversation} disabled={controlBusy}>
+                    {controlBusy ? <Loader2 className="animate-spin" /> : <RotateCcw />} Reopen chat
+                  </button>
+                )}
+              </div>
+            </section>
+          )
+        })()}
+
+        {closed && !automation && (
+          <section className="crm-chat-automation" data-tone="paused" aria-label="Closed conversation">
+            <div className="crm-chat-automation-main">
+              <span className="crm-chat-automation-badge"><Pause aria-hidden className="h-3.5 w-3.5" /> Chat closed</span>
+            </div>
+            <p>The history stays available. Reopening the chat does not resume AI.</p>
+            <div className="crm-chat-automation-actions">
+              <button type="button" onClick={reopenConversation} disabled={controlBusy}>
+                {controlBusy ? <Loader2 className="animate-spin" /> : <RotateCcw />} Reopen chat
+              </button>
+            </div>
+          </section>
+        )}
+
+        {(ownerFacts.facts.length > 0 || ownerFacts.pendingReview.length > 0) && (
+          <section className="crm-owner-facts" aria-label="Owner facts">
+            <button type="button" className="crm-owner-facts-heading" onClick={() => setFactsExpanded(value => !value)} aria-expanded={factsExpanded}>
+              <span><ShieldCheck aria-hidden /> Owner facts</span>
+              <small>{ownerFacts.facts.length} sourced · {ownerFacts.pendingReview.length} pending</small>
+            </button>
+            <div className="crm-owner-facts-chips">
+              {ownerFacts.facts.slice(0, factsExpanded ? 20 : 5).map(fact => (
+                <div key={fact.id} className="crm-owner-fact" data-pending={fact.status !== 'KNOWN' || undefined} data-restricted={fact.restricted || undefined}>
+                  <span className="crm-owner-fact-copy">
+                    <b>{fact.restricted ? 'Restricted' : FACT_LABELS[fact.field] || fact.field}</b>
+                    <span>{fact.restricted && !isAdmin ? 'Compliance review' : factValue(fact)}</span>
+                  </span>
+                  {factsExpanded && (
+                    <span className="crm-owner-fact-meta">
+                      {Math.round((fact.confidence || 0) * 100)}% · {fact.lastConfirmedAt || fact.sourceTimestamp ? agoShort(String(fact.lastConfirmedAt || fact.sourceTimestamp)) : 'unconfirmed'}
+                    </span>
+                  )}
+                  {factsExpanded && (
+                    <span className="crm-owner-fact-actions">
+                      <button type="button" onClick={() => changeFact(fact, 'correct')} aria-label={`Correct ${FACT_LABELS[fact.field] || fact.field}`} title="Correct sourced fact"><Pencil /></button>
+                      <button type="button" onClick={() => changeFact(fact, 'dismiss')} aria-label={`Dismiss ${FACT_LABELS[fact.field] || fact.field}`} title="Dismiss sourced fact"><Trash2 /></button>
+                    </span>
+                  )}
+                </div>
+              ))}
+              {ownerFacts.pendingReview.slice(0, factsExpanded ? 10 : 2).map(review => (
+                <div key={`review-${review.id}`} className="crm-owner-fact crm-owner-fact-review">
+                  <CircleAlert aria-hidden />
+                  <span className="crm-owner-fact-copy"><b>Pending clarification</b><span>{review.reason.replaceAll('_', ' ')}</span></span>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* ── milchglas: other agents' activity with this same owner ───────────── */}

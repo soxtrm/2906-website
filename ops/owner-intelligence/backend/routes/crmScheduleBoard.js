@@ -2402,6 +2402,119 @@ router.get('/listings/:ref/relay', auth, async (req, res) => {
   }
 })
 
+async function conversationControlContext(prop, me) {
+  const thread = (await db.query(
+    `SELECT id,status,owner_chat_id,owner_session,owner_id,updated_at
+       FROM book_relay_threads
+      WHERE property_id=$1 AND agent_id=$2
+      ORDER BY updated_at DESC,id DESC LIMIT 1`, [prop.id,me.id]).catch(() => ({ rows: [] }))).rows[0] || null
+  const owner = prop.owner_id ? (await db.query(
+    `SELECT id,phone_normalized FROM owner_contacts WHERE id=$1 LIMIT 1`, [prop.owner_id])).rows[0] : null
+  return {
+    thread,
+    ownerId: owner?.id || thread?.owner_id || prop.owner_id || null,
+    ownerPhone: owner?.phone_normalized || null,
+    chatId: thread?.owner_chat_id || null,
+    session: thread?.owner_session || null,
+  }
+}
+
+// Automation health is intentionally separate from WAHA connectivity, relay
+// thread status, property availability and viewing state.  The dialog renders
+// all of them without inferring one from another.
+router.get('/listings/:ref/conversation-control', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    const ctx = await conversationControlContext(loaded.prop, loaded.me)
+    const recovery = require('../services/conversationRecovery')
+    const automation = await recovery.automationSnapshot(ctx)
+    res.json({ ok:true, chatStatus:ctx.thread?.status || 'not_started', threadId:ctx.thread?.id || null, automation })
+  } catch (err) {
+    log.error('board conversation-control failed', { err:err.message, ref:req.params.ref })
+    res.status(500).json({ error:'Could not load conversation status.' })
+  }
+})
+
+router.post('/listings/:ref/conversation-control', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    const action = String(req.body?.action || '').toLowerCase()
+    if (!['pause','resume'].includes(action)) return res.status(400).json({ error:'Action must be pause or resume.' })
+    const ctx = await conversationControlContext(loaded.prop, loaded.me)
+    const recovery = require('../services/conversationRecovery')
+    const result = await recovery.setAutomationStatus({ ...ctx, agentId:loaded.me.id, action, reason:req.body?.reason })
+    if (!result.ok) return res.status(result.reason === 'no_assistant_state' ? 409 : 422).json({ error:result.reason, ...result })
+    res.json({ ...result, automation:await recovery.automationSnapshot(ctx) })
+  } catch (err) {
+    log.error('board conversation-control update failed', { err:err.message, ref:req.params.ref })
+    res.status(500).json({ error:'Could not update AI status.' })
+  }
+})
+
+// Closed means the relay workflow stopped; it never means the property was
+// rented and never deletes its history.  Reopening is agent-scoped, audited
+// and changes only the relay thread.
+router.post('/listings/:ref/relay/reopen', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    const row = (await db.query(
+      `UPDATE book_relay_threads SET status='relaying',reopened_at=NOW(),reopened_by_agent_id=$3,
+              close_reason=NULL,closed_at=NULL,updated_at=NOW()
+        WHERE id=(SELECT id FROM book_relay_threads WHERE property_id=$1 AND agent_id=$2 ORDER BY updated_at DESC,id DESC LIMIT 1)
+          AND status='closed'
+        RETURNING id,status`, [loaded.prop.id,loaded.me.id,loaded.me.id])).rows[0]
+    if (!row) return res.status(409).json({ error:'No closed conversation is available to reopen.' })
+    await db.query(
+      `INSERT INTO property_activities(property_id,agent_id,activity_type,details,is_significant,created_at)
+       VALUES($1,$2,'owner_conversation_reopened',$3::jsonb,FALSE,NOW())`,
+      [loaded.prop.id,loaded.me.id,JSON.stringify({ ref:loaded.prop.ref,threadId:row.id })])
+    res.json({ ok:true,threadId:row.id,status:row.status })
+  } catch (err) {
+    log.error('board relay reopen failed', { err:err.message, ref:req.params.ref })
+    res.status(500).json({ error:'Could not reopen this conversation.' })
+  }
+})
+
+router.get('/listings/:ref/owner-facts', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    if (!loaded.prop.owner_id) return res.json({ facts:[],pendingReview:[] })
+    const recovery = require('../services/conversationRecovery')
+    res.json(await recovery.ownerFacts({ ownerId:loaded.prop.owner_id,propertyId:loaded.prop.id,includeRestricted:loaded.me.role === 'admin' }))
+  } catch (err) {
+    log.error('board owner-facts failed', { err:err.message, ref:req.params.ref })
+    res.status(500).json({ error:'Could not load Owner Facts.' })
+  }
+})
+
+router.patch('/listings/:ref/owner-facts/:factId', auth, async (req, res) => {
+  try {
+    const loaded = await loadForAction(req, res)
+    if (!loaded) return
+    const factId = Number(req.params.factId)
+    if (!Number.isInteger(factId)) return res.status(400).json({ error:'Invalid fact.' })
+    // Ownership join prevents an agent from editing a fact through a ref that
+    // belongs to another owner/property.
+    const allowed = await db.query(
+      `SELECT 1 FROM conversation_facts f
+        JOIN conversation_intelligence_state s ON s.id=f.state_id
+       WHERE f.id=$1 AND s.owner_contact_id=$2 AND (f.property_id IS NULL OR f.property_id=$3)`,
+      [factId,loaded.prop.owner_id,loaded.prop.id])
+    if (!allowed.rows.length) return res.status(404).json({ error:'Fact not found for this owner.' })
+    const recovery = require('../services/conversationRecovery')
+    const result = await recovery.updateFact({ factId,agentId:loaded.me.id,action:req.body?.action,value:req.body?.value,note:req.body?.note })
+    if (!result.ok) return res.status(result.reason === 'not_found' ? 404 : 400).json({ error:result.reason })
+    res.json(result)
+  } catch (err) {
+    log.error('board owner-fact update failed', { err:err.message, ref:req.params.ref })
+    res.status(500).json({ error:'Could not update Owner Facts.' })
+  }
+})
+
 // ── POST /listings/:ref/relay/attachments ───────────────────────────────────
 router.post('/listings/:ref/relay/attachments', auth, relayAttachmentUpload.array('files', 5), async (req, res) => {
   try {
@@ -2443,6 +2556,9 @@ router.post('/listings/:ref/relay/attachments', auth, relayAttachmentUpload.arra
       }
       sent.push({ filename: file.originalname, archived: !!url })
     }
+    await markBoardAgentTakeover(thread.id).catch(err => {
+      log.warn('board relay attachment sent but AI takeover marker failed', { ref: prop.ref, err: err.message })
+    })
     res.json({ ok: true, files: sent })
   } catch (err) {
     log.error('board relay attachment failed', { err: err.message, ref: req.params.ref })
@@ -2453,6 +2569,17 @@ router.post('/listings/:ref/relay/attachments', auth, relayAttachmentUpload.arra
 // ── POST /listings/:ref/relay/message ────────────────────────────────────────
 // The agent typing directly into the chat window. Verbatim to the owner — no
 // rewrite, see services/bookRelay.js `relayVerbatim`.
+async function markBoardAgentTakeover(threadId) {
+  const thread = (await db.query(
+    `SELECT owner_session,owner_chat_id FROM book_relay_threads WHERE id=$1`, [threadId]
+  )).rows[0]
+  if (!thread?.owner_session || !thread?.owner_chat_id) return false
+  return require('../services/ownerAssistant').handleHumanMessage({
+    session: thread.owner_session,
+    chatId: thread.owner_chat_id,
+  })
+}
+
 router.post('/listings/:ref/relay/message', auth, async (req, res) => {
   try {
     const text = req.body && req.body.text ? String(req.body.text).trim().slice(0, 1000) : ''
@@ -2476,6 +2603,9 @@ router.post('/listings/:ref/relay/message', auth, async (req, res) => {
         agentPhone: me.notify_whatsapp || null, initialText: text,
       })
       if (!opened.ok) return res.status(422).json({ error: opened.message || 'Could not reach the owner.' })
+      await markBoardAgentTakeover(opened.threadId).catch(err => {
+        log.warn('board relay opened but AI takeover marker failed', { ref: prop.ref, err: err.message })
+      })
       return res.json({ ok: true, opened: true, scrubbed: false, persona: opened.persona })
     }
 
@@ -2489,6 +2619,9 @@ router.post('/listings/:ref/relay/message', auth, async (req, res) => {
         : `Could not send: ${sent.reason || 'unknown'}.`
       return res.status(status).json({ error, presence: sent.presence })
     }
+    await markBoardAgentTakeover(thread.id).catch(err => {
+      log.warn('board relay sent but AI takeover marker failed', { ref: prop.ref, err: err.message })
+    })
     res.json({ ok: true, scrubbed: !!sent.scrubbed })
   } catch (err) {
     log.error('board relay send failed', { err: err.message, ref: req.params.ref })
