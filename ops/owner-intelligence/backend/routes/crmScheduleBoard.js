@@ -52,6 +52,7 @@ const multer  = require('multer')
 const cloudinary = require('cloudinary').v2
 const db      = require('../db')
 const log     = require('../logger')
+const inventorySecurity = require('../services/inventorySecurityGuard')
 // Same Cloudinary upload helper !upload and !picup already use
 // (handlers/uploadListing.js:uploadBuffer) — the dashboard uploader below is
 // additive to that path, not a second one. See POST /listings/:ref/images.
@@ -139,12 +140,18 @@ async function auth(req, res, next) {
   if (payload.aud && payload.aud !== 'crm' && payload.aud !== 'board') {
     return res.status(403).json({ error: 'Token not valid for the board.' })
   }
+  let currentRow
   try {
     const r = await db.query(
-      `SELECT active, board_access FROM agents WHERE id = $1`, [payload.id])
-    const row = r.rows[0]
-    if (!row || !row.active) return res.status(401).json({ error: 'Account inactive' })
-    if (!row.board_access) {
+      `SELECT active,board_access,role,name,display_name,agency_id,
+              security_suspended_at,security_suspension_cleared_at
+         FROM agents WHERE id = $1`, [payload.id])
+    currentRow = r.rows[0]
+    if (!currentRow || !currentRow.active) return res.status(401).json({ error: 'Account inactive' })
+    if (inventorySecurity.isSuspended(currentRow)) {
+      return res.status(423).json({ error:inventorySecurity.SUSPENDED_MESSAGE, code:'security_suspended' })
+    }
+    if (!currentRow.board_access) {
       return res.status(403).json({ error: 'Not whitelisted for the Schedule Board.' })
     }
     // A long-lived cookie is not evidence that somebody stopped using the
@@ -159,7 +166,8 @@ async function auth(req, res, next) {
     log.error('board auth lookup failed', { err: e.message })
     return res.status(500).json({ error: 'Auth check failed' })
   }
-  req.agent = payload
+  req.agent = { ...payload,role:currentRow.role,
+    name:currentRow.name || currentRow.display_name,agency_id:currentRow.agency_id }
   next()
 }
 
@@ -167,9 +175,10 @@ async function auth(req, res, next) {
 // token was issued, and we need whatsapp_phones for the Fall A reply echo.
 async function liveAgent(id) {
   const r = await db.query(
-    `SELECT id, username, email, name, role, active, agency_id, whatsapp_phones, whatsapp_session,
+    `SELECT id, username, email, name, display_name, role, active, agency_id, whatsapp_phones, whatsapp_session,
             notify_whatsapp, board_tour_completed_at, can_create_owner_group,
-            COALESCE(can_ask_owner, TRUE) AS can_ask_owner
+            COALESCE(can_ask_owner, TRUE) AS can_ask_owner,
+            security_suspended_at,security_suspension_reason,security_suspension_cleared_at
        FROM agents WHERE id = $1`, [id])
   return r.rows[0] || null
 }
@@ -3086,6 +3095,12 @@ router.delete('/listings/:ref/duplicate', auth, async (req, res) => {
     const loaded = await loadForAction(req, res)
     if (!loaded) return
     const { prop, me } = loaded
+    const security = await inventorySecurity.recordDeleteAttempt({
+      agentId:me.id,propertyId:prop.id,ref:prop.ref,route:'schedule_board_duplicate_delete',
+    })
+    if (!security.allowed) {
+      return res.status(423).json({ error:inventorySecurity.SUSPENDED_MESSAGE, code:'security_suspended' })
+    }
     if (me.role !== 'admin') {
       return res.status(403).json({ error: 'Admin only — this permanently deletes the listing.' })
     }

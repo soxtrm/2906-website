@@ -17,6 +17,7 @@ const cron       = require('node-cron')
 const rateLimit  = require('express-rate-limit')
 const db         = require('../db')
 const log        = require('../logger')
+const inventorySecurity = require('../services/inventorySecurityGuard')
 
 // Login rate limiter (multi-agent hardening pass, 2026-09-17) — same shape
 // as routes/adminWeb.js's own loginLimiter. This router's /login had none
@@ -145,7 +146,7 @@ function clientIp(req) {
 // split. Tokens issued before the audience existed have no `aud` and are
 // treated as 'crm' so nobody is logged out mid-session; they expire on their
 // own within COOKIE_DAYS.
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const h = req.headers.authorization
   if (!h || !h.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' })
   let payload
@@ -157,13 +158,26 @@ function auth(req, res, next) {
   if (payload.aud === 'board') {
     return res.status(403).json({ error: 'Board account — no access to CRM data.' })
   }
-  req.agent = payload
-  db.query(
-    `UPDATE agents SET last_active_at = NOW()
-      WHERE id = $1
-        AND (last_active_at IS NULL OR last_active_at < NOW() - INTERVAL '5 minutes')`,
-    [payload.id]).catch(err => log.warn('crm activity touch failed', { agentId: payload.id, err: err.message }))
-  next()
+  try {
+    const current = await liveAgent(payload.id)
+    if (!current || !current.active) return res.status(401).json({ error: 'Account inactive' })
+    if (inventorySecurity.isSuspended(current)) {
+      return res.status(423).json({ error: inventorySecurity.SUSPENDED_MESSAGE, code:'security_suspended' })
+    }
+    // Roles and permissions are read live. A suspension never rewrites them,
+    // while a legitimate admin change still takes effect before the JWT ends.
+    req.agent = { ...payload, role:current.role, name:current.name || current.display_name,
+      agency_id:current.agency_id }
+    db.query(
+      `UPDATE agents SET last_active_at = NOW()
+        WHERE id = $1
+          AND (last_active_at IS NULL OR last_active_at < NOW() - INTERVAL '5 minutes')`,
+      [payload.id]).catch(err => log.warn('crm activity touch failed', { agentId: payload.id, err: err.message }))
+    next()
+  } catch (err) {
+    log.error('crm auth lookup failed', { err:err.message })
+    return res.status(500).json({ error:'Auth check failed' })
+  }
 }
 function adminOnly(req, res, next) {
   if (req.agent?.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
@@ -173,8 +187,10 @@ function adminOnly(req, res, next) {
 // Fetch a live agent row by id (role/limit may change after token issued).
 async function liveAgent(id) {
   const r = await db.query(
-    `SELECT id, username, email, name, role, active, agency_id, board_access, daily_reveal_limit,
-            can_create_owner_group FROM agents WHERE id=$1`, [id])
+    `SELECT id, username, email, name, display_name, alias, role, active, agency_id,
+            board_access, daily_reveal_limit, can_create_owner_group,
+            security_suspended_at,security_suspension_reason,security_suspension_cleared_at
+       FROM agents WHERE id=$1`, [id])
   return r.rows[0] || null
 }
 async function revealsToday(agentId) {
@@ -211,6 +227,9 @@ router.post('/login', loginLimiter, async (req, res) => {
         [a.id, a.role, a.name || a.username, JSON.stringify({ reason: 'wrong_password' })])
         .catch(err => log.warn('login-failure audit insert failed', { err: err.message }))
       return res.status(401).json({ error: 'Invalid login' })
+    }
+    if (inventorySecurity.isSuspended(a)) {
+      return res.status(423).json({ error:inventorySecurity.SUSPENDED_MESSAGE, code:'security_suspended' })
     }
     await db.query(`UPDATE agents SET last_login_at=NOW(), last_active_at=NOW() WHERE id=$1`, [a.id])
     // role 'board' = whitelisted board-only agent. Their token is stamped
@@ -262,6 +281,21 @@ router.post('/admin/set-password', auth, adminOnly, async (req, res) => {
   } catch (err) {
     log.error('crm/set-password error', err)
     res.status(500).json({ error: 'Failed' })
+  }
+})
+
+// Security suspension is deliberately separate from role, active and board
+// permissions. Admin review can restore access without rebuilding the account.
+router.post('/admin/agents/:id/security-suspension/clear', auth, adminOnly, async (req, res) => {
+  try {
+    const result = await inventorySecurity.clearSuspension({
+      agentId:Number(req.params.id), clearedByAgentId:req.agent.id,
+    })
+    if (!result.found) return res.status(404).json({ error:'Agent not found' })
+    res.json({ ok:true, cleared:result.cleared })
+  } catch (err) {
+    log.error('crm security suspension clear failed', { err:err.message, agentId:req.params.id })
+    res.status(500).json({ error:'Could not clear security suspension' })
   }
 })
 
@@ -1104,6 +1138,12 @@ router.get('/properties/:id', auth, async (req, res) => {
     if (a.role !== 'admin') params.push(a.id)
     const r = await db.query(`${PROP_SELECT} WHERE p.id = $1 AND ${vis}`, params)
     if (!r.rows.length) return res.status(404).json({ error: 'Not found or not visible' })
+    const security = await inventorySecurity.recordDetailOpen({
+      agentId:a.id,propertyId:r.rows[0].id,ref:r.rows[0].ref,route:'crm_property_detail',
+    })
+    if (!security.allowed) {
+      return res.status(423).json({ error:inventorySecurity.SUSPENDED_MESSAGE, code:'security_suspended' })
+    }
     const favR = await db.query(`SELECT 1 FROM agent_favourites WHERE agent_id=$1 AND property_id=$2`, [a.id, req.params.id])
     const favSet = favR.rows.length ? new Set([parseInt(req.params.id)]) : new Set()
     const acts = await db.query(
@@ -1934,6 +1974,12 @@ router.delete('/properties/:id', auth, async (req, res) => {
     const id = parseInt(req.params.id)
     const cur = await db.query(`SELECT listed_by_agent_id FROM properties WHERE id=$1`, [id])
     if (!cur.rows.length) return res.status(404).json({ error: 'Not found' })
+    const security = await inventorySecurity.recordDeleteAttempt({
+      agentId:a.id,propertyId:id,route:'crm_property_archive',
+    })
+    if (!security.allowed) {
+      return res.status(423).json({ error:inventorySecurity.SUSPENDED_MESSAGE, code:'security_suspended' })
+    }
     if (a.role !== 'admin' && cur.rows[0].listed_by_agent_id !== a.id)
       return res.status(403).json({ error: 'Not allowed' })
     const { archive } = require('../services/boardAction')

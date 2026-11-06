@@ -36,7 +36,7 @@ for f in "${!EXPECTED[@]}"; do
   A=$(md5sum $B/$f | cut -d' ' -f1)
   [ "$A" = "${EXPECTED[$f]}" ] || { echo "ABORT: production $f changed ($A) — rebase first"; exit 1; }
 done
-NEW=(services/timeGreeting.js services/locationRequest.js services/websitePublication.js services/ownerAttribution.js services/ownerQuestionPlan.js services/ownerOptOut.js)
+NEW=(services/timeGreeting.js services/locationRequest.js services/websitePublication.js services/ownerAttribution.js services/ownerQuestionPlan.js services/ownerOptOut.js services/inventorySecurityGuard.js)
 for f in "${NEW[@]}"; do [ ! -e $B/$f ] || { echo "ABORT: $f already exists in production"; exit 1; }; done
 # timeGreeting needs the outreach automation's central time module.
 [ -e $B/services/outreachSchedule.js ] || { echo "ABORT: services/outreachSchedule.js missing (deploy outreach automation first)"; exit 1; }
@@ -52,7 +52,7 @@ docker exec 2906_postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -
 echo "backup: $BK"
 
 # 4. Migrations (each one transaction, idempotent), then code.
-for m in 20261030_location_requests.sql 20261030_reminder_context.sql 20261031_website_publication.sql 20261031_owner_attribution.sql 20261031_scorecard_fields.sql 20261101_reminder_manual_default.sql; do
+for m in 20261030_location_requests.sql 20261030_reminder_context.sql 20261031_website_publication.sql 20261031_owner_attribution.sql 20261031_scorecard_fields.sql 20261101_reminder_manual_default.sql 20261106_inventory_security_guard.sql; do
   docker exec -i 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' < $SRC/migrations/$m
 done
 for f in "${!EXPECTED[@]}" "${NEW[@]}"; do cp $SRC/$f $B/$f; done
@@ -69,4 +69,4 @@ q "SELECT COUNT(*) FROM property_location_requests"
 q "SELECT status, COUNT(*) FROM website_publication_state GROUP BY 1"
 md5sum $B/waha.js $B/routes/crmScheduleBoard.js $B/services/locationRequest.js
 
-echo "rollback: for f in ${!EXPECTED[*]}; do cp -p $BK/\$f $B/\$f; done; rm -f ${NEW[*]/#/$B/}; docker restart 2906_backend; then (optional) psql < $SRC/migrations/20261030_reminder_context.down.sql and 20261030_location_requests.down.sql"
+echo "rollback: for f in ${!EXPECTED[*]}; do cp -p $BK/\$f $B/\$f; done; rm -f ${NEW[*]/#/$B/}; docker restart 2906_backend; then (optional) psql < $SRC/migrations/20261106_inventory_security_guard.down.sql plus the earlier migration down files"
