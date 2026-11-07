@@ -16,8 +16,7 @@
 //   4. once a conversation reaches a terminal state (declined /
 //      ready_for_kev / cancelled_*) the bot NEVER speaks in that chat again.
 //
-// Timing: every bot reaction is delayed 1-2 minutes (Kev, 2026-09-01 —
-// was 3-5 minutes until this revision) and debounced — a
+// Timing: every eligible bot reaction is delayed 2-3 minutes and debounced — a
 // second owner message arriving before the delay fires cancels the queued
 // job and reschedules from the new message, so the bot always answers the
 // owner's most recent, most complete text rather than a truncated one.
@@ -41,11 +40,8 @@ const ownerPreferenceProfile = require('./ownerPreferenceProfile')
 const { resolveSenderIdentity } = require('./outreachIdentity')
 const { looksLikeFutureAvailability, ownerIntakeStopDecision } = require('./ownerConversationStopRules')
 
-// Kev, 2026-09-01 (his "neue genauere Vorgabe", DELAY BUG prompt): 1-2
-// minutes, replacing the original 3-5 minute target -- still relaxed and
-// human-feeling, just tighter than before.
-const DELAY_MIN_MS = 1 * 60_000
-const DELAY_MAX_MS = 2 * 60_000
+const DEFAULT_DELAY_MIN_SECONDS = 120
+const DEFAULT_DELAY_MAX_SECONDS = 180
 
 // Kev, 2026-08-31: an outreach/conversation this old is a DIFFERENT
 // situation, not a continuation -- an owner texting back months later must
@@ -103,8 +99,27 @@ function fieldOrderFor(checklist) {
 // and parking (with subletting) — bundled by services/ownerQuestionPlan.js.
 const OPTIONAL_FIELDS = ['photos', 'map', 'floor', 'rent_type', 'pets', 'sharing', 'parking', 'subletting']
 
-function randomDelayMs() {
-  return Math.floor(Math.random() * (DELAY_MAX_MS - DELAY_MIN_MS + 1)) + DELAY_MIN_MS
+function normalizeReplyDelay(minSeconds, maxSeconds) {
+  const min = Math.max(30, Math.min(900, Math.round(Number(minSeconds) || DEFAULT_DELAY_MIN_SECONDS)))
+  const max = Math.max(min, Math.min(900, Math.round(Number(maxSeconds) || DEFAULT_DELAY_MAX_SECONDS)))
+  return { min, max }
+}
+
+async function replyDelayConfig() {
+  try {
+    const r = await db.query(
+      `SELECT key,value FROM outreach_settings WHERE key IN ('ai_reply.delay_min_seconds','ai_reply.delay_max_seconds')`)
+    const values = Object.fromEntries(r.rows.map(row => [row.key, Number(row.value)]))
+    return normalizeReplyDelay(values['ai_reply.delay_min_seconds'], values['ai_reply.delay_max_seconds'])
+  } catch (err) {
+    log.warn('autoOwnerConversation: reply delay setting unavailable; using safe default', { err: err.message })
+    return normalizeReplyDelay(DEFAULT_DELAY_MIN_SECONDS, DEFAULT_DELAY_MAX_SECONDS)
+  }
+}
+
+function drawReplyDelayMs(range, rng = Math.random) {
+  const { min, max } = normalizeReplyDelay(range?.min, range?.max)
+  return (min + Math.floor(rng() * (max - min + 1))) * 1000
 }
 
 // ── GOLDEN-SCRIPT (Kev, 2026-09-06): Kev's own four annotated real
@@ -402,13 +417,22 @@ async function cancelPendingJob(jobId, queueName = 'auto-conversation') {
   }
 }
 
-async function scheduleStep(conversationId, phone, session) {
-  const delay = randomDelayMs()
-  const job = await addJob('auto-conversation', { conversationId, phone, session }, { delay })
+async function scheduleStep(conversationId, phone, session, sourceMessageId = null) {
+  const config = await replyDelayConfig()
+  const delay = drawReplyDelayMs(config)
+  const scheduledAt = new Date(Date.now() + delay)
+  const safeSourceId = String(sourceMessageId || scheduledAt.getTime()).replace(/[^a-zA-Z0-9_-]/g, '').slice(-80)
+  const job = await addJob(
+    'auto-conversation',
+    { conversationId, phone, session, sourceMessageId },
+    { delay, jobId: `owner-reply-${conversationId}-${safeSourceId}` })
   await db.query(
-    `UPDATE owner_auto_conversations SET pending_job_id = $1, updated_at = NOW() WHERE id = $2`,
-    [String(job.id), conversationId]
+    `UPDATE owner_auto_conversations
+        SET pending_job_id=$1,scheduled_response_at=$2,pending_source_message_id=$3,updated_at=NOW()
+      WHERE id=$4`,
+    [String(job.id), scheduledAt, sourceMessageId, conversationId]
   )
+  return { jobId:String(job.id), scheduledAt, delaySeconds:Math.round(delay / 1000) }
 }
 
 // ── Main entry — called from routes/webhook.js for every inbound owner DM.
@@ -656,7 +680,7 @@ async function handleOwnerReply({ phone, text, session, hasMedia, mediaMimeType,
       WHERE id = $2`,
     [JSON.stringify(checklistForMerge), convo.id]
   )
-  await scheduleStep(convo.id, phone, session)
+  await scheduleStep(convo.id, phone, session, payload?.id || null)
 }
 
 // ── FALL 3, call variant (Kev, 2026-09-06, GOLDEN-SCRIPT) ────────────────
@@ -731,7 +755,9 @@ async function handleFromMeMessage(phone, text) {
 
   await cancelPendingJob(convo.pending_job_id)
   await db.query(
-    `UPDATE owner_auto_conversations SET status='human_paused', automation_disabled=TRUE, cancelled_reason=$1, updated_at=NOW() WHERE id=$2`,
+    `UPDATE owner_auto_conversations SET status='human_paused', automation_disabled=TRUE,
+            pending_job_id=NULL,scheduled_response_at=NULL,pending_source_message_id=NULL,
+            cancelled_reason=$1, updated_at=NOW() WHERE id=$2`,
     ['Admin account wrote in this chat manually', convo.id]
   )
   log.info('autoOwnerConversation: human override -- automation paused', { phone: String(phone).slice(-4) })
@@ -924,7 +950,8 @@ async function completeConversationAfterOperatorUpload({ ownerId = null, phone =
   await db.query(
     `UPDATE owner_auto_conversations
         SET status='manually_uploaded', automation_disabled=FALSE,
-            pending_job_id=NULL, processing_lock=NULL, cancelled_reason=$2,
+            pending_job_id=NULL,scheduled_response_at=NULL,pending_source_message_id=NULL,
+            processing_lock=NULL, cancelled_reason=$2,
             updated_at=NOW()
       WHERE id = ANY($1::int[])`,
     [ids, reason]
@@ -3713,7 +3740,7 @@ async function processStep({ conversationId, phone, session }) {
   // single missed release can never wedge a conversation shut forever.
   const claim = await db.query(
     `UPDATE owner_auto_conversations
-        SET processing_lock = NOW()
+        SET processing_lock = NOW(),scheduled_response_at=NULL,pending_source_message_id=NULL
       WHERE id = $1
         AND status = 'active_collecting'
         AND automation_disabled = FALSE
@@ -4378,7 +4405,8 @@ async function cancelAllAutomations(triggeredBy) {
     await cancelPendingJob(row.checklist?._publish_job_id, 'owner-auto-publish')
   }
   const upd = await db.query(
-    `UPDATE owner_auto_conversations SET status='cancelled_global', cancelled_reason=$1, updated_at=NOW()
+    `UPDATE owner_auto_conversations SET status='cancelled_global',pending_job_id=NULL,
+            scheduled_response_at=NULL,pending_source_message_id=NULL,cancelled_reason=$1,updated_at=NOW()
      WHERE status IN ('active_collecting', 'awaiting_auto_publish') RETURNING id`,
     [`Cancelled globally by ${triggeredBy || 'admin'}`]
   )
@@ -4404,7 +4432,9 @@ async function cancelChatAutomation(phone) {
   await cancelPendingJob(convo.pending_job_id)
   await cancelPendingJob(convo.checklist?._publish_job_id, 'owner-auto-publish')
   await db.query(
-    `UPDATE owner_auto_conversations SET status='cancelled_chat', automation_disabled=TRUE, cancelled_reason='!ca', updated_at=NOW() WHERE id=$1`,
+    `UPDATE owner_auto_conversations SET status='cancelled_chat',automation_disabled=TRUE,
+            pending_job_id=NULL,scheduled_response_at=NULL,pending_source_message_id=NULL,
+            cancelled_reason='!ca',updated_at=NOW() WHERE id=$1`,
     [convo.id]
   )
   return true
@@ -4474,6 +4504,9 @@ module.exports = {
   completeConversationAfterOperatorUpload, // called by handlers/upload.js after a successful operator upload
   takeOverOwnerDrafts,
   processingLockTTLMs: 2 * 60 * 1000, // test-only: mirrors the SQL literal above
+  normalizeReplyDelay, // test-only / admin validation
+  drawReplyDelayMs, // test-only
+  replyDelayConfig,
   logLearningIfActive, // called from routes/webhook.js for every owner-inbound DM
   optionalFieldEligible, // test-only
   checkOptionalStopRule, // test-only

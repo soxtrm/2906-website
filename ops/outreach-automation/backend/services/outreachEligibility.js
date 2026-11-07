@@ -35,6 +35,14 @@ async function checkBeforeSend({ phone, accountId, session, now = new Date(), fo
   const p = normPhone(phone)
   if (!p) return { allowed: false, reason: 'invalid_phone' }
 
+  // Cross-account, minimum-data suppression. This runs before force/cooldown
+  // handling, so no sender account can bypass an owner opt-out.
+  const crypto = require('crypto')
+  const identityHash = crypto.createHash('sha256').update(`whatsapp_phone:${p}`).digest('hex')
+  const suppression = await db.query(
+    `SELECT 1 FROM global_contact_suppressions WHERE identity_hash=$1 AND active=TRUE LIMIT 1`, [identityHash])
+  if (suppression.rows.length) return { allowed: false, reason: 'global_suppression' }
+
   const contact = (await db.query(
     `SELECT id, status, do_not_contact, owner_contact_paused_until, last_reply_at
        FROM owner_contacts WHERE phone_normalized = $1 LIMIT 1`, [p])).rows[0] || null

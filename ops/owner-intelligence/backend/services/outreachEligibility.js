@@ -35,6 +35,10 @@ async function checkBeforeSend({ phone, accountId, session, now = new Date(), fo
   const p = normPhone(phone)
   if (!p) return { allowed: false, reason: 'invalid_phone' }
 
+  if (await require('./ownerOptOut').isGloballySuppressed(p)) {
+    return { allowed: false, reason: 'global_suppression' }
+  }
+
   const contact = (await db.query(
     `SELECT id, status, do_not_contact, owner_contact_paused_until, last_reply_at
        FROM owner_contacts WHERE phone_normalized = $1 LIMIT 1`, [p])).rows[0] || null

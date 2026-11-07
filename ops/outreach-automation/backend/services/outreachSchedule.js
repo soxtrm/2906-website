@@ -4,7 +4,7 @@
 // (Kev, 2026-10-29).
 //
 // Before this module the time rules were scattered: the planner chained each
-// auto day to the previous one (+16 min) on top of a 24h15 gate measured from
+// auto day to the previous one (+15 min) on top of a 24h15 gate measured from
 // the END of the previous run, so start times walked later every day until
 // batches started at 19:49 and 20:19 (batches #348, #350, Gabriela). Nothing
 // enforced a daily cutoff, and greetings were frozen into the plan text when
@@ -104,20 +104,70 @@ function autoStartTime(accountId, dateStr) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 }
 
-// Kev, 2026-10-29: "sobald ich ne zeit bei today setze, morgen +16 min" —
-// each following day starts 16 minutes later than the day before it. Unlike
+// Outreach recovery 2026-11-07: one documented default (+15 minutes), with
+// an explicit cutoff/skip/reset preview. Unlike
 // the old 24h15 chain this is anchored to a chosen start, not to the last
 // send, and the result must still leave 30 minutes inside 08:30–19:30.
-const DAILY_SHIFT_MIN = 16
+const DAILY_SHIFT_MIN = 15
 const hhmm = minutes => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
-function chainedStart(baseStart, offsetDays) {
+function chainedStart(baseStart, offsetDays, dailyShiftMin = DAILY_SHIFT_MIN) {
   const base = maltaParts(baseStart).minutes
-  const minutes = base + DAILY_SHIFT_MIN * offsetDays
+  const shift = Math.max(0, Math.min(180, Math.round(Number(dailyShiftMin) || DAILY_SHIFT_MIN)))
+  const minutes = base + shift * offsetDays
   if (minutes < WINDOW_START_MIN || minutes + 30 > WINDOW_END_MIN) return null
   return hhmm(minutes)
 }
 const dayDiff = (fromDateStr, toDateStr) =>
   Math.round((Date.parse(`${toDateStr}T12:00:00Z`) - Date.parse(`${fromDateStr}T12:00:00Z`)) / 86400000)
+
+function parseTimeMinutes(value, fallback) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''))
+  if (!match) return fallback
+  const minutes = Number(match[1]) * 60 + Number(match[2])
+  return Number(match[1]) < 24 && Number(match[2]) < 60 ? minutes : fallback
+}
+
+// Pure 14-day schedule model used by both the API preview and tests. A day
+// beyond the cutoff is a visible cooldown/skip; the next eligible day resets
+// to the original baseline. No send or DB mutation happens here.
+function buildSchedulePreview({
+  baseDate = maltaDateStr(), baseTime = '09:00', days = 14,
+  dailyShiftMinutes = DAILY_SHIFT_MIN, windowStart = '08:30', windowEnd = '19:30',
+  minimumRunMinutes = 30,
+} = {}) {
+  const start = parseTimeMinutes(windowStart, WINDOW_START_MIN)
+  const end = parseTimeMinutes(windowEnd, WINDOW_END_MIN)
+  const baseline = parseTimeMinutes(baseTime, start)
+  const shift = Math.max(0, Math.min(180, Math.round(Number(dailyShiftMinutes) || DAILY_SHIFT_MIN)))
+  const count = Math.max(1, Math.min(60, Math.round(Number(days) || 14)))
+  if (baseline < start || baseline + minimumRunMinutes > end) {
+    const err = new Error('baseline must leave the configured run duration inside the send window')
+    err.code = 'invalid_baseline'
+    throw err
+  }
+  const preview = []
+  let eligibleOffset = 0
+  let resetAfterSkip = false
+  for (let index = 0; index < count; index++) {
+    const date = addDays(baseDate, index)
+    if (resetAfterSkip) {
+      eligibleOffset = 0
+      resetAfterSkip = false
+    }
+    const minutes = baseline + shift * eligibleOffset
+    if (minutes + minimumRunMinutes > end) {
+      preview.push({ date, status:'cooldown', time:null, reason:'cutoff_exceeded', resetsTo:hhmm(baseline) })
+      resetAfterSkip = true
+      continue
+    }
+    preview.push({
+      date,status:'eligible',time:hhmm(minutes),scheduledAt:maltaLocalToUTC(date,hhmm(minutes)).toISOString(),
+      offsetMinutes:shift * eligibleOffset,
+    })
+    eligibleOffset++
+  }
+  return { timezone:TZ,windowStart:hhmm(start),windowEnd:hhmm(end),baseline:hhmm(baseline),dailyShiftMinutes:shift,days:preview }
+}
 
 // ── Send-time greeting/closing for FREE-TEXT messages ────────────────────
 // Persona-library templates are chosen per period (outreachTemplates.js).
@@ -152,6 +202,6 @@ module.exports = {
   TZ, WINDOW_START_MIN, WINDOW_END_MIN, AUTO_START_EARLIEST_MIN, AUTO_START_LATEST_MIN,
   maltaParts, maltaDateStr, addDays, maltaLocalToUTC,
   isSendAllowed, nextSendWindowStart, windowEndFor, greetingPeriod, autoStartTime,
-  DAILY_SHIFT_MIN, chainedStart, dayDiff,
+  DAILY_SHIFT_MIN, chainedStart, dayDiff, buildSchedulePreview, parseTimeMinutes,
   normalizeGreeting, OPENING, CLOSING,
 }

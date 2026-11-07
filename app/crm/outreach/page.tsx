@@ -162,10 +162,10 @@ function cooldownState(account: Account) {
 }
 
 // Kev, 2026-10-29: no more "last send + 24h15" chain. Instead each day follows
-// the day before it +16 min ("sobald ich ne zeit bei today setze, morgen +16
+// the day before it +15 min. The backend owns the same default and the
 // min"); the backend applies the same rule when ARM sets a time and when Auto
 // prepares. Without an earlier day the suggestion is a morning start.
-const DAILY_SHIFT_MIN = 16
+const DAILY_SHIFT_MIN = 15
 function suggestTime(plans: Plan[] | null, label: string, _lastOutreachAt: string | null): string {
   const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS']
   const idx = order.indexOf(label)
@@ -354,7 +354,7 @@ function ArgusConsole() {
                 <em className={restricted ? 'is-restricted' : account.connected ? 'is-online' : ''}>{restricted ? 'RESTRICTED' : account.connected ? 'ONLINE' : 'OFFLINE'}</em>
                 <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{selectable && <strong className={cooldown.ready ? 'is-ready' : ''}>{restricted ? `Held${account.restrictionUntil ? ` until ${maltaHM(new Date(account.restrictionUntil))}` : ''}` : cooldown.label}</strong>}</footer>
                 {selectable && <span className="account-plan-strip" aria-label="Next five days">{account.planningDays?.map((day,index)=><span key={day.day} title={`${day.day}: ${day.display?.label || day.status}${day.scheduledAt ? ' · '+maltaHM(new Date(day.scheduledAt)) : ''} · ${day.count} contacts`}><span>{index===0?'T':index===1?'T+1':`T+${index}`}</span><DayBadge display={day.display} compact /></span>)}</span>}
-                {selectable && <span className="account-auto-line"><b className={account.outreachAutoEnabled ? 'is-on' : ''}>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'AUTO · ROLLING' : 'AUTO · NOT SAVED') : 'MANUAL'}</b><small>Pace {account.outreachPaceMin ?? account.outreachVolumePercent ?? '—'}{account.outreachPaceMax && account.outreachPaceMax !== account.outreachPaceMin ? `–${account.outreachPaceMax}` : ''}%</small></span>}
+                {selectable && <span className="account-auto-line"><b className={account.outreachAutoEnabled ? 'is-on' : ''}>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'AUTO · ARMED' : 'AUTO · CONFIGURED') : 'MANUAL'}</b><small>Dispatch pace {account.outreachPaceMin ?? account.outreachVolumePercent ?? '—'}%</small></span>}
               </button></div>
             })}
             <button className="account-add" onClick={()=>setAdding(true)}><b>+</b><span>Add account<small>Expand your network</small></span></button>
@@ -581,16 +581,14 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // Kev, 2026-10-29: never fall back to 100 — an unset pace shows empty and
   // the backend refuses to send without one (the old reset-to-100 bug).
   const savedMin = account.outreachPaceMin ?? account.outreachVolumePercent ?? null
-  const savedMax = account.outreachPaceMax ?? savedMin
-  const [paceMin, setPaceMin] = useState<number | ''>(savedMin ?? '')
-  const [paceMax, setPaceMax] = useState<number | ''>(savedMax ?? '')
+  const [paceDraft, setPaceDraft] = useState(savedMin == null ? '' : String(savedMin))
   const [volumeBusy, setVolumeBusy] = useState(false)
   const [autoBusy, setAutoBusy] = useState(false)
   const [saveAll, setSaveAll] = useState<{ busy: boolean; result: any | null; error: string }>({ busy: false, result: null, error: '' })
   const [autoSummary, setAutoSummary] = useState('')
   const pickedInitialPlan = useRef(false)
 
-  useEffect(() => { setPaceMin(savedMin ?? ''); setPaceMax(savedMax ?? '') }, [savedMin, savedMax])
+  useEffect(() => { setPaceDraft(savedMin == null ? '' : String(savedMin)) }, [savedMin])
 
   const loadPlans = useCallback(async () => {
     const r = await crmGet(`outreach/plans?accountId=${account.id}`)
@@ -725,7 +723,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const contacts = prepared.reduce((sum: number, plan: any) => sum + Number(plan.preparedCount || 0), 0)
       const preparedTimes = prepared.map((plan: any) => outreachTimeLabel(plan.scheduledAt)).filter(Boolean)
       const timeSummary = preparedTimes.length ? ` · ${preparedTimes.join(' → ')}` : ''
-      setAutoSummary(`✓ AUTO PREPARED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +16 min daily${timeSummary} · press SAVE ALL to schedule`)
+      setAutoSummary(`✓ PREPARED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +15 min per eligible day${timeSummary} · use Auto ON to arm the saved schedule`)
       setNote(`Auto prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${contacts} previews · ${preserved.length} preserved${blocked.length ? ` · ${blocked.length} blocked by time/safety` : ''}.`)
       setSelectedPrepareDays([])
       setPrepareDaysOpen(false)
@@ -791,12 +789,12 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function cancel() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/cancel`, 'POST', {}); await refresh() } finally { setBusy(false) } }
 
   async function saveVolume() {
-    if (paceMin === '') { setNote('Enter a pace between 10 and 100.'); return }
-    const min = paceMin, max = paceMax === '' ? paceMin : paceMax
+    const pace = Number(paceDraft)
+    if (!Number.isFinite(pace) || pace < 10 || pace > 50) { setNote('Enter a dispatch pace from 10 to 50.'); return }
     setVolumeBusy(true); setNote('')
     try {
-      await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { min, max })
-      setNote(min === max ? `Pace ${min}% saved — stays until you change it.` : `Pace ${Math.min(min, max)}–${Math.max(min, max)}% saved — each run draws inside it.`)
+      await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { min: pace, max: pace })
+      setNote(`Dispatch pace ${pace}% saved. This changes spacing, not the daily contact cap.`)
       onChanged()
     } catch (e: any) { setNote(e?.message || 'Failed to save pace') } finally { setVolumeBusy(false) }
   }
@@ -807,7 +805,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const r = await crmJson(`outreach/accounts/${account.id}/auto`, 'POST', { enabled })
       if (r.rollingPlans) setPlans(r.rollingPlans)
       else await loadPlans()
-      setNote(enabled ? 'Auto on — five days prepared (A). Press SAVE ALL to schedule them.' : `Auto off — ${(r.paused || []).length} future auto day(s) paused. Nothing new is sent.`)
+      setNote(enabled
+        ? (r.armed ? 'Auto armed — the saved schedule will run when contacts remain eligible.' : 'Auto configured but not armed — review the blocked days shown below.')
+        : `Auto off — ${(r.paused || []).length} future auto day(s) paused. Nothing new is sent.`)
       await onChanged()
     } catch (e: any) { setNote(e?.message || 'Could not change Auto') } finally { setAutoBusy(false) }
   }
@@ -854,7 +854,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <p>One account. One queue. Every step in view.</p>
         <div className="queue-automation" aria-label="Automation">
           <button type="button" role="switch" aria-checked={Boolean(account.outreachAutoEnabled)} className={`auto-switch${account.outreachAutoEnabled ? ' is-on' : ''}`} disabled={autoBusy || account.operationalStatus === 'restricted'} onClick={() => toggleAuto(!account.outreachAutoEnabled)}>
-            <i aria-hidden /><span><b>{autoBusy ? 'Working…' : account.outreachAutoEnabled ? 'Auto ON' : 'Auto OFF'}</b><small>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Rolling 5 days · keeps itself scheduled' : 'Prepared · press SAVE ALL') : '30–40 owners · 08:30–09:15 start'}</small></span>
+            <i aria-hidden /><span><b>{autoBusy ? 'Working…' : account.outreachAutoEnabled ? 'Auto ON' : 'Auto OFF'}</b><small>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Armed · rolling schedule' : 'Configured · needs attention') : 'Off · nothing will run automatically'}</small></span>
           </button>
           <button type="button" className="queue-autosetup" disabled={saveAll.busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={saveAllDays}><ShieldCheck size={17} />{saveAll.busy ? 'Saving…' : 'SAVE ALL'}<span>Schedule every prepared day</span></button>
           <button className="queue-autosetup is-secondary" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={() => setPrepareDaysOpen(open => !open)} aria-expanded={prepareDaysOpen}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>Choose days by hand</span></button>
@@ -900,16 +900,16 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
       <div className="account-safety-panel">
         <div className="account-volume-compact">
-          <span>PACE · {account.pool === 'bottom' ? 'Z→A' : 'A→Z'}</span>
-          <input aria-label={`${account.label} pace from percent`} type="number" min={10} max={100} value={paceMin} placeholder="—" onChange={e => setPaceMin(e.target.value === '' ? '' : Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
-          <b>–</b>
-          <input aria-label={`${account.label} pace to percent`} type="number" min={10} max={100} value={paceMax} placeholder="—" onChange={e => setPaceMax(e.target.value === '' ? '' : Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
+          <span>DISPATCH PACE · spacing only</span>
+          <input className="pace-slider" aria-label={`${account.label} dispatch pace slider`} type="range" min={10} max={50} step={1} value={paceDraft || 10} onChange={e => setPaceDraft(e.target.value)} />
+          <input aria-label={`${account.label} dispatch pace percent`} type="text" inputMode="numeric" pattern="[0-9]*" value={paceDraft} placeholder="30" onChange={e => setPaceDraft(e.target.value.replace(/\D/g, '').slice(0, 2))} />
           <b>%</b>
-          <button disabled={volumeBusy || paceMin === ''} onClick={() => saveVolume()} style={btnGhost}>{volumeBusy ? 'Saving…' : 'Save'}</button>
+          <button disabled={volumeBusy || paceDraft === '' || paceDraft === String(savedMin ?? '')} onClick={() => saveVolume()} style={btnGhost}>{volumeBusy ? 'Saving…' : 'Save'}</button>
           {savedMin == null && <small className="pace-missing">No pace saved — runs are refused until one is set.</small>}
-          <span className={`account-pace-status ${paceMin === '' ? 'is-error' : (paceMin !== (savedMin ?? '') || paceMax !== (savedMax ?? '')) ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
-            {volumeBusy ? '… Saving' : savedMin == null ? '× No pace saved' : (paceMin !== savedMin || paceMax !== savedMax) ? `● Unsaved · ${paceMin}${paceMax !== '' && paceMax !== paceMin ? `–${paceMax}` : ''}%` : `✓ Saved · ${savedMin}${savedMax !== savedMin ? `–${savedMax}` : ''}%`}
+          <span className={`account-pace-status ${paceDraft === '' ? 'is-error' : paceDraft !== String(savedMin ?? '') ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
+            {volumeBusy ? '… Saving' : savedMin == null ? '× No pace saved' : paceDraft !== String(savedMin) ? `● Unsaved · ${paceDraft || '—'}%` : `✓ Saved · ${savedMin}%`}
           </span>
+          <small className="pace-unit-help">10 = extra slow · 30 = normal · 50 = faster. Daily owner limits are separate.</small>
         </div>
         <div className="account-restriction-line">
           <span><b>{account.restrictionsThisWeek || 0}</b> restrictions this week</span>
@@ -1066,7 +1066,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       )}
 
       </section>
-      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · sends only 08:30–19:30, max 40 owners per account per day. Each following day starts 16 minutes later than the day before. A run reaching 19:30 pauses and resumes 08:30 next morning. Owner checks run again before every message.</p>
+      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · sends only 08:30–19:30, max 40 owners per account per day. Each eligible day starts 15 minutes later. When the cutoff is reached, that day is skipped and the next eligible day resets to the saved baseline. Owner checks run again before every message.</p>
       {/* schedule / arm */}
       {!isCompleted && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1080,7 +1080,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             <button disabled={busy || !activePlan?.armed} onClick={pause} style={btnGhost}>PAUSE</button>
             <button disabled={busy} onClick={cancel} style={{ ...btnGhost, color: 'var(--crm-danger)' }}>CANCEL</button>
           </div>
-          <div className="queue-time-readout"><span>{outreachDaypart(armTime)}</span><b>{armTime}</b><small>Auto next day: +16 min · accept with ARM</small></div>
+          <div className="queue-time-readout"><span>{outreachDaypart(armTime)}</span><b>{armTime}</b><small>Auto next eligible day: +15 min · cutoff reset is shown in preview</small></div>
           {activePlan?.scheduled_at && (
             <div style={{ fontSize: 11, color: MUTED }}>
               Next: {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(activePlan.scheduled_at))} · {maltaHM(new Date(activePlan.scheduled_at))}

@@ -686,8 +686,8 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
     }
 
     // The first auto day starts in the morning (08:30–09:15, stable per
-    // account and day); every later day follows the day before it +16 min
-    // (Kev, 2026-10-29). If today's slot already passed and the window is
+    // account and day); every later day follows the day before it +15 min.
+    // If today's slot already passed and the window is
     // still open, today starts in ten minutes instead.
     const scheduledDateStr = toDateStr(plan.scheduled_date)
     const previous = [...results].reverse().find(r => r.scheduledAt && r.status !== 'blocked' && r.day)
@@ -1223,8 +1223,9 @@ async function saveAllPrepared(accountId, { actor = 'admin', now = new Date() } 
   }
 }
 
-// Auto on: prepare the horizon now. Auto off: stop the rolling schedule and
-// pause every future auto day that has not started (nothing new is sent).
+// Auto on is a deliberate arm action: prepare and schedule the exact saved
+// configuration. Auto off pauses future auto days and remains off after a
+// restart; safety-blocked jobs are never re-armed by this path.
 async function setAutoEnabled(accountId, enabled, { actor = 'admin', now = new Date() } = {}) {
   await db.query(
     `UPDATE whatsapp_accounts
@@ -1233,7 +1234,11 @@ async function setAutoEnabled(accountId, enabled, { actor = 'admin', now = new D
       WHERE id = $1 AND is_active = TRUE AND outreach_enabled = TRUE`, [accountId, enabled === true])
   if (enabled === true) {
     const preparation = await autoPrepareAccount(accountId, { actor, now })
-    return { enabled: true, preparation, rollingPlans: preparation.rollingPlans }
+    const scheduling = await saveAllPrepared(accountId, { actor:`${actor}:auto-enable`, now })
+    return {
+      enabled:true,armed:scheduling.ok,automationState:scheduling.ok ? 'ARMED' : 'CONFIGURED',
+      preparation,scheduling,rollingPlans:scheduling.rollingPlans,
+    }
   }
   const paused = []
   const armed = (await db.query(

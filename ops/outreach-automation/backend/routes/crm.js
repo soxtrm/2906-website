@@ -426,6 +426,38 @@ router.get('/outreach/accounts', auth, adminOnly, async (req, res) => {
   }
 })
 
+router.post('/outreach/schedule/preview', auth, adminOnly, async (req, res) => {
+  try {
+    const preview = require('../services/outreachSchedule').buildSchedulePreview({
+      baseDate:req.body?.baseDate,baseTime:req.body?.baseTime,days:req.body?.days ?? 14,
+      dailyShiftMinutes:req.body?.dailyShiftMinutes ?? 15,
+      windowStart:req.body?.windowStart ?? '08:30',windowEnd:req.body?.windowEnd ?? '19:30',
+    })
+    res.json(preview)
+  } catch (err) {
+    res.status(400).json({ error:err.message,code:err.code || 'invalid_schedule' })
+  }
+})
+
+router.get('/outreach/safety', auth, adminOnly, async (_req, res) => {
+  try {
+    const [suppression, requests, replies, settings] = await Promise.all([
+      db.query(`SELECT COUNT(*)::int AS active FROM global_contact_suppressions WHERE active=TRUE`),
+      db.query(`SELECT id,request_type,status,source,requested_at FROM owner_privacy_requests ORDER BY requested_at DESC LIMIT 50`),
+      db.query(`SELECT id,session,status,scheduled_response_at,last_owner_message_at
+                  FROM owner_auto_conversations WHERE scheduled_response_at IS NOT NULL
+                 ORDER BY scheduled_response_at LIMIT 50`),
+      db.query(`SELECT key,value,updated_at FROM outreach_settings
+                 WHERE key LIKE 'ai_reply.%' OR key LIKE 'schedule.%' ORDER BY key`),
+    ])
+    res.json({ activeSuppressions:suppression.rows[0]?.active || 0,privacyRequests:requests.rows,
+      pendingReplies:replies.rows,settings:settings.rows,asOf:new Date().toISOString() })
+  } catch (err) {
+    log.error('crm/outreach/safety error', err)
+    res.status(500).json({ error:'Failed to load outreach safety state' })
+  }
+})
+
 // Register an outreach identity; connection is verified separately by WAHA.
 router.post('/outreach/accounts', auth, adminOnly, async (req,res) => {
   const session=String(req.body.sessionName||'').trim(), label=String(req.body.label||'').trim();

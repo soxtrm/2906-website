@@ -220,6 +220,9 @@ async function checkOwnerSend({
     }
 
     if (p) {
+      if (await require('./ownerOptOut').isGloballySuppressed(p)) {
+        return { allow: false, reason: 'global_suppression' }
+      }
       const dnc = await db.query(
         `SELECT 1 FROM owner_contacts
           WHERE right(regexp_replace(COALESCE(phone_normalized,''), '\\D', '', 'g'), 9) = $1
@@ -297,7 +300,7 @@ function describeBlock(reason) {
       ? 'the owner has not confirmed it is available yet'
       : `it is currently marked ${st.replace(/_/g, ' ')}`
   }
-  if (r === 'dnc') return 'this owner asked not to be contacted'
+  if (r === 'dnc' || r === 'global_suppression') return 'this owner asked not to be contacted'
   if (r === 'review_only') return 'owner automation is in review-only mode'
   if (r === 'gate_unavailable') return 'the final safety check could not be completed'
   if (r === 'human_review_required') return 'this owner complained about the automated messages — resume them with !o before asking again'
