@@ -2,7 +2,7 @@
 
 const crypto = require('crypto')
 
-const GPT_COMMAND_RE = /^!(gptuploadv|gptupload)\s*([1-9])?(?:\s+([SC]))?\b/i
+const GPT_COMMAND_RE = /^!(plusupload|gptuploadv|gptupload)\s*([1-9])?(?:\s+([SC]))?\b/i
 const UPLOAD_COMMAND_RE = /^!upload([1-9])?(?:\s+([SC]))?\b/i
 
 function parseUploadCommand(text) {
@@ -13,7 +13,10 @@ function parseUploadCommand(text) {
     return {
       variantSuffix: gpt[2] || '',
       intakeMode: gpt[3] ? (gpt[3].toUpperCase() === 'S' ? 'sale' : 'commercial') : null,
-      photoMode: command === 'gptuploadv' ? 'vision' : 'pimp',
+      // Keep the legacy vision command working, but make the two user-facing
+      // enhancement levels explicit.  `plusupload` must never alias the
+      // conservative gptupload preset.
+      photoMode: command === 'plusupload' ? 'premium' : (command === 'gptuploadv' ? 'vision' : 'conservative'),
     }
   }
   const upload = value.match(UPLOAD_COMMAND_RE)
@@ -27,7 +30,7 @@ function parseUploadCommand(text) {
 
 function stripUploadCommands(text) {
   return String(text || '').replace(
-    /!(?:gptuploadv|gptupload|upload)\s*[1-9]?\b(?:\s+(?:S|C|force|group|noad)\b)*/gi,
+    /!(?:plusupload|gptuploadv|gptupload|upload)\s*[1-9]?\b(?:\s+(?:S|C|force|group|noad)\b)*/gi,
     '')
 }
 
