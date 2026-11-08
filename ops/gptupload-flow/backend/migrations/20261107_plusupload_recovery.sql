@@ -4,7 +4,7 @@ ALTER TABLE property_photo_processing_runs
   DROP CONSTRAINT IF EXISTS property_photo_processing_runs_mode_check;
 ALTER TABLE property_photo_processing_runs
   ADD CONSTRAINT property_photo_processing_runs_mode_check
-  CHECK (mode IN ('pimp','conservative','premium','vision'));
+  CHECK (mode IN ('pimp','plus','conservative','premium','vision'));
 
 ALTER TABLE property_photo_processing_runs
   ADD COLUMN IF NOT EXISTS failure_reason TEXT,

@@ -410,8 +410,11 @@ async function preparePhotoPackage({ images, photoMode, facts, triggerId }) {
   // Originals are retained separately before generation. They are never put
   // into the property gallery as a pretend enhanced result if generation
   // fails. Generated checkpoints make a retry idempotent across restarts.
-  const sourceUrls = []
-  for (const image of (images || [])) sourceUrls.push(await ul.uploadBuffer(image.buffer, image.mimeType))
+  const sourceUrls = new Map()
+  for (const image of (images || [])) {
+    const url = await ul.uploadBuffer(image.buffer, image.mimeType)
+    if (url) sourceUrls.set(gptPhotoPipeline.sha256(image.buffer), url)
+  }
   const photoResult = await gptPhotoPipeline.processImages({
     images: images || [], facts, mode: photoMode, triggerId, source: 'whatsapp_upload',
     uploader: (buffer, mimeType) => ul.uploadBuffer(buffer, mimeType),
@@ -419,7 +422,7 @@ async function preparePhotoPackage({ images, photoMode, facts, triggerId }) {
   const imageUrls = []
   const uploaded = []
   for (const item of photoResult.items) {
-    const sourceUrl = sourceUrls[item.position] || null
+    const sourceUrl = sourceUrls.get(item.sourceSha256) || await ul.uploadBuffer(item.sourceBuffer, item.sourceMimeType)
     let editedUrl = item.editedUrl || null
     if (item.status === 'quality_checked' && !editedUrl) editedUrl = await ul.uploadBuffer(item.buffer, item.mimeType)
     if (sourceUrl && editedUrl) imageUrls.push(editedUrl)

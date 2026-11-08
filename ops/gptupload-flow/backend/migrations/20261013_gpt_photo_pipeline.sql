@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS property_photo_processing_runs (
   run_id UUID PRIMARY KEY,
   trigger_id TEXT,
   source TEXT NOT NULL,
-  mode TEXT NOT NULL CHECK (mode IN ('pimp','conservative','premium','vision')),
+  mode TEXT NOT NULL CHECK (mode IN ('pimp','plus','conservative','premium','vision')),
   status TEXT NOT NULL,
   property_id BIGINT REFERENCES properties(id) ON DELETE SET NULL,
   source_count INTEGER NOT NULL DEFAULT 0,

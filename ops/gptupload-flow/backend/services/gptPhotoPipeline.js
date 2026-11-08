@@ -12,7 +12,12 @@ const log = require('../logger')
 const config = require('../config')
 
 const MAX_EDIT_IMAGES = 10
+const MAX_AUDIT_IMAGES = 30
 const EDIT_MODEL = process.env.GPTUPLOAD_IMAGE_MODEL || 'gemini-3.1-flash-image'
+const PLUS_EDIT_MODEL = process.env.PLUSUPLOAD_IMAGE_MODEL || EDIT_MODEL
+const PLUS_IMAGE_SIZE = ['1K', '2K', '4K'].includes(String(process.env.PLUSUPLOAD_IMAGE_SIZE || '').toUpperCase())
+  ? String(process.env.PLUSUPLOAD_IMAGE_SIZE).toUpperCase()
+  : '2K'
 const VISION_MODEL = process.env.GPTUPLOAD_VISION_MODEL || 'gemini-2.5-flash'
 const EDIT_TIMEOUT_MS = Number(process.env.GPTUPLOAD_IMAGE_TIMEOUT_MS || 120000)
 const VISION_TIMEOUT_MS = Number(process.env.GPTUPLOAD_VISION_TIMEOUT_MS || 90000)
@@ -28,13 +33,13 @@ const PRESETS = Object.freeze({
     key: 'conservative',
     editType: 'CONSERVATIVE_ENHANCEMENT',
     label: 'GPT conservative enhancement',
-    prompt: `Use a conservative real-estate photo enhancement. Preserve the photograph and room exactly. Improve exposure, brightness, sharpness, resolution appearance, natural white balance and mild warmth. Correct only subtle lens and perspective distortion. Keep every wall, window, doorway, floor, fixture, furniture item, view and material recognizable and in the same position. Make no decorative additions and do not remove permanent or material condition details.`,
+    prompt: `Edit this real-estate photograph using a conservative clean-listing profile. Preserve the photograph and room exactly. Improve exposure, brightness, crisp detail, resolution appearance, neutral natural white balance and mild warmth. Correct only subtle lens and perspective distortion. Keep every wall, window, doorway, floor, fixture, furniture item, view and material recognizable and in the same position. Make no decorative additions and do not remove permanent or material condition details.`,
   }),
   premium: Object.freeze({
     key: 'premium',
     editType: 'PREMIUM_ENHANCEMENT',
     label: 'PLUS premium enhancement',
-    prompt: `Create a visibly refined but truthful premium real-estate photograph. Improve ambient daylight, exposure, clarity, texture appearance, natural colour and slightly-to-moderately warm balance. Preserve the room's recognizable identity. In a finished furnished room only, you may add a small number of believable, tasteful removable accessories such as a plant, cushion, folded bedding or subtle decor when they fit the existing scene. Never change or invent walls, windows, doors, floor plan, room size, built-in furniture, appliances, fixtures, view, structural condition or essential property characteristics. If the building or room is unfinished, preserve that exact unfinished construction state and do not add completed walls, finishes, fixtures or staging.`,
+    prompt: `Edit this real-estate photograph as a visibly refined, high-end international property editorial while remaining completely truthful. The PLUS result must be clearly more polished and aspirational than a basic exposure correction: create bright refined ambient daylight, a soft believable interior glow, clean neutral-warm Mediterranean colour, elegant tonal depth, corrected verticals and perspective, crisp premium texture, magazine-quality framing and an airy upscale mood. Preserve the room's recognizable identity and all essential property characteristics. In a finished furnished room, tastefully style the existing scene with a restrained selection of believable removable accessories such as an elegant plant, refined cushions, neatly styled bedding, subtle artwork or table styling. Improve the presentation of existing furniture without replacing the room or changing its function. Never change or invent walls, windows, doors, floor plan, room size, built-in furniture, appliances, permanent fixtures, view, structural condition or amenities. If the image shows an unfinished, renovation or construction-stage space, preserve that exact unfinished construction state: improve only exposure, clarity, perspective and presentation; never fabricate completed walls, floors, ceilings, kitchens, bathrooms, landscaping, fixtures or furniture. Avoid fake HDR, orange cast, fantasy luxury, fake sunset, extreme wide angle, impossible reflections, duplicated objects, people, text, logos and watermarks.`,
   }),
   vision: Object.freeze({
     key: 'vision',
@@ -45,8 +50,10 @@ const PRESETS = Object.freeze({
 })
 
 function normaliseMode(mode) {
-  // `pimp` is retained for old persisted jobs, but new commands never write it.
+  // Production historically used `pimp`/`plus`; keep both aliases so the
+  // recovery can roll out without invalidating already queued commands.
   if (mode === 'pimp') return 'conservative'
+  if (mode === 'plus') return 'premium'
   return PRESETS[mode] ? mode : 'conservative'
 }
 
@@ -135,7 +142,12 @@ function normaliseAudit(value, count) {
   const hero = (Array.isArray(audit.hero_candidates) ? audit.hero_candidates : []).map(Number).filter(valid).slice(0, 3)
   const recommendations = (Array.isArray(audit.photo_recommendations) ? audit.photo_recommendations : [])
     .filter(item => valid(item?.index))
-    .map(item => ({ index: Number(item.index), action: String(item.action || 'REVIEW').toUpperCase(), reason: String(item.reason || '').slice(0, 240) }))
+    .map(item => ({
+      index: Number(item.index),
+      action: String(item.action || 'REVIEW').toUpperCase(),
+      scene: String(item.scene || 'OTHER').toUpperCase(),
+      reason: String(item.reason || '').slice(0, 240),
+    }))
   return {
     coverage: Array.isArray(audit.coverage) ? audit.coverage : [],
     likely_missing: Array.isArray(audit.likely_missing) ? audit.likely_missing : [],
@@ -159,24 +171,54 @@ function factsForPrompt(facts = {}) {
 async function auditImages(images, facts, { ai } = {}) {
   if (!images.length || (!apiKey() && !ai)) return null
   const client = ai || new GoogleGenAI({ apiKey: apiKey() })
-  const parts = images.slice(0, MAX_EDIT_IMAGES).map((image, index) => ({
+  const audited = images.slice(0, MAX_AUDIT_IMAGES)
+  const parts = audited.map((image, index) => ({
     inlineData: { mimeType: image.mimeType || 'image/jpeg', data: image.buffer.toString('base64') },
   }))
   parts.push({ text: `Internally audit this ordered property photo set (indices start at 0). Known structured facts: ${JSON.stringify(factsForPrompt(facts))}.
 Do not infer that a room or amenity does not exist merely because it is unseen. Do not infer protected characteristics. Similar rooms may be distinct; use confidence.
 Return JSON only with:
-{"coverage":[{"label":"living room","state":"PHOTOGRAPHED|LIKELY_PHOTOGRAPHED|NOT_SEEN|UNKNOWN","confidence":0.0,"evidence_indices":[0]}],"likely_missing":[{"label":"Bedroom 3","state":"NOT_SEEN|UNKNOWN","reason":"..."}],"photo_recommendations":[{"index":0,"action":"USE|EDIT|LOW_PRIORITY|DUPLICATE|REVIEW","reason":"..."}],"hero_candidates":[0,1,2],"soft_observations":[{"value":"possible balcony","confidence":0.0,"evidence_image_index":0}],"summary":"short internal summary"}` })
+{"coverage":[{"label":"living room","state":"PHOTOGRAPHED|LIKELY_PHOTOGRAPHED|NOT_SEEN|UNKNOWN","confidence":0.0,"evidence_indices":[0]}],"likely_missing":[{"label":"Bedroom 3","state":"NOT_SEEN|UNKNOWN","reason":"..."}],"photo_recommendations":[{"index":0,"action":"USE|EDIT|LOW_PRIORITY|DUPLICATE|REVIEW","scene":"LIVING|KITCHEN|OUTDOOR|BEDROOM|BATHROOM|OTHER","reason":"..."}],"hero_candidates":[0,1,2],"soft_observations":[{"value":"possible balcony","confidence":0.0,"evidence_image_index":0}],"summary":"short internal summary"}` })
   try {
     const response = await withTimeout(client.models.generateContent({
       model: VISION_MODEL,
       contents: [{ role: 'user', parts }],
       config: { responseMimeType: 'application/json', temperature: 0.1 },
     }), VISION_TIMEOUT_MS, 'vision audit')
-    return normaliseAudit(jsonText(response), Math.min(images.length, MAX_EDIT_IMAGES))
+    return normaliseAudit(jsonText(response), audited.length)
   } catch (error) {
     log.warn('gptPhotoPipeline: vision audit failed; continuing', { err: error.message })
     return null
   }
+}
+
+function dedupeImages(images = []) {
+  const seen = new Set()
+  const unique = []
+  for (const image of images) {
+    if (!Buffer.isBuffer(image?.buffer) || !image.buffer.length) continue
+    const hash = sha256(image.buffer)
+    if (seen.has(hash)) continue
+    seen.add(hash)
+    unique.push(image)
+  }
+  return unique
+}
+
+const SCENE_PRIORITY = { LIVING: 0, KITCHEN: 1, OUTDOOR: 2, OTHER: 3, BEDROOM: 4, BATHROOM: 5 }
+function editPriorityIndices(images, audit, limit = MAX_EDIT_IMAGES) {
+  const scenes = new Map((audit?.photo_recommendations || []).map(item => [item.index, item.scene]))
+  return images.map((_, index) => index)
+    .sort((a, b) => (SCENE_PRIORITY[scenes.get(a)] ?? SCENE_PRIORITY.OTHER) - (SCENE_PRIORITY[scenes.get(b)] ?? SCENE_PRIORITY.OTHER) || a - b)
+    .slice(0, limit)
+}
+
+function editModelForMode(mode) {
+  return normaliseMode(mode) === 'premium' ? PLUS_EDIT_MODEL : EDIT_MODEL
+}
+
+function editTypeForMode(mode) {
+  return presetFor(mode).editType
 }
 
 function validateGeneratedImage(source, output) {
@@ -200,13 +242,15 @@ async function editOne(image, context, { ai } = {}) {
   const client = ai || new GoogleGenAI({ apiKey: apiKey() })
   const mode = normaliseMode(context.mode)
   const prompt = editPrompt(mode, context)
+  const generationConfig = { responseModalities: ['IMAGE'] }
+  if (mode === 'premium') generationConfig.imageConfig = { imageSize: PLUS_IMAGE_SIZE }
   const response = await withTimeout(client.models.generateContent({
-    model: EDIT_MODEL,
+    model: editModelForMode(mode),
     contents: [{ role: 'user', parts: [
       { inlineData: { mimeType: image.mimeType || 'image/jpeg', data: image.buffer.toString('base64') } },
       { text: prompt },
     ] }],
-    config: { responseModalities: ['IMAGE'] },
+    config: generationConfig,
   }), EDIT_TIMEOUT_MS, 'photo edit')
   const result = responseImage(response)
   const checked = validateGeneratedImage(image, result)
@@ -273,7 +317,7 @@ async function checkpoint(id, index, sourceImage, output, editedUrl, mode, store
        edited_sha256=EXCLUDED.edited_sha256, source_sha256=EXCLUDED.source_sha256,
        edit_type=EXCLUDED.edit_type, model_version=EXCLUDED.model_version, status='generated', error=NULL`,
     [id, index, sourceImage.sourceSha256, sha256(output.buffer), editedUrl,
-      sourceImage.sourceKind || 'ORIGINAL', preset.editType, EDIT_MODEL], store)
+      sourceImage.sourceKind || 'ORIGINAL', preset.editType, editModelForMode(mode)], store)
 }
 
 async function recoverOriginal(image, { store = db, fetcher = fetch } = {}) {
@@ -303,12 +347,12 @@ async function recoverOriginal(image, { store = db, fetcher = fetch } = {}) {
 async function processImages({ images = [], facts = {}, mode = 'conservative', triggerId = null, source = 'whatsapp', onProgress = null, ai = null, store = db, fetcher = fetch, uploader = null } = {}) {
   let id = runId()
   const effectiveMode = normaliseMode(mode)
-  const limited = images.slice(0, MAX_EDIT_IMAGES)
-  const untouched = images.slice(MAX_EDIT_IMAGES)
+  const inputCount = images.length
+  images = dedupeImages(images)
   const inserted = await safeQuery(
     `INSERT INTO property_photo_processing_runs (run_id, trigger_id, source, mode, status, source_count, edit_model, vision_model, created_at)
      VALUES ($1,$2,$3,$4,'received',$5,$6,$7,NOW()) ON CONFLICT (trigger_id) WHERE trigger_id IS NOT NULL DO NOTHING RETURNING run_id`,
-    [id, triggerId, source, effectiveMode, images.length, EDIT_MODEL, effectiveMode === 'vision' ? VISION_MODEL : null], store)
+    [id, triggerId, source, effectiveMode, images.length, editModelForMode(effectiveMode), effectiveMode === 'vision' ? VISION_MODEL : null], store)
   let resumedRun = false
   if (!inserted.rows.length && triggerId) {
     const existing = await safeQuery(`SELECT run_id FROM property_photo_processing_runs WHERE trigger_id=$1 LIMIT 1`, [triggerId], store)
@@ -318,11 +362,22 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
   if (!resumedRun) await recordStage(id, 'received', { store, details: { mode: effectiveMode, sourceCount: images.length } })
   await recordStage(id, 'processing', { store, details: { mode: effectiveMode, sourceCount: images.length, resumed: resumedRun } })
 
+  // Keep the production set audit and scene priority: living areas, kitchens
+  // and outdoor spaces consume the bounded edit slots before secondary rooms.
+  // Live production keeps the existing set audit. Unit/integration callers
+  // that inject an image editor do not unexpectedly spend their edit double
+  // on an additional audit unless they explicitly selected vision mode.
+  const audit = (effectiveMode === 'vision' || apiKey())
+    ? await auditImages(images, facts, { ai: effectiveMode === 'vision' ? ai : null })
+    : null
+  const selectedIndices = editPriorityIndices(images, audit)
   const bases = []
-  for (const image of limited) bases.push(await recoverOriginal(image, { store, fetcher }))
-  for (const base of bases) if (!base.sourceSha256) base.sourceSha256 = sha256(base.buffer)
+  for (const position of selectedIndices) {
+    const image = await recoverOriginal(images[position], { store, fetcher })
+    if (!image.sourceSha256) image.sourceSha256 = sha256(image.buffer)
+    bases.push({ position, image })
+  }
   const fromCheckpoint = resumedRun ? await loadCheckpoints(id, store, fetcher) : async () => null
-  const audit = effectiveMode === 'vision' ? await auditImages(bases, facts, { ai }) : null
   let editedCount = 0
   let failedCount = 0
   let resumedCount = 0
@@ -331,13 +386,13 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
   const keyPresent = !!apiKey() || !!ai
   // Bounded parallel edits; every item is written to its own index, so the
   // final order is the input order no matter which edit finishes first.
-  const items = await mapLimited(bases, EDIT_CONCURRENCY, async (sourceImage, index) => {
+  const editedItems = await mapLimited(bases, EDIT_CONCURRENCY, async ({ position, image: sourceImage }) => {
     let output = null
     let editedUrl = null
     let status = 'failed'
     let error = null
     let resumed = false
-    const checkpointed = sourceImage.recoveryError ? null : await fromCheckpoint(index, sourceImage.sourceSha256)
+    const checkpointed = sourceImage.recoveryError ? null : await fromCheckpoint(position, sourceImage.sourceSha256)
     if (sourceImage.recoveryError) {
       error = sourceImage.recoveryError
       failedCount += 1
@@ -359,7 +414,7 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
         output = null
         editedUrl = null
         status = 'failed'
-        log.warn('gptPhotoPipeline: image generation failed', { runId: id, index, stage: 'processing', mode: effectiveMode, reason: error })
+        log.warn('gptPhotoPipeline: image generation failed', { runId: id, index: position, stage: 'processing', mode: effectiveMode, reason: error })
       }
     } else {
       error = 'image editing key unavailable'
@@ -374,26 +429,26 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
       failedCount += 1
       status = 'failed'
       error = `quality check failed: edited ${editedSize.width}x${editedSize.height} < original ${sourceSize.width}x${sourceSize.height}`
-      log.warn('gptPhotoPipeline: edited image is lower resolution than its original', { index, sourceSize, editedSize })
+      log.warn('gptPhotoPipeline: edited image is lower resolution than its original', { index: position, sourceSize, editedSize })
     }
     if (status === 'quality_checked' && uploader && !editedUrl) {
       try {
         editedUrl = await uploader(output.buffer, output.mimeType)
         if (!editedUrl) throw new Error('generated image storage returned no URL')
-        await checkpoint(id, index, sourceImage, output, editedUrl, effectiveMode, store)
+        await checkpoint(id, position, sourceImage, output, editedUrl, effectiveMode, store)
       } catch (caught) {
         error = String(caught.message || caught).slice(0, 500)
         editedCount -= 1
         failedCount += 1
         status = 'failed'
         editedUrl = null
-        log.warn('gptPhotoPipeline: generated image storage failed', { runId: id, index, stage: 'saved', mode: effectiveMode, reason: error })
+        log.warn('gptPhotoPipeline: generated image storage failed', { runId: id, index: position, stage: 'saved', mode: effectiveMode, reason: error })
       }
     }
     completed += 1
     if (onProgress) await onProgress({ complete: completed, total: bases.length, edited: editedCount, failed: failedCount, stage: status })
     return {
-      position: index,
+      position,
       sourceBuffer: sourceImage.buffer,
       sourceMimeType: sourceImage.mimeType,
       sourceSha256: sourceImage.sourceSha256 || sha256(sourceImage.buffer),
@@ -410,11 +465,14 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
       reviewResolution,
     }
   })
-  for (let i = 0; i < untouched.length; i += 1) {
-    const image = untouched[i]
-    items.push({ position: MAX_EDIT_IMAGES + i, sourceBuffer: image.buffer, sourceMimeType: image.mimeType, sourceSha256: sha256(image.buffer), sourceKind: 'ORIGINAL', buffer: null, mimeType: null, editedSha256: null, editedUrl: null, status: 'failed', error: `preset limit is ${MAX_EDIT_IMAGES}; retry this image in a separate batch` })
-    failedCount += 1
-  }
+  const byPosition = new Map(editedItems.map(item => [item.position, item]))
+  const items = images.map((image, position) => byPosition.get(position) || {
+    position, sourceBuffer: image.buffer, sourceMimeType: image.mimeType,
+    sourceSha256: sha256(image.buffer), sourceKind: 'ORIGINAL',
+    buffer: null, mimeType: null, editedSha256: null, editedUrl: null,
+    status: 'failed', error: `preset limit is ${MAX_EDIT_IMAGES}; retry this image in a separate batch`,
+  })
+  failedCount += Math.max(0, images.length - selectedIndices.length)
   await safeQuery(
     `UPDATE property_photo_processing_runs SET edited_count=$2, fallback_count=$3, audit=$4::jsonb, updated_at=NOW() WHERE run_id=$1`,
     [id, editedCount, failedCount, JSON.stringify(audit || {})], store)
@@ -432,9 +490,10 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
   return {
     runId: id, mode: effectiveMode, preset: presetFor(effectiveMode), items, audit,
     editedCount, failedCount, fallbackCount: 0, resumedCount, lowerResolutionCount,
-    overLimitCount: untouched.length, sourceCount: images.length, retryAvailable: failedCount > 0,
+    overLimitCount: Math.max(0, images.length - selectedIndices.length), duplicateCount: inputCount - images.length,
+    sourceCount: images.length, retryAvailable: failedCount > 0,
     status: failedCount ? 'failed' : 'quality_checked',
-    models: { edit: EDIT_MODEL, vision: effectiveMode === 'vision' ? VISION_MODEL : null },
+    models: { edit: editModelForMode(effectiveMode), vision: VISION_MODEL },
   }
 }
 
@@ -536,6 +595,8 @@ async function retryRun({ runId: parentRunId, store = db, fetcher = fetch, uploa
 }
 
 module.exports = {
-  MAX_EDIT_IMAGES, EDIT_MODEL, VISION_MODEL, EDIT_CONCURRENCY, PRESETS, sha256, normaliseAudit, imageSize, mapLimited,
-  normaliseMode, presetFor, editPrompt, validateGeneratedImage, auditImages, editOne, processImages, persistResult, retryRun, responseImage,
+  MAX_EDIT_IMAGES, MAX_AUDIT_IMAGES, EDIT_MODEL, PLUS_EDIT_MODEL, PLUS_IMAGE_SIZE, VISION_MODEL, EDIT_CONCURRENCY,
+  PRESETS, sha256, normaliseAudit, imageSize, mapLimited, dedupeImages, editPriorityIndices,
+  normaliseMode, presetFor, editModelForMode, editTypeForMode, editPrompt, validateGeneratedImage,
+  auditImages, editOne, processImages, persistResult, retryRun, responseImage,
 }

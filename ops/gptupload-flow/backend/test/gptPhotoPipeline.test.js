@@ -31,7 +31,7 @@ test('vision output cannot reference nonexistent images', () => {
     soft_observations: [{ value: 'possible balcony', confidence: .7, evidence_image_index: 1 }],
   }, 3)
   assert.deepEqual(audit.hero_candidates, [2, 1, 0])
-  assert.deepEqual(audit.photo_recommendations, [{ index: 1, action: 'EDIT', reason: 'dark' }])
+  assert.deepEqual(audit.photo_recommendations, [{ index: 1, action: 'EDIT', scene: 'OTHER', reason: 'dark' }])
 })
 
 test('image response extraction accepts Gemini candidate parts', () => {
