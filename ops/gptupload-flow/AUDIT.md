@@ -44,3 +44,14 @@ Recovery behavior:
 - `property_photo_edits` retains original and generated URLs, hashes, model, preset and status. Retry gallery repair restores original ordering and deduplicates URLs.
 
 Verification was intentionally local: no WhatsApp messages, production data mutation, live listing publication or production provider call. The existing Gemini integration/model configuration and concurrency/cost controls remain unchanged. Automated tests use injected transport/provider doubles. Synthetic visual outputs were generated separately and are stored under `artifacts/image-pipeline-regression/`; their review table documents architecture preservation and the visible difference between conservative and premium output.
+
+## 2026-11-08 production deployment
+
+Deployed the recovery onto the newer production overlay at `/opt/2906-system/backend` without replacing its existing PLUS-specific 2K model selection, set audit, image deduplication or scene-priority logic. Production already recognised `!plusupload`, but its database mode constraint still rejected `plus` runs and provider failures still fell back to the original image while reporting completion.
+
+- Runtime commit: `50d012a4e8e4429271310702091da36bfd9bdc79` (recovery base `f61f904d13bb40bb7fe1c35ea3e3f3c8f76c1d88`).
+- Backend files: `handlers/upload.js`, `services/gptPhotoPipeline.js`; additive migration `20261107_plusupload_recovery.sql`.
+- Rollback snapshot: `/opt/2906-system/backups/plusupload-recovery-20261108T040159Z`.
+- Post-deploy hashes: `upload.js` `3fcaccde78b8896792ad7628cb5e1aa523d85e7cd9d19e5aa9c63e9787e8d292`; `gptPhotoPipeline.js` `a909ab53c9aabe8a2f051b4261739be9f352412b818cf018f7ed922bca93b752`.
+- Backend restarted healthy; `/health` returned OK; command/preset contract and 27 automated pipeline/visual tests passed. No WhatsApp message or listing publication was triggered.
+- A single isolated, non-publishing PLUS render against the configured production provider failed with HTTP 402 `RESOURCE_EXHAUSTED`: the AI Studio project's prepayment credits are depleted. No generated file was produced. This is the current external blocker for real renders. The deployed recovery now records and exposes that failure instead of uploading the original as a successful PLUS result.
