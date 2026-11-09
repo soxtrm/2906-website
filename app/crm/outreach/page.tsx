@@ -17,6 +17,8 @@ const MUTED = 'var(--crm-muted)'
 const FAINT = 'var(--crm-faint)'
 const F = "'Bricolage Grotesque', 'Inter', system-ui, sans-serif"
 const FM = "'JetBrains Mono', 'SF Mono', monospace"
+// services/outreachQuota.js HARD_DAILY_CAP (per account, per Malta day).
+const DAILY_TARGET_CAP = 40
 
 // Deterministic per-account accent palette (spec point 32 — never random,
 // never changes after refresh; assigned by stable DB order).
@@ -588,7 +590,35 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [autoSummary, setAutoSummary] = useState('')
   const pickedInitialPlan = useRef(false)
 
-  useEffect(() => { setPaceDraft(savedMin == null ? '' : String(savedMin)) }, [savedMin])
+  // A background refresh must never overwrite a value the admin is editing
+  // (recovery spec 2026-11-09): sync from the server only while not dirty.
+  const syncedPace = useRef(savedMin == null ? '' : String(savedMin))
+  useEffect(() => {
+    const next = savedMin == null ? '' : String(savedMin)
+    setPaceDraft(cur => (cur === syncedPace.current ? next : cur))
+    syncedPace.current = next
+  }, [savedMin])
+
+  // Daily contact target N with an optional ±5 planning envelope (stored as
+  // the account's target min/max; the hard cap of 40 is enforced per send).
+  const tMin = account.dailyTargetMin, tMax = account.dailyTargetMax
+  const savedTarget = tMin == null || tMax == null ? null : Math.round((tMin + tMax) / 2)
+  const savedVariation: 0 | 5 = tMin != null && tMax != null && tMax - tMin >= 2 ? 5 : 0
+  const [targetDraft, setTargetDraft] = useState(savedTarget == null ? '' : String(savedTarget))
+  const [variationDraft, setVariationDraft] = useState<0 | 5>(savedVariation)
+  const [targetState, setTargetState] = useState<{ busy: boolean; error: string; savedAt: string | null }>({ busy: false, error: '', savedAt: null })
+  const syncedTarget = useRef(targetDraft)
+  useEffect(() => {
+    const next = savedTarget == null ? '' : String(savedTarget)
+    setTargetDraft(cur => (cur === syncedTarget.current ? next : cur))
+    syncedTarget.current = next
+  }, [savedTarget])
+  const targetDirty = targetDraft !== String(savedTarget ?? '') || variationDraft !== savedVariation
+  const targetNumber = targetDraft === '' ? null : Number(targetDraft)
+  const targetValid = targetNumber != null && Number.isInteger(targetNumber) && targetNumber >= 0 && targetNumber <= DAILY_TARGET_CAP
+  const envelope = targetValid
+    ? (targetNumber === 0 ? '0 — no outreach planned' : `plans ${Math.max(1, targetNumber - variationDraft)}–${Math.min(DAILY_TARGET_CAP, targetNumber + variationDraft)} eligible owners/day`)
+    : `enter 0–${DAILY_TARGET_CAP}`
 
   const loadPlans = useCallback(async () => {
     const r = await crmGet(`outreach/plans?accountId=${account.id}`)
@@ -799,6 +829,17 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     } catch (e: any) { setNote(e?.message || 'Failed to save pace') } finally { setVolumeBusy(false) }
   }
 
+  async function saveTarget() {
+    if (!targetValid) { setTargetState(s => ({ ...s, error: `Enter a whole number from 0 to ${DAILY_TARGET_CAP}.` })); return }
+    setTargetState(s => ({ ...s, busy: true, error: '' }))
+    try {
+      const r = await crmJson(`outreach/accounts/${account.id}/daily-target`, 'POST', { target: targetNumber, variation: variationDraft })
+      syncedTarget.current = String(r.target)
+      setTargetState({ busy: false, error: '', savedAt: r.savedAt || new Date().toISOString() })
+      onChanged()
+    } catch (e: any) { setTargetState(s => ({ ...s, busy: false, error: e?.message || 'Failed to save the daily target' })) }
+  }
+
   async function toggleAuto(enabled: boolean) {
     setAutoBusy(true); setNote('')
     try {
@@ -899,6 +940,18 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       </div>
 
       <div className="account-safety-panel">
+        <div className="account-volume-compact account-daily-target">
+          <span>DAILY TARGET · eligible owners</span>
+          <input className="pace-slider" aria-label={`${account.label} daily target slider`} type="range" min={0} max={DAILY_TARGET_CAP} step={1} value={targetValid ? (targetNumber as number) : (savedTarget ?? 0)} onChange={e => setTargetDraft(e.target.value)} />
+          <input aria-label={`${account.label} daily target`} type="text" inputMode="numeric" pattern="[0-9]*" value={targetDraft} placeholder="20" onChange={e => setTargetDraft(e.target.value.replace(/\D/g, '').slice(0, 2))} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveTarget() } }} />
+          <label className="target-variation"><input type="checkbox" checked={variationDraft === 5} onChange={e => setVariationDraft(e.target.checked ? 5 : 0)} /> ±5</label>
+          <button disabled={targetState.busy || !targetDirty || !targetValid} onClick={() => saveTarget()} style={btnGhost}>{targetState.busy ? 'Saving…' : 'Save'}</button>
+          <span className={`account-pace-status ${!targetValid ? 'is-error' : targetDirty ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
+            {targetState.busy ? '… Saving' : !targetValid ? `× ${envelope}` : targetDirty ? `● Unsaved · ${envelope}` : `✓ Saved · ${envelope}${targetState.savedAt ? ` · ${maltaHM(new Date(targetState.savedAt))}` : ''}`}
+          </span>
+          {targetState.error && <small className="pace-missing">{targetState.error}</small>}
+          <small className="pace-unit-help">Workload plan only. Hard cap {DAILY_TARGET_CAP}/day per account; do-not-contact, consent and the 08:30–19:30 window still decide every send. Saving never starts outreach.</small>
+        </div>
         <div className="account-volume-compact">
           <span>DISPATCH PACE · spacing only</span>
           <input className="pace-slider" aria-label={`${account.label} dispatch pace slider`} type="range" min={10} max={50} step={1} value={paceDraft || 10} onChange={e => setPaceDraft(e.target.value)} />

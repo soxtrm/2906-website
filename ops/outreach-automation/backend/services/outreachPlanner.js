@@ -710,7 +710,17 @@ async function autoPrepareAccount(accountId, { baseCount = null, message = null,
       continue
     }
 
-    const target = Math.max(1, Math.min(limit, outreachQuota.drawTarget(account)))
+    // A saved daily target of 0 means no activity for this account (Claude,
+    // 2026-11-09): no list is prepared, the day is shown as blocked.
+    const drawn = outreachQuota.drawTarget(account)
+    if (drawn <= 0) {
+      await db.query(
+        `UPDATE outreach_plans SET scheduled_at=$2, source='auto_blocked:daily_target_zero', status='draft', armed=FALSE, updated_at=NOW()
+          WHERE id=$1`, [plan.id, scheduledAt.toISOString()])
+      results.push({ day: toDateStr(plan.scheduled_date), planId: plan.id, label: plan.label, status: 'blocked', reason: 'daily_target_zero', scheduledAt: scheduledAt.toISOString(), targetCount: 0, preparedCount: 0 })
+      continue
+    }
+    const target = Math.max(1, Math.min(limit, drawn))
     try {
       const generated = await generateList(plan.id, target, {
         actor: 'auto-prepare', topUp: false, previewCursor, excludedPhones,

@@ -21,10 +21,32 @@ const HARD_DAILY_CAP = 40
 
 const normPhone = p => String(p || '').replace(/\D/g, '')
 
+// Claude, 2026-11-09 (recovery spec, Outreach Control): an explicitly saved 0
+// means "no activity" — it used to fall back to 30 via `|| 30`. Only an unset
+// value (null) keeps the 30–40 default.
+const savedOr = (value, fallback) => (value == null || value === '' || !Number.isFinite(Number(value)) ? fallback : Number(value))
+
 function drawTarget(account, rng = Math.random) {
-  const lo = Math.max(1, Math.min(HARD_DAILY_CAP, Number(account?.outreach_daily_target_min) || 30))
-  const hi = Math.max(lo, Math.min(HARD_DAILY_CAP, Number(account?.outreach_daily_target_max) || 40))
+  const lo = Math.max(0, Math.min(HARD_DAILY_CAP, savedOr(account?.outreach_daily_target_min, 30)))
+  const hi = Math.max(lo, Math.min(HARD_DAILY_CAP, savedOr(account?.outreach_daily_target_max, 40)))
   return lo + Math.floor(rng() * (hi - lo + 1))
+}
+
+// Daily target N with an optional ±5 planning envelope, clamped to the hard
+// cap. A planning range for eligible contacts only — the cap above is still
+// enforced per send, and the envelope never raises it.
+const TARGET_VARIATIONS = [0, 5]
+function targetEnvelope(target, variation = 5) {
+  const n = Number(target)
+  const v = Number(variation)
+  if (!Number.isInteger(n) || n < 0 || n > HARD_DAILY_CAP) {
+    const err = new Error(`daily target must be a whole number from 0 to ${HARD_DAILY_CAP}`); err.code = 'invalid_target'; throw err
+  }
+  if (!TARGET_VARIATIONS.includes(v)) {
+    const err = new Error('variation must be 0 or 5'); err.code = 'invalid_target'; throw err
+  }
+  if (n === 0) return { target: 0, variation: v, min: 0, max: 0 }
+  return { target: n, variation: v, min: Math.max(1, n - v), max: Math.min(HARD_DAILY_CAP, n + v) }
 }
 
 async function ensureDay(client, accountId, day, rng) {
@@ -116,4 +138,4 @@ async function status(accountId, { now = new Date(), rng = Math.random } = {}) {
   }
 }
 
-module.exports = { HARD_DAILY_CAP, drawTarget, reserve, markSent, release, status }
+module.exports = { targetEnvelope, TARGET_VARIATIONS, HARD_DAILY_CAP, drawTarget, reserve, markSent, release, status }

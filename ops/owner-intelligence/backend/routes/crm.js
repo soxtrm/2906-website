@@ -630,6 +630,29 @@ router.get('/outreach/accounts/:accountId/quota', auth, adminOnly, async (req, r
   } catch (err) { outreachAutomationError(res, err, 'Failed to read daily quota') }
 })
 
+// Daily contact target N (0–40) with an optional ±5 planning envelope
+// (Claude, 2026-11-09, recovery spec "Outreach Control"). Stored as the
+// existing outreach_daily_target_min/max; the hard per-send cap of 40 stays
+// in services/outreachQuota.js. Saving never arms, prepares or sends.
+router.post('/outreach/accounts/:accountId/daily-target', auth, adminOnly, async (req, res) => {
+  try {
+    const accountId = Number.parseInt(req.params.accountId, 10)
+    if (!accountId) return res.status(400).json({ error: 'valid accountId required' })
+    const quota = require('../services/outreachQuota')
+    const envelope = quota.targetEnvelope(req.body?.target, req.body?.variation == null ? 5 : req.body.variation)
+    const r = await db.query(
+      `UPDATE whatsapp_accounts SET outreach_daily_target_min=$2, outreach_daily_target_max=$3
+        WHERE id=$1 RETURNING id, outreach_daily_target_min, outreach_daily_target_max, NOW() AS saved_at`,
+      [accountId, envelope.min, envelope.max])
+    if (!r.rows.length) return res.status(404).json({ error: 'account not found' })
+    log.info('outreach daily target saved', { accountId, ...envelope, actor: req.agent?.username || 'admin' })
+    res.json({ ok: true, ...envelope, cap: quota.HARD_DAILY_CAP, savedAt: r.rows[0].saved_at })
+  } catch (err) {
+    if (err.code === 'invalid_target') return res.status(400).json({ error: err.message, code: err.code })
+    outreachAutomationError(res, err, 'Failed to save the daily target')
+  }
+})
+
 router.get('/outreach/persona-templates', auth, adminOnly, async (req, res) => {
   try {
     const persona = req.query.persona ? String(req.query.persona).toLowerCase() : null
