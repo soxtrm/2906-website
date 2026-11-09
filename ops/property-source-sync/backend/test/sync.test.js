@@ -139,7 +139,11 @@ test('26 reject keeps the CRM unchanged and the item in source history', async (
   await Sync.ingestSnapshot(L, longLets())
   const before = (await q(`SELECT COUNT(*)::int n FROM properties`))[0].n
   const [ev] = await pending(L, 'NEW')
+  await assert.rejects(Sync.decide(ev.id, 'reject', admin), /reason/)
   await Sync.decide(ev.id, 'reject', admin, { note: 'not our segment' })
+  const [rej] = await q(`SELECT decision_note FROM property_source_events WHERE id=$1`, [ev.id])
+  assert.equal(rej.decision_note, 'not our segment')
+  assert.equal((await Sync.summary()).totals.rejected, 1)
   assert.equal((await q(`SELECT COUNT(*)::int n FROM properties`))[0].n, before)
   const [w] = await q(`SELECT import_status FROM website_source_inventory WHERE id=$1`, [ev.wsi_id])
   assert.equal(w.import_status, 'REJECTED')

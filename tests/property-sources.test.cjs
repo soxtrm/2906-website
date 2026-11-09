@@ -50,7 +50,7 @@ async function mount(page, s) {
     if (p === 'me') return json({ agent: { id: 1, username: 'admin', name: 'Kevin', role: 'admin', email: 'a@b' }, reveals: { used: 0, limit: 50 } })
     if (p === 'property-sources/summary') {
       const pending = s.events.filter(e => e.status === 'PENDING')
-      const totals = { new: pending.filter(e => e.event_type === 'NEW').length, updated: pending.filter(e => /UPDATED|CHANGED/.test(e.event_type)).length, check: pending.filter(e => e.event_type === 'MISSING_FROM_SOURCE').length }
+      const totals = { new: pending.filter(e => e.event_type === 'NEW').length, updated: pending.filter(e => /UPDATED|CHANGED/.test(e.event_type)).length, check: pending.filter(e => e.event_type === 'MISSING_FROM_SOURCE').length, rejected: s.events.filter(e => e.status === 'REJECTED').length }
       s.sources[0].pending = totals
       return json({ sources: s.sources, totals, digests: [{ id: 99, createdAt: now, source_id: 1, scan_id: 5, label: 'My Next Home · Long Let', counts: { new: 2, price_updated: 1, availability_changed: 0, details_changed: 0, media_changed: 0, missing: 1 } }] })
     }
@@ -134,11 +134,31 @@ for (const [label, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 8
       await page.evaluate(() => [...document.querySelectorAll('[data-testid="event-14"] button')].find(b => /Noted/.test(b.textContent)).click())
       await page.waitForFunction(() => !document.querySelector('[data-testid="event-14"]'))
 
+      // Reject requires a reason, which is sent and kept.
+      await page.evaluate(() => [...document.querySelectorAll('[data-testid="event-12"] button')].find(b => /Reject/.test(b.textContent)).click())
+      await page.waitForSelector('[data-testid="reject-reason"]')
+      const rejectDisabled = await page.$eval('[data-testid="detail"]', n => [...n.querySelectorAll('button')].find(b => /Reject with reason/.test(b.textContent)).disabled)
+      assert.equal(rejectDisabled, true)
+      await page.type('[data-testid="reject-reason"]', 'Already listed by the owner directly')
+      await page.evaluate(() => [...document.querySelectorAll('[data-testid="detail"] button')].find(b => /Reject with reason/.test(b.textContent)).click())
+      await page.waitForFunction(() => !document.querySelector('[data-testid="event-12"]'))
+      assert.deepEqual(s.posts.find(p => p.action === 'reject').body, { fingerprint: 'f12', note: 'Already listed by the owner directly' })
+      assert.match(await page.$eval('[data-testid="kpi-rejected"]', n => n.textContent), /Rejected\s*1/)
+
       // Price change row shows old → new.
       assert.match(await page.$eval('[data-testid="event-13"]', n => n.textContent), /€1,500 → €1,400/)
       // No horizontal overflow at this width.
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no horizontal overflow')
       await page.screenshot({ path: path.join(OUT, `after-${width}.png`), fullPage: true })
+      // Refresh: decisions persist (served by the backend), queue reloads.
+      await page.reload({ waitUntil: 'networkidle2' })
+      await page.waitForSelector('[data-testid="property-sources"]')
+      assert.deepEqual(await page.$$eval('[data-testid^="event-"]', n => n.map(x => x.dataset.testid)), ['event-13'])
+      // Empty state after the last open proposal is handled.
+      s.events.find(e => e.id === 13).status = 'ACCEPTED'
+      await page.reload({ waitUntil: 'networkidle2' })
+      await page.waitForSelector('[data-testid="queue-empty"]')
+      assert.match(await page.$eval('[data-testid="queue-empty"]', n => n.textContent), /No proposals/)
       assert.deepEqual(errors, [])
     } finally { await browser.close() }
   })

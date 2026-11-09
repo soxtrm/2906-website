@@ -17,7 +17,7 @@ type Source = {
   media_use: 'LINK_ONLY' | 'LICENSED'; text_use: 'METADATA_ONLY' | 'LICENSED'; import_mode: string
   sync_enabled: boolean; interval_hours: number; next_check_at: string | null; last_check_at: string | null; last_success_at: string | null
   last_error: string | null; consecutive_failures: number; complete_scan_count: number; version: number
-  polling_allowed: boolean; polling_blockers: string[]; pending: { new: number; updated: number; check: number }
+  polling_allowed: boolean; polling_blockers: string[]; pending: { new: number; updated: number; check: number; rejected: number }
 }
 type Digest = { id: number; createdAt: string; source_id: number; scan_id: number; label: string; counts: Record<string, number> }
 type Price = { amount: string | null; basis: string | null; conflict?: boolean; quote_count?: number; candidate_prices?: { amount: string; basis: string; evidence: string }[] }
@@ -73,7 +73,7 @@ function PropertySources() {
   const { me } = useCrm()
   const mobile = useIsMobile()
   const [sources, setSources] = useState<Source[]>([])
-  const [totals, setTotals] = useState({ new: 0, updated: 0, check: 0 })
+  const [totals, setTotals] = useState({ new: 0, updated: 0, check: 0, rejected: 0 })
   const [digests, setDigests] = useState<Digest[]>([])
   const [events, setEvents] = useState<EventRow[]>([])
   const [filter, setFilter] = useState({ status: 'OPEN', type: '', source: '' })
@@ -148,9 +148,9 @@ function PropertySources() {
           </div>
         )}
 
-        <section aria-label="Review totals" style={{ display: 'grid', gridTemplateColumns: mobile ? 'repeat(3, 1fr)' : 'repeat(3, minmax(0, 220px)) 1fr', gap: 10, alignItems: 'stretch' }}>
-          {[['New', totals.new, '#3ECF8E', 'NEW'], ['Updated', totals.updated, '#F2A53D', 'PRICE_UPDATED'], ['Check', totals.check, '#F2597A', 'MISSING_FROM_SOURCE']].map(([l, n, c, t]) => (
-            <button key={String(l)} data-testid={`kpi-${String(l).toLowerCase()}`} onClick={() => setFilter(f => ({ ...f, status: 'OPEN', type: t === 'PRICE_UPDATED' ? '' : String(t) }))}
+        <section aria-label="Review totals" style={{ display: 'grid', gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(4, minmax(0, 180px)) 1fr', gap: 10, alignItems: 'stretch' }}>
+          {[['New', totals.new, '#3ECF8E', 'NEW'], ['Updated', totals.updated, '#F2A53D', 'PRICE_UPDATED'], ['Check', totals.check, '#F2597A', 'MISSING_FROM_SOURCE'], ['Rejected', totals.rejected, DTEXT_DIM, 'REJECTED']].map(([l, n, c, t]) => (
+            <button key={String(l)} data-testid={`kpi-${String(l).toLowerCase()}`} onClick={() => setFilter(f => t === 'REJECTED' ? { ...f, status: 'REJECTED', type: '' } : ({ ...f, status: 'OPEN', type: t === 'PRICE_UPDATED' ? '' : String(t) }))}
               style={{ ...ui.card, textAlign: 'left', cursor: 'pointer', padding: mobile ? 12 : 16 }}>
               <div style={ui.label}>{l}</div><div style={{ fontSize: mobile ? 24 : 30, fontWeight: 800, color: String(c), lineHeight: 1.1 }}>{n}</div>
             </button>
@@ -175,7 +175,7 @@ function PropertySources() {
                   <Chip tone={s.sync_enabled ? '#3ECF8E' : DTEXT_DIM}>{s.sync_enabled ? `Auto · every ${s.interval_hours} h` : 'Paused'}</Chip>
                 </header>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <Chip tone="#3ECF8E">{s.pending.new} New</Chip><Chip tone="#F2A53D">{s.pending.updated} Updated</Chip><Chip tone="#F2597A">{s.pending.check} Check</Chip>
+                  <Chip tone="#3ECF8E">{s.pending.new} New</Chip><Chip tone="#F2A53D">{s.pending.updated} Updated</Chip><Chip tone="#F2597A">{s.pending.check} Check</Chip><Chip>{s.pending.rejected} Rejected</Chip>
                 </div>
                 <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', fontSize: 12, margin: 0 }}>
                   <dt style={{ color: DTEXT_DIM }}>Last check</dt><dd style={{ margin: 0 }}>{fmtTime(s.last_check_at)}{s.last_success_at && s.last_success_at !== s.last_check_at ? ` · last success ${fmtTime(s.last_success_at)}` : ''}</dd>
@@ -276,7 +276,7 @@ function PropertySources() {
                     <button style={ui.btn()} onClick={() => openDetail(e.id)}>{e.event_type === 'NEW' ? 'Preview' : 'Compare evidence'}</button>
                     {open && e.event_type !== 'MISSING_FROM_SOURCE' && <button style={ui.btn('primary', !!busy || e.stale)} disabled={!!busy || e.stale} onClick={() => decide(e, 'accept')}>Accept</button>}
                     {open && e.event_type === 'MISSING_FROM_SOURCE' && <button style={ui.btn('primary', !!busy)} disabled={!!busy} onClick={() => decide(e, 'acknowledge')}>Noted · verify</button>}
-                    {open && <button style={ui.btn('danger', !!busy)} disabled={!!busy} onClick={() => decide(e, 'reject')}>Reject</button>}
+                    {open && <button style={ui.btn('danger', !!busy)} disabled={!!busy} onClick={() => openDetail(e.id)} aria-label={`Reject ${e.current.title}`}>Reject…</button>}
                   </div>
                 </article>
               )
@@ -352,6 +352,7 @@ function RightsForm({ source, onDone }: { source: Source; onDone: (msg: string) 
 
 function DetailPanel({ detail: d, mobile, busy, onClose, onDecide }: { detail: Detail; mobile: boolean; busy: string; onClose: () => void; onDecide: (ev: { id: number; fingerprint: string }, action: string, body?: Record<string, any>) => void }) {
   const [linkId, setLinkId] = useState('')
+  const [reason, setReason] = useState('')
   const open = ['PENDING', 'CLARIFICATION'].includes(d.status)
   const quotes = d.current.price?.candidate_prices || []
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
@@ -417,11 +418,17 @@ function DetailPanel({ detail: d, mobile, busy, onClose, onDecide }: { detail: D
             {d.event_type === 'MISSING_FROM_SOURCE'
               ? <button style={ui.btn('primary', !!busy)} disabled={!!busy} onClick={() => onDecide(d, 'acknowledge')}>Noted · verify with provider</button>
               : <button style={ui.btn('primary', !!busy || d.stale)} disabled={!!busy || d.stale} onClick={() => onDecide(d, 'accept')}>{d.event_type === 'NEW' ? 'Accept as staged draft' : 'Accept change'}</button>}
-            <button style={ui.btn('ghost', !!busy)} disabled={!!busy} onClick={() => onDecide(d, 'clarify')}>Request clarification</button>
-            <button style={ui.btn('danger', !!busy)} disabled={!!busy} onClick={() => onDecide(d, 'reject')}>Reject</button>
+            <button style={ui.btn('ghost', !!busy)} disabled={!!busy} onClick={() => onDecide(d, 'clarify', reason.trim() ? { note: reason.trim() } : {})}>Request clarification</button>
           </div>
         )}
-        {!open && d.decision_result && <div style={{ fontSize: 12, color: DTEXT_DIM }}>Decided {fmtTime(d.decided_at)}: {d.status.toLowerCase()}{d.decision_result.applied ? ` · applied ${d.decision_result.applied.join(', ') || 'nothing'}` : ''}{d.decision_result.skipped?.length ? ` · kept newer owner data for ${d.decision_result.skipped.map((s: any) => s.field).join(', ')}` : ''}</div>}
+        {open && (
+          <section style={{ ...ui.card, display: 'grid', gap: 8 }}>
+            <label style={{ display: 'grid', gap: 4 }}><span style={ui.label}>Reason (required to reject, kept in history)</span>
+              <textarea data-testid="reject-reason" rows={2} style={{ ...ui.input, resize: 'vertical' }} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Already listed by the owner directly" /></label>
+            <button style={ui.btn('danger', !!busy || !reason.trim())} disabled={!!busy || !reason.trim()} onClick={() => onDecide(d, 'reject', { note: reason.trim() })}>Reject with reason</button>
+          </section>
+        )}
+        {!open && d.decision_result && <div style={{ fontSize: 12, color: DTEXT_DIM }} data-testid="decision">Decided {fmtTime(d.decided_at)}: {d.status.toLowerCase()}{(d as any).decision_note ? ` — “${(d as any).decision_note}”` : ''}{d.decision_result.applied ? ` · applied ${d.decision_result.applied.join(', ') || 'nothing'}` : ''}{d.decision_result.skipped?.length ? ` · kept newer owner data for ${d.decision_result.skipped.map((s: any) => s.field).join(', ')}` : ''}</div>}
       </div>
     </div>
   )

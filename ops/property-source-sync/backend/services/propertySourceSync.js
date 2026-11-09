@@ -370,6 +370,7 @@ async function decide(eventId, action, agent, opts = {}) {
     let status, result = { action }, propertyId = wsi.canonical_property_id || null
 
     if (action === 'reject') {
+      if (!String(opts.note || '').trim()) throw new SyncError('REASON_REQUIRED', 'Give a reason for rejecting; it stays in the source history', 422)
       status = 'REJECTED'
       if (ev.event_type === 'NEW') await q.query(`UPDATE website_source_inventory SET import_status='REJECTED', review_notes=$2, updated_at=NOW() WHERE id=$1`, [wsi.id, `Rejected in Property Sources by agent ${agent.id}${opts.note ? `: ${String(opts.note).slice(0, 300)}` : ''}`])
     } else if (action === 'clarify') {
@@ -465,11 +466,13 @@ async function summary() {
             COUNT(*) FILTER (WHERE event_type IN ('PRICE_UPDATED','AVAILABILITY_CHANGED','MEDIA_CHANGED','DETAILS_CHANGED'))::int AS updated,
             COUNT(*) FILTER (WHERE event_type='MISSING_FROM_SOURCE')::int AS check
        FROM property_source_events WHERE status IN ('PENDING','CLARIFICATION') GROUP BY source_id`)
+  const { rows: rejected } = await db.query(`SELECT source_id, COUNT(*)::int AS n FROM property_source_events WHERE status='REJECTED' GROUP BY source_id`)
+  const rej = Object.fromEntries(rejected.map(r => [r.source_id, r.n]))
   const { rows: digests } = await db.query(
     `SELECT id, details, created_at FROM agent_activity_log WHERE action_type='SOURCE_SYNC_DIGEST' ORDER BY created_at DESC LIMIT 10`)
   const by = Object.fromEntries(counts.map(c => [c.source_id, c]))
-  const out = sources.map(s => ({ ...s, pending: by[s.id] || { new: 0, updated: 0, check: 0 } }))
-  const totals = out.reduce((t, s) => ({ new: t.new + s.pending.new, updated: t.updated + s.pending.updated, check: t.check + s.pending.check }), { new: 0, updated: 0, check: 0 })
+  const out = sources.map(s => ({ ...s, pending: { new: 0, updated: 0, check: 0, ...(by[s.id] ? { new: by[s.id].new, updated: by[s.id].updated, check: by[s.id].check } : {}), rejected: rej[s.id] || 0 } }))
+  const totals = out.reduce((t, s) => ({ new: t.new + s.pending.new, updated: t.updated + s.pending.updated, check: t.check + s.pending.check, rejected: t.rejected + s.pending.rejected }), { new: 0, updated: 0, check: 0, rejected: 0 })
   return { sources: out, totals, digests: digests.map(d => ({ id: Number(d.id), createdAt: d.created_at, ...d.details })) }
 }
 async function listEvents({ sourceId, status = 'PENDING', type, limit = 200 } = {}) {
