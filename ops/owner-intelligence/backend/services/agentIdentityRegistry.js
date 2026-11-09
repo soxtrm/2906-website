@@ -35,18 +35,26 @@ const PERSONA_IDENTITIES = Object.freeze({
     introAnswer: "I'm a self-employed real estate agent working with 2906 Estate, a collective of independent property agents here in Malta. We work together to connect property owners with suitable tenants and buyers.",
     shortIntroAnswer: "I'm an independent real estate agent working with the 2906 Estate collective here in Malta, mainly assisting clients with rentals and property sales.",
     email: 'kevinsony1@gmail.com',
+    website: 'https://2906.estate',
+    affiliationVerified: true,
   }),
   // Cedric / Gabriela: no email yet. Kev dictated one address for both on
   // 2026-10-30 and asked to verify its spelling first; until then an email
   // question goes to a human (ARGUS_AGENT_IDENTITIES_JSON can add it).
+  // Kev confirmed both affiliations in chat on 2026-11-09 ("Quicklets Cedric,
+  // Gabriela Sothebys"). affiliationVerified gates every agency answer: a
+  // persona set to false (here or via ARGUS_AGENT_IDENTITIES_JSON) goes to a
+  // human instead of naming a firm.
   cedric: Object.freeze({
     persona: 'cedric', name: 'Cedric', fullName: 'Cedric Reiter', agency: 'QuickLets',
     roleNoun: 'a rental agent', position: 'Rental Agent', clientDescription: CLIENT_DESCRIPTION,
+    affiliationVerified: true,
   }),
   gabriela: Object.freeze({
     persona: 'gabriela', name: 'Gabriela', fullName: 'Gabriela', agency: "Sotheby's",
     roleNoun: 'a real estate agent', position: 'Real Estate Agent',
     clientDescription: 'clients looking for suitable long-term rentals, depending on the property',
+    affiliationVerified: true,
   }),
 })
 
@@ -127,8 +135,9 @@ async function resolveIdentityForSession(session, db = null) {
 // "Of course. I'm Kevin Eich, a real estate agent representing 2906 Estate in Malta."
 // A persona with its own approved wording (introAnswer) always uses that.
 function agencyAnswer(identity) {
-  if (identity && identity.introAnswer) return identity.introAnswer
-  if (!identity || !identity.agency) return null
+  if (!identity || identity.affiliationVerified === false) return null
+  if (identity.introAnswer) return identity.introAnswer
+  if (!identity.agency) return null
   const who = identity.fullName || identity.name
   const role = identity.roleNoun || (identity.position ? `a ${identity.position.toLowerCase()}` : 'an agent')
   return `Of course. I'm ${who}, ${role} representing ${identity.agency} in Malta.`
@@ -136,8 +145,9 @@ function agencyAnswer(identity) {
 
 // The second time an owner asks: one short line, never the full intro again.
 function agencyShortAnswer(identity) {
-  if (identity && identity.shortIntroAnswer) return identity.shortIntroAnswer
-  if (!identity || !identity.agency) return null
+  if (!identity || identity.affiliationVerified === false) return null
+  if (identity.shortIntroAnswer) return identity.shortIntroAnswer
+  if (!identity.agency) return null
   return `Sure — I'm ${identity.fullName || identity.name} from ${identity.agency}, based in Malta.`
 }
 
@@ -186,6 +196,13 @@ const AGENCY_QUESTION_PATTERNS = [
   /\bare you (?:from|with) (?:an?|which|what) (?:agency|company)\b/i,
   /\bdo you work (?:independently|for)\b/i,
   /\bwhich agents?\b/i,
+  // Claude, 2026-11-09 (Cedric/Gabriela screenshots): chat shorthand and
+  // "who you represent" without do/are fell through to the intake questions.
+  /\b(?:are|r)\s+u\s+(?:an?\s+)?(?:agent|broker|agency)\b/i,
+  /\bwho\s+(?:you|u)\s+represent\b/i,
+  /\bagent\s+or\s+(?:urs|yours|owner)\b/i,
+  /\b(?:do\s+)?(?:you|u)\s+have\s+(?:your|ur)\s+own\s+propert/i,
+  /\bprivate\s+(?:client|buyer)\s+or\s+(?:a\s+)?(?:broker|agent)\b/i,
 ]
 const AGENCY_QUESTION_RE = new RegExp(AGENCY_QUESTION_PATTERNS.map(r => r.source).join('|'), 'i')
 
