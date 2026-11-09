@@ -91,6 +91,7 @@ test('review queue over HTTP: list → detail → accept / reject; stale and rep
   const target = list.data.find(e => e.current.external_id === items[0].external_id)
   const detail = await call('GET', `/api/crm/property-sources/events/${target.id}`, null, T)
   assert.match(detail.data.privacy.address, /PRIVATE/); assert.equal(detail.data.media.use, 'LINK_ONLY'); assert.deepEqual(detail.data.media.urls, [])
+  assert.equal(detail.data.current.media_source_urls, undefined, 'link-only media URLs are not returned')
   const acc = await call('POST', `/api/crm/property-sources/events/${target.id}/accept`, { fingerprint: target.fingerprint }, T)
   assert.equal(acc.status, 200); assert.ok(acc.data.result.propertyId)
   const again = await call('POST', `/api/crm/property-sources/events/${target.id}/accept`, { fingerprint: target.fingerprint }, T)

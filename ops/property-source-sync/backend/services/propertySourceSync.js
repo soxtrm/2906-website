@@ -493,9 +493,12 @@ async function eventDetail(id) {
   if (!r) throw new SyncError('NOT_FOUND', 'Proposal not found', 404)
   let property = null
   if (r.wsi_property_id) property = (await db.query(`SELECT id, ref, town, bedrooms, bathrooms, longlet_price, sale_price, available_status, available_date, published, system_online, is_staging, last_confirmed_available_at FROM properties WHERE id=$1`, [r.wsi_property_id])).rows[0] || null
-  return { ...r, stale: r.event_type !== 'MISSING_FROM_SOURCE' && r.current_fingerprint !== r.fingerprint, property,
+  const licensed = r.media_use === 'LICENSED'
+  const strip = snap => { if (!snap) return snap; const c = { ...snap }; if (!licensed) delete c.media_source_urls; return c }
+  const mediaCount = (r.current?.media_source_urls || []).length
+  return { ...r, current: strip(r.current), previous: strip(r.previous), stale: r.event_type !== 'MISSING_FROM_SOURCE' && r.current_fingerprint !== r.fingerprint, property,
            privacy: { address: r.current?.private_address_candidate ? 'PRIVATE — admin only, never shared or published' : null },
-           media: { use: r.media_use, count: (r.current?.media_source_urls || []).length, urls: r.media_use === 'LICENSED' ? r.current?.media_source_urls || [] : [], note: r.media_use === 'LICENSED' ? null : 'Link only: open the source page to view photos.' } }
+           media: { use: r.media_use, count: mediaCount, urls: licensed ? r.current?.media_source_urls || [] : [], note: r.media_use === 'LICENSED' ? null : 'Link only: open the source page to view photos.' } }
 }
 async function scans(sourceId, limit = 20) {
   const { rows } = await db.query(`SELECT * FROM property_source_scans WHERE source_id=$1 ORDER BY started_at DESC LIMIT $2`, [sourceId, limit])

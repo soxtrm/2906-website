@@ -1,0 +1,303 @@
+{
+  "captured_at": "2026-11-09",
+  "source": "public category-page textual evidence",
+  "note": "Illustrative offline snapshot assembled from observed public listing page titles and prices. Not a live sync, not confirmation of availability. Media intentionally omitted pending authorization.",
+  "listings": [
+    {
+      "external_id": "6fb0159a62d645b87552",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-first-floor-maisonette/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "long_let",
+      "title": "Hamrun 1-bedroom 1st Floor Maisonette",
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "available_from_source": "01/11/2026",
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": "73 sqm",
+      "price": {
+        "amount": "1300",
+        "basis": "EUR_MONTH",
+        "candidate_prices": [
+          {
+            "amount": "1300",
+            "basis": "EUR_MONTH",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-first-floor-maisonette/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Malta"
+    },
+    {
+      "external_id": "ca49a7380c5a04847f8c",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-2-bedroom-third-floor-apartment/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "long_let",
+      "title": "Hamrun 2-bedroom 3rd Floor Apartment",
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "available_from_source": "01/11/2026",
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": "69.2 sqm",
+      "price": {
+        "amount": "1600",
+        "basis": "EUR_MONTH",
+        "candidate_prices": [
+          {
+            "amount": "1600",
+            "basis": "EUR_MONTH",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-2-bedroom-third-floor-apartment/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Malta"
+    },
+    {
+      "external_id": "047bfa2161441f73c249",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-1-bedroom-fourth-floor-penthouse/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "long_let",
+      "title": "Hamrun 1-bedroom 4th Floor Penthouse",
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "available_from_source": "01/11/2026",
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": "69.7 sqm",
+      "price": {
+        "amount": "1500",
+        "basis": "EUR_MONTH",
+        "candidate_prices": [
+          {
+            "amount": "1500",
+            "basis": "EUR_MONTH",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-1-bedroom-fourth-floor-penthouse/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Malta"
+    },
+    {
+      "external_id": "ddc2d78418c83bd9a723",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/bugibba-qawra-2-bedroom-apartment/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "long_let",
+      "title": "Bugibba / Qawra 2-bedroom Apartment (Apt. 7/2)",
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "available_from_source": "15/12/2026",
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": "76 sqm",
+      "price": {
+        "amount": "1200",
+        "basis": "EUR_MONTH",
+        "candidate_prices": [
+          {
+            "amount": "1200",
+            "basis": "EUR_MONTH",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/bugibba-qawra-2-bedroom-apartment/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Malta"
+    },
+    {
+      "external_id": "404f60c7481195ce01e5",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/bugibba-1-bedroom-first-floor-apartment/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "sale",
+      "title": "Bugibba 1-Bedroom First Floor Apartment",
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "available_from_source": null,
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": "43 sqm",
+      "price": {
+        "amount": "255000",
+        "basis": "EUR_SALE",
+        "candidate_prices": [
+          {
+            "amount": "255000",
+            "basis": "EUR_SALE",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/bugibba-1-bedroom-first-floor-apartment/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Malta"
+    },
+    {
+      "external_id": "4d217637f00192f249d7",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/isla-senglea-2-bedroom-second-floor-apartment/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "sale",
+      "title": "Isla (Senglea) 2-Bedroom Second Floor Apartment",
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "available_from_source": null,
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": null,
+      "price": {
+        "amount": "345000",
+        "basis": "EUR_SALE",
+        "candidate_prices": [
+          {
+            "amount": "345000",
+            "basis": "EUR_SALE",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/isla-senglea-2-bedroom-second-floor-apartment/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Malta"
+    },
+    {
+      "external_id": "6e0e0fc266094a85ff18",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-shop/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "sale",
+      "title": "Hamrun Strada Rjali - Shop (near Top Choice)",
+      "bedrooms": null,
+      "bathrooms": null,
+      "available_from_source": null,
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": null,
+      "price": {
+        "amount": "255000",
+        "basis": "EUR_SALE",
+        "candidate_prices": [
+          {
+            "amount": "255000",
+            "basis": "EUR_SALE",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hamrun-shop/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Malta"
+    },
+    {
+      "external_id": "7ff024903e16d09da18a",
+      "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hotel-commercial-building-in-tripoli-libya/",
+      "source_domain": "www.mynexthome.mt",
+      "category": "sale",
+      "title": "Hotel / Commercial Building in Tripoli - Libya",
+      "bedrooms": 29,
+      "bathrooms": 34,
+      "available_from_source": null,
+      "available_from_conflict": false,
+      "private_address_candidate": null,
+      "total_area": null,
+      "price": {
+        "amount": "2900000",
+        "basis": "EUR_SALE",
+        "candidate_prices": [
+          {
+            "amount": "2900000",
+            "basis": "EUR_SALE",
+            "evidence": "Observed category-page displayed price",
+            "line_index": -1
+          }
+        ],
+        "review_required": false,
+        "reason": "Observed source category page; live status not confirmed"
+      },
+      "media_source_urls": [],
+      "is_authorized_for_publication": false,
+      "availability_state": "SOURCE_LISTED_UNVERIFIED",
+      "source_evidence": {
+        "source_url": "https://www.mynexthome.mt/directory-apartments/listing/hotel-commercial-building-in-tripoli-libya/",
+        "price_evidence": [
+          "Observed category listing price"
+        ]
+      },
+      "market_country": "Libya"
+    }
+  ]
+}
