@@ -51,6 +51,40 @@ test('edit uses injected provider and returns one readable transformed image', a
   assert.deepEqual(result.buffer, expected)
 })
 
+test('provider billing errors are reduced to an actionable non-secret reason', () => {
+  const failure = pipeline.classifyProviderFailure(new Error(JSON.stringify({
+    error: { code: 402, status: 'RESOURCE_EXHAUSTED', message: 'prepayment credits are depleted' },
+  })))
+  assert.deepEqual(failure, {
+    code: 'provider_billing_blocked',
+    terminal: true,
+    message: 'image provider billing is unavailable (402); restore provider credits, then retry this run',
+  })
+})
+
+test('terminal provider failure opens a batch circuit without pretending originals were enhanced', async () => {
+  let calls = 0
+  const providerError = Object.assign(new Error('Your prepayment credits are depleted'), {
+    code: 402,
+    status: 'RESOURCE_EXHAUSTED',
+  })
+  const ai = { models: { generateContent: async () => {
+    calls += 1
+    throw providerError
+  } } }
+  const images = Array.from({ length: 7 }, (_, index) => ({ buffer: png(1600, 1200, index), mimeType: 'image/png' }))
+  const result = await pipeline.processImages({ images, mode: 'premium', ai, store: runStore() })
+
+  assert.ok(calls > 0 && calls <= pipeline.EDIT_CONCURRENCY, `provider calls bounded by concurrency, got ${calls}`)
+  assert.equal(result.editedCount, 0)
+  assert.equal(result.failedCount, 7)
+  assert.equal(result.status, 'failed')
+  assert.equal(result.retryAvailable, true)
+  assert.equal(result.providerFailureCode, 'provider_billing_blocked')
+  assert.ok(result.items.every(item => item.status === 'failed' && item.buffer === null))
+  assert.ok(result.items.every(item => /restore provider credits/.test(item.error)))
+})
+
 test('one edit failure is explicit and never falls back to the original as enhanced', async () => {
   let calls = 0
   const ai = { models: { generateContent: async () => {

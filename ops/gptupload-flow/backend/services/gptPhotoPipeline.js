@@ -72,6 +72,45 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
 
+// Provider errors arrive in several shapes depending on the Google SDK
+// version (Error fields, nested JSON, or a JSON string in `message`).  Reduce
+// them to a stable, non-secret reason before persisting or showing them to an
+// operator.  Terminal errors open a circuit for the rest of the current batch
+// so one billing/auth outage cannot fan out into ten identical paid requests.
+function classifyProviderFailure(error) {
+  const raw = [error?.code, error?.status, error?.message, error?.error?.code,
+    error?.error?.status, error?.error?.message, String(error || '')]
+    .filter(value => value !== undefined && value !== null)
+    .join(' ')
+
+  if (/\b402\b/.test(raw) || /prepayment credits? (?:are )?depleted|billing.*(?:disabled|unavailable|required)/i.test(raw)) {
+    return {
+      code: 'provider_billing_blocked',
+      terminal: true,
+      message: 'image provider billing is unavailable (402); restore provider credits, then retry this run',
+    }
+  }
+  if (/\b(?:401|403)\b/.test(raw) || /api key.*(?:invalid|expired)|permission[_ ]denied|unauthenticated/i.test(raw)) {
+    return {
+      code: 'provider_authorization_blocked',
+      terminal: true,
+      message: 'image provider authorization failed; repair the configured credential, then retry this run',
+    }
+  }
+  if (/\b429\b/.test(raw) || /resource[_ ]exhausted|quota.*(?:exhausted|exceeded)/i.test(raw)) {
+    return {
+      code: 'provider_quota_blocked',
+      terminal: true,
+      message: 'image provider quota is exhausted; retry this run after the provider limit resets',
+    }
+  }
+  return {
+    code: 'provider_request_failed',
+    terminal: false,
+    message: String(error?.message || error || 'image provider request failed').slice(0, 500),
+  }
+}
+
 // Width/height from the image header (PNG, JPEG, WebP) without a decoder.
 // Returns null for anything it cannot read; callers treat that as unknown.
 function imageSize(buffer) {
@@ -383,6 +422,7 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
   let resumedCount = 0
   let lowerResolutionCount = 0
   let completed = 0
+  let providerBlocked = null
   const keyPresent = !!apiKey() || !!ai
   // Bounded parallel edits; every item is written to its own index, so the
   // final order is the input order no matter which edit finishes first.
@@ -403,18 +443,30 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
       editedCount += 1
       resumedCount += 1
       resumed = true
+    } else if (providerBlocked) {
+      error = providerBlocked.message
+      failedCount += 1
+      log.warn('gptPhotoPipeline: image generation skipped; provider circuit open', {
+        runId: id, index: position, stage: 'processing', mode: effectiveMode,
+        providerFailureCode: providerBlocked.code,
+      })
     } else if (keyPresent) {
       try {
         output = await editOne(sourceImage, { facts, auditSummary: audit?.summary, mode: effectiveMode }, { ai })
         status = 'quality_checked'
         editedCount += 1
       } catch (caught) {
-        error = String(caught.message || caught).slice(0, 500)
+        const providerFailure = classifyProviderFailure(caught)
+        if (providerFailure.terminal) providerBlocked = providerFailure
+        error = providerFailure.message
         failedCount += 1
         output = null
         editedUrl = null
         status = 'failed'
-        log.warn('gptPhotoPipeline: image generation failed', { runId: id, index: position, stage: 'processing', mode: effectiveMode, reason: error })
+        log.warn('gptPhotoPipeline: image generation failed', {
+          runId: id, index: position, stage: 'processing', mode: effectiveMode,
+          reason: error, providerFailureCode: providerFailure.code,
+        })
       }
     } else {
       error = 'image editing key unavailable'
@@ -493,6 +545,7 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
     overLimitCount: Math.max(0, images.length - selectedIndices.length), duplicateCount: inputCount - images.length,
     sourceCount: images.length, retryAvailable: failedCount > 0,
     status: failedCount ? 'failed' : 'quality_checked',
+    providerFailureCode: providerBlocked?.code || null,
     models: { edit: editModelForMode(effectiveMode), vision: VISION_MODEL },
   }
 }
@@ -598,5 +651,5 @@ module.exports = {
   MAX_EDIT_IMAGES, MAX_AUDIT_IMAGES, EDIT_MODEL, PLUS_EDIT_MODEL, PLUS_IMAGE_SIZE, VISION_MODEL, EDIT_CONCURRENCY,
   PRESETS, sha256, normaliseAudit, imageSize, mapLimited, dedupeImages, editPriorityIndices,
   normaliseMode, presetFor, editModelForMode, editTypeForMode, editPrompt, validateGeneratedImage,
-  auditImages, editOne, processImages, persistResult, retryRun, responseImage,
+  classifyProviderFailure, auditImages, editOne, processImages, persistResult, retryRun, responseImage,
 }
