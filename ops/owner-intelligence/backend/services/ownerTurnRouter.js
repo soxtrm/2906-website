@@ -283,6 +283,8 @@ function renderAnswer(questions, identity, ctx = {}) {
     if (q === 'identity') {
       if (!agency) return null
       if (ctx.ownerIsAgent) add(`You're right, I missed your question. I'm ${identity.name}, a real estate professional with ${agency} in Malta. Thanks for clarifying that you're an agent too. Would you prefer to discuss potential collaboration rather than a specific property?`)
+      else if (ctx.askedPrivateBuyer) add(`I'm ${identity.name}, a real estate professional with ${agency}, not a private buyer. If you prefer to deal only with private clients, I understand.`)
+      else if (ctx.askedCollaboration) add(`I'm ${identity.name} and I work through ${agency}. Where appropriate, agents can collaborate on suitable properties, subject to the agreed terms. I can explain our role before any details are shared.`)
       else add(identity.introAnswer || `I'm ${identity.name}, a real estate professional working with ${agency} in Malta. I'm contacting you in that professional capacity, not as the owner of a property.`)
     } else if (q === 'automation') {
       if (!agency) return null
@@ -394,7 +396,9 @@ function routeContent({ messages, identity = null, context = {} } = {}) {
   if (questions.length) {
     const ownerIsAgent = /\bi\s*(?:am|'m)\s+(?:an?\s+)?agent\b|\bwe\s+have\s+(?:a\s+)?(?:variety|lot|lots)\s+of\s+clients\b/i.test(ownerText)
       && /\b(?:asked\s+(?:u|you)\s+a\s+question|r\s+u|are\s+(?:u|you))\b/i.test(ownerText)
-    const replyText = renderAnswer(questions, identity, { ...ctx, ownerIsAgent })
+    const askedPrivateBuyer = /\bprivate\s+(?:client|buyer|person)\b/i.test(ownerText)
+    const askedCollaboration = /\bonly\s+for\s+one\b|\bother\s+agenc(?:y|ies)\b|\bwork\s+independently\b/i.test(ownerText)
+    const replyText = renderAnswer(questions, identity, { ...ctx, ownerIsAgent, askedPrivateBuyer, askedCollaboration })
     if (questions.includes('photos_optional')) { facts.private_draft = true; facts.photos = 'pending' }
     const holdReason = replyText ? null
       : (!identity ? 'sender_persona_unknown' : questions.includes('identity') && !identity.affiliationVerified ? 'sender_affiliation_unverified' : 'no_verified_answer')
