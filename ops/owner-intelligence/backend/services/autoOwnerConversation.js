@@ -438,6 +438,26 @@ async function scheduleStep(conversationId, phone, session, sourceMessageId = nu
 // ── Main entry — called from routes/webhook.js for every inbound owner DM.
 // Never throws, never blocks the caller's pipeline; always fire-and-forget
 // from the caller's side.
+// Private draft from a clear offer while a human owns the chat. Never sends,
+// never publishes; skipped when a matching staging draft (same owner, town and
+// bedrooms) was written in the last 30 days.
+async function passiveIntakeDuringTakeover(phone, text, standDownReason) {
+  const decision = require('./ownerTurnRouter').routeOwnerTurn({ messages: [text], context: { humanActive: true } })
+  const f = decision.factsDelta || {}
+  if (decision.route === 'PRIVACY_STOP' || !f.private_draft) return null
+  const dup = await db.query(
+    `SELECT p.id FROM properties p JOIN owner_contacts o ON o.id = p.owner_id
+      WHERE o.phone_normalized = $1 AND p.is_staging = TRUE AND p.created_at > NOW() - INTERVAL '30 days'
+        AND COALESCE(p.town,'') = COALESCE($2,'') AND COALESCE(p.bedrooms,-1) = COALESCE($3,-1) LIMIT 1`,
+    [phone, f.location || null, f.bedrooms ?? null])
+  if (dup.rows.length) return dup.rows[0].id
+  const id = await writeEntityDraft(phone, {
+    town: f.location || null, bedrooms: f.bedrooms ?? null, price: f.transaction === 'sale' ? null : (f.price || null), status: 'pending_check',
+  })
+  log.info('autoOwnerConversation: private draft written during human takeover', { propertyId: id, standDownReason })
+  return id
+}
+
 async function handleOwnerReply({ phone, text, session, hasMedia, mediaMimeType, payload }) {
   // Kev, 2026-08-31 (Prompt 2 T12): a media-only reply (photos, no caption)
   // must still register -- previously requiring non-empty `text` meant 10
@@ -480,6 +500,12 @@ async function handleOwnerReply({ phone, text, session, hasMedia, mediaMimeType,
     // would supersede the stand-down marker (every gate reads the LATEST row) and
     // silently resume. Only a human clearing the marker resumes it.
     const standDownReason = await require('./ownerSendGate').getStandDownReason(phone)
+    // A person handles this chat: no automated reply, but a clear new offer
+    // still becomes a private draft (Claude, 2026-11-09, recovery P0 E).
+    if (standDownReason && standDownReason !== 'permanent_owner_stop' && text) {
+      await passiveIntakeDuringTakeover(phone, text, standDownReason).catch(err =>
+        log.warn('autoOwnerConversation: passive intake failed', { err: err.message }))
+    }
     if (standDownReason === 'human_review_required' || standDownReason === 'permanent_owner_stop') return
 
     // Only ever START a conversation while an Outreach/Foutreach cycle for
@@ -3727,6 +3753,71 @@ async function releaseProcessingLock(conversationId) {
   }
 }
 
+// ── Owner turn router integration (Claude, 2026-11-09) ────────────────────
+// Returns { handled, sentText?, persist?, extraFields?, trace }. handled=false
+// means "continue into the existing intake engine" (offers, facts, follow-ups).
+const ownerTurnRouter = require('./ownerTurnRouter')
+
+async function routeTurn({ conversationId, phone, session, pending, checklist }) {
+  const ownerOptOut = require('./ownerOptOut')
+  const identity = await resolveIdentityForSession(session, db)
+  const globallySuppressed = await ownerOptOut.isGloballySuppressed(phone).catch(() => false)
+  const decision = ownerTurnRouter.routeOwnerTurn({ messages: pending, identity, context: { globallySuppressed } })
+  const trace = {
+    route: decision.route, holdReason: decision.holdReason, questions: decision.questions,
+    persona: decision.senderPersona, version: decision.routerVersion, at: new Date().toISOString(),
+  }
+  const text = pending.join('\n')
+  const R = ownerTurnRouter.ROUTES
+  log.info('autoOwnerConversation: owner turn routed', { conversationId, session, route: decision.route, hold: decision.holdReason })
+
+  if (decision.route === R.PRIVACY_STOP) {
+    await ownerOptOut.markDoNotContact(phone, `Owner asked to stop contact: "${text.replace(/\s+/g, ' ').slice(0, 160)}"`, db,
+      { source: 'owner_turn_router' })
+    await waha.markChatUnread(session, phone).catch(() => {})
+    // markDoNotContact already moved this conversation to human_review_required.
+    return { handled: true, persist: false, trace }
+  }
+
+  if (decision.route === R.HUMAN_HANDOFF || decision.route === R.HUMAN_REVIEW) {
+    await db.query(
+      `UPDATE owner_auto_conversations
+          SET status='human_review_required', automation_disabled=TRUE, pending_job_id=NULL,
+              scheduled_response_at=NULL, cancelled_reason=$2, updated_at=NOW()
+        WHERE id=$1`, [conversationId, `${decision.route}: ${decision.holdReason || 'owner needs a person'}`])
+    await waha.markChatUnread(session, phone).catch(() => {})
+    await notifyAdminEscalation(session, phone,
+      decision.route === R.HUMAN_HANDOFF ? 'OWNER ASKED FOR A PERSON — automation stopped for this chat' : 'OWNER MESSAGE NEEDS HUMAN JUDGEMENT — automation stopped for this chat',
+      `"${text.slice(0, 200)}" (${decision.holdReason || decision.route})`)
+    return { handled: true, extraFields: { _owner_question_needs_human: text.slice(0, 300) }, trace }
+  }
+
+  if (decision.route === R.NO_REPLY || decision.route === R.NO_REPLY_HUMAN_ACTIVE) {
+    return { handled: true, trace }
+  }
+
+  if (decision.route === R.ANSWER_QUESTION) {
+    let reply = decision.shouldSend ? decision.replyText : null
+    // Asked again: one short restatement, then a person (never a third
+    // explanation and never the intake question instead).
+    if (reply && hasAlreadySentExactText(checklist, reply)) {
+      reply = decision.questions.includes('identity') ? agencyRepeatAnswer(identity) : null
+      if (reply && hasAlreadySentExactText(checklist, reply)) reply = null
+    }
+    if (!reply) {
+      await waha.markChatUnread(session, phone).catch(() => {})
+      await notifyAdminEscalation(session, phone, 'OWNER QUESTION — no verified automatic answer; please reply personally',
+        `"${text.slice(0, 200)}" (${decision.holdReason || 'already answered twice'})`)
+      return { handled: true, extraFields: { _owner_question_needs_human: text.slice(0, 300) }, trace }
+    }
+    const sent = await gatedSend(session, phone, reply, conversationId)
+    if (!sent.sent) return { handled: true, persist: false, trace }
+    return { handled: true, sentText: reply, trace }
+  }
+
+  return { handled: false, trace }
+}
+
 async function processStep({ conversationId, phone, session }) {
   // Kev, 2026-08-31 (HARD STOP spec, Point 5 -- "nur EIN Worker darf eine
   // ID besitzen"). Atomic claim: this UPDATE...RETURNING can only succeed
@@ -3779,6 +3870,19 @@ async function processStep({ conversationId, phone, session }) {
         `UPDATE owner_auto_conversations SET checklist=$1, last_bot_message_at=NOW(), updated_at=NOW() WHERE id=$2`,
         [JSON.stringify({ ...updatedChecklist, ...extraFields, _log: log_ }), conversationId]
       )
+    }
+
+    // ── OWNER TURN ROUTER (Claude, 2026-11-09) ──────────────────────────
+    // One typed decision per burst, before any branch below can ask for rent
+    // or bedrooms: privacy stop → handoff/review → answer the owner's question
+    // → (everything else continues into the intake engine below). Evidence and
+    // priority order: services/ownerTurnRouter.js.
+    const routed = await routeTurn({ conversationId, phone, session, pending, checklist: updatedChecklist })
+    updatedChecklist = { ...updatedChecklist, _last_decision: routed.trace }
+    if (routed.handled) {
+      if (routed.sentText) log_.push({ from: 'bot', text: routed.sentText, at: new Date().toISOString() })
+      if (routed.persist !== false) await persistAndReturn(routed.extraFields || {})
+      return
     }
 
     // ── BUSINESS / IDENTITY FIRST ────────────────────────────────────────
@@ -4484,6 +4588,7 @@ module.exports = {
   handleOwnerReply,
   handleFromMeMessage,
   processStep,
+  passiveIntakeDuringTakeover, // called by handleOwnerReply; exported for the worker tests
   isTestNumber,
   isAutomationLive,
   localExtract,

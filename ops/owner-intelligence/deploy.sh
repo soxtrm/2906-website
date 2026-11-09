@@ -36,7 +36,7 @@ for f in "${!EXPECTED[@]}"; do
   A=$(md5sum $B/$f | cut -d' ' -f1)
   [ "$A" = "${EXPECTED[$f]}" ] || { echo "ABORT: production $f changed ($A) — rebase first"; exit 1; }
 done
-NEW=(services/timeGreeting.js services/locationRequest.js services/websitePublication.js services/ownerAttribution.js services/ownerQuestionPlan.js services/ownerOptOut.js services/inventorySecurityGuard.js)
+NEW=(services/timeGreeting.js services/locationRequest.js services/websitePublication.js services/ownerAttribution.js services/ownerQuestionPlan.js services/ownerOptOut.js services/inventorySecurityGuard.js services/ownerTurnRouter.js)
 for f in "${NEW[@]}"; do [ ! -e $B/$f ] || { echo "ABORT: $f already exists in production"; exit 1; }; done
 # timeGreeting needs the outreach automation's central time module.
 [ -e $B/services/outreachSchedule.js ] || { echo "ABORT: services/outreachSchedule.js missing (deploy outreach automation first)"; exit 1; }
