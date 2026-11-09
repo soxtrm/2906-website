@@ -35,7 +35,9 @@ test('complaint path: automation stopped AND the owner becomes do-not-contact (s
   assert.deepStrictEqual([c.do_not_contact, c.status], [true, 'do_not_contact'])
   assert.match(c.do_not_contact_reason, /remove me from your list/)
   const gate = await Elig.checkBeforeSend({ phone: OWNER, session: 'Kevsecond', force: true })
-  assert.deepStrictEqual([gate.allowed, gate.reason], [false, 'dnc'], 'no account may send again, not even in force mode')
+  // Since a610faa the global suppression check runs first; either block is correct.
+  assert.strictEqual(gate.allowed, false, 'no account may send again, not even in force mode')
+  assert.ok(['dnc', 'global_suppression'].includes(gate.reason), gate.reason)
 })
 
 test('central conversation path: same text → do-not-contact with status and reason', async () => {
