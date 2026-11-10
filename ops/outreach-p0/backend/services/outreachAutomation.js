@@ -329,6 +329,8 @@ async function runPreflight(planId, now = new Date()) {
   if (!(await check('template_approved', templateOk, { mode: config.templateMode, persona }))) {
     return fail('no_approved_template', { suspendReason: 'no_approved_template', recoverable: false })
   }
+  // P0: a saved target of 0 is reported as such, not as a full daily cap.
+  if (Number(config.targetBase) === 0 && !plan.target_snapshot) { await check('target_positive', false, { target: 0 }); return fail('daily_target_zero') }
   const quota = await outreachQuota.status(plan.account_id, { now: at }).catch(() => null)
   if (!(await check('daily_cap', !!quota && quota.remaining > 0, { remaining: quota?.remaining }))) return fail('daily_cap_reached')
   const target = Math.min(plan.target_snapshot || config.targetBase, quota.remaining)
