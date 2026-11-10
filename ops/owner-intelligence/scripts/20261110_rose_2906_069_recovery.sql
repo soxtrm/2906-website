@@ -20,6 +20,13 @@ BEGIN
      WHERE property_id=p.id AND activity_type='owner_shared_place_recovery'
        AND details->>'source'='rose_p0_recovery_20261110'
   ) THEN
+    UPDATE conversation_intelligence_state SET
+      human_active=TRUE,
+      automation_status='AGENT_TAKEOVER',
+      automation_reason='Rose shared-place correction requires authorized review',
+      automation_changed_at=NOW(),
+      updated_at=NOW()
+    WHERE owner_contact_id=p.owner_id;
     RAISE NOTICE 'rose recovery already applied';
     RETURN;
   END IF;
@@ -34,6 +41,14 @@ BEGIN
   END IF;
   SELECT * INTO oc FROM owner_contacts WHERE id=p.owner_id;
   IF NOT FOUND OR COALESCE(oc.phone_normalized,'')='' THEN RAISE EXCEPTION 'rose recovery guard: owner contact missing'; END IF;
+
+  UPDATE conversation_intelligence_state SET
+    human_active=TRUE,
+    automation_status='AGENT_TAKEOVER',
+    automation_reason='Rose shared-place correction requires authorized review',
+    automation_changed_at=NOW(),
+    updated_at=NOW()
+  WHERE owner_contact_id=oc.id;
 
   ctx=jsonb_build_object(
     'propertyId',p.id,'ref',p.ref,'sourceMessageId',source_message,'sourceTimestamp',source_time,
