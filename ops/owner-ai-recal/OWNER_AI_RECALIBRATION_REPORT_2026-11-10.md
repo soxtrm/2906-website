@@ -68,3 +68,41 @@ Unchanged by design:
 | `/crm/owner-quality` in Chromium at 1440 / 390 / 360 | **3/3** |
 
 Evidence: `evidence/runtime/runtime-{before,after}.json|.tap`, `quality.tap`, `backend/test/out/golden136-traces.jsonl`, `tests/screenshots/owner-quality/`.
+
+## 4. Production deployment (2026-11-10, after the 19:30 Malta send window; 0 active outreach runs)
+
+| Step | Time (UTC) | Backup / rollback |
+|---|---|---|
+| Outreach P0 backend (`ops/outreach-p0/deploy.sh`) | 18:32 | `/opt/2906-system/backups/outreach-p0-20261110T183219Z` (rollback command printed by the script) |
+| Owner AI recalibration backend (`ops/owner-ai-recal/deploy.sh`) | 18:33 | `/opt/2906-system/backups/owner-ai-recal-20261110T183333Z`: restore the 4 files, delete the 5 new ones, restart, then run `20261110_owner_ai_recal.down.sql` |
+| Facts-engine hotfix `$9::timestamptz` | 19:13 | `/opt/2906-system/backups/facts-engine-param9-20261110T191308Z/conversationIntelligence.js` |
+| Frontend `main` → Vercel | 19:13 | `origin/main` 46e449b (previous d9873bb) |
+
+Installed md5 (live): autoOwnerConversation `5f26ddb0`, agentIdentityRegistry `8680d831`, ownerDecision `407c36f5`,
+ownerDecisionRuntime `7a6c59f9`, ownerQualityReport `edc41280`, ownerTurnRouter `d7cbd363`, timeGreeting `7ba8b256`,
+routes/crm.js `d5a254d7`, cron.js `82d18fe6`, conversationIntelligence `5e6a7ea4`.
+
+Verified live:
+- `properties.floor_level` and `parking_type` exist.
+- All 7 `owner_ai_*` tables exist.
+- `EMAIL_QUESTION_RE` is exported and `conversationPolicy.interpretInbound` runs.
+- `timeGreeting.fixForSend` works.
+- Decision smoke check: `ACKNOWLEDGE_UPDATE/STUDIO_EXPLICIT`.
+- Weekly schedule next run: 2026-11-16 07:30 UTC (08:30 Malta).
+- `/api/crm/owner-quality/*` returns 401 without a session.
+- Regression run recorded, code `2e5a1961…`.
+- Account Auto/target snapshot identical before and after.
+- No V2 config enabled.
+
+First live decisions: 3 × `DEFER/OUT_OF_HOURS` (19:33–20:03 Malta), nothing sent.
+
+Template rotation (Outreach P0 migration, planner_v2):
+- The founder-rejected slot-4 morning rows ("reaching out to owners who may have…") for kev, cedric and gabriela are now inactive.
+- Gabriela slot 5 (approved in the planner_v2 migration) is in rotation.
+- The 24 new persona introductions remain DRAFT.
+
+First real weekly report (`0f291ccf…`, 3–9 Nov, before the fix):
+- 275 conversations, 591 owner messages, 603 automated replies.
+- 295 issues: 4 P0, 284 P1, 7 P2.
+- Release decision HOLD.
+- P0 cases: 3 × "removed from listings" for mixed rented/available messages; 1 × "How many bedrooms?" after "you have the wrong person".

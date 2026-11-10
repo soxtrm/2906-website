@@ -34,7 +34,12 @@ docker exec 2906_postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -
 [ -s "$BK/outreach_tables.sql" ] || { echo "ABORT: empty backup"; exit 1; }
 SNAP="SELECT string_agg(id||':'||COALESCE(outreach_auto_enabled::text,'')||':'||COALESCE(outreach_enabled::text,'')||':'||COALESCE(outreach_daily_target_min::text,'')||'-'||COALESCE(outreach_daily_target_max::text,'')||':'||COALESCE(outreach_pace_min::text,'')||'-'||COALESCE(outreach_pace_max::text,''), ',' ORDER BY id) FROM whatsapp_accounts"
 q "$SNAP" > "$BK/accounts_before.txt"
-q "SELECT persona||'/'||slot||'/'||period FROM outreach_persona_templates WHERE active AND COALESCE(status,'approved')='approved' ORDER BY 1" > "$BK/live_templates_before.txt"
+# Before planner_v2 there is no status column: every active row is live.
+if [ "$(q "SELECT count(*) FROM information_schema.columns WHERE table_name='outreach_persona_templates' AND column_name='status'")" = "1" ]; then
+  q "SELECT persona||'/'||slot||'/'||period FROM outreach_persona_templates WHERE active AND status='approved' ORDER BY 1" > "$BK/live_templates_before.txt"
+else
+  q "SELECT persona||'/'||slot||'/'||period FROM outreach_persona_templates WHERE active ORDER BY 1" > "$BK/live_templates_before.txt"
+fi
 cp "$SRC"/migrations/20261109_outreach_planner_v2*.sql "$SRC"/migrations/20261110_outreach_p0*.sql "$BK/"
 echo "backup: $BK"
 
