@@ -57,6 +57,17 @@ UPDATE property_photo_edits SET
     ELSE failure_code
   END;
 
+-- Old runs often stored the actionable provider failure only on each item.
+-- Lift that persisted evidence to the batch so 0/N is shown as blocked by the
+-- provider rather than as a vague retryable failure.
+UPDATE property_photo_processing_runs r SET
+  phase='BLOCKED_PROVIDER',
+  failure_code='PROVIDER_BILLING_BLOCKED'
+WHERE EXISTS (
+  SELECT 1 FROM property_photo_edits e
+   WHERE e.run_id=r.run_id AND e.failure_code='PROVIDER_BILLING_BLOCKED'
+);
+
 ALTER TABLE property_photo_processing_events
   DROP CONSTRAINT IF EXISTS property_photo_processing_events_stage_check;
 ALTER TABLE property_photo_processing_events

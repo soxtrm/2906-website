@@ -9,7 +9,7 @@ DECLARE
   source_message TEXT;
   source_time TIMESTAMPTZ;
   evidence TEXT;
-  agent_id INTEGER;
+  notification_agent_id INTEGER;
   ctx JSONB;
   ctx_hash TEXT;
 BEGIN
@@ -70,10 +70,10 @@ BEGIN
     proposed_action=EXCLUDED.proposed_action,proposed_message=EXCLUDED.proposed_message,
     approval_context_hash=NULL,approved_at=NULL,approved_by=NULL,resolved_at=NULL,resolution=NULL,updated_at=NOW();
 
-  agent_id=COALESCE(p.listed_by_agent_id,p.activity_agent_id);
-  IF agent_id IS NOT NULL THEN
+  notification_agent_id=COALESCE(p.listed_by_agent_id,p.activity_agent_id);
+  IF notification_agent_id IS NOT NULL THEN
     INSERT INTO agent_listing_notifications(agent_id,property_id,kind,status_label,detail,notified_at)
-    VALUES(agent_id,p.id,'owner_shared_place','Review shared-place offer',
+    VALUES(notification_agent_id,p.id,'owner_shared_place','Review shared-place offer',
       'Verified owner evidence: one additional shared-accommodation place at EUR 800 per person; viewing welcomed. Corrective reply requires approval.',NOW())
     ON CONFLICT(agent_id,property_id,kind) DO UPDATE SET
       status_label=EXCLUDED.status_label,detail=EXCLUDED.detail,notified_at=NOW(),seen_at=NULL;

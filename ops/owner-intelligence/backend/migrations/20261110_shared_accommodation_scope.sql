@@ -9,6 +9,13 @@ ALTER TABLE properties
   ADD COLUMN IF NOT EXISTS whole_property_total_rent NUMERIC,
   ADD COLUMN IF NOT EXISTS viewing_invited BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- The existing sourced-fact writer already records this discriminator.  The
+-- original conversation-recovery migration added the surrounding provenance
+-- columns but omitted source_type, so a fresh/live rollout must repair that
+-- schema gap before the shared-place facts are committed.
+ALTER TABLE conversation_facts
+  ADD COLUMN IF NOT EXISTS source_type TEXT;
+
 ALTER TABLE properties
   DROP CONSTRAINT IF EXISTS properties_available_place_count_nonnegative,
   ADD CONSTRAINT properties_available_place_count_nonnegative
