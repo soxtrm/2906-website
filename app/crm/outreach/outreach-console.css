@@ -118,3 +118,36 @@
 .template-period h3{margin:18px 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9aa5bb}.template-period{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.template-period>h3{grid-column:1/-1}
 .template-card{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid #222c40;border-radius:12px;background:#0b111b}.template-card.is-off{opacity:.55}.template-card header,.template-card footer{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#9aa5bb}.template-card textarea{width:100%;min-height:110px;padding:9px;border:1px solid #1b2436;border-radius:8px;background:#070b12;color:#e4e8f4;font:12.5px/1.5 inherit;resize:vertical}
 @media(max-width:900px){.queue-mission:has(.queue-automation){min-height:0}.queue-automation{position:static;width:100%;margin-top:14px}.engagement-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.engagement-levels{grid-template-columns:repeat(3,minmax(0,1fr))}.template-period{grid-template-columns:1fr}.call-list>div{grid-template-columns:1fr auto}.call-list>div>small{grid-column:1/-1}.engagement-lane,.template-library{margin:12px 14px;padding:15px}}
+
+/* Outreach recovery 2026-11-07: one stable pace value with a real local edit
+   state. The slider and numeric field share space without widening the page. */
+.argus-workspace{max-width:100%;overflow-x:clip}
+.argus-workspace *{box-sizing:border-box;min-width:0}
+.account-volume-compact{grid-template-columns:minmax(130px,auto) minmax(120px,1fr) 58px auto auto}
+.account-volume-compact .pace-slider{width:100%;min-width:0}
+.account-volume-compact input[type=text]{width:58px;padding:7px 8px;border:1px solid var(--crm-border);border-radius:8px;background:var(--crm-surface);color:var(--crm-text);font-weight:800;text-align:center}
+.account-volume-compact .pace-unit-help{grid-column:1/-1;color:var(--crm-faint);font-size:9.5px;line-height:1.45}
+
+@media(max-width:700px){
+  .argus-workspace{width:100%;padding-bottom:max(96px,calc(72px + env(safe-area-inset-bottom)))}
+  .outreach-control-layout,.outreach-hero,.argus-workspace .outreach-main-tabs{max-width:100%}
+  .argus-workspace .outreach-main-tabs{overflow-x:auto;scrollbar-width:none}.argus-workspace .outreach-main-tabs::-webkit-scrollbar{display:none}
+  .argus-workspace .outreach-main-tabs button{flex:0 0 auto;min-width:max-content}
+  .outreach-control-layout{padding:12px 10px 110px}
+  .outreach-control-layout .outreach-account-grid{margin-inline:-2px;max-width:calc(100vw - 20px)}
+  .outreach-control-layout .account-slot{flex-basis:min(82vw,280px)}
+  .argus-workspace .queue-console{width:100%;max-width:100%;padding:12px!important;border-radius:16px!important;overflow:visible}
+  .queue-day-tabs>div:first-child{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px!important}
+  .queue-day-tabs>div:first-child button{width:100%}.queue-day-tabs>div:first-child button:last-child{grid-column:1/-1}
+  .queue-contacts,.queue-message,.queue-release{padding:13px}
+  .account-volume-compact{grid-template-columns:1fr 54px auto;gap:8px}
+  .account-volume-compact>span{grid-column:1/-1}.account-volume-compact .pace-slider{grid-column:1/-1}
+  .account-volume-compact button{width:100%}.account-volume-compact .account-pace-status{grid-column:1/-1}
+  .queue-time-readout{grid-template-columns:auto auto}.queue-time-readout small{grid-column:1/-1;text-align:left}
+  .queue-message>div,.queue-release>div{max-width:100%}
+  .queue-message textarea,.queue-contacts textarea,.template-card textarea{font-size:16px!important}
+  .template-library,.engagement-lane{margin:10px;padding:12px;border-radius:15px}
+  .persona-tabs{width:100%;overflow-x:auto}.persona-tabs button{flex:0 0 auto}
+  .template-card header,.template-card footer{gap:8px;flex-wrap:wrap}.template-card footer button{width:100%}
+  .call-list>div{overflow-wrap:anywhere}
+}

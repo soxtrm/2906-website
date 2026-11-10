@@ -5,6 +5,8 @@ import './outreach-console.css'
 import { crmGet, crmJson } from '@/lib/crm/api'
 import { normalizeOutreachCountDraft } from '@/lib/crm/outreach-count'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
+import { AccountRail, ActivityView, AutomationSetup, DayDetail, DayTimeline, KpiBar, LazyDetails, TemplateReview, useOverview, type DayCell } from './control-center'
+import { AccountCards, AutoPauseRow, HealthFilter, PaceCard, PersonaPreview, SevenDays, healthMatches, type P0Account } from './outreach-p0'
 
 // ── ARGUS / NEON design tokens ───────────────────────────────────────────────
 const BG = 'var(--crm-bg)'
@@ -17,6 +19,8 @@ const MUTED = 'var(--crm-muted)'
 const FAINT = 'var(--crm-faint)'
 const F = "'Bricolage Grotesque', 'Inter', system-ui, sans-serif"
 const FM = "'JetBrains Mono', 'SF Mono', monospace"
+// services/outreachQuota.js HARD_DAILY_CAP (per account, per Malta day).
+const DAILY_TARGET_CAP = 40
 
 // Deterministic per-account accent palette (spec point 32 — never random,
 // never changes after refresh; assigned by stable DB order).
@@ -162,10 +166,10 @@ function cooldownState(account: Account) {
 }
 
 // Kev, 2026-10-29: no more "last send + 24h15" chain. Instead each day follows
-// the day before it +16 min ("sobald ich ne zeit bei today setze, morgen +16
+// the day before it +15 min. The backend owns the same default and the
 // min"); the backend applies the same rule when ARM sets a time and when Auto
 // prepares. Without an earlier day the suggestion is a morning start.
-const DAILY_SHIFT_MIN = 16
+const DAILY_SHIFT_MIN = 15
 function suggestTime(plans: Plan[] | null, label: string, _lastOutreachAt: string | null): string {
   const order = ['TODAY', 'TOMORROW', 'IN_2_DAYS', 'IN_3_DAYS', 'IN_4_DAYS']
   const idx = order.indexOf(label)
@@ -236,8 +240,13 @@ function ArgusConsole() {
   // lifted here, not per-console, so saving one in DEFAULT's card makes it
   // immediately available in every other account's card too.
   const [templates, setTemplates] = useState<Template[]>([])
-  const [activeTab, setActiveTab] = useState<'tools' | 'reminders' | 'engagement' | 'templates'>('tools')
+  // Planner V2 (2026-11-09): results first. Overview / Manual planner /
+  // Automation / Templates / Activity; reminders and engagement live under Activity.
+  const [activeTab, setActiveTab] = useState<'overview' | 'manual' | 'automation' | 'templates' | 'activity'>('overview')
+  const [pickedDay, setPickedDay] = useState<DayCell | null>(null)
+  const { data: overview, error: overviewError, reload: reloadOverview } = useOverview()
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
+  const [healthFilter, setHealthFilter] = useState('all')
 
   const load = useCallback(async () => {
     try {
@@ -289,124 +298,103 @@ function ArgusConsole() {
 
   return (
     <CrmShell title="Outreach" subtitle="Accounts, queues and reviewed owner contact." dark><div className="argus-workspace" style={{ minHeight: '100vh', color: TEXT, fontFamily: F, paddingBottom: 60 }}>
-      {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <section className="outreach-hero">
-        <div className="outreach-hero-copy">
-          <span><Radio size={12} aria-hidden /> ARGUS / OUTREACH SYSTEM</span>
-          <h2>Every account.<br /><strong>In sync.</strong></h2>
-          <p>One control layer for outreach identities, protected timing and reviewed owner contact.</p>
-          <div className="outreach-hero-signals" aria-label="System principles">
-            <span><ShieldCheck size={13} /> Reviewed sends</span>
-            <span><Clock3 size={13} /> 08:30–19:30 Malta · max 40/day</span>
-            <span><Layers size={13} /> Separate identities</span>
-          </div>
-        </div>
-        <div className="outreach-orbit" aria-hidden="true">
-          <i /><i /><i />
-          <span><Zap size={25} /><b>ARGUS</b><small>OUTREACH</small></span>
-        </div>
-        <div className="outreach-hero-status">
-          <div className="outreach-status-card">
-            <div style={{ fontSize: 9, color: FAINT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Connected Accounts</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-              {orderedAccounts.map((a, i) => (
-                <span key={a.id} title={a.sessionName} style={{ width: 8, height: 8, borderRadius: '50%', background: a.connected ? accentFor(i).a : 'transparent', border: `1px solid ${a.connected ? accentFor(i).a : FAINT}`, boxShadow: a.connected ? `0 0 6px ${accentFor(i).glow}` : 'none' }} />
-              ))}
-              <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 6 }}>{connectedCount} / {orderedAccounts.length} connected</span>
-            </div>
-          </div>
-          <div className="outreach-status-card time">
-            <div style={{ fontSize: 9, color: FAINT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Europe/Malta</div>
-            <div style={{ fontSize: 15, fontWeight: 700, fontFamily: FM }}>{clock.time} <span style={{ fontSize: 10, color: MUTED, fontFamily: F }}>{clock.date}</span></div>
-          </div>
-          <div className="outreach-status-card wide">
-            <RecentOutreachBars runs={summary?.recentRuns || []} />
-          </div>
-        </div>
-      </section>
+      <KpiBar data={overview} error={overviewError} />
 
-      <nav className="outreach-main-tabs" aria-label="Outreach workspace">
-        <button aria-pressed={activeTab === 'tools'} onClick={() => setActiveTab('tools')}>Outreach tools <span>{outreachAccounts.length}</span></button>
-        <button aria-pressed={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')}>Outreach reminders <span>{dueReminders.rows.length + rechecks.tasks.length}</span></button>
-        <button aria-pressed={activeTab === 'engagement'} onClick={() => setActiveTab('engagement')}>Engagement</button>
+      <nav className="cc-tabs" aria-label="Outreach workspace">
+        <button aria-pressed={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>Overview</button>
+        <button aria-pressed={activeTab === 'manual'} onClick={() => setActiveTab('manual')}>Manual planner</button>
+        <button aria-pressed={activeTab === 'automation'} onClick={() => setActiveTab('automation')}>Automation</button>
         <button aria-pressed={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>Templates</button>
+        <button aria-pressed={activeTab === 'activity'} onClick={() => setActiveTab('activity')}>Activity <span>{dueReminders.rows.length + rechecks.tasks.length || ''}</span></button>
       </nav>
 
       {error && <div style={{ padding: '10px 24px', color: 'var(--crm-danger)', fontSize: 12 }}>{error}</div>}
       {!accounts && !error && <div style={{ padding: 24, color: MUTED, fontSize: 12 }}>Loading…</div>}
 
-      {accounts && activeTab === 'reminders' && <>
-        <OwnerRecheckLane data={rechecks} onChanged={load} />
-        <DueReminderLane data={dueReminders} />
-      </>}
-      {accounts && activeTab === 'engagement' && <EngagementLane accounts={outreachAccounts} />}
-      {accounts && activeTab === 'templates' && <TemplateLibrary />}
+      {activeTab === 'templates' && <div className="cc-layout" style={{ gridTemplateColumns: '1fr' }}>
+        <TemplateReview />
+        <LazyDetails summary="Saved free-text drafts (manual planner)"><TemplateLibrary /></LazyDetails>
+      </div>}
 
-      {accounts && activeTab === 'tools' && <>
-        <div className="outreach-control-layout">
-        <section className="outreach-account-overview">
-          <header><div><span>ACCOUNT CONTROL</span><h2>Accounts</h2></div><p>Select one identity. Restricted accounts stay visible and cannot be armed.</p></header>
-          <div className="outreach-account-grid"><div className="account-row-label">SYSTEM & OUTREACH / ARGUS</div>
-            {orderedAccounts.map((account, index) => {
-              const manager = isArgusManager(account), selectable = account.active !== false && account.outreachEnabled !== false && !manager, selected = selectedAccount?.id === account.id, cooldown = cooldownState(account), restricted = account.operationalStatus === 'restricted'
-              return <div key={account.id} className={/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? 'account-slot argus-slot' : 'account-slot'}>{index > 0 && /^argus[ _-]?[1-4]$/i.test(orderedAccounts[index-1].sessionName) && !/^argus[ _-]?[1-4]$/i.test(account.sessionName) && <span className="account-team-label">YOUR TEAM</span>}<button key={account.id} type="button" disabled={!selectable} aria-pressed={selected} onClick={() => setSelectedAccountId(account.id)} className={`outreach-account-tile${/^argus[ _-]?[1-4]$/i.test(account.sessionName) ? ' is-argus' : ''}${manager ? ' is-manager' : ''}${!selectable ? ' is-support' : ''}${restricted ? ' is-restricted' : ''}${selected ? ' is-selected' : ''}`} style={{ '--account-accent': accentFor(index).a } as React.CSSProperties}>
-                <i aria-hidden>{manager ? '⌘' : selectable ? '↗' : '◇'}</i><span><b>{accountDisplayName(account)}</b><small>{manager ? 'SYSTEM MANAGER · NOT IN ROTATION' : selectable ? `${account.pool === 'bottom' ? 'Z→A' : 'A→Z'} OUTREACH` : 'SUPPORT · NOT IN ROTATION'}</small></span>
-                <em className={restricted ? 'is-restricted' : account.connected ? 'is-online' : ''}>{restricted ? 'RESTRICTED' : account.connected ? 'ONLINE' : 'OFFLINE'}</em>
-                <footer><span>{account.lastOutreachAt ? `Last · ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} ${maltaHM(new Date(account.lastOutreachAt))}` : 'No outreach logged'}</span>{selectable && <strong className={cooldown.ready ? 'is-ready' : ''}>{restricted ? `Held${account.restrictionUntil ? ` until ${maltaHM(new Date(account.restrictionUntil))}` : ''}` : cooldown.label}</strong>}</footer>
-                {selectable && <span className="account-plan-strip" aria-label="Next five days">{account.planningDays?.map((day,index)=><span key={day.day} title={`${day.day}: ${day.display?.label || day.status}${day.scheduledAt ? ' · '+maltaHM(new Date(day.scheduledAt)) : ''} · ${day.count} contacts`}><span>{index===0?'T':index===1?'T+1':`T+${index}`}</span><DayBadge display={day.display} compact /></span>)}</span>}
-                {selectable && <span className="account-auto-line"><b className={account.outreachAutoEnabled ? 'is-on' : ''}>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'AUTO · ROLLING' : 'AUTO · NOT SAVED') : 'MANUAL'}</b><small>Pace {account.outreachPaceMin ?? account.outreachVolumePercent ?? '—'}{account.outreachPaceMax && account.outreachPaceMax !== account.outreachPaceMin ? `–${account.outreachPaceMax}` : ''}%</small></span>}
-              </button></div>
-            })}
-            <button className="account-add" onClick={()=>setAdding(true)}><b>+</b><span>Add account<small>Expand your network</small></span></button>
-          </div>
-          {adding && <form className="account-register" onSubmit={async event=>{event.preventDefault();setRegistering(true);setError('');try{await crmJson('outreach/accounts','POST',newAccount);setAdding(false);setNewAccount({label:'',sessionName:'',phone:''});await load()}catch(e:any){setError(e.message||'Registration failed')}finally{setRegistering(false)}}}>
-            <h3>Connect another outreach account</h3><p>Register the identity here, then connect its WhatsApp session. An offline account cannot send.</p>
-            <label>Display name<input required value={newAccount.label} onChange={e=>setNewAccount({...newAccount,label:e.target.value})} placeholder="Argus 5" /></label>
-            <label>Session name<input required pattern="[A-Za-z0-9_-]{2,40}" value={newAccount.sessionName} onChange={e=>setNewAccount({...newAccount,sessionName:e.target.value})} placeholder="Argus5" /></label>
-            <label>Phone number<input required type="tel" value={newAccount.phone} onChange={e=>setNewAccount({...newAccount,phone:e.target.value})} placeholder="+356 …" /></label>
-            <button disabled={registering} type="submit">{registering?'Registering…':'Register account'}</button><button type="button" onClick={()=>setAdding(false)}>Cancel</button>
-          </form>}
-        </section>
-
-        {selectedAccount && <div className="outreach-active-console">
-          <div className="outreach-active-caption"><span>ACTIVE OUTREACH TOOL</span><b>{accountDisplayName(selectedAccount)}</b><small>Auto keeps five morning days prepared. SAVE ALL schedules them; every send re-checks the owner, the 08:30–19:30 window and the 40/day cap.</small></div>
-          <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={load} templates={templates} onTemplatesChanged={loadTemplates} />
-        </div>
-        }
-        </div>
-
-      {/* ── GLOBAL PANELS ──────────────────────────────────────────────── */}
-      <div style={{ padding: '4px 24px', display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 320px', background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 16, padding: 18 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700 }}>Today Contacted</div>
-            <span style={{ fontSize: 11, color: MUTED }}>Unique owners: {summary?.unique_owners ?? '—'} · Duplicate sends: {summary ? Math.max(0, (summary.total_sends || 0) - (summary.unique_owners || 0)) : '—'}</span>
-          </div>
-          {(summary?.perAccount || []).length === 0 && <div style={{ fontSize: 12, color: FAINT }}>Nothing sent today yet.</div>}
-          {(summary?.perAccount || []).map((row: any, i: number) => (
-            <div key={row.session_name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${HAIRLINE}`, fontSize: 12.5 }}>
-              <span style={{ color: accountsColor(accounts || [], row.session_name) }}>{row.session_name.toUpperCase()}</span>
-              <span style={{ fontWeight: 700 }}>{row.n}</span>
+      {accounts && overview && activeTab === 'overview' && (() => {
+        const rows = (overview.accounts as P0Account[]).filter(row => outreachAccounts.some(account => account.id === row.id))
+        const visible = rows.filter(row => healthMatches(row.health, healthFilter))
+        const sel = rows.find(row => row.id === selectedAccount?.id) || rows[0] || null
+        return <div className="p0-overview" style={{ padding: '0 16px 16px' }} data-testid="p0-overview">
+          <HealthFilter accounts={rows} value={healthFilter} onChange={setHealthFilter} />
+          <AccountCards accounts={visible} selectedId={sel?.id ?? null} onSelect={id => setSelectedAccountId(id)} />
+          {!visible.length && <p style={{ color: MUTED, fontSize: 12 }}>No account in this status.</p>}
+          {sel && <>
+            <div className="p0-overview-grid">
+              <PaceCard key={sel.id} account={sel} onSaved={() => reloadOverview()} />
+              <PersonaPreview persona={sel.persona} />
             </div>
-          ))}
+            <AutoPauseRow account={sel} onChanged={() => { reloadOverview(); load() }} />
+            <SevenDays days={sel.days} />
+          </>}
         </div>
+      })()}
 
-        <div style={{ flex: '1 1 280px', background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 16, padding: 18 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700 }}>Duplicate Audit</div>
-            <button onClick={checkDuplicates} style={btnGhost}>Check Duplicates</button>
+      {accounts && overview && activeTab !== 'templates' && activeTab !== 'overview' && (() => {
+        const railAccounts = overview.accounts.filter(row => outreachAccounts.some(account => account.id === row.id))
+        const selectedRow = railAccounts.find(row => row.id === selectedAccount?.id) || railAccounts[0] || null
+        const select = (id: number) => { setSelectedAccountId(id); setPickedDay(null) }
+        return <div className="cc-layout">
+          <AccountRail accounts={railAccounts} selectedId={selectedRow?.id ?? null} onSelect={select}
+            footer={<div className="cc-rail-foot"><button type="button" onClick={() => { setActiveTab('manual'); setAdding(true) }}>+ Add account</button></div>} />
+          <div className="cc-main">
+            {activeTab === 'automation' && selectedRow && <AutomationSetup key={selectedRow.id} account={selectedRow} today={overview.today} onSaved={() => { reloadOverview(); load() }} />}
+            {activeTab === 'activity' && selectedRow && <ActivityView key={selectedRow.id} account={selectedRow} />}
+            {activeTab === 'manual' && <>
+              {adding && <form className="account-register" onSubmit={async event=>{event.preventDefault();setRegistering(true);setError('');try{await crmJson('outreach/accounts','POST',newAccount);setAdding(false);setNewAccount({label:'',sessionName:'',phone:''});await load();await reloadOverview()}catch(e:any){setError(e.message||'Registration failed')}finally{setRegistering(false)}}}>
+                <h3>Connect another outreach account</h3><p>Register the identity here, then connect its WhatsApp session. An offline account cannot send.</p>
+                <label>Display name<input required value={newAccount.label} onChange={e=>setNewAccount({...newAccount,label:e.target.value})} placeholder="Argus 5" /></label>
+                <label>Session name<input required pattern="[A-Za-z0-9_-]{2,40}" value={newAccount.sessionName} onChange={e=>setNewAccount({...newAccount,sessionName:e.target.value})} placeholder="Argus5" /></label>
+                <label>Phone number<input required type="tel" value={newAccount.phone} onChange={e=>setNewAccount({...newAccount,phone:e.target.value})} placeholder="+356 …" /></label>
+                <button disabled={registering} type="submit">{registering?'Registering…':'Register account'}</button><button type="button" onClick={()=>setAdding(false)}>Cancel</button>
+              </form>}
+              {selectedAccount && <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={async () => { await load(); await reloadOverview() }} templates={templates} onTemplatesChanged={loadTemplates} />}
+            </>}
+            {activeTab === 'activity' && <>
+              <LazyDetails summary={`Reminders · ${dueReminders.rows.length + rechecks.tasks.length}`} defaultOpen={dueReminders.rows.length + rechecks.tasks.length > 0}>
+                <OwnerRecheckLane data={rechecks} onChanged={load} />
+                <DueReminderLane data={dueReminders} />
+              </LazyDetails>
+              <LazyDetails summary="Engagement"><EngagementLane accounts={outreachAccounts} /></LazyDetails>
+              <LazyDetails summary="Today contacted · duplicate audit">
+                <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', paddingTop: 10 }}>
+                  <div style={{ flex: '1 1 260px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>Today contacted</div>
+                      <span style={{ fontSize: 11, color: MUTED }} title="Unique owners vs. accepted sends today, across all accounts">Unique owners: {summary?.unique_owners ?? '—'} · Repeat sends: {summary ? Math.max(0, (summary.total_sends || 0) - (summary.unique_owners || 0)) : '—'}</span>
+                    </div>
+                    {(summary?.perAccount || []).length === 0 && <div style={{ fontSize: 12, color: FAINT }}>Nothing sent today yet.</div>}
+                    {(summary?.perAccount || []).map((row: any) => (
+                      <div key={row.session_name} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${HAIRLINE}`, fontSize: 12.5 }}>
+                        <span style={{ color: accountsColor(accounts || [], row.session_name) }}>{row.session_name.toUpperCase()}</span><span style={{ fontWeight: 700 }}>{row.n}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ flex: '1 1 260px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700 }} title="Owners with an active reservation on more than one account (cross-account identity check)">Duplicate audit</div>
+                      <button onClick={checkDuplicates} style={btnGhost}>Check now</button>
+                    </div>
+                    {duplicates === null ? <div style={{fontSize:12,color:MUTED}}>Checks active reservations across all accounts.</div> : duplicates.length === 0
+                      ? <div style={{ fontSize: 12, color: 'var(--crm-success)' }}>✓ No owner is reserved on two accounts</div>
+                      : duplicates.map((d: any) => (
+                        <div key={d.normalized_phone} style={{ fontSize: 12, padding: '6px 0', borderBottom: `1px solid ${HAIRLINE}` }}>
+                          <div style={{ color: '#f2a53d', fontWeight: 700 }}>+{d.normalized_phone}</div>
+                          <div style={{ color: MUTED, fontSize: 11 }}>{d.plans.map((p: any) => `${p.session_name} · ${p.scheduled_date}`).join('  vs  ')}</div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </LazyDetails>
+            </>}
           </div>
-          {duplicates === null ? <div style={{fontSize:12,color:MUTED}}>Run a check to review cross-account conflicts.</div> : duplicates.length === 0
-            ? <div style={{ fontSize: 12, color: 'var(--crm-success)' }}>✓ No active cross-account conflicts</div>
-            : duplicates.map((d: any) => (
-              <div key={d.normalized_phone} style={{ fontSize: 12, padding: '6px 0', borderBottom: `1px solid ${HAIRLINE}` }}>
-                <div style={{ color: '#f2a53d', fontWeight: 700 }}>+{d.normalized_phone}</div>
-                <div style={{ color: MUTED, fontSize: 11 }}>{d.plans.map((p: any) => `${p.session_name} · ${p.scheduled_date}`).join('  vs  ')}</div>
-              </div>
-            ))}
         </div>
-      </div>
-      </>}
+      })()}
     </div></CrmShell>
   )
 }
@@ -581,16 +569,42 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // Kev, 2026-10-29: never fall back to 100 — an unset pace shows empty and
   // the backend refuses to send without one (the old reset-to-100 bug).
   const savedMin = account.outreachPaceMin ?? account.outreachVolumePercent ?? null
-  const savedMax = account.outreachPaceMax ?? savedMin
-  const [paceMin, setPaceMin] = useState<number | ''>(savedMin ?? '')
-  const [paceMax, setPaceMax] = useState<number | ''>(savedMax ?? '')
+  const [paceDraft, setPaceDraft] = useState(savedMin == null ? '' : String(savedMin))
   const [volumeBusy, setVolumeBusy] = useState(false)
   const [autoBusy, setAutoBusy] = useState(false)
   const [saveAll, setSaveAll] = useState<{ busy: boolean; result: any | null; error: string }>({ busy: false, result: null, error: '' })
   const [autoSummary, setAutoSummary] = useState('')
   const pickedInitialPlan = useRef(false)
 
-  useEffect(() => { setPaceMin(savedMin ?? ''); setPaceMax(savedMax ?? '') }, [savedMin, savedMax])
+  // A background refresh must never overwrite a value the admin is editing
+  // (recovery spec 2026-11-09): sync from the server only while not dirty.
+  const syncedPace = useRef(savedMin == null ? '' : String(savedMin))
+  useEffect(() => {
+    const next = savedMin == null ? '' : String(savedMin)
+    setPaceDraft(cur => (cur === syncedPace.current ? next : cur))
+    syncedPace.current = next
+  }, [savedMin])
+
+  // Daily contact target N with an optional ±5 planning envelope (stored as
+  // the account's target min/max; the hard cap of 40 is enforced per send).
+  const tMin = account.dailyTargetMin, tMax = account.dailyTargetMax
+  const savedTarget = tMin == null || tMax == null ? null : Math.round((tMin + tMax) / 2)
+  const savedVariation: 0 | 5 = tMin != null && tMax != null && tMax - tMin >= 2 ? 5 : 0
+  const [targetDraft, setTargetDraft] = useState(savedTarget == null ? '' : String(savedTarget))
+  const [variationDraft, setVariationDraft] = useState<0 | 5>(savedVariation)
+  const [targetState, setTargetState] = useState<{ busy: boolean; error: string; savedAt: string | null }>({ busy: false, error: '', savedAt: null })
+  const syncedTarget = useRef(targetDraft)
+  useEffect(() => {
+    const next = savedTarget == null ? '' : String(savedTarget)
+    setTargetDraft(cur => (cur === syncedTarget.current ? next : cur))
+    syncedTarget.current = next
+  }, [savedTarget])
+  const targetDirty = targetDraft !== String(savedTarget ?? '') || variationDraft !== savedVariation
+  const targetNumber = targetDraft === '' ? null : Number(targetDraft)
+  const targetValid = targetNumber != null && Number.isInteger(targetNumber) && targetNumber >= 0 && targetNumber <= DAILY_TARGET_CAP
+  const envelope = targetValid
+    ? (targetNumber === 0 ? '0 — no outreach planned' : `plans ${Math.max(1, targetNumber - variationDraft)}–${Math.min(DAILY_TARGET_CAP, targetNumber + variationDraft)} eligible owners/day`)
+    : `enter 0–${DAILY_TARGET_CAP}`
 
   const loadPlans = useCallback(async () => {
     const r = await crmGet(`outreach/plans?accountId=${account.id}`)
@@ -725,7 +739,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const contacts = prepared.reduce((sum: number, plan: any) => sum + Number(plan.preparedCount || 0), 0)
       const preparedTimes = prepared.map((plan: any) => outreachTimeLabel(plan.scheduledAt)).filter(Boolean)
       const timeSummary = preparedTimes.length ? ` · ${preparedTimes.join(' → ')}` : ''
-      setAutoSummary(`✓ AUTO PREPARED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +16 min daily${timeSummary} · press SAVE ALL to schedule`)
+      setAutoSummary(`✓ PREPARED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +15 min per eligible day${timeSummary} · use Auto ON to arm the saved schedule`)
       setNote(`Auto prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${contacts} previews · ${preserved.length} preserved${blocked.length ? ` · ${blocked.length} blocked by time/safety` : ''}.`)
       setSelectedPrepareDays([])
       setPrepareDaysOpen(false)
@@ -791,14 +805,25 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function cancel() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/cancel`, 'POST', {}); await refresh() } finally { setBusy(false) } }
 
   async function saveVolume() {
-    if (paceMin === '') { setNote('Enter a pace between 10 and 100.'); return }
-    const min = paceMin, max = paceMax === '' ? paceMin : paceMax
+    const pace = Number(paceDraft)
+    if (!Number.isFinite(pace) || pace < 10 || pace > 50) { setNote('Enter a dispatch pace from 10 to 50.'); return }
     setVolumeBusy(true); setNote('')
     try {
-      await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { min, max })
-      setNote(min === max ? `Pace ${min}% saved — stays until you change it.` : `Pace ${Math.min(min, max)}–${Math.max(min, max)}% saved — each run draws inside it.`)
+      await crmJson(`outreach/accounts/${account.id}/volume`, 'POST', { min: pace, max: pace })
+      setNote(`Dispatch pace ${pace}% saved. This changes spacing, not the daily contact cap.`)
       onChanged()
     } catch (e: any) { setNote(e?.message || 'Failed to save pace') } finally { setVolumeBusy(false) }
+  }
+
+  async function saveTarget() {
+    if (!targetValid) { setTargetState(s => ({ ...s, error: `Enter a whole number from 0 to ${DAILY_TARGET_CAP}.` })); return }
+    setTargetState(s => ({ ...s, busy: true, error: '' }))
+    try {
+      const r = await crmJson(`outreach/accounts/${account.id}/daily-target`, 'POST', { target: targetNumber, variation: variationDraft })
+      syncedTarget.current = String(r.target)
+      setTargetState({ busy: false, error: '', savedAt: r.savedAt || new Date().toISOString() })
+      onChanged()
+    } catch (e: any) { setTargetState(s => ({ ...s, busy: false, error: e?.message || 'Failed to save the daily target' })) }
   }
 
   async function toggleAuto(enabled: boolean) {
@@ -807,7 +832,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const r = await crmJson(`outreach/accounts/${account.id}/auto`, 'POST', { enabled })
       if (r.rollingPlans) setPlans(r.rollingPlans)
       else await loadPlans()
-      setNote(enabled ? 'Auto on — five days prepared (A). Press SAVE ALL to schedule them.' : `Auto off — ${(r.paused || []).length} future auto day(s) paused. Nothing new is sent.`)
+      setNote(enabled
+        ? (r.armed ? 'Auto armed — the saved schedule will run when contacts remain eligible.' : 'Auto configured but not armed — review the blocked days shown below.')
+        : `Auto off — ${(r.paused || []).length} future auto day(s) paused. Nothing new is sent.`)
       await onChanged()
     } catch (e: any) { setNote(e?.message || 'Could not change Auto') } finally { setAutoBusy(false) }
   }
@@ -854,7 +881,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <p>One account. One queue. Every step in view.</p>
         <div className="queue-automation" aria-label="Automation">
           <button type="button" role="switch" aria-checked={Boolean(account.outreachAutoEnabled)} className={`auto-switch${account.outreachAutoEnabled ? ' is-on' : ''}`} disabled={autoBusy || account.operationalStatus === 'restricted'} onClick={() => toggleAuto(!account.outreachAutoEnabled)}>
-            <i aria-hidden /><span><b>{autoBusy ? 'Working…' : account.outreachAutoEnabled ? 'Auto ON' : 'Auto OFF'}</b><small>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Rolling 5 days · keeps itself scheduled' : 'Prepared · press SAVE ALL') : '30–40 owners · 08:30–09:15 start'}</small></span>
+            <i aria-hidden /><span><b>{autoBusy ? 'Working…' : account.outreachAutoEnabled ? 'Auto ON' : 'Auto OFF'}</b><small>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Armed · rolling schedule' : 'Configured · needs attention') : 'Off · nothing will run automatically'}</small></span>
           </button>
           <button type="button" className="queue-autosetup" disabled={saveAll.busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={saveAllDays}><ShieldCheck size={17} />{saveAll.busy ? 'Saving…' : 'SAVE ALL'}<span>Schedule every prepared day</span></button>
           <button className="queue-autosetup is-secondary" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={() => setPrepareDaysOpen(open => !open)} aria-expanded={prepareDaysOpen}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>Choose days by hand</span></button>
@@ -899,17 +926,29 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       </div>
 
       <div className="account-safety-panel">
-        <div className="account-volume-compact">
-          <span>PACE · {account.pool === 'bottom' ? 'Z→A' : 'A→Z'}</span>
-          <input aria-label={`${account.label} pace from percent`} type="number" min={10} max={100} value={paceMin} placeholder="—" onChange={e => setPaceMin(e.target.value === '' ? '' : Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
-          <b>–</b>
-          <input aria-label={`${account.label} pace to percent`} type="number" min={10} max={100} value={paceMax} placeholder="—" onChange={e => setPaceMax(e.target.value === '' ? '' : Math.max(10, Math.min(100, Number(e.target.value) || 10)))} />
-          <b>%</b>
-          <button disabled={volumeBusy || paceMin === ''} onClick={() => saveVolume()} style={btnGhost}>{volumeBusy ? 'Saving…' : 'Save'}</button>
-          {savedMin == null && <small className="pace-missing">No pace saved — runs are refused until one is set.</small>}
-          <span className={`account-pace-status ${paceMin === '' ? 'is-error' : (paceMin !== (savedMin ?? '') || paceMax !== (savedMax ?? '')) ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
-            {volumeBusy ? '… Saving' : savedMin == null ? '× No pace saved' : (paceMin !== savedMin || paceMax !== savedMax) ? `● Unsaved · ${paceMin}${paceMax !== '' && paceMax !== paceMin ? `–${paceMax}` : ''}%` : `✓ Saved · ${savedMin}${savedMax !== savedMin ? `–${savedMax}` : ''}%`}
+        <div className="account-volume-compact account-daily-target">
+          <span>DAILY TARGET · eligible owners</span>
+          <input className="pace-slider" aria-label={`${account.label} daily target slider`} type="range" min={0} max={DAILY_TARGET_CAP} step={1} value={targetValid ? (targetNumber as number) : (savedTarget ?? 0)} onChange={e => setTargetDraft(e.target.value)} />
+          <input aria-label={`${account.label} daily target`} type="text" inputMode="numeric" pattern="[0-9]*" value={targetDraft} placeholder="20" onChange={e => setTargetDraft(e.target.value.replace(/\D/g, '').slice(0, 2))} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveTarget() } }} />
+          <label className="target-variation"><input type="checkbox" checked={variationDraft === 5} onChange={e => setVariationDraft(e.target.checked ? 5 : 0)} /> ±5</label>
+          <button disabled={targetState.busy || !targetDirty || !targetValid} onClick={() => saveTarget()} style={btnGhost}>{targetState.busy ? 'Saving…' : 'Save'}</button>
+          <span className={`account-pace-status ${!targetValid ? 'is-error' : targetDirty ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
+            {targetState.busy ? '… Saving' : !targetValid ? `× ${envelope}` : targetDirty ? `● Unsaved · ${envelope}` : `✓ Saved · ${envelope}${targetState.savedAt ? ` · ${maltaHM(new Date(targetState.savedAt))}` : ''}`}
           </span>
+          {targetState.error && <small className="pace-missing">{targetState.error}</small>}
+          <small className="pace-unit-help">Workload plan only. Hard cap {DAILY_TARGET_CAP}/day per account; do-not-contact, consent and the 08:30–19:30 window still decide every send. Saving never starts outreach.</small>
+        </div>
+        <div className="account-volume-compact">
+          <span>DISPATCH PACE · spacing only</span>
+          <input className="pace-slider" aria-label={`${account.label} dispatch pace slider`} type="range" min={10} max={50} step={1} value={paceDraft || 10} onChange={e => setPaceDraft(e.target.value)} />
+          <input aria-label={`${account.label} dispatch pace percent`} type="text" inputMode="numeric" pattern="[0-9]*" value={paceDraft} placeholder="30" onChange={e => setPaceDraft(e.target.value.replace(/\D/g, '').slice(0, 2))} />
+          <b>%</b>
+          <button disabled={volumeBusy || paceDraft === '' || paceDraft === String(savedMin ?? '')} onClick={() => saveVolume()} style={btnGhost}>{volumeBusy ? 'Saving…' : 'Save'}</button>
+          {savedMin == null && <small className="pace-missing">No pace saved — runs are refused until one is set.</small>}
+          <span className={`account-pace-status ${paceDraft === '' ? 'is-error' : paceDraft !== String(savedMin ?? '') ? 'is-dirty' : 'is-saved'}`} role="status" aria-live="polite">
+            {volumeBusy ? '… Saving' : savedMin == null ? '× No pace saved' : paceDraft !== String(savedMin) ? `● Unsaved · ${paceDraft || '—'}%` : `✓ Saved · ${savedMin}%`}
+          </span>
+          <small className="pace-unit-help">10 = extra slow · 30 = normal · 50 = faster. Daily owner limits are separate.</small>
         </div>
         <div className="account-restriction-line">
           <span><b>{account.restrictionsThisWeek || 0}</b> restrictions this week</span>
@@ -1066,7 +1105,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       )}
 
       </section>
-      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · sends only 08:30–19:30, max 40 owners per account per day. Each following day starts 16 minutes later than the day before. A run reaching 19:30 pauses and resumes 08:30 next morning. Owner checks run again before every message.</p>
+      <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · sends only 08:30–19:30, max 40 owners per account per day. Each eligible day starts 15 minutes later. When the cutoff is reached, that day is skipped and the next eligible day resets to the saved baseline. Owner checks run again before every message.</p>
       {/* schedule / arm */}
       {!isCompleted && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1080,7 +1119,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             <button disabled={busy || !activePlan?.armed} onClick={pause} style={btnGhost}>PAUSE</button>
             <button disabled={busy} onClick={cancel} style={{ ...btnGhost, color: 'var(--crm-danger)' }}>CANCEL</button>
           </div>
-          <div className="queue-time-readout"><span>{outreachDaypart(armTime)}</span><b>{armTime}</b><small>Auto next day: +16 min · accept with ARM</small></div>
+          <div className="queue-time-readout"><span>{outreachDaypart(armTime)}</span><b>{armTime}</b><small>Auto next eligible day: +15 min · cutoff reset is shown in preview</small></div>
           {activePlan?.scheduled_at && (
             <div style={{ fontSize: 11, color: MUTED }}>
               Next: {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(activePlan.scheduled_at))} · {maltaHM(new Date(activePlan.scheduled_at))}
