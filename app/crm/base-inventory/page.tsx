@@ -42,6 +42,9 @@ const STATUS_BADGE: Record<string, { bg: string; fg: string; label: string }> = 
   DUPLICATE_MERGED: { bg: 'rgba(255,255,255,0.06)', fg: DTEXT_FAINT, label: 'MERGED' },
   SOURCE_REMOVED: { bg: 'rgba(255,255,255,0.06)', fg: DTEXT_FAINT, label: 'SOURCE REMOVED' },
   PROMOTED: { bg: 'rgba(62,207,142,0.20)', fg: '#3ECF8E', label: 'PROMOTED' },
+  // Provider listings reviewed in /crm/property-sources (2026-11-09).
+  SOURCE_DRAFT: { bg: 'rgba(79,123,242,0.14)', fg: '#7EA0FF', label: 'SOURCE DRAFT' },
+  SOURCE_REJECTED: { bg: 'rgba(255,255,255,0.06)', fg: DTEXT_FAINT, label: 'SOURCE REJECTED' },
 }
 function Badge({ status }: { status: string }) {
   const b = STATUS_BADGE[status] || STATUS_BADGE.NEEDS_REVIEW

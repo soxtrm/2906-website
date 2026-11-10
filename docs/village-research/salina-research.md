@@ -1,0 +1,116 @@
+# Salina edition — sourced research draft
+
+Language: English. Status: **PREVIEW VERIFIED — NOT PUBLISHED**. Research, asset and responsive preview checks completed 30 October 2026 (Europe/Malta).
+
+## Why Salina is the next distinct edition
+
+The current public Nexus inventory returned 333 listable records. One ten-image record carried the exact area label `Salina`, while the 60 published English neighbourhood editions contained no Salina page. That is a narrow editorial coverage signal only: it is not a popularity, demand, quality, value or future-availability ranking. The property's address, coordinates, price, description, images and claimed features were not used for this research.
+
+- Public inventory: https://www.2906.estate/api/nexus/inventory
+- Existing neighbourhood directory: https://www.2906.estate/link-marketplace/index.html
+
+## Naming, administration and editorial boundary
+
+Salina needs more care than a generic village label. The Office of the Address Registrar does not list Salina as a standalone locality row. Primary HealthCare places `Salina` within the Naxxar grouping in the Mosta Health Centre catchment, while Ambjent Malta and BirdLife Malta describe the Salina reserve at the Burmarrad valley mouth and within the limits of St Paul's Bay. The public inventory label therefore cannot establish a municipal boundary or even the official locality of a particular address.
+
+A useful edition should keep four contexts separate:
+
+1. **Triq is-Salina and the Naxxar-side residential/hospitality edge**;
+2. **the Salina salt pans, saline marsh and protected reserve**;
+3. **Kennedy Grove / Park Nazzjonali tas-Salina and the Buġibba–St Paul's Bay side**;
+4. **the wider bay and Coast Road approach**, where Qawra, Magħtab and Baħar iċ-Ċagħaq remain separate search contexts.
+
+Exact street and official address evidence must decide how a property is labelled. A broad `Salina` tag must never promise a wetland view, bay frontage, quietness, easy parking, step-free access, a short walk to the reserve or inclusion in either Naxxar or St Paul's Bay without property-level evidence.
+
+Primary sources:
+
+- Office of the Address Registrar, official localities and councils: https://address.gov.mt/localities/
+- Primary HealthCare, Mosta Health Centre catchment: https://primaryhealthcare.gov.mt/en/health-centers/mosta-health-center/
+- Ambjent Malta, Is-Salini managed site: https://ambjentmalta.gov.mt/what-we-do/managed-sites/salina-national-park/
+- BirdLife Malta, Salina Nature Reserve: https://birdlifemalta.org/nature-reserves/is-salina/
+
+## Everyday life and mobility
+
+Primary HealthCare's current catchment page supports the relationship with Mosta Health Centre and expressly groups Salina under Naxxar. It does not prove that a clinic is inside Salina, guarantee eligibility, appointments, opening or a journey time. Those details must remain behind the live service page.
+
+Malta Public Transport's current route-and-stop index contains the paired `Salini` stops, codes 1026 and 940. The live operator page, stop displays and real-time service should be checked for present routes and diversions; no timetable, frequency, travel time or walk to a specific home belongs in evergreen copy.
+
+- Malta Public Transport, routes and timetable search: https://www.publictransport.com.mt/routes-timetables-search-page/
+- Malta Public Transport, live tracking guidance: https://www.publictransport.com.mt/real-time/
+
+No grocery, pharmacy or other everyday operator has been added from an aggregator. A future page may add one only from a current authority or operator source and must not freeze stock, hours, delivery, accessibility, parking or distance from a listing.
+
+## Nature, salt heritage and activities
+
+Ambjent Malta describes Is-Salini as a Natura 2000 wetland with saline marsh, traditional salt pans and protected wildlife habitat. BirdLife Malta, the reserve manager, documents the salt pans, visitor context, restored wetland and Ximenes Redoubt. These sources support a nature-and-salt-heritage anchor, not guaranteed wildlife sightings, unrestricted access, current opening, bathing suitability or a property view.
+
+The Superintendence of Cultural Heritage inventory identifies Ximenes Redoubt as a protected eighteenth-century coastal fortification at Triq is-Salini in Naxxar and records its relationship to salt storage. Heritage Malta separately documents the Salini Catacombs as an archaeological site in Naxxar. Its current page says access is by appointment; the edition should link that live page rather than reproduce mutable booking or access details.
+
+- Superintendence of Cultural Heritage, Ximenes Redoubt inventory 1401: https://schmalta.mt/wp-content/uploads/2023/08/DC-01401.pdf
+- Heritage Malta, Salini Catacombs: https://heritagemalta.mt/explore/katakombi-tas-salina/
+- Intangible Cultural Heritage Malta, sea-salt harvesting context: https://ichmalta.gov.mt/national-inventory/sea-salt-harvesting/
+
+The reserve, catacombs, Kennedy Grove and the bay edge are distinct experiences. They must not be presented as a single always-open attraction, and a map must not draw a shortcut through protected land, salt pans, fields, canal or water.
+
+## Food and casual stops
+
+The MTA public register's exact `Salina` text search returned three restaurant records and two snack-bar records at research time:
+
+1. **Charles Inn Restaurant** — `RST-27447`, Triq is-Salina, Naxxar;
+2. **Elba Restaurant** — `RST-20976`, Triq is-Salina, Naxxar;
+3. **Ta' Cassia Salina Restaurant** — `RST-31537`, Triq il-Katakombi, Naxxar;
+4. **Melita Salina Gardens** — `SBR-25240`, Park Nazzjonali tas-Salina, San Pawl il-Baħar;
+5. **Ta' Nardi Snack Bar** — `SBR-19738`, Triq is-Salina, Naxxar.
+
+This is a non-ranked register snapshot and usefully demonstrates why the Salina search context crosses administrative edges. It proves only the licence reference, recorded name, category and address at check time. It does not prove current trading, menu, price, quality, opening hours, accessibility, parking, atmosphere, reservation availability or proximity to a property. A future edition should use no more than three examples and tell readers to confirm operating details directly.
+
+- MTA, Salina restaurant search: https://www.mta.com.mt/licences/licences/?type=restaurants&q=Salina&size=250
+- MTA, Salina snack-bar search: https://www.mta.com.mt/licences/licences/?type=snack-bars&q=Salina&size=250
+
+## Licensed image research
+
+The six Wikimedia Commons originals below were downloaded outside Git, checked locally against the Commons SHA-1 and inspected at full resolution. Every SHA-1 matched. Local SHA-256 values provide a second reproducibility check.
+
+1. **Salina Bay.jpg** — HH58; captured 31 October 2019; 4608×3456; 4,717,025 bytes; CC BY-SA 4.0; Commons SHA-1 `42213BFF658EAEABE912E0E305914D34C00F3A6C`; local SHA-256 `AF1D65654E4452CC55C2BF150FE19EDCACFAB908FD9E2B5F29D33FC7484B17FD`.
+   - https://commons.wikimedia.org/wiki/File:Salina_Bay.jpg
+2. **Salina Bay Panorama.jpg** — HH58; captured 31 October 2019; 2688×720; 684,666 bytes; CC BY-SA 4.0; Commons SHA-1 `0893801B7EFD0E109383F8479B5071FFF73DCC78`; local SHA-256 `C79F338085B49B59CDA1DDA66712C09FB6A78A0F38A31CFBEAE7D678A320FC42`.
+   - https://commons.wikimedia.org/wiki/File:Salina_Bay_Panorama.jpg
+3. **Malta - St. Paul's Bay - Triq tax-Xtut - Salina Salt Pans + Naxxar - Triq is-Salina 01 ies.jpg** — Frank Vincentz; captured 13 April 2014; 5616×3744; 11,628,940 bytes; CC BY-SA 3.0; Commons SHA-1 `DF57F256F40489A5438ACADB7B1E7E28A9097C78`; local SHA-256 `8EA71D98D674353EE265315871432444B52C0B1F25279BFEE269F9EE4DED0913`.
+   - https://commons.wikimedia.org/wiki/File:Malta_-_St._Paul%27s_Bay_-_Triq_tax-Xtut_-_Salina_Salt_Pans_%2B_Naxxar_-_Triq_is-Salina_01_ies.jpg
+4. **Malta - Naxxar - Triq is-Salina 03 ies.jpg** — Frank Vincentz; captured 25 April 2014; 5616×3744; 11,934,124 bytes; CC BY-SA 3.0; Commons SHA-1 `F27BA7E973360418A34D6882907C38F5F71B2E3D`; local SHA-256 `C0323040E4A869E567F7DAC33B05CC8F6BB56602D18E3EFC3C5024D141C8F323`.
+   - https://commons.wikimedia.org/wiki/File:Malta_-_Naxxar_-_Triq_is-Salina_03_ies.jpg
+5. **Ximenes Redoubt in Salina, Naxxar, Malta.jpg** — BoneA; captured 8 February 2016; 5472×2744; 6,661,549 bytes; CC BY-SA 4.0; Commons SHA-1 `07CACE6A69A85D33BBCD042DFB886F557516234C`; local SHA-256 `7BDFB7F1819C9E0978D8F7DA35F3A22F420AE280AD1CA820C3B777AD8365AEAF`.
+   - https://commons.wikimedia.org/wiki/File:Ximenes_Redoubt_in_Salina,_Naxxar,_Malta.jpg
+6. **Salina Catacombs 1.jpg** — HH58; captured 31 October 2019; 4608×3456; 4,759,809 bytes; CC BY-SA 4.0; Commons SHA-1 `354B78E010E23F1624DB8C271DFF5FD3F654E189`; local SHA-256 `ABFFBD23C09919ADA4AC8DCB20D501C0C92232849988CA764DE50818F0A637BE`.
+   - https://commons.wikimedia.org/wiki/File:Salina_Catacombs_1.jpg
+
+**Selected lead:** `Salina Bay Panorama.jpg`. Its continuous view of the salt pans, low green edge, settlement and bay entrance gives the clearest neutral orientation without reducing Salina to one monument. No identifiable person, readable vehicle plate, private contact detail or advertising message was found in the full-resolution inspection. `Salina Bay.jpg` covers the same subject but leaves much more empty sky and introduces a foreground shadow; the 2014 salt-pan image centres construction equipment and roads; the Triq is-Salina image is a distant landscape dominated by the Magħtab landfill; Ximenes Redoubt and the catacombs are useful supporting subjects but too narrow for the locality lead. These are editorial-fit decisions, not quality rankings.
+
+The checked-in derivative `public/link-marketplace/assets/salina-bay-panorama-hh58.webp` is a proportional 1800×482 WebP conversion at quality 82. It has 85,452 bytes and SHA-256 `90F8125E86CC41C39115F8F3A93883474BC7E6E7A8F001BD54DF434AA89C37D2`. There was no crop, retouching, compositing, colour treatment or generative change. The private preview visibly credits `HH58 / Wikimedia Commons / CC BY-SA 4.0`, links the file page and licence, gives the capture date, and states the proportional WebP conversion. Its real 390×844 and 1440×1000 frames were visually checked: the desktop frame retains the complete panorama, while the mobile frame deliberately crops the displayed edges without modifying the source file. The image does not imply a present property view, present access, quietness, parking, water quality or wildlife sighting.
+
+## Private preview and responsive verification
+
+`public/link-marketplace/areas/salina-preview.html` is an independent English editorial preview with `noindex,nofollow`, no canonical and no Open Graph URL. It was not added to the public neighbourhood hub, navigation or sitemap. The page keeps the Naxxar-side road, protected salt-pan/reserve context, Kennedy Grove / St Paul's Bay side and Qawra / bay approach separate, and gives mutable address, transport, health, access and trading details back to the live sources.
+
+Chromium checks at 390×844 and 1440×1000 returned HTTP 200, exactly one H1, zero horizontal overflow, a fully decoded 1800×482 hero, visible attribution and initially zero iframes. After an intentional click, exactly one visible OpenStreetMap iframe filled a 310×320 mobile frame or 1156×520 desktop frame, set `aria-expanded=true` and produced no console error, failed request or HTTP response at or above 400. The responsive neutral overview uses `14.399,35.938,14.438,35.966` on compact screens and `14.391,35.943,14.445,35.962` on wider screens so the map canvas is filled at both aspect ratios. These are orientation extents only, not locality boundaries.
+
+## Fast 2D map and route guardrails
+
+The preview uses a click-to-load OpenStreetMap orientation frame spanning the Naxxar-side edge, salt pans/reserve, Kennedy Grove side and Qawra approach. It draws no council boundary, property pin, straight-line connection, distance or journey time. The reserve's OSM search result is an orientation feature, not administrative proof.
+
+No route should be published at this research stage. A later property route must use exact verified endpoints and real routed geometry. It must not cut across salt pans, protected wetland, fields, canals or Salina Bay, and no line over water may be described as walking or driving. There is no assumed ferry mode for this locality.
+
+- OpenStreetMap search: https://nominatim.openstreetmap.org/ui/search.html?q=Salina%20Nature%20Reserve%20Malta
+- OpenStreetMap copyright and licence: https://www.openstreetmap.org/copyright
+
+## Verification and publication boundary
+
+The public inventory, Address Registrar, BirdLife Malta, Heritage Malta, Malta Public Transport, both MTA searches, the Superintendence PDF, Wikimedia Commons API and OpenStreetMap Nominatim returned HTTP 200 to the neutral direct client on 30 October 2026. Ambjent Malta and Primary HealthCare returned HTTP 403, while Intangible Cultural Heritage Malta presented its browser security challenge to that client; all three remained current and readable through browser retrieval. No claim was expanded from those transport-layer differences. Volatile access, health, transport, licence, event, nature and operating details remain on the linked live sources.
+
+No private contact details were copied. Six licensed originals were checked outside Git and one proportional WebP derivative was added; no image was generated. One private noindex preview was created and verified. No public page, canonical, social metadata, structured data, index, sitemap, internal link, route, deployment, backlink, account, outreach message, WhatsApp message, backend, Google API or scheduler was created or changed.
+
+## Next gates
+
+1. Recheck every source immediately before release work and keep volatile access, transport, health and licence details behind their live links.
+2. Build the public release candidate in a separate clean worktree with canonical, Open Graph, BreadcrumbList, hub entry, sitemap and contextual internal links.
+3. Repeat responsive, SEO, route/ferry-presentation and production-build verification, then name the rollback basis before any publication.
