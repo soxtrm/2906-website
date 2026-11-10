@@ -1,0 +1,359 @@
+[
+  {
+    "id": "S01",
+    "title": "identity question behind a third-party auto-reply",
+    "session": "Cedric",
+    "inbound": [
+      "Thank you for contacting Gabriella! Please let us know how we can help.",
+      "Are you an agent in Malta or do you own properties? I'm an agent also; I asked a question."
+    ],
+    "sent": [
+      "Of course. I'm Cedric Reiter, a rental agent representing QuickLets in Malta."
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {},
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S04",
+    "title": "clarification after wrong permit question",
+    "session": "default",
+    "inbound": [
+      "I'm not sure what you mean."
+    ],
+    "sent": [
+      "Great, noted, what town/area is the property in?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "property_category": "commercial"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S05",
+    "title": "callback request with area",
+    "session": "default",
+    "inbound": [
+      "Both around 90sqm. Give me a call if you need more info."
+    ],
+    "sent": [
+      "Thank you for your feedback, I am currently on appointments, I will be coming back later to you"
+    ],
+    "status": "needs_human_contact",
+    "reason": "voice note / call / call-me request -- needs Kev personally",
+    "deferred_until": null,
+    "facts": {
+      "property_category": "residential"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S06",
+    "title": "price correction + available",
+    "session": "Gabriela",
+    "inbound": [
+      "It's €2,800. And yes, it's available."
+    ],
+    "sent": [
+      "When would it be possible to view it?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 2649,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "available_date": "It's €2,800. And yes, it's available."
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S07",
+    "title": "tenant move-out date",
+    "session": "Gabriela",
+    "inbound": [
+      "My tenant leaves on 20 November."
+    ],
+    "sent": [
+      "Roughly when could someone come view it?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 2800,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "available_date": "November"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S08",
+    "title": "long-term rented",
+    "session": "kevthirdd",
+    "inbound": [
+      "No pets",
+      "It's not available, it's rented for many years. Thanks."
+    ],
+    "sent": [
+      "Got it, thanks, what would the monthly rent be?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "pets": "no"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S09",
+    "title": "decline after subletting pitch",
+    "session": "Gabriela",
+    "inbound": [
+      "No thanks for now."
+    ],
+    "sent": [
+      "Roughly what’s the rent per month?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "available_date": "now"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S10",
+    "title": "room in shared apartment",
+    "session": "Cedric",
+    "inbound": [
+      "Double room available 1 Dec, €900 all inclusive, in a three-bedroom sharing apartment. Only one room is available; other two are rented. Two bathrooms",
+      "No pets"
+    ],
+    "sent": [
+      "Great, noted, which town or area is it in?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 900,
+      "bathrooms": 2,
+      "listing_kind": "room",
+      "property_category": "residential",
+      "pets": "no"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S11",
+    "title": "clarification after sharing question to a room",
+    "session": "Gabriela",
+    "inbound": [
+      "What do you mean please? It's a good room."
+    ],
+    "sent": [],
+    "status": "cancelled_chat",
+    "reason": "!ca",
+    "deferred_until": null,
+    "facts": {
+      "listing_kind": "room"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": true
+  },
+  {
+    "id": "S12",
+    "title": "studio with price",
+    "session": "default",
+    "inbound": [
+      "Valletta studio, 1100e."
+    ],
+    "sent": [
+      "What would the monthly rent be?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "property_category": "residential"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S14",
+    "title": "video attachment",
+    "session": "default",
+    "inbound": [
+      "[document]"
+    ],
+    "sent": [
+      "Sorry, I couldn't open that file on my end — could you resend it, or just tell me the details directly (bedrooms, bathrooms, price, availability)?",
+      "Perfect, thank you, how many bedrooms does it have?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 1100,
+      "property_subtype": "studio"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S15",
+    "title": "voice note with a fact",
+    "session": "default",
+    "inbound": [
+      "One bathroom.",
+      "[voice]"
+    ],
+    "sent": [
+      "Thank you for your feedback, I am currently on appointments, I will be coming back later to you"
+    ],
+    "status": "needs_human_contact",
+    "reason": "voice note / call / call-me request -- needs Kev personally",
+    "deferred_until": null,
+    "facts": {
+      "price": 1100,
+      "property_subtype": "studio"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S16",
+    "title": "quiet hours",
+    "session": "default",
+    "inbound": [
+      "Do you accept pets?"
+    ],
+    "sent": [
+      "What would the monthly rent be?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {},
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S02",
+    "title": "villa + viewing offer",
+    "session": "Cedric",
+    "inbound": [
+      "Villa available 4 December, 4 bedrooms plus office, 3-car garage, pool, €5,600. Address and photos attached. Viewing tomorrow at 3 PM."
+    ],
+    "sent": [
+      "Lovely, thanks, and how many bathrooms?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 5600,
+      "bedrooms": 4,
+      "property_category": "residential",
+      "available_date": "December"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S20",
+    "title": "privacy / deletion request",
+    "session": "default",
+    "inbound": [
+      "You obtained my number without my permission. Remove my details from your database."
+    ],
+    "sent": [
+      "Just to check — do you have a property available to rent out at the moment?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {},
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "LIVE-6340",
+    "title": "residential bungalow asked for permits (real 10 Nov chat)",
+    "session": "Argus4",
+    "inbound": [
+      "Big pool and garden"
+    ],
+    "sent": [
+      "What is the space intended or permitted for?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 4500,
+      "property_category": "commercial"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "LIVE-6302",
+    "title": "subletting pitch at the end of intake (real 8 Nov chat)",
+    "session": "Gabriela",
+    "inbound": [
+      "Yes sharing is fine"
+    ],
+    "sent": [
+      "One last question, sorry for the spam, but I want to make sure I ask before I don't and you somehow accept it. If I have super serious subletting companies with very interesting offers for you, would you may consider it?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 1400,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "available_date": "2026-12-01",
+      "pets": "no"
+    },
+    "decision": null,
+    "global_suppressions": 0,
+    "pending_kept": false
+  }
+]

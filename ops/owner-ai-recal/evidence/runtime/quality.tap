@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: period is the previous seven Malta calendar days; Monday run is 08:30 Malta
+ok 1 - period is the previous seven Malta calendar days; Monday run is 08:30 Malta
+  ---
+  duration_ms: 915.858168
+  ...
+# Subtest: generate measures real conversations: permit-to-home, studio, spam pitch, fabricated status, ignored question, quiet hours
+ok 2 - generate measures real conversations: permit-to-home, studio, spam pitch, fabricated status, ignored question, quiet hours
+  ---
+  duration_ms: 93.013618
+  ...
+# Subtest: reports are immutable rows; review appends and creates a fixture candidate; block does not
+ok 3 - reports are immutable rows; review appends and creates a fixture candidate; block does not
+  ---
+  duration_ms: 10.621416
+  ...
+# Subtest: anonymised export carries no conversation ids, sessions or phone fragments
+ok 4 - anonymised export carries no conversation ids, sessions or phone fragments
+  ---
+  duration_ms: 1.512652
+  ...
+# Subtest: scheduled tick runs once when due, persists the next Monday, and is idempotent
+ok 5 - scheduled tick runs once when due, persists the next Monday, and is idempotent
+  ---
+  duration_ms: 55.405549
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1540.056112

@@ -439,6 +439,8 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'baseinventory', icon: '▤', label: 'Base Inventory', href: '/base-inventory' },
   // Integrations → Property Sources (2026-11-09): admin-only server-side and here.
   { key: 'sources', icon: '⇄', label: 'Property Sources', href: '/property-sources', adminOnly: true },
+  // Intelligence → Owner Conversation Quality (2026-11-10): weekly owner-AI review, admin only.
+  { key: 'ownerquality', icon: '✓', label: 'Owner AI Quality', href: '/owner-quality', adminOnly: true },
 ]
 
 // Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean

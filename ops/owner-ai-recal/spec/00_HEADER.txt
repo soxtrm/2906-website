@@ -1,0 +1,19 @@
+# CLAUDE: READ THE ENTIRE ATTACHED FILE — ARGUS OWNER AI RECALIBRATION
+
+This file is intentionally self-contained. It contains the actual implementation directive, annotated GOLDEN examples, runtime policy, weekly quality report design, the complete 136-case test catalogue as JSONL, and the offline evaluator Python source.
+
+EXECUTE THE FOLLOWING IN THE EXISTING CANONICAL ARGUS BACKEND/CRM. DO NOT STOP AT PLANNING:
+
+1. Trace and prove why the actual 9–10 November WhatsApp conversations were mishandled, across WAHA webhook, context assembly, property state, model/planner, dispatcher and schedule. Preserve the last truly working behavior and all other good modules.
+2. Fix the decisions, not merely the wording: direct questions first; studio and shared-room ontology; availability != rented; correct owner price updates; viewing offers; commercial permits only for commercial contexts; no re-asking known facts; no replies after opt-out/unavailability or at forbidden hours; human handoff.
+3. Freeze an approved policy, persona templates, prompt/model hashes and known-good commit with executable regression suite. Preserve and rerun the PRIOR historical 486-case recovery pack in addition to these 136 new cases, do not claim results you haven't run.
+4. Implement automatic weekly admin Quality Reports, evidence-linked redacted cases, approve/correct/freeze review and a safe candidate evaluation workflow. Do not silently self-modify prompt/model or activate new templates on live Auto ON accounts.
+5. Integrate and deploy verified safe software changes via existing production workflow (no generic no-deploy excuse), while keeping live owner messages, unapproved templates and paused marketing protected from testing.
+6. Return before/after redacted conversations, actual runtime test results, data mutations, dashboard evidence, deployed commit/version and rollback point. Do not stop at a local report.
+
+IMPORTANT: A technically correct reply that fails to save price/availability/viewing facts is still a failure. And a perfectly phrased but unnecessary message is also a failure. NO_SEND is a first-class success.
+
+Sections below have labelled START/END markers for materialization into separate repo files.
+
+
+========================= START MASTER_SPEC (FILE: claude/01_CLAUDE_MASTER_RECALIBRATION.md) =========================

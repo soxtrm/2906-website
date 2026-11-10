@@ -1,0 +1,453 @@
+[
+  {
+    "id": "S01",
+    "title": "identity question behind a third-party auto-reply",
+    "session": "Cedric",
+    "inbound": [
+      "Thank you for contacting Gabriella! Please let us know how we can help.",
+      "Are you an agent in Malta or do you own properties? I'm an agent also; I asked a question."
+    ],
+    "sent": [
+      "Yes — I'm an agent too, not an owner. I'm Cedric, a rental agent with QuickLets in Malta."
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {},
+    "decision": {
+      "next_action": "ANSWER_DIRECT",
+      "reason_code": "OWNER_DIRECT_QUESTION",
+      "sent": true,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S04",
+    "title": "clarification after wrong permit question",
+    "session": "default",
+    "inbound": [
+      "I'm not sure what you mean."
+    ],
+    "sent": [
+      "Sorry, that question wasn't relevant to your residential apartment. Please ignore it — I've removed it from the details we're asking for."
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "property_category": "commercial"
+    },
+    "decision": {
+      "next_action": "ANSWER_DIRECT",
+      "reason_code": "OWNER_DIRECT_QUESTION",
+      "sent": true,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S05",
+    "title": "callback request with area",
+    "session": "default",
+    "inbound": [
+      "Both around 90sqm. Give me a call if you need more info."
+    ],
+    "sent": [
+      "Of course — I'll ask the agent handling it to call you."
+    ],
+    "status": "needs_human_contact",
+    "reason": "owner AI handoff: CALLBACK_REQUEST",
+    "deferred_until": null,
+    "facts": {
+      "property_category": "residential",
+      "size_sqm": 90,
+      "callback_requested": true
+    },
+    "decision": {
+      "next_action": "HUMAN_HANDOFF",
+      "reason_code": "CALLBACK_REQUEST",
+      "sent": true,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S06",
+    "title": "price correction + available",
+    "session": "Gabriela",
+    "inbound": [
+      "It's €2,800. And yes, it's available."
+    ],
+    "sent": [
+      "Thank you. I've updated the asking rent to €2,800 and noted that the property is available. Could you send a couple of photos when you get a chance?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 2800,
+      "previous_price": 2649,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "available_date": "available (owner confirmed; exact date not given)",
+      "availability_status": "AVAILABLE_MARKETING"
+    },
+    "decision": {
+      "next_action": "ACKNOWLEDGE_UPDATE",
+      "reason_code": "PRICE_CORRECTION",
+      "sent": false,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S07",
+    "title": "tenant move-out date",
+    "session": "Gabriela",
+    "inbound": [
+      "My tenant leaves on 20 November."
+    ],
+    "sent": [
+      "Thank you — I've noted that the current tenant leaves on 20 November. I'll keep the available-from date open until you confirm it. Could you send a couple of photos when you get a chance?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 2800,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "available_date": "after 2026-11-20 (current tenant leaves; to confirm)",
+      "tenant_departure_date": "2026-11-20"
+    },
+    "decision": {
+      "next_action": "ACKNOWLEDGE_UPDATE",
+      "reason_code": "FUTURE_VACANCY",
+      "sent": false,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S08",
+    "title": "long-term rented",
+    "session": "kevthirdd",
+    "inbound": [
+      "No pets",
+      "It's not available, it's rented for many years. Thanks."
+    ],
+    "sent": [],
+    "status": "declined",
+    "reason": "owner: long-term rented (no reply needed)",
+    "deferred_until": null,
+    "facts": {
+      "availability_status": "UNAVAILABLE_LONG_TERM",
+      "pets": "no"
+    },
+    "decision": {
+      "next_action": "NO_SEND",
+      "reason_code": "LONG_TERM_RENTED",
+      "sent": false,
+      "block_reason": "LONG_TERM_RENTED"
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S09",
+    "title": "decline after subletting pitch",
+    "session": "Gabriela",
+    "inbound": [
+      "No thanks for now."
+    ],
+    "sent": [],
+    "status": "declined",
+    "reason": "owner declined the current offer (no reply needed)",
+    "deferred_until": null,
+    "facts": {},
+    "decision": {
+      "next_action": "NO_SEND",
+      "reason_code": "NO_REPLY_REQUIRED",
+      "sent": false,
+      "block_reason": "NO_REPLY_REQUIRED"
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S10",
+    "title": "room in shared apartment",
+    "session": "Cedric",
+    "inbound": [
+      "Double room available 1 Dec, €900 all inclusive, in a three-bedroom sharing apartment. Only one room is available; other two are rented. Two bathrooms",
+      "No pets"
+    ],
+    "sent": [
+      "Got it: one room available in the three-bedroom shared apartment with two bathrooms, at €900 inclusive. I've noted the no-pets policy as well. Which town or area is it in?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 900,
+      "bathrooms": 2,
+      "listing_kind": "room",
+      "property_category": "residential",
+      "available_date": "2026-12-01",
+      "availability_status": "AVAILABLE_MARKETING",
+      "pets": "no"
+    },
+    "decision": {
+      "next_action": "ACKNOWLEDGE_UPDATE",
+      "reason_code": "ROOM_NOT_ENTIRE_APARTMENT",
+      "sent": false,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S11",
+    "title": "clarification after sharing question to a room",
+    "session": "Gabriela",
+    "inbound": [
+      "What do you mean please? It's a good room."
+    ],
+    "sent": [
+      "Sorry, that question wasn't relevant — I've noted it as a room in a shared apartment, and I won't ask about sharing again."
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "listing_kind": "room"
+    },
+    "decision": {
+      "next_action": "ANSWER_DIRECT",
+      "reason_code": "OWNER_DIRECT_QUESTION",
+      "sent": true,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S12",
+    "title": "studio with price",
+    "session": "default",
+    "inbound": [
+      "Valletta studio, 1100e."
+    ],
+    "sent": [
+      "Thanks — a studio in Valletta at €1,100. How many bathrooms does it have?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 1100,
+      "bedrooms": 0,
+      "property_subtype": "studio",
+      "property_category": "residential"
+    },
+    "decision": {
+      "next_action": "ACKNOWLEDGE_UPDATE",
+      "reason_code": "STUDIO_EXPLICIT",
+      "sent": false,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S14",
+    "title": "video attachment",
+    "session": "default",
+    "inbound": [
+      "[video]"
+    ],
+    "sent": [],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 1100,
+      "property_subtype": "studio",
+      "_media_pending": "PENDING"
+    },
+    "decision": {
+      "next_action": "WAIT_FOR_MEDIA",
+      "reason_code": "MEDIA_UNREADABLE",
+      "sent": false,
+      "block_reason": "wait_for_media"
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S15",
+    "title": "voice note with a fact",
+    "session": "default",
+    "inbound": [
+      "One bathroom.",
+      "[voice]"
+    ],
+    "sent": [
+      "Thank you, I've noted one bathroom. I'll flag the voice note for review so we don't lose any details."
+    ],
+    "status": "needs_human_contact",
+    "reason": "owner AI handoff: MEDIA_UNREADABLE",
+    "deferred_until": null,
+    "facts": {
+      "price": 1100,
+      "bathrooms": 1,
+      "property_subtype": "studio",
+      "_media_pending": "PENDING_TRANSCRIPTION"
+    },
+    "decision": {
+      "next_action": "HUMAN_HANDOFF",
+      "reason_code": "MEDIA_UNREADABLE",
+      "sent": true,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S16",
+    "title": "quiet hours",
+    "session": "default",
+    "inbound": [
+      "Do you accept pets?"
+    ],
+    "sent": [],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": "2026-11-10T07:33:20.575Z",
+    "facts": {},
+    "decision": {
+      "next_action": "DEFER",
+      "reason_code": "OUT_OF_HOURS",
+      "sent": false,
+      "block_reason": "OUT_OF_HOURS"
+    },
+    "global_suppressions": 0,
+    "pending_kept": true
+  },
+  {
+    "id": "S02",
+    "title": "villa + viewing offer",
+    "session": "Cedric",
+    "inbound": [
+      "Villa available 4 December, 4 bedrooms plus office, 3-car garage, pool, €5,600. Address and photos attached. Viewing tomorrow at 3 PM."
+    ],
+    "sent": [
+      "Thank you, I've noted tomorrow at 3:00 pm as a possible viewing. I'll check with the client and confirm with you before arranging anything."
+    ],
+    "status": "needs_human_contact",
+    "reason": "owner AI handoff: VIEWING_OFFER",
+    "deferred_until": null,
+    "facts": {
+      "price": 5600,
+      "bedrooms": 4,
+      "property_subtype": "villa",
+      "available_date": "2026-12-04",
+      "viewing_status": "PROPOSED"
+    },
+    "decision": {
+      "next_action": "HUMAN_HANDOFF",
+      "reason_code": "VIEWING_OFFER",
+      "sent": true,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "S20",
+    "title": "privacy / deletion request",
+    "session": "default",
+    "inbound": [
+      "You obtained my number without my permission. Remove my details from your database."
+    ],
+    "sent": [],
+    "status": "human_review_required",
+    "reason": "GLOBAL_SUPPRESSION: Owner AI: DNC — You obtained my number without my permission. Remove my details from your database.",
+    "deferred_until": null,
+    "facts": {
+      "do_not_contact": true
+    },
+    "decision": {
+      "next_action": "DNC",
+      "reason_code": "DNC",
+      "sent": false,
+      "block_reason": "dnc"
+    },
+    "global_suppressions": 1,
+    "pending_kept": false
+  },
+  {
+    "id": "LIVE-6340",
+    "title": "residential bungalow asked for permits (real 10 Nov chat)",
+    "session": "Argus4",
+    "inbound": [
+      "Big pool and garden"
+    ],
+    "sent": [
+      "Lovely, thanks, roughly when could someone come view it?"
+    ],
+    "status": "active_collecting",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 4500,
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "property_category": "commercial",
+      "available_date": "Big pool and garden"
+    },
+    "decision": {
+      "next_action": "NO_SEND",
+      "reason_code": "NO_REPLY_REQUIRED",
+      "sent": false,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  },
+  {
+    "id": "LIVE-6302",
+    "title": "subletting pitch at the end of intake (real 8 Nov chat)",
+    "session": "Gabriela",
+    "inbound": [
+      "Yes sharing is fine"
+    ],
+    "sent": [
+      "Perfect, thank you so much for all the details! I'll pass this along and we'll be in touch. Have a great day!"
+    ],
+    "status": "ready_for_kev",
+    "reason": null,
+    "deferred_until": null,
+    "facts": {
+      "price": 1400,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "available_date": "2026-12-01",
+      "pets": "no"
+    },
+    "decision": {
+      "next_action": "NO_SEND",
+      "reason_code": "NO_REPLY_REQUIRED",
+      "sent": false,
+      "block_reason": null
+    },
+    "global_suppressions": 0,
+    "pending_kept": false
+  }
+]
