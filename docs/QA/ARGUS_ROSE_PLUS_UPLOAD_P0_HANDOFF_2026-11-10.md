@@ -41,7 +41,7 @@ The two real seven-image runs retained their originals but the image provider re
 | Viewing | not represented | invitation recorded; no appointment invented |
 | Corrective reply | false removal claim had already been sent | review draft only; 0 messages sent by recovery |
 
-Live evidence confirms one `DECISION_REQUIRED / REVIEW_SHARED_PLACE` task, seven sourced Rose facts, one recovery audit activity and zero outbound messages after recovery.
+Live evidence confirms one `DECISION_REQUIRED / REVIEW_SHARED_PLACE` task, seven sourced Rose facts, one recovery audit activity and zero outbound messages after recovery. The conversation is explicitly `AGENT_TAKEOVER` with `human_active=true` until an authorized reviewer acts.
 
 ## Seven uploaded items
 
@@ -76,6 +76,7 @@ Browser reachability was checked at 390x844 and 1440x1000. The protected CRM cor
 
 - `ffe0459` — shared-place recovery, upload batch state, 48 regressions and QA contracts
 - `087382f` — live-schema hardening, guarded recovery SQL and browser evidence
+- `cc76755` — explicit Agent Takeover lock for the unapproved Rose correction
 - remote branch pushed: `origin/codex/argus-rose-plus-p0-20261110`
 - production code backup: `/opt/2906-system/backups/argus-rose-plus-p0-20261110T151250Z`
 - backup includes code checksums and a 138 MB PostgreSQL custom-format dump
