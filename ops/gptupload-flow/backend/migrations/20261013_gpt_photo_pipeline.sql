@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS property_photo_processing_runs (
   run_id UUID PRIMARY KEY,
   trigger_id TEXT,
   source TEXT NOT NULL,
-  mode TEXT NOT NULL CHECK (mode IN ('pimp','vision')),
+  mode TEXT NOT NULL CHECK (mode IN ('pimp','plus','conservative','premium','vision')),
   status TEXT NOT NULL,
   property_id BIGINT REFERENCES properties(id) ON DELETE SET NULL,
   source_count INTEGER NOT NULL DEFAULT 0,
@@ -13,7 +13,12 @@ CREATE TABLE IF NOT EXISTS property_photo_processing_runs (
   edit_model TEXT,
   vision_model TEXT,
   audit JSONB NOT NULL DEFAULT '{}'::jsonb,
+  failure_reason TEXT,
+  retry_available BOOLEAN NOT NULL DEFAULT FALSE,
+  retry_count INTEGER NOT NULL DEFAULT 0,
+  parent_run_id UUID REFERENCES property_photo_processing_runs(run_id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   completed_at TIMESTAMPTZ
 );
 CREATE UNIQUE INDEX IF NOT EXISTS property_photo_processing_runs_trigger_uidx
@@ -41,6 +46,17 @@ CREATE TABLE IF NOT EXISTS property_photo_edits (
 CREATE INDEX IF NOT EXISTS property_photo_edits_property_idx ON property_photo_edits(property_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS property_photo_edits_source_hash_idx ON property_photo_edits(source_sha256);
 CREATE INDEX IF NOT EXISTS property_photo_edits_edited_hash_idx ON property_photo_edits(edited_sha256) WHERE edited_sha256 IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS property_photo_processing_events (
+  id BIGSERIAL PRIMARY KEY,
+  run_id UUID NOT NULL REFERENCES property_photo_processing_runs(run_id) ON DELETE CASCADE,
+  stage TEXT NOT NULL CHECK (stage IN ('received','processing','generated','quality_checked','saved','ready','failed')),
+  reason TEXT,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS property_photo_processing_events_run_idx
+  ON property_photo_processing_events(run_id, created_at);
 
 CREATE TABLE IF NOT EXISTS property_photo_vision_observations (
   id BIGSERIAL PRIMARY KEY,

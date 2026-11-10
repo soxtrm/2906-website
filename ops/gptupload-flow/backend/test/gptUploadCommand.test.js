@@ -18,10 +18,16 @@ test('legacy !upload digit semantics are preserved', () => {
 })
 
 test('gpt variants accept compact and spaced digits with identical suffix', () => {
-  assert.deepEqual(parseUploadCommand('!gptupload4 force'), { variantSuffix: '4', intakeMode: null, photoMode: 'pimp' })
-  assert.deepEqual(parseUploadCommand('!gptupload 4 group'), { variantSuffix: '4', intakeMode: null, photoMode: 'pimp' })
+  assert.deepEqual(parseUploadCommand('!gptupload4 force'), { variantSuffix: '4', intakeMode: null, photoMode: 'conservative' })
+  assert.deepEqual(parseUploadCommand('!gptupload 4 group'), { variantSuffix: '4', intakeMode: null, photoMode: 'conservative' })
   assert.deepEqual(parseUploadCommand('!gptuploadv9'), { variantSuffix: '9', intakeMode: null, photoMode: 'vision' })
   assert.deepEqual(parseUploadCommand('!gptuploadv 9 noad'), { variantSuffix: '9', intakeMode: null, photoMode: 'vision' })
+})
+
+test('plusupload has its own premium mode and never aliases gptupload', () => {
+  assert.deepEqual(parseUploadCommand('!plusupload'), { variantSuffix: '', intakeMode: null, photoMode: 'premium' })
+  assert.deepEqual(parseUploadCommand('!plusupload 4 noad'), { variantSuffix: '4', intakeMode: null, photoMode: 'premium' })
+  assert.equal(parseUploadCommand('!plusuploadstatus'), null)
 })
 
 test('other upload commands do not collide', () => {
@@ -31,6 +37,7 @@ test('other upload commands do not collide', () => {
 
 test('command is removed while listing text remains', () => {
   assert.equal(stripUploadCommands('Apartment Sliema\n!gptuploadv 9 force group'), 'Apartment Sliema\n')
+  assert.equal(stripUploadCommands('Apartment Sliema\n!plusupload 4 force'), 'Apartment Sliema\n')
 })
 
 test('all group commands have one cross-session logical key', () => {

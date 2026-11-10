@@ -1,0 +1,25 @@
+services:
+  backend:
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+  postgres:
+    logging:
+      driver: json-file
+      options:
+        max-size: "25m"
+        max-file: "3"
+  redis:
+    logging:
+      driver: json-file
+      options:
+        max-size: "25m"
+        max-file: "3"
+  waha:
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"

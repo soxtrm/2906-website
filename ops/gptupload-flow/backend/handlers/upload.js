@@ -407,17 +407,25 @@ async function preparePhotoPackage({ images, photoMode, facts, triggerId }) {
     return { imageUrls, photoResult: null, uploaded: [] }
   }
 
+  // Originals are retained separately before generation. They are never put
+  // into the property gallery as a pretend enhanced result if generation
+  // fails. Generated checkpoints make a retry idempotent across restarts.
+  const sourceUrls = new Map()
+  for (const image of (images || [])) {
+    const url = await ul.uploadBuffer(image.buffer, image.mimeType)
+    if (url) sourceUrls.set(gptPhotoPipeline.sha256(image.buffer), url)
+  }
   const photoResult = await gptPhotoPipeline.processImages({
     images: images || [], facts, mode: photoMode, triggerId, source: 'whatsapp_upload',
+    uploader: (buffer, mimeType) => ul.uploadBuffer(buffer, mimeType),
   })
   const imageUrls = []
   const uploaded = []
   for (const item of photoResult.items) {
-    const sourceUrl = await ul.uploadBuffer(item.sourceBuffer, item.sourceMimeType)
-    let editedUrl = null
-    if (item.status === 'edited') editedUrl = await ul.uploadBuffer(item.buffer, item.mimeType)
-    const finalUrl = editedUrl || sourceUrl
-    if (finalUrl) imageUrls.push(finalUrl)
+    const sourceUrl = sourceUrls.get(item.sourceSha256) || await ul.uploadBuffer(item.sourceBuffer, item.sourceMimeType)
+    let editedUrl = item.editedUrl || null
+    if (item.status === 'quality_checked' && !editedUrl) editedUrl = await ul.uploadBuffer(item.buffer, item.mimeType)
+    if (sourceUrl && editedUrl) imageUrls.push(editedUrl)
     uploaded.push({ position: item.position, sourceUrl, editedUrl })
   }
   return { imageUrls, photoResult, uploaded }
@@ -439,7 +447,8 @@ async function updateExistingVisionProperty({ ref, images, facts, photoMode, tri
   await db.query(
     `UPDATE properties SET images=$2::jsonb, public_payload=$3::jsonb, updated_at=NOW() WHERE id=$1`,
     [prop.id, JSON.stringify(mergedRows), JSON.stringify(publicPayload)])
-  await gptPhotoPipeline.persistResult({ result: prepared.photoResult, propertyId: prop.id, uploaded: prepared.uploaded })
+  const persistedPhotos = await gptPhotoPipeline.persistResult({ result: prepared.photoResult, propertyId: prop.id, uploaded: prepared.uploaded })
+  if (prepared.photoResult && persistedPhotos) prepared.photoResult.status = persistedPhotos.status
   require('../services/websiteSync').syncPropertyToWebsite(prop.id)
     .catch(err => log.warn('gptuploadv: existing property website sync failed', { ref, err: err.message }))
   const channelRows = await db.query(`SELECT DISTINCT channel FROM property_publishing_status WHERE property_id=$1`, [prop.id])
@@ -670,9 +679,10 @@ async function createListing({ rawText, images, videos, agent, senderPhone, chat
   const propId = ins.rows[0].id
 
   if (preparedPhotos.photoResult) {
-    await gptPhotoPipeline.persistResult({
+    const persistedPhotos = await gptPhotoPipeline.persistResult({
       result: preparedPhotos.photoResult, propertyId: propId, uploaded: preparedPhotos.uploaded,
     })
+    if (persistedPhotos) preparedPhotos.photoResult.status = persistedPhotos.status
   }
 
   // LOCALITY RESOLVER WIRING (Kev, 2026-09-23, ARGUS locality hotfix): every
@@ -1220,7 +1230,7 @@ async function markChannel(propId, channel, status, err) {
 // ("!upload6 4835") is too short to be a phone, so it never matches.
 function parseOwnerContact(commandText) {
   const tail = String(commandText || '')
-    .replace(/^\s*!(?:gptuploadv|gptupload|upload)\s*[1-9]?\b/i, '')
+    .replace(/^\s*!(?:plusupload|gptuploadv|gptupload|upload)\s*[1-9]?\b/i, '')
     .replace(/^(?:\s+(?:S|C|force|group|noad)\b)+/i, '')
     .trim()
   if (!tail) return null
@@ -1368,7 +1378,7 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
     if (isGroup) {
       const { quotedFromPayload } = require('../lib/quotedMessage')
       const { id: quotedMessageId } = quotedFromPayload(payload)
-      const commandPrefix = text.match(/^!(?:(?:gptuploadv|gptupload)\s*[1-9]?|upload[1-9]?)(?:\s+[SC])?\b/i)
+      const commandPrefix = text.match(/^!(?:(?:plusupload|gptuploadv|gptupload)\s*[1-9]?|upload[1-9]?)(?:\s+[SC])?\b/i)
       const explicitIdMatch = commandPrefix ? text.slice(commandPrefix[0].length).match(/^\s+(\d{2,})\b/) : null
       const explicitId = explicitIdMatch ? Number(explicitIdMatch[1]) : null
 
@@ -1474,9 +1484,10 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
       const count = Math.min(total, gptPhotoPipeline.MAX_EDIT_IMAGES)
       // Internal chat only. Photos beyond the limit are still uploaded, as
       // originals - say so up front instead of silently leaving them unedited.
-      const overLimit = total > count ? `\nMaximum ${gptPhotoPipeline.MAX_EDIT_IMAGES} images supported for gptupload - ${total - count} more kept as original.` : ''
+      const overLimit = total > count ? `\nMaximum ${gptPhotoPipeline.MAX_EDIT_IMAGES} images per enhancement run - ${total - count} require a separate retry batch.` : ''
+      const presetLabel = gptPhotoPipeline.presetFor(photoMode).label
       await reply(session, chatId,
-        `${photoMode === 'vision' ? 'VISION + GPT PHOTO PROCESSING' : 'GPT PHOTO PROCESSING'}\n0 / ${count} complete${overLimit}`)
+        `${presetLabel.toUpperCase()}\nReceived → Processing\n0 / ${count} complete${overLimit}`)
     }
     const created = []
     const dupes = []
@@ -1550,7 +1561,7 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
         (c.multiUnit ? `Multi-unit post — also created ${c.units.map(u => '#' + u.ref).filter(r => r !== '#' + c.ref).join(', ')}, both cross-referenced.\n` : '') +
         `${c.town || '—'} · ${c.beds || 0}BR/${c.baths || 0}BA · ${price}\n` +
         `${media}\n` +
-        (c.photoSummary ? `GPT PIMP ${c.photoSummary.editedCount}/${Math.min(c.photoSummary.sourceCount, gptPhotoPipeline.MAX_EDIT_IMAGES)} complete${c.photoSummary.fallbackCount ? ` · ${c.photoSummary.fallbackCount} original fallback` : ''}${c.photoSummary.lowerResolutionCount ? ` · ${c.photoSummary.lowerResolutionCount} lower-res, review` : ''}${c.photoSummary.overLimitCount ? ` · ${c.photoSummary.overLimitCount} over limit kept original` : ''}${c.photoSummary.audit?.hero_candidates?.length ? ` · hero candidate ${c.photoSummary.audit.hero_candidates[0] + 1}` : ''}\n` : '') +
+        (c.photoSummary ? `${c.photoSummary.preset.label}: ${c.photoSummary.editedCount}/${Math.min(c.photoSummary.sourceCount, gptPhotoPipeline.MAX_EDIT_IMAGES)} generated${c.photoSummary.status === 'failed' ? ` · FAILED · ${c.photoSummary.failedCount} retry available` : ' · Quality Checked → Saved → Ready'}${c.photoSummary.resumedCount ? ` · ${c.photoSummary.resumedCount} resumed` : ''}${c.photoSummary.lowerResolutionCount ? ` · ${c.photoSummary.lowerResolutionCount} lower-res, review` : ''}${c.photoSummary.overLimitCount ? ` · ${c.photoSummary.overLimitCount} separate-batch retry` : ''}${c.photoSummary.audit?.hero_candidates?.length ? ` · hero candidate ${c.photoSummary.audit.hero_candidates[0] + 1}` : ''}\nRun ${c.photoSummary.runId}\n` : '') +
         `\n` +
         (noAd ? `🚫 noad — no Facebook at all (no page post, no group share)\n` : '') +
         (!noAd && !c.imageCount && !c.videoCount
@@ -2679,6 +2690,75 @@ async function handleWebhookMessage({ payload, session, text, isGroup, chatId, s
     await cmdBmarket({ session, chatId, senderPhone: senderForAuth, arg: t.replace(/^!bmarket\s*/i, '') })
     return true
   }
+  // Admin-only status and side-by-side source/result links. Private media is
+  // never exposed outside the existing authorised ARGUS operator chat.
+  if (/^!imagestatus\b/i.test(t)) {
+    if (!isAdmin(senderForAuth)) { await reply(session, chatId, '❌ Admin only.'); return true }
+    const statusId = t.match(/^!imagestatus\s+([0-9a-f]{8}-[0-9a-f-]{27,})\b/i)?.[1]
+    if (!statusId) { await reply(session, chatId, 'Usage: !imagestatus <photo-run-id>'); return true }
+    const runRows = await db.query(
+      `SELECT r.run_id, r.mode, r.status, r.failure_reason, r.retry_available, r.created_at, r.completed_at, p.ref
+         FROM property_photo_processing_runs r LEFT JOIN properties p ON p.id=r.property_id
+        WHERE r.run_id=$1 LIMIT 1`, [statusId])
+    const run = runRows.rows[0]
+    if (!run) { await reply(session, chatId, '❌ Photo run not found.'); return true }
+    const editRows = await db.query(
+      `SELECT position, status, source_image_url, edited_image_url, error
+         FROM property_photo_edits WHERE run_id=$1 ORDER BY position`, [statusId])
+    const lines = [
+      `${run.status === 'ready' ? '✅ Ready' : run.status === 'failed' ? '❌ Failed → Retry Available' : '⏳ ' + run.status}`,
+      `${run.mode.toUpperCase()} · ${run.ref ? '#' + run.ref : 'property pending'} · Run ${run.run_id}`,
+    ]
+    if (run.failure_reason) lines.push(`Reason: ${String(run.failure_reason).slice(0, 240)}`)
+    for (const row of editRows.rows.slice(0, gptPhotoPipeline.MAX_EDIT_IMAGES)) {
+      lines.push('', `Image ${Number(row.position) + 1} · ${row.status}`,
+        `Original: ${row.source_image_url || 'not saved'}`,
+        `Enhanced: ${row.edited_image_url || 'not generated'}`)
+      if (row.error) lines.push(`Error: ${String(row.error).slice(0, 180)}`)
+    }
+    if (run.retry_available) lines.push('', `Retry: !imageretry ${run.run_id}`)
+    await reply(session, chatId, lines.join('\n'))
+    return true
+  }
+
+  // Manual, idempotent retry for a failed enhancement run. This never sends
+  // owner outreach and never republishes a listing; it only restores failed
+  // gallery positions from the retained original assets.
+  if (/^!imageretry\b/i.test(t)) {
+    if (!isAdmin(senderForAuth)) { await reply(session, chatId, '❌ Admin only.'); return true }
+    const retryId = t.match(/^!imageretry\s+([0-9a-f]{8}-[0-9a-f-]{27,})\b/i)?.[1]
+    if (!retryId) { await reply(session, chatId, 'Usage: !imageretry <photo-run-id>'); return true }
+    try {
+      const retried = await gptPhotoPipeline.retryRun({
+        runId: retryId,
+        uploader: (buffer, mimeType) => ul.uploadBuffer(buffer, mimeType),
+      })
+      const propRow = await db.query(`SELECT images, public_payload FROM properties WHERE id=$1 LIMIT 1`, [retried.propertyId])
+      const prop = propRow.rows[0] || {}
+      const priorRows = await db.query(
+        `SELECT position, edited_image_url FROM property_photo_edits
+          WHERE run_id=$1 AND edited_image_url IS NOT NULL ORDER BY position`, [retryId])
+      const byPosition = new Map(priorRows.rows.map(row => [Number(row.position), row.edited_image_url]))
+      for (const replacement of retried.replacements) byPosition.set(replacement.position, replacement.editedUrl)
+      const runUrls = [...byPosition.entries()].sort((a, b) => a[0] - b[0]).map(entry => entry[1]).filter(Boolean)
+      const runUrlSet = new Set([...priorRows.rows.map(row => row.edited_image_url), ...retried.replacements.map(row => row.editedUrl)])
+      const oldUrls = Array.isArray(prop.images) ? prop.images.map(row => row?.url).filter(Boolean) : []
+      const mergedUrls = [...oldUrls.filter(url => !runUrlSet.has(url)), ...runUrls]
+      const publicPayload = { ...(prop.public_payload || {}), images: mergedUrls }
+      await db.query(`UPDATE properties SET images=$2::jsonb, public_payload=$3::jsonb, updated_at=NOW() WHERE id=$1`,
+        [retried.propertyId, JSON.stringify(mergedUrls.map(url => ({ url }))), JSON.stringify(publicPayload)])
+      require('../services/websiteSync').syncPropertyToWebsite(retried.propertyId)
+        .catch(err => log.warn('imageretry: website sync failed', { propertyId: retried.propertyId, err: err.message }))
+      await reply(session, chatId,
+        `${retried.persisted.status === 'ready' ? '✅ Ready' : '❌ Failed → Retry Available'}\n` +
+        `Run ${retried.result.runId}\n${retried.persisted.savedCount} image${retried.persisted.savedCount === 1 ? '' : 's'} saved.`)
+    } catch (error) {
+      log.warn('imageretry: failed', { stage: 'retry', reason: String(error.message || error).slice(0, 500) })
+      await reply(session, chatId, `❌ Failed → Retry Available\n${String(error.message || error).slice(0, 300)}`)
+    }
+    return true
+  }
+
   // !wupload — Unwatermark.ai integration (Kev, 2026-09-08). Deliberately
   // standalone from !upload/createListing -- "die Owner sachen werden ja
   // garnicht immer properties haben": sometimes there's a photo to clean up
