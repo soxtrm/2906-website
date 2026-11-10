@@ -7,6 +7,7 @@ const waha = require('../waha')
 const { interpretInbound, planDirectReply, validateDraft, OPERATIONAL_STATUS } = require('./conversationPolicy')
 const { nearDuplicate } = require('./responseDedup')
 const { resolveAgentIdentity, agencyShortAnswer, emailAnswer } = require('./agentIdentityRegistry')
+const { founderApprovedDraft } = require('./sharedAccommodation')
 
 const normalizePhone = value => String(value || '').replace(/\D/g, '').slice(-12)
 const sourceTimestamp = value => {
@@ -36,7 +37,7 @@ async function resolveProperties(ownerId, text, chatId) {
   if (!ownerId) return []
   const all = (await db.query(
     `SELECT id, ref, town, sub_location, available_status, operational_status,
-            property_type, bedrooms, floor_level, apt
+            property_type, bedrooms, floor_level, apt, listed_by_agent_id, activity_agent_id
        FROM properties
       WHERE owner_id=$1 AND ref IS NOT NULL ORDER BY updated_at DESC`, [ownerId])).rows
   const explicit = all.filter(p => {
@@ -61,7 +62,7 @@ async function allOwnerProperties(ownerId) {
   if (!ownerId) return []
   return (await db.query(
     `SELECT id, ref, town, sub_location, available_status, operational_status,
-            property_type, bedrooms, floor_level, apt
+            property_type, bedrooms, floor_level, apt, listed_by_agent_id, activity_agent_id
        FROM properties WHERE owner_id=$1 AND ref IS NOT NULL ORDER BY updated_at DESC`, [ownerId])).rows
 }
 
@@ -135,6 +136,97 @@ async function applyActions(client, state, decision, properties, meta) {
            reason=EXCLUDED.reason,evidence=EXCLUDED.evidence,candidate_property_ids=EXCLUDED.candidate_property_ids,updated_at=NOW()`,
         [state.id,state.owner_contact_id,meta.messageId,action.reason || 'ambiguous',action.evidence || action.reason || '',
          JSON.stringify(action.details?.candidatePropertyIds || action.details?.selectedPropertyIds || [])])
+    }
+    if (action.type === 'SHARED_PLACE_STATUS') {
+      await client.query(`UPDATE conversation_intelligence_state SET human_active=TRUE WHERE id=$1`, [state.id])
+      await client.query(
+        `INSERT INTO conversation_review_tasks
+           (state_id,owner_contact_id,source_message_id,review_type,status,reason,evidence,candidate_property_ids,created_at,updated_at)
+         VALUES ($1,$2,$3,'SHARED_PLACE_STATUS','OPEN','shared_place_no_longer_available',$4,$5::jsonb,NOW(),NOW())
+         ON CONFLICT (state_id,source_message_id,review_type) DO UPDATE SET
+           evidence=EXCLUDED.evidence,candidate_property_ids=EXCLUDED.candidate_property_ids,updated_at=NOW()`,
+        [state.id,state.owner_contact_id,meta.messageId,action.reason || '',JSON.stringify(action.propertyIds || [])])
+    }
+    if (action.type === 'SHARED_PLACE_OFFER') {
+      const ids = (action.propertyIds?.length ? action.propertyIds : properties.map(p => p.id)).map(Number).filter(Number.isFinite)
+      if (ids.length !== 1) {
+        await client.query(`UPDATE conversation_intelligence_state SET human_active=TRUE WHERE id=$1`, [state.id])
+        await client.query(
+          `INSERT INTO conversation_review_tasks
+             (state_id,owner_contact_id,source_message_id,review_type,status,reason,evidence,candidate_property_ids,created_at,updated_at)
+           VALUES ($1,$2,$3,'PROPERTY_ASSOCIATION','OPEN','shared_place_requires_exact_property',$4,$5::jsonb,NOW(),NOW())
+           ON CONFLICT (state_id,source_message_id,review_type) DO UPDATE SET evidence=EXCLUDED.evidence,candidate_property_ids=EXCLUDED.candidate_property_ids,updated_at=NOW()`,
+          [state.id,state.owner_contact_id,meta.messageId,action.reason || '',JSON.stringify(ids)])
+        continue
+      }
+      const propertyId = ids[0]
+      const current = (await client.query(
+        `SELECT id,ref,available_status,operational_status,published,listed_by_agent_id,activity_agent_id
+           FROM properties WHERE id=$1 FOR UPDATE`, [propertyId])).rows[0]
+      if (!current) continue
+      const details = action.details || {}
+      const corrective = current.available_status === 'rented' || current.operational_status === OPERATIONAL_STATUS.RENTED
+      const taskTopic = `shared_place_offer:${propertyId}`
+      const taskReason = 'Owner reports a partially occupied shared property with a remaining rentable place. Review source, presentation and scope before any owner reply or publication change.'
+      const context = {
+        propertyId, sourceMessageId: meta.messageId, sourceTimestamp: meta.timestamp,
+        occupancyState: details.occupancyState || null,
+        wholePropertyAvailable: false,
+        availablePlaceCount: details.availablePlaceCount ?? null,
+        availableRoomCount: details.availableRoomCount ?? null,
+        occupiedPersonCount: details.occupiedPersonCount ?? null,
+        perPersonRent: details.perPersonRent ?? null,
+        wholePropertyTotalRent: details.wholePropertyTotalRent ?? null,
+        viewingInvited: !!details.viewingInvited,
+        viewingProposal: details.viewingProposal || null,
+        protectedPreferencePresent: !!details.protectedPreference,
+        previousStatus: { available: current.available_status, operational: current.operational_status, published: current.published },
+      }
+      const contextHash = digest(JSON.stringify(context))
+      const proposedMessage = founderApprovedDraft(details, { corrective })
+      await client.query(
+        `UPDATE properties SET
+           available_status='pending_check', operational_status='NEEDS_HUMAN_REVIEW',
+           sharing_allowed=TRUE, sharing_price=COALESCE($2,sharing_price),
+           occupancy_state=$3, whole_property_available=FALSE,
+           available_place_count=$4, available_room_count=$5,
+           occupied_person_count=$6, whole_property_total_rent=$7,
+           viewing_invited=$8, updated_at=NOW()
+         WHERE id=$1`,
+        [propertyId,details.perPersonRent ?? null,details.occupancyState || 'SHARED_OCCUPANCY_UNKNOWN',
+         details.availablePlaceCount ?? null,details.availableRoomCount ?? null,
+         details.occupiedPersonCount ?? null,details.wholePropertyTotalRent ?? null,!!details.viewingInvited])
+      await client.query(
+        `INSERT INTO owner_recheck_tasks
+           (owner_contact_id,owner_phone,topic,state,decision,reason,property_id,source_type,source_id,
+            context_hash,context_snapshot,proposed_action,proposed_message,created_at,updated_at)
+         VALUES ($1,$2,$3,'DECISION_REQUIRED','REVIEW_SHARED_PLACE',$4,$5,'conversation_intelligence',$6,$7,$8::jsonb,
+                 'Review shared-place facts, presentation and corrective owner reply',$9,NOW(),NOW())
+         ON CONFLICT (owner_phone,topic) DO UPDATE SET
+           owner_contact_id=EXCLUDED.owner_contact_id,state='DECISION_REQUIRED',decision=EXCLUDED.decision,
+           reason=EXCLUDED.reason,property_id=EXCLUDED.property_id,source_type=EXCLUDED.source_type,
+           source_id=EXCLUDED.source_id,context_hash=EXCLUDED.context_hash,
+           context_snapshot=EXCLUDED.context_snapshot,proposed_action=EXCLUDED.proposed_action,
+           proposed_message=EXCLUDED.proposed_message,approval_context_hash=NULL,approved_at=NULL,
+           approved_by=NULL,resolved_at=NULL,resolution=NULL,updated_at=NOW()`,
+        [state.owner_contact_id,meta.phone,taskTopic,taskReason,propertyId,meta.messageId,contextHash,JSON.stringify(context),proposedMessage])
+      const agentId = current.listed_by_agent_id || current.activity_agent_id
+      if (agentId) {
+        await client.query(
+          `INSERT INTO agent_listing_notifications (agent_id,property_id,kind,status_label,detail,notified_at)
+           VALUES ($1,$2,'owner_shared_place','Review shared-place offer',
+                   'Owner offers one additional shared-accommodation place. Review source facts and the approval-required reply.',NOW())
+           ON CONFLICT (agent_id,property_id,kind) DO UPDATE SET
+             status_label=EXCLUDED.status_label,detail=EXCLUDED.detail,notified_at=NOW(),seen_at=NULL`,
+          [agentId,propertyId])
+      }
+      await client.query(
+        `INSERT INTO property_activities (property_id,activity_type,details,is_significant,created_at)
+         VALUES ($1,'owner_shared_place_review',$2::jsonb,TRUE,NOW())`,
+        [propertyId,JSON.stringify({ source:'conversation_intelligence', source_message_id:meta.messageId, context_hash:contextHash,
+          old_status:context.previousStatus, new_state:{ available_status:'pending_check', operational_status:'NEEDS_HUMAN_REVIEW' },
+          task_committed:true, outbound_review_required:true })])
+      await client.query(`UPDATE conversation_intelligence_state SET human_active=TRUE WHERE id=$1`, [state.id])
     }
     if (action.type === 'PROPERTY_STATUS') {
       const ids = action.propertyIds?.length ? action.propertyIds : properties.map(p => p.id)
@@ -291,7 +383,7 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
     const ts = sourceTimestamp(timestamp)
     await persistFacts(client, state, decision, properties, { edited, messageId, timestamp: ts, senderAccountId })
     pendingJobs = await applyActions(client, state, decision, properties, { messageId, timestamp: ts, phone })
-    const reviewAction = decision.actions.find(a => a.type === 'HUMAN_REVIEW' || a.type === 'HUMAN_COMPLIANCE_REVIEW')
+    const reviewAction = decision.actions.find(a => ['HUMAN_REVIEW','HUMAN_COMPLIANCE_REVIEW','SHARED_PLACE_OFFER','SHARED_PLACE_STATUS'].includes(a.type))
     let processingStatus = reviewAction ? 'REVIEW_REQUIRED' : 'PROCESSED'
     let processingReasonCode = reviewAction?.reason || null
     let processingReasonDetail = reviewAction?.evidence || null
@@ -349,6 +441,7 @@ async function handleInbound({ phone, chatId, session='default', text, messageId
         conversationVersion: state.conversation_version, contactOptOut: !!state.contact_opt_out,
         humanActive: !!state.human_active, humanComplianceReview: decision.complianceReview || !!state.compliance_review_required,
         facts: state.facts,
+        committedActions: decision.actions.filter(a => a.type === 'PROPERTY_STATUS').map(a => a.type),
       }, identity, expectedConversationVersion: state.conversation_version })
       if (check.allow) {
         guardId = await claimReply(client, state.id, messageId, reply)

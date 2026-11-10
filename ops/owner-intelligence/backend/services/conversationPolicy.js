@@ -1,6 +1,7 @@
 'use strict'
 
 const { agencyAnswer, clientTypeAnswer } = require('./agentIdentityRegistry')
+const { parseSharedAccommodation } = require('./sharedAccommodation')
 
 const FACT_STATUS = Object.freeze({
   KNOWN: 'KNOWN', UNKNOWN: 'UNKNOWN', CONFLICTING: 'CONFLICTING',
@@ -18,7 +19,7 @@ const PROPERTY_REMOVAL_RE = /\b(remove (?:it|the (?:property|place|listing))|tak
 const RENTED_RE = /\b(?:just\s+)?(?:been\s+)?rented\b|\balready rented\b|\bplace (?:is|has been) taken\b/i
 const SOLD_RE = /\b(?:just\s+)?sold\b|\balready sold\b/i
 const HISTORICAL_RE = /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+years?\s+ago\b|\b(?:previously|formerly|back then|used to be|when (?:it|the (?:flat|apartment|property|place)) (?:was|had been|got) (?:finished|completed|built|renovated))\b/i
-const CURRENT_AVAILABLE_RE = /\b(?:is|are)\s+(?:still\s+|currently\s+|now\s+)?available\b|\b(?:remains?|still|currently|now)\s+(?:both\s+|all\s+)?available\b|\b(?:studio|apartment|flat|unit|number\s*(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)|no\.?\s*\d+)\b.{0,45}\bavailable\b|^\s*available\s*[.!]?\s*$/i
+const CURRENT_AVAILABLE_RE = /\b(?:is|are)\s+(?:still\s+|currently\s+|now\s+)?available\b|\b(?:remains?|still|currently|now)\s+(?:both\s+|all\s+)?available\b|\b(?:studio|apartment|flat|unit|number\s*(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)|no\.?\s*\d+)\b.{0,45}\bavailable\b|^\s*available\b/i
 const FUTURE_AVAILABLE_RE = /\bavailable\s+(?:again\s+)?from\b/i
 const VIEWING_ONLY_RE = /\bnot\s+available\s+for\s+viewings?\b|\bviewings?\s+(?:are\s+)?(?:not\s+possible|paused|unavailable)\b/i
 const REFURBISHMENT_RE = /\b(?:currently\s+)?(?:being\s+)?(?:refurbished|renovated|painted|cleaned)\b|\b(?:painting|cleaning|refurbishment|renovation)\s+(?:is\s+)?(?:ongoing|in progress|pending)\b/i
@@ -187,13 +188,56 @@ function interpretInbound(input = {}) {
   const referencedProperties = properties.filter(p => referencedPropertyIds.includes(p.id))
   const selector = unitSelector(text, referencedProperties.length ? referencedProperties : properties)
   const selectedIds = uniq(selector.constrained ? selector.ids : referencedPropertyIds)
+  const shared = parseSharedAccommodation(text)
 
   if (globalOptOut) {
     actions.push({ type: 'CONTACT_OPT_OUT', scope: 'CONTACT', reason: text })
     terminal = true
     suppressAutomation = true
   }
-  if (historical && (rented || sold)) {
+  if (shared.isOffer) {
+    const sharedDetails = {
+      occupancyState: shared.occupancyState,
+      wholePropertyAvailable: false,
+      availablePlaceCount: shared.availablePlaceCount,
+      availableRoomCount: shared.availableRoomCount,
+      occupiedPersonCount: shared.occupiedPersonCount,
+      perPersonRent: shared.perPersonRent,
+      wholePropertyTotalRent: shared.wholePropertyTotalRent,
+      availableFrom: shared.availableFrom,
+      viewingInvited: shared.viewingInvited,
+      viewingProposal: shared.viewingProposal,
+      protectedPreference: shared.protectedPreference,
+    }
+    facts.push(makeFact('occupancyState', shared.occupancyState || 'SHARED_OCCUPANCY_UNKNOWN', { evidence: text, propertyIds: selectedIds }))
+    facts.push(makeFact('wholePropertyAvailable', false, { negative: true, evidence: text, propertyIds: selectedIds }))
+    facts.push(makeFact('sharingAllowed', true, { evidence: text, propertyIds: selectedIds }))
+    if (shared.availablePlaceCount != null) facts.push(makeFact('availablePlaceCount', shared.availablePlaceCount, { evidence: text, propertyIds: selectedIds }))
+    if (shared.availableRoomCount != null) facts.push(makeFact('availableRoomCount', shared.availableRoomCount, { evidence: text, propertyIds: selectedIds }))
+    if (shared.occupiedPersonCount != null) facts.push(makeFact('occupiedPersonCount', shared.occupiedPersonCount, { evidence: text, propertyIds: selectedIds }))
+    if (shared.perPersonRent != null) facts.push(makeFact('perPersonRent', shared.perPersonRent, { evidence: text, propertyIds: selectedIds }))
+    if (shared.wholePropertyTotalRent != null) facts.push(makeFact('wholePropertyTotalRent', shared.wholePropertyTotalRent, { evidence: text, propertyIds: selectedIds }))
+    if (shared.availableFrom) facts.push(makeFact('availableFrom', shared.availableFrom, { factStatus: FACT_STATUS.CONDITIONAL, confidence: 0.9, evidence: text, propertyIds: selectedIds }))
+    if (shared.viewingInvited) facts.push(makeFact('viewingInvited', true, { evidence: text, propertyIds: selectedIds }))
+    if (shared.viewingProposal) facts.push(makeFact('viewingProposal', shared.viewingProposal, { factStatus: FACT_STATUS.CONDITIONAL, confidence: 0.9, evidence: text, propertyIds: selectedIds }))
+    if (shared.protectedPreference) facts.push(makeFact('restrictedComplianceNote', shared.protectedPreference, { factStatus: FACT_STATUS.CONDITIONAL, confidence: 1, evidence: text, restricted: true, propertyIds: selectedIds }))
+    actions.push({
+      type: 'SHARED_PLACE_OFFER', scope: 'PROPERTY', propertyIds: selectedIds,
+      status: OPERATIONAL_STATUS.NEEDS_HUMAN_REVIEW, reason: text, details: sharedDetails,
+    })
+    terminal = true
+    suppressAutomation = true
+    if (shared.protectedPreference) complianceReview = true
+  } else if (shared.unavailablePlace) {
+    facts.push(makeFact('availablePlaceCount', 0, { negative: true, evidence: text, propertyIds: selectedIds }))
+    actions.push({
+      type: 'SHARED_PLACE_STATUS', scope: 'PROPERTY', propertyIds: selectedIds,
+      status: OPERATIONAL_STATUS.NEEDS_HUMAN_REVIEW, reason: text,
+      details: { availablePlaceCount: 0, wholePropertyAvailable: null },
+    })
+    terminal = true
+    suppressAutomation = true
+  } else if (historical && (rented || sold)) {
     facts.push(makeFact('historicalPropertyEvent', sold ? 'sold' : 'rented', {
       factStatus: FACT_STATUS.KNOWN, confidence: 0.98, evidence: text, propertyIds: selectedIds.length === 1 ? selectedIds : [],
     }))
@@ -219,7 +263,7 @@ function interpretInbound(input = {}) {
     suppressAutomation = true
   }
 
-  if (currentAvailable) {
+  if (currentAvailable && !shared.isOffer) {
     const targetIds = selectedIds
     if (targetIds.length === 1 || (selector.constrained && targetIds.length > 0)) {
       actions.push({ type: 'PROPERTY_STATUS', scope: 'PROPERTY', status: OPERATIONAL_STATUS.AVAILABLE, propertyIds: targetIds, reason: text, correction: /\bstill\b|\bactually\b|\bcorrection\b/i.test(text) })
@@ -253,7 +297,7 @@ function interpretInbound(input = {}) {
   if (/\bno compan(?:y|ies)\b/i.test(text)) facts.push(makeFact('companiesAllowed', false, { negative: true, evidence: text }))
 
   const money = extractMoney(text)
-  if (money) {
+  if (money && !shared.isOffer) {
     facts.push(makeFact('askingPrice', money.value, { correction: money.correction, evidence: text, propertyIds: selectedIds }))
     if (/\bnegotiable\b/i.test(text) && !/\bnot\s+\d{3,5}\s+negotiable\b/i.test(text)) facts.push(makeFact('priceNegotiable', true, { evidence: text, propertyIds: selectedIds }))
     else if (money.correction) facts.push(makeFact('priceNegotiable', null, { factStatus: FACT_STATUS.UNKNOWN, correction: true, evidence: text }))
@@ -269,6 +313,10 @@ function interpretInbound(input = {}) {
     facts.push(makeFact('specialLeaseScenario', 'contract_only_or_non_occupancy', { factStatus: FACT_STATUS.CONDITIONAL, confidence: 0.9, evidence: text }))
     actions.push({ type: 'HUMAN_COMPLIANCE_REVIEW', status: OPERATIONAL_STATUS.NEEDS_HUMAN_REVIEW, reason: text })
     complianceReview = true
+    suppressAutomation = true
+  }
+  if (/\b(?:please\s+)?call me\b|\bcan you call\b/i.test(text)) {
+    actions.push({ type: 'HUMAN_REVIEW', status: OPERATIONAL_STATUS.NEEDS_HUMAN_REVIEW, reason: 'owner_requested_call', evidence: text })
     suppressAutomation = true
   }
 
@@ -297,6 +345,7 @@ function interpretInbound(input = {}) {
   if (window && !historical) facts.push(makeFact(viewingOnly ? 'viewingsFrom' : 'availabilityFrom', window.label, { factStatus: window.tentative || futureAvailable ? FACT_STATUS.CONDITIONAL : FACT_STATUS.KNOWN, confidence: window.tentative ? 0.65 : 0.95, evidence: text, propertyIds: selectedIds }))
 
   if (/\bnew property\b/i.test(text)) facts.push(makeFact('listingCondition', 'new', { evidence: text }))
+  if (/\bstudio\b/i.test(text)) facts.push(makeFact('propertyType', 'STUDIO', { evidence: text, propertyIds: selectedIds }))
   const beds = s.match(/\b(\d+)\s*(?:bed|bedroom)s?\b/)
   const baths = s.match(/\b(\d+)\s*(?:bath|bathroom)s?\b/)
   if (beds) facts.push(makeFact('bedrooms', Number(beds[1]), { evidence: text }))
@@ -372,6 +421,7 @@ function applyDecision(state = {}, decision, meta = {}) {
 
 function planDirectReply(decision, identity, state = {}) {
   if (decision.actions.some(a => a.type === 'CONTACT_OPT_OUT')) return 'Understood. I will not contact you again.'
+  if (decision.actions.some(a => a.type === 'SHARED_PLACE_OFFER' || a.type === 'SHARED_PLACE_STATUS')) return null
   if (decision.actions.some(a => a.type === 'PROPERTY_STATUS' && [OPERATIONAL_STATUS.RENTED, OPERATIONAL_STATUS.SOLD, OPERATIONAL_STATUS.WITHDRAWN].includes(a.status) && a.propertyIds?.length)) return "Thanks for letting me know. I've updated our records and removed the property from our available listings."
   if (decision.complianceReview) return null
   if (decision.questions.includes('agency_identity')) return agencyAnswer(identity)
@@ -402,6 +452,14 @@ function validateDraft({ draft, state = {}, identity = null, expectedConversatio
   if (state.contactOptOut) return { allow: false, reason: 'contact_opt_out' }
   if (state.humanActive) return { allow: false, reason: 'human_operator_active' }
   if (state.humanComplianceReview && /\b(offer|market|client|passport|residen|contract)\b/i.test(text)) return { allow: false, reason: 'compliance_review_required' }
+  if (/\b(?:i(?:'ve| have)\s+updated|updated\s+(?:our|the)\s+records?|removed\s+the\s+property|notified\s+(?:my|our)\s+colleagues?|let\s+(?:my|our)\s+colleagues\s+know)\b/i.test(text)) {
+    const committed = new Set(state.committedActions || [])
+    const removal = /removed\s+the\s+property|updated\s+(?:our|the)\s+records?/i.test(text)
+    const notified = /colleagues/i.test(text)
+    if ((removal && !committed.has('PROPERTY_STATUS')) || (notified && !committed.has('INTERNAL_TASK_COMMITTED'))) {
+      return { allow: false, reason: 'uncommitted_completion_claim' }
+    }
+  }
   const facts = activeFactMap(state.facts)
   for (const field of ['address', 'sharingAllowed', 'companySubletting', 'petsAllowed', 'askingPrice']) {
     if (facts.has(field) && draftAsksField(text, field)) return { allow: false, reason: `known_field_reasked:${field}` }

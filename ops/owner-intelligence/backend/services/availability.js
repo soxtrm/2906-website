@@ -35,6 +35,7 @@ const { normalizePhone } = require('./phoneNormalizer')
 const humanDelay = require('./humanDelay')
 const geoTowns = require('./geoTowns')
 const ownerSendGate = require('./ownerSendGate')
+const { parseSharedAccommodation } = require('./sharedAccommodation')
 // Read the owner chat before writing into it, and vary the wording accordingly.
 // Both are soft: a failed scan falls back to the original spec sentence, which
 // is variant index 0 of every set. See services/ownerMessageVariants.js for the
@@ -185,7 +186,7 @@ function buildOwnerCheckMessage(prop, { urgent = false } = {}) {
 // sentence.
 const MSG_OWNER_CLARIFY = [
   'Got it — has it been rented, or just temporarily unavailable?',
-  'Sorry to hear — is it rented, or just on a break for now?',
+  'Thanks for the update. Has the whole property been rented, or is only part of it occupied?',
   'Thanks for the update. Is it rented, or just not available right now?',
 ]
 
@@ -885,6 +886,9 @@ function classifyReply(text, { messageDate = new Date() } = {}) {
 function isUnambiguousRentedStatement(text) {
   const raw = String(text || '').trim()
   if (!raw) return false
+  // A partly occupied shared flat can still have a rentable place. Never let
+  // the broad rented-word matcher flatten that offer to whole-property RENTED.
+  if (parseSharedAccommodation(raw).isOffer) return false
   // Same length/shape sanity check runAvCommand's caller uses elsewhere in
   // this file (looksLikeARealAnswer) — generous enough for a full sentence
   // ("Hi, just to let you know the apartment got rented yesterday, thanks
@@ -1684,6 +1688,36 @@ async function handleOwnerReply({ payload, session, text, senderPhone, chatId })
     const ownerSessionP = await resolveLiveSession(check.account_session) || session
     await onPropertyIdentityReply(check, text, { ownerSession: ownerSessionP, ownerChat: check.owner_chat_id || chatId, replyMsgId: payload?.id || null })
     return
+  }
+
+  // Shared-accommodation offers are a separate scope from whole-property
+  // vacancy. The canonical conversation-intelligence transaction persists the
+  // place/room facts and approval task; this legacy availability check only
+  // records that it was answered and must not send its generic rented/break
+  // clarification or mutate the whole listing.
+  const sharedOffer = parseSharedAccommodation(text)
+  if (sharedOffer.isOffer) {
+    await db.query(
+      `UPDATE availability_checks
+          SET status='needs_review', needs_review=TRUE, reply_at=NOW(),
+              reply_text=$2, reply_message_id=$3, updated_at=NOW()
+        WHERE id=$1`,
+      [check.id,String(text || '').slice(0,2000),payload?.id || null])
+    await db.query(
+      `INSERT INTO property_activities (property_id,activity_type,details,is_significant,created_at)
+       VALUES ($1,'owner_shared_place_evidence',$2::jsonb,TRUE,NOW())`,
+      [check.property_id,JSON.stringify({
+        source:'availability_owner_reply', check_id:check.id,
+        available_place_count:sharedOffer.availablePlaceCount,
+        available_room_count:sharedOffer.availableRoomCount,
+        per_person_rent:sharedOffer.perPersonRent,
+        whole_property_total_rent:sharedOffer.wholePropertyTotalRent,
+        no_owner_message_sent:true,
+      })]).catch(err => log.warn('[av] shared-place activity failed', { checkId:check.id, err:err.message }))
+    log.info('[av] shared-place offer routed to approval review; whole-property status unchanged by availability classifier', {
+      checkId:check.id, propertyId:check.property_id,
+    })
+    return { matched:true, handled:'shared_place_offer_review' }
   }
 
   // Kev, 2026-08-31 (real incident: Elaine Pughe). classifyReply() is a

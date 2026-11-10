@@ -308,12 +308,21 @@ async function safeQuery(sql, params, store = db) {
 
 async function recordStage(id, stage, { store = db, reason = null, details = {} } = {}) {
   const safeReason = reason ? String(reason).slice(0, 500) : null
+  const runStatus = stage === 'stalled' ? 'failed' : stage
+  const phase = stage === 'ready' ? 'READY'
+    : stage === 'failed' && /billing|credit/i.test(safeReason || '') ? 'BLOCKED_PROVIDER'
+    : stage === 'failed' ? 'FAILED_RETRYABLE'
+    : stage.toUpperCase()
+  const failureCode = stage === 'failed' && /billing|credit|402/i.test(safeReason || '')
+    ? 'PROVIDER_BILLING_BLOCKED' : details?.failureCode || null
   await safeQuery(
     `UPDATE property_photo_processing_runs
         SET status=$2, failure_reason=$3, retry_available=($2='failed'), updated_at=NOW(),
+            phase=$4, failure_code=COALESCE($5,failure_code), worker_heartbeat_at=NOW(),
+            processing_started_at=CASE WHEN $2='processing' THEN COALESCE(processing_started_at,NOW()) ELSE processing_started_at END,
             completed_at=CASE WHEN $2='processing' THEN NULL WHEN $2 IN ('ready','failed') THEN NOW() ELSE completed_at END
       WHERE run_id=$1`,
-    [id, stage, safeReason], store)
+    [id, runStatus, safeReason, phase, failureCode], store)
   await safeQuery(
     `INSERT INTO property_photo_processing_events (run_id, stage, reason, details, created_at)
      VALUES ($1,$2,$3,$4::jsonb,NOW())`,
@@ -354,7 +363,8 @@ async function checkpoint(id, index, sourceImage, output, editedUrl, mode, store
      VALUES ($1,NULL,$2,$3,$4,NULL,$5,$3,$4,$6,$7,$8,'generated',NULL,NOW())
      ON CONFLICT (run_id, position) DO UPDATE SET edited_image_url=EXCLUDED.edited_image_url,
        edited_sha256=EXCLUDED.edited_sha256, source_sha256=EXCLUDED.source_sha256,
-       edit_type=EXCLUDED.edit_type, model_version=EXCLUDED.model_version, status='generated', error=NULL`,
+       edit_type=EXCLUDED.edit_type, model_version=EXCLUDED.model_version, status='generated',
+       item_state='PROCESSING',error=NULL,worker_heartbeat_at=NOW(),phase_started_at=NOW()`,
     [id, index, sourceImage.sourceSha256, sha256(output.buffer), editedUrl,
       sourceImage.sourceKind || 'ORIGINAL', preset.editType, editModelForMode(mode)], store)
 }
@@ -383,15 +393,21 @@ async function recoverOriginal(image, { store = db, fetcher = fetch } = {}) {
   }
 }
 
-async function processImages({ images = [], facts = {}, mode = 'conservative', triggerId = null, source = 'whatsapp', onProgress = null, ai = null, store = db, fetcher = fetch, uploader = null } = {}) {
+async function processImages({ images = [], facts = {}, mode = 'conservative', triggerId = null, source = 'whatsapp', ownership = {}, onProgress = null, ai = null, store = db, fetcher = fetch, uploader = null } = {}) {
   let id = runId()
   const effectiveMode = normaliseMode(mode)
   const inputCount = images.length
   images = dedupeImages(images)
   const inserted = await safeQuery(
-    `INSERT INTO property_photo_processing_runs (run_id, trigger_id, source, mode, status, source_count, edit_model, vision_model, created_at)
-     VALUES ($1,$2,$3,$4,'received',$5,$6,$7,NOW()) ON CONFLICT (trigger_id) WHERE trigger_id IS NOT NULL DO NOTHING RETURNING run_id`,
-    [id, triggerId, source, effectiveMode, images.length, editModelForMode(effectiveMode), effectiveMode === 'vision' ? VISION_MODEL : null], store)
+    `INSERT INTO property_photo_processing_runs
+       (run_id,trigger_id,source,mode,status,source_count,expected_count,accepted_count,
+        phase,worker_heartbeat_at,agency_scope,agent_id,source_session,source_chat_hash,
+        edit_model,vision_model,created_at)
+     VALUES ($1,$2,$3,$4,'received',$5,$5,$5,'RECEIVED',NOW(),$6,$7,$8,$9,$10,$11,NOW())
+     ON CONFLICT (trigger_id) WHERE trigger_id IS NOT NULL DO NOTHING RETURNING run_id`,
+    [id,triggerId,source,effectiveMode,images.length,ownership.agencyScope || null,ownership.agentId || null,
+     ownership.sourceSession || null,ownership.sourceChatHash || null,
+     editModelForMode(effectiveMode),effectiveMode === 'vision' ? VISION_MODEL : null],store)
   let resumedRun = false
   if (!inserted.rows.length && triggerId) {
     const existing = await safeQuery(`SELECT run_id FROM property_photo_processing_runs WHERE trigger_id=$1 LIMIT 1`, [triggerId], store)
@@ -399,6 +415,24 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
   }
 
   if (!resumedRun) await recordStage(id, 'received', { store, details: { mode: effectiveMode, sourceCount: images.length } })
+  if (!resumedRun) {
+    for (let position = 0; position < images.length; position += 1) {
+      const image = images[position]
+      const sourceHash = sha256(image.buffer)
+      await safeQuery(
+        `INSERT INTO property_photo_edits
+           (run_id,property_id,position,source_image_id,source_image_url,source_sha256,source_kind,
+            edit_type,model_version,status,item_state,attempt_count,worker_heartbeat_at,phase_started_at,created_at)
+         VALUES ($1,NULL,$2,$3,$4,$3,$5,$6,$7,'queued','QUEUED',0,NOW(),NOW(),NOW())
+         ON CONFLICT (run_id,position) DO UPDATE SET
+           source_image_url=COALESCE(property_photo_edits.source_image_url,EXCLUDED.source_image_url),
+           item_state=CASE WHEN property_photo_edits.item_state='COMPLETED' THEN 'COMPLETED' ELSE 'QUEUED' END,
+           worker_heartbeat_at=NOW()`,
+        [id,position,sourceHash,image.sourceUrl || null,image.sourceKind || 'ORIGINAL',
+         presetFor(effectiveMode).editType,editModelForMode(effectiveMode)],store)
+    }
+    await recordStage(id, 'queued', { store, details: { mode: effectiveMode, acceptedCount: images.length } })
+  }
   await recordStage(id, 'processing', { store, details: { mode: effectiveMode, sourceCount: images.length, resumed: resumedRun } })
 
   // Keep the production set audit and scene priority: living areas, kitchens
@@ -427,6 +461,11 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
   // Bounded parallel edits; every item is written to its own index, so the
   // final order is the input order no matter which edit finishes first.
   const editedItems = await mapLimited(bases, EDIT_CONCURRENCY, async ({ position, image: sourceImage }) => {
+    await safeQuery(
+      `UPDATE property_photo_edits SET item_state='PROCESSING',status='processing',
+          attempt_count=attempt_count+1,worker_heartbeat_at=NOW(),phase_started_at=NOW()
+        WHERE run_id=$1 AND position=$2 AND item_state<>'COMPLETED'`,
+      [id,position],store)
     let output = null
     let editedUrl = null
     let status = 'failed'
@@ -498,6 +537,23 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
       }
     }
     completed += 1
+    const itemState = status === 'quality_checked' ? 'PROCESSING' : 'FAILED_RETRYABLE'
+    const failureCode = status === 'failed'
+      ? (providerBlocked?.code || (reviewResolution ? 'QUALITY_RESOLUTION_REGRESSION' : 'PROCESSING_FAILED')).toUpperCase()
+      : null
+    await safeQuery(
+      `UPDATE property_photo_edits SET status=$3,item_state=$4,error=$5,failure_code=$6,
+          worker_heartbeat_at=NOW(),phase_started_at=NOW()
+        WHERE run_id=$1 AND position=$2`,
+      [id,position,status,itemState,error,failureCode],store)
+    await safeQuery(
+      `UPDATE property_photo_processing_runs SET
+          completed_count=(SELECT COUNT(*) FROM property_photo_edits WHERE run_id=$1 AND item_state='COMPLETED'),
+          failed_count=(SELECT COUNT(*) FROM property_photo_edits WHERE run_id=$1 AND item_state IN ('FAILED_RETRYABLE','FAILED_PERMANENT')),
+          needs_review_count=(SELECT COUNT(*) FROM property_photo_edits WHERE run_id=$1 AND item_state='NEEDS_REVIEW'),
+          worker_heartbeat_at=NOW(),updated_at=NOW()
+        WHERE run_id=$1`,
+      [id],store)
     if (onProgress) await onProgress({ complete: completed, total: bases.length, edited: editedCount, failed: failedCount, stage: status })
     return {
       position,
@@ -526,7 +582,8 @@ async function processImages({ images = [], facts = {}, mode = 'conservative', t
   })
   failedCount += Math.max(0, images.length - selectedIndices.length)
   await safeQuery(
-    `UPDATE property_photo_processing_runs SET edited_count=$2, fallback_count=$3, audit=$4::jsonb, updated_at=NOW() WHERE run_id=$1`,
+    `UPDATE property_photo_processing_runs SET edited_count=$2, fallback_count=$3, audit=$4::jsonb,
+       failed_count=$3,worker_heartbeat_at=NOW(),updated_at=NOW() WHERE run_id=$1`,
     [id, editedCount, failedCount, JSON.stringify(audit || {})], store)
   if (!images.length) {
     failedCount += 1
@@ -566,7 +623,10 @@ async function persistResult({ result, propertyId, uploaded, store = db }) {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
        ON CONFLICT (run_id, position) DO UPDATE SET property_id=EXCLUDED.property_id, source_image_url=EXCLUDED.source_image_url,
        edited_image_url=EXCLUDED.edited_image_url, edit_type=EXCLUDED.edit_type,
-       model_version=EXCLUDED.model_version, status=EXCLUDED.status, error=EXCLUDED.error`,
+       model_version=EXCLUDED.model_version, status=EXCLUDED.status, error=EXCLUDED.error,
+       item_state=CASE WHEN EXCLUDED.status='saved' THEN 'COMPLETED' ELSE 'FAILED_RETRYABLE' END,
+       failure_code=CASE WHEN EXCLUDED.status='saved' THEN NULL ELSE COALESCE(property_photo_edits.failure_code,'PERSISTENCE_INCOMPLETE') END,
+       worker_heartbeat_at=NOW(),phase_started_at=NOW()`,
       [result.runId, propertyId, row.position, item.sourceSha256, item.editedSha256, row.sourceUrl, row.editedUrl,
         item.sourceSha256, item.editedSha256, item.sourceKind, result.preset.editType,
         result.models.edit, saved ? 'saved' : 'failed', item.error || (!row.sourceUrl ? 'original storage failed' : (!row.editedUrl && item.status !== 'failed' ? 'generated image storage failed' : null))], store)
@@ -590,7 +650,49 @@ async function persistResult({ result, propertyId, uploaded, store = db }) {
       : 'generated image storage incomplete; retry available'
     await recordStage(result.runId, 'failed', { store, reason, details: { savedCount, expected: result.editedCount, propertyId } })
   }
+  await safeQuery(
+    `UPDATE property_photo_processing_runs SET expected_count=source_count,accepted_count=source_count,
+       completed_count=(SELECT COUNT(*) FROM property_photo_edits WHERE run_id=$1 AND item_state='COMPLETED'),
+       failed_count=(SELECT COUNT(*) FROM property_photo_edits WHERE run_id=$1 AND item_state IN ('FAILED_RETRYABLE','FAILED_PERMANENT')),
+       needs_review_count=(SELECT COUNT(*) FROM property_photo_edits WHERE run_id=$1 AND item_state='NEEDS_REVIEW'),
+       worker_heartbeat_at=NOW(),updated_at=NOW() WHERE run_id=$1`,
+    [result.runId],store)
   return { runId: result.runId, status: ready ? 'ready' : 'failed', savedCount, retryAvailable: !ready }
+}
+
+async function recoverStalledRuns({ store = db, staleMinutes = 10 } = {}) {
+  const rows = await safeQuery(
+    `UPDATE property_photo_processing_runs SET phase='STALLED',status='failed',
+       failure_code='WORKER_HEARTBEAT_STALE',
+       failure_reason='worker heartbeat expired; retry available',
+       retry_available=TRUE,stalled_at=NOW(),updated_at=NOW()
+     WHERE phase IN ('QUEUED','PROCESSING')
+       AND COALESCE(worker_heartbeat_at,processing_started_at,created_at) < NOW() - ($1 || ' minutes')::interval
+     RETURNING run_id`,
+    [Math.max(1,Number(staleMinutes) || 10)],store)
+  for (const row of rows.rows) {
+    await safeQuery(
+      `UPDATE property_photo_edits SET item_state='FAILED_RETRYABLE',
+         failure_code='WORKER_HEARTBEAT_STALE',error=COALESCE(error,'worker heartbeat expired; retry available'),
+         phase_started_at=NOW()
+       WHERE run_id=$1 AND item_state IN ('RECEIVED','QUEUED','PROCESSING')`,
+      [row.run_id],store)
+    await recordStage(row.run_id,'stalled',{store,reason:'worker heartbeat expired; retry available'})
+  }
+  return rows.rows.map(row => row.run_id)
+}
+
+function progressSummary(run = {}, items = []) {
+  const total = Number(run.expected_count ?? run.source_count ?? items.length) || 0
+  const completed = items.filter(item => ['COMPLETED','ready','saved'].includes(item.item_state || item.status)).length
+  const failed = items.filter(item => ['FAILED_RETRYABLE','FAILED_PERMANENT','failed'].includes(item.item_state || item.status)).length
+  const review = items.filter(item => (item.item_state || item.status) === 'NEEDS_REVIEW').length
+  const cancelled = items.filter(item => (item.item_state || item.status) === 'CANCELLED').length
+  const duplicateLinked = items.filter(item => (item.item_state || item.status) === 'DUPLICATE_LINKED').length
+  const queued = items.filter(item => ['RECEIVED','QUEUED','PROCESSING','queued','processing'].includes(item.item_state || item.status)).length
+  return { total,completed,failed,review,cancelled,duplicateLinked,queued,
+    resolved:completed+failed+review+cancelled+duplicateLinked,
+    phase:run.phase || String(run.status || 'received').toUpperCase() }
 }
 
 async function retryRun({ runId: parentRunId, store = db, fetcher = fetch, uploader, ai = null } = {}) {
@@ -651,5 +753,6 @@ module.exports = {
   MAX_EDIT_IMAGES, MAX_AUDIT_IMAGES, EDIT_MODEL, PLUS_EDIT_MODEL, PLUS_IMAGE_SIZE, VISION_MODEL, EDIT_CONCURRENCY,
   PRESETS, sha256, normaliseAudit, imageSize, mapLimited, dedupeImages, editPriorityIndices,
   normaliseMode, presetFor, editModelForMode, editTypeForMode, editPrompt, validateGeneratedImage,
-  classifyProviderFailure, auditImages, editOne, processImages, persistResult, retryRun, responseImage,
+  classifyProviderFailure, auditImages, editOne, processImages, persistResult, retryRun, recoverStalledRuns,
+  progressSummary, responseImage,
 }

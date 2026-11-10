@@ -397,7 +397,7 @@ function extractIntakeMetadata(rawText, extractedProperty = {}, intakeMode = nul
 // copy, which deliberately omits negative facts and conditional prices per
 // spec point 11/28). Only the owner-auto-upload path passes this today;
 // every other caller leaves it undefined and behaviour is unchanged.
-async function preparePhotoPackage({ images, photoMode, facts, triggerId }) {
+async function preparePhotoPackage({ images, photoMode, facts, triggerId, uploadContext = {} }) {
   if (!photoMode) {
     const imageUrls = []
     for (const it of (images || [])) {
@@ -415,8 +415,18 @@ async function preparePhotoPackage({ images, photoMode, facts, triggerId }) {
     const url = await ul.uploadBuffer(image.buffer, image.mimeType)
     if (url) sourceUrls.set(gptPhotoPipeline.sha256(image.buffer), url)
   }
+  const processingImages = (images || []).map(image => ({
+    ...image,
+    sourceUrl: sourceUrls.get(gptPhotoPipeline.sha256(image.buffer)) || null,
+  }))
   const photoResult = await gptPhotoPipeline.processImages({
-    images: images || [], facts, mode: photoMode, triggerId, source: 'whatsapp_upload',
+    images: processingImages, facts, mode: photoMode, triggerId, source: 'whatsapp_upload',
+    ownership: {
+      agencyScope: uploadContext.agencyScope || '2906',
+      agentId: uploadContext.agentId || null,
+      sourceSession: uploadContext.session || null,
+      sourceChatHash: uploadContext.chatId ? gptPhotoPipeline.sha256(Buffer.from(String(uploadContext.chatId))) : null,
+    },
     uploader: (buffer, mimeType) => ul.uploadBuffer(buffer, mimeType),
   })
   const imageUrls = []
@@ -431,13 +441,13 @@ async function preparePhotoPackage({ images, photoMode, facts, triggerId }) {
   return { imageUrls, photoResult, uploaded }
 }
 
-async function updateExistingVisionProperty({ ref, images, facts, photoMode, triggerId, noAd, rawText }) {
+async function updateExistingVisionProperty({ ref, images, facts, photoMode, triggerId, noAd, rawText, uploadContext }) {
   const row = await db.query(
     `SELECT id, ref, town, bedrooms, bathrooms, longlet_price, sale_price, images, public_payload
        FROM properties WHERE ref=$1 LIMIT 1`, [ref])
   const prop = row.rows[0]
   if (!prop) return { duplicate: ref }
-  const prepared = await preparePhotoPackage({ images, photoMode, facts, triggerId })
+  const prepared = await preparePhotoPackage({ images, photoMode, facts, triggerId, uploadContext })
   const oldImages = Array.isArray(prop.images) ? prop.images : []
   const oldPayloadImages = Array.isArray(prop.public_payload?.images) ? prop.public_payload.images : []
   const mergedUrls = [...new Set([...oldPayloadImages, ...prepared.imageUrls])]
@@ -577,7 +587,7 @@ async function createListing({ rawText, images, videos, agent, senderPhone, chat
     if (dupRef && photoMode === 'vision') {
       return updateExistingVisionProperty({
         ref: dupRef, images, facts: p, photoMode, triggerId: photoTriggerId,
-        noAd, rawText,
+        noAd, rawText, uploadContext: { agentId:agent?.id, session, chatId },
       })
     }
     if (dupRef) return { duplicate: dupRef }
@@ -587,6 +597,7 @@ async function createListing({ rawText, images, videos, agent, senderPhone, chat
   // standard !upload still executes the unchanged one-upload-per-image path.
   const preparedPhotos = await preparePhotoPackage({
     images, photoMode, facts: p, triggerId: photoTriggerId,
+    uploadContext: { agentId:agent?.id, session, chatId },
   })
   const imageUrls = preparedPhotos.imageUrls
   // videos → Cloudinary, resource_type 'video'. Stored on the row, NOT in
@@ -1487,7 +1498,7 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
       const overLimit = total > count ? `\nMaximum ${gptPhotoPipeline.MAX_EDIT_IMAGES} images per enhancement run - ${total - count} require a separate retry batch.` : ''
       const presetLabel = gptPhotoPipeline.presetFor(photoMode).label
       await reply(session, chatId,
-        `${presetLabel.toUpperCase()}\nReceived → Processing\n0 / ${count} complete${overLimit}`)
+        `${presetLabel.toUpperCase()}\nReceived → Queued\n0 / ${count} completed · ${count} queued${overLimit}`)
     }
     const created = []
     const dupes = []
@@ -1561,7 +1572,7 @@ async function cmdUpload({ payload, session, chatId, isGroup, text, variantSuffi
         (c.multiUnit ? `Multi-unit post — also created ${c.units.map(u => '#' + u.ref).filter(r => r !== '#' + c.ref).join(', ')}, both cross-referenced.\n` : '') +
         `${c.town || '—'} · ${c.beds || 0}BR/${c.baths || 0}BA · ${price}\n` +
         `${media}\n` +
-        (c.photoSummary ? `${c.photoSummary.preset.label}: ${c.photoSummary.editedCount}/${Math.min(c.photoSummary.sourceCount, gptPhotoPipeline.MAX_EDIT_IMAGES)} generated${c.photoSummary.status === 'failed' ? ` · FAILED · ${c.photoSummary.failedCount} retry available` : ' · Quality Checked → Saved → Ready'}${c.photoSummary.resumedCount ? ` · ${c.photoSummary.resumedCount} resumed` : ''}${c.photoSummary.lowerResolutionCount ? ` · ${c.photoSummary.lowerResolutionCount} lower-res, review` : ''}${c.photoSummary.overLimitCount ? ` · ${c.photoSummary.overLimitCount} separate-batch retry` : ''}${c.photoSummary.audit?.hero_candidates?.length ? ` · hero candidate ${c.photoSummary.audit.hero_candidates[0] + 1}` : ''}\nRun ${c.photoSummary.runId}\n` : '') +
+        (c.photoSummary ? `${c.photoSummary.preset.label}: ${c.photoSummary.editedCount} completed · ${c.photoSummary.failedCount} failed${c.photoSummary.status === 'failed' ? ` · Retry available${c.photoSummary.providerFailureCode === 'provider_billing_blocked' ? ' after provider credits are restored' : ''}` : ' · Quality Checked → Saved → Ready'}${c.photoSummary.resumedCount ? ` · ${c.photoSummary.resumedCount} resumed` : ''}${c.photoSummary.lowerResolutionCount ? ` · ${c.photoSummary.lowerResolutionCount} lower-res, review` : ''}${c.photoSummary.overLimitCount ? ` · ${c.photoSummary.overLimitCount} separate-batch retry` : ''}${c.photoSummary.audit?.hero_candidates?.length ? ` · hero candidate ${c.photoSummary.audit.hero_candidates[0] + 1}` : ''}\nRun ${c.photoSummary.runId}\n` : '') +
         `\n` +
         (noAd ? `🚫 noad — no Facebook at all (no page post, no group share)\n` : '') +
         (!noAd && !c.imageCount && !c.videoCount
@@ -2697,24 +2708,27 @@ async function handleWebhookMessage({ payload, session, text, isGroup, chatId, s
     const statusId = t.match(/^!imagestatus\s+([0-9a-f]{8}-[0-9a-f-]{27,})\b/i)?.[1]
     if (!statusId) { await reply(session, chatId, 'Usage: !imagestatus <photo-run-id>'); return true }
     const runRows = await db.query(
-      `SELECT r.run_id, r.mode, r.status, r.failure_reason, r.retry_available, r.created_at, r.completed_at, p.ref
+      `SELECT r.run_id,r.mode,r.status,r.phase,r.failure_code,r.failure_reason,r.retry_available,
+              r.expected_count,r.created_at,r.completed_at,p.ref
          FROM property_photo_processing_runs r LEFT JOIN properties p ON p.id=r.property_id
         WHERE r.run_id=$1 LIMIT 1`, [statusId])
     const run = runRows.rows[0]
     if (!run) { await reply(session, chatId, '❌ Photo run not found.'); return true }
     const editRows = await db.query(
-      `SELECT position, status, source_image_url, edited_image_url, error
+      `SELECT position,status,item_state,failure_code,source_image_url,edited_image_url,error
          FROM property_photo_edits WHERE run_id=$1 ORDER BY position`, [statusId])
+    const summary = gptPhotoPipeline.progressSummary(run,editRows.rows)
     const lines = [
       `${run.status === 'ready' ? '✅ Ready' : run.status === 'failed' ? '❌ Failed → Retry Available' : '⏳ ' + run.status}`,
       `${run.mode.toUpperCase()} · ${run.ref ? '#' + run.ref : 'property pending'} · Run ${run.run_id}`,
+      `${summary.completed}/${summary.total} completed · ${summary.queued} queued/processing · ${summary.review} needs review · ${summary.failed} failed · ${summary.phase}`,
     ]
     if (run.failure_reason) lines.push(`Reason: ${String(run.failure_reason).slice(0, 240)}`)
-    for (const row of editRows.rows.slice(0, gptPhotoPipeline.MAX_EDIT_IMAGES)) {
-      lines.push('', `Image ${Number(row.position) + 1} · ${row.status}`,
+    for (const row of editRows.rows) {
+      lines.push('', `Image ${Number(row.position) + 1} · ${row.item_state || row.status}`,
         `Original: ${row.source_image_url || 'not saved'}`,
         `Enhanced: ${row.edited_image_url || 'not generated'}`)
-      if (row.error) lines.push(`Error: ${String(row.error).slice(0, 180)}`)
+      if (row.error) lines.push(`Error${row.failure_code ? ' [' + row.failure_code + ']' : ''}: ${String(row.error).slice(0, 180)}`)
     }
     if (run.retry_available) lines.push('', `Retry: !imageretry ${run.run_id}`)
     await reply(session, chatId, lines.join('\n'))
