@@ -20,7 +20,7 @@ declare -A EXPECTED=(
   [services/autoOwnerConversation.js]=0134df180530a9b92aae30663ed504d7
   [services/agentIdentityRegistry.js]=5a1b64afc1020ad1f6ab493e7120fcf9
   [routes/crm.js]=d2ea21a68dc7d87c41fa6885ca0b0694
-  [cron.js]=0f17b23cdd772b61416cc594f16e6bfb
+  [cron.js]=7fa1080e52a96d34ac973fdc9cc339cd
   # read, not replaced — must be the versions the tests ran with
   [services/conversationPolicy.js]=8a89f714286e07bf606244435c97f91f
   [services/conversationIntelligence.js]=cfc4803161433f4d016cc8404ca1d6aa
