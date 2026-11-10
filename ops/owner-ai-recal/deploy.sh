@@ -12,7 +12,8 @@ STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 BK=/opt/2906-system/backups/owner-ai-recal-$STAMP
 q() { docker exec -e SQL="$1" 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "$SQL"'; }
 FILES="services/autoOwnerConversation.js services/agentIdentityRegistry.js routes/crm.js cron.js"
-NEW="services/ownerDecision.js services/ownerDecisionRuntime.js services/ownerQualityReport.js services/ownerTurnRouter.js"
+NEW="services/ownerDecision.js services/ownerDecisionRuntime.js services/ownerQualityReport.js services/ownerTurnRouter.js services/timeGreeting.js"
+# timeGreeting.js: required by availability.js since the 14:20 UTC deploy but never installed (Cannot find module)
 
 # 1. Production must be exactly the base this release was built and tested on.
 declare -A EXPECTED=(
