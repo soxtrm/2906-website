@@ -56,7 +56,10 @@ router.get('/property/:propertyId/route', send(req => R.getRoute(propertyId(req)
 router.put('/property/:propertyId/route', send(req => R.setRoute(propertyId(req), req.agent, req.body || {})))
 router.post('/property/:propertyId/route/approve', send(req => R.approveRelease(propertyId(req), req.agent)))
 router.post('/property/:propertyId/route/revoke', send(req => R.revokeRoute(propertyId(req), req.agent, req.body?.reason)))
-router.post('/routes/process-due', adminOnly, send(() => R.processDueReleases()))
+router.post('/routes/process-due', adminOnly, send(() => R.tick()))
+
+// Harmless form defaults with their explanation; decision fields are never prefilled.
+router.get('/defaults/availability-answer', send(() => require('../services/nexusSmartDefaults').availabilityAnswerDefaults()))
 
 router.get('/:ownerId', send(req => S.status(ownerId(req), req.agent)))
 router.post('/:ownerId/invitation', inviteLimiter, send(req => S.createInvitation(ownerId(req), req.agent, { rotate: req.body?.rotate === true })))

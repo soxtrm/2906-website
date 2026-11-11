@@ -8,16 +8,17 @@
 #
 # This deploy does not enable any NEXUS traffic: with NEXUS_LINK_INBOUND_SECRET
 # and NEXUS_OWNER_LINK_URL unset the service surface answers 503 and nothing is
-# sent outbound. It adds no cron job and sends no message to anyone.
-# Delayed releases therefore only fire when an admin calls
-# POST /api/crm/owner-nexus/routes/process-due; a cron tick is a separate, later change.
+# sent outbound. It sends no message to anyone and does not touch cron.js.
+# The link's own scheduler (services/nexusLinkScheduler.js) stays OFF unless
+# NEXUS_LINK_SCHEDULER=1 is set; until then delayed releases only fire when an
+# admin calls POST /api/crm/owner-nexus/routes/process-due.
 set -euo pipefail
 B=/opt/2906-system/backend
 SRC=/tmp/nol-deploy/backend
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 BK=/opt/2906-system/backups/nexus-owner-link-$STAMP
 q() { docker exec -e SQL="$1" 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "$SQL"'; }
-NEW="services/nexusOwnerLink.js services/nexusLinkCrypto.js services/availabilityFreshness.js services/nexusDistributionRouting.js routes/crmOwnerNexus.js routes/nexusLinkService.js"
+NEW="services/nexusOwnerLink.js services/nexusLinkCrypto.js services/availabilityFreshness.js services/nexusDistributionRouting.js services/nexusLinkScheduler.js services/nexusSmartDefaults.js routes/crmOwnerNexus.js routes/nexusLinkService.js"
 
 # 1. Production index.js must be exactly the base this release was built on
 #    (Property Source Sync, live since 2026-11-09). If another release changed

@@ -46,7 +46,7 @@ test('no rule exists by default, and the offered default is "no external distrib
   assert.equal(g.options.defaultMode, 'none')
   assert.equal((await db.query(`SELECT COUNT(*)::int n FROM nexus_distribution_routes`)).rows[0].n, 0)
   // even with the owner's blanket authorisation nothing is released without an agency rule
-  assert.deepEqual(await R.processDueReleases(), { due: 0, released: 0, waitingForOwner: 0, heldOffMarket: 0 })
+  assert.deepEqual(await R.processDueReleases(), { due: 0, released: 0, waitingForOwner: 0, heldOffMarket: 0, revokedEnded: 0, errors: 0 })
   assert.equal((await outbox('distribution.released')).length, 0)
   // every option carries an explanation
   for (const m of g.options.modes) assert.ok(m.explain.length > 20, m.mode)
@@ -72,7 +72,7 @@ test('seven-day routing: the delay counts from the agency approval, not from cre
   const again = await R.approveRelease(p.id, admin)
   assert.equal(again.changed, false); assert.equal(new Date(again.route.scheduledReleaseAt).getTime(), scheduled)
   // day 6: nothing. day 7: released, exactly once.
-  assert.deepEqual(await R.processDueReleases({ now: at(6 * DAY) }), { due: 0, released: 0, waitingForOwner: 0, heldOffMarket: 0 })
+  assert.deepEqual(await R.processDueReleases({ now: at(6 * DAY) }), { due: 0, released: 0, waitingForOwner: 0, heldOffMarket: 0, revokedEnded: 0, errors: 0 })
   assert.equal((await R.processDueReleases({ now: at(7 * DAY + 60000) })).released, 1)
   assert.equal((await R.processDueReleases({ now: at(8 * DAY) })).due, 0)
   const [ev, ...rest] = await outbox('distribution.released')
@@ -137,8 +137,9 @@ test('authorisation is re-checked at release time; off-market listings are not r
   const b = await listing({ channels: ['all_eligible_agencies'] })
   await R.setRoute(b.p.id, admin, { mode: 'immediate', audienceType: 'all_eligible_agencies' })
   await R.approveRelease(b.p.id, admin)
-  await db.query(`UPDATE properties SET available_status='rented' WHERE id=$1`, [b.p.id])
-  assert.deepEqual(await R.processDueReleases(), { due: 1, released: 0, waitingForOwner: 0, heldOffMarket: 1 })
+  // "Rented?" is a temporary state: the route waits, it is not cancelled.
+  await db.query(`UPDATE properties SET available_status='pending_check' WHERE id=$1`, [b.p.id])
+  assert.deepEqual(await R.processDueReleases(), { due: 1, released: 0, waitingForOwner: 0, heldOffMarket: 1, revokedEnded: 0, errors: 0 })
   assert.equal((await outbox('distribution.released')).length, 0)
   await db.query(`UPDATE properties SET available_status='available' WHERE id=$1`, [b.p.id])
   assert.equal((await R.processDueReleases()).released, 1)

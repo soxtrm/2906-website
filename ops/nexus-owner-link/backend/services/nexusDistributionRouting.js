@@ -17,6 +17,7 @@
 // Sends no message. Does not touch outreach, swipe links or the public index.
 // ============================================================================
 const db = require('../db')
+const log = require('../logger')
 const L = require('./nexusOwnerLink')
 const { tx, enqueue, activeGrants, audit, AGENCY_KEY, ensurePropertyLink, PROPERTY_COLUMNS, REAL_PROPERTY } = L._internal
 const { LinkError } = L
@@ -176,8 +177,9 @@ async function revoke(q, r, p, { by, reason }) {
     `UPDATE nexus_distribution_routes SET release_state='revoked', revoked_at=NOW(), revoked_by=$2, revoked_reason=$3, updated_at=NOW() WHERE id=$1 RETURNING *`, [r.id, by, reason])
   let withdrawalQueued = false
   if (r.release_state === 'released') {
-    const plink = await ensurePropertyLink(q, p)
-    await enqueue(q, { aggregateType: 'property', aggregateId: p.id, eventType: 'distribution.release_revoked', payload: { externalId: plink.external_id, routeId: Number(r.id), revokedBy: by, reason } })
+    // The listing may be archived by now, so read the link that the release created.
+    const { rows: [plink] } = await q.query(`SELECT external_id FROM nexus_property_links WHERE agency_key=$1 AND property_id=$2`, [r.agency_key, r.property_id])
+    await enqueue(q, { aggregateType: 'property', aggregateId: r.property_id, eventType: 'distribution.release_revoked', payload: { externalId: plink.external_id, routeId: Number(r.id), revokedBy: by, reason } })
     withdrawalQueued = true
   }
   return { route: view(u), withdrawalQueued }
@@ -206,37 +208,100 @@ async function onOwnerAuthorizationChanged(q, agencyKey, propertyId) {
   return null
 }
 
-// Release everything that is due. Safe to call from a cron tick, a button or
+// A listing that is over for good: nothing may stay scheduled or released for it.
+const ENDED_STATUS = ['rented', 'archived', 'not_available']
+const ended = p => ENDED_STATUS.includes(p.available_status) || ['rented', 'archived'].includes(p.lifecycle_state)
+// Unlike propertyRow this also returns archived or incomplete listings.
+async function anyPropertyRow(q, propertyId) {
+  const { rows: [p] } = await q.query(`SELECT ${PROPERTY_COLUMNS}, p.archived_at FROM properties p WHERE p.id=$1`, [propertyId])
+  return p || null
+}
+const active = p => !!p && !p.archived_at && !!p.ref && !!p.town && !!p.property_type && (p.longlet_price != null || p.sale_price != null)
+const over = p => !active(p) || ended(p)
+
+// Release everything that is due. Safe to call from the scheduler, a button or
 // twice at once: each route is locked, re-checked and released exactly once.
+// One broken route never stops the others.
 async function processDueReleases({ now = null, limit = 100 } = {}) {
   const agency = AGENCY_KEY()
   const { rows: due } = await db.query(
-    `SELECT id FROM nexus_distribution_routes WHERE agency_key=$1 AND release_state='scheduled' AND scheduled_release_at <= COALESCE($2::timestamptz, NOW()) ORDER BY scheduled_release_at, id LIMIT $3`, [agency, now, limit])
-  const out = { due: due.length, released: 0, waitingForOwner: 0, heldOffMarket: 0 }
+    `SELECT id FROM nexus_distribution_routes WHERE agency_key=$1 AND release_state='scheduled' AND scheduled_release_at <= COALESCE($2::timestamptz, NOW())
+      ORDER BY COALESCE(last_checked_at, scheduled_release_at), id LIMIT $3`, [agency, now, limit])
+  const out = { due: due.length, released: 0, waitingForOwner: 0, heldOffMarket: 0, revokedEnded: 0, errors: 0 }
   for (const { id } of due) {
-    await tx(async q => {
-      const { rows: [r] } = await q.query(`SELECT * FROM nexus_distribution_routes WHERE id=$1 AND release_state='scheduled' FOR UPDATE SKIP LOCKED`, [id])
-      if (!r) return // another worker has it, or it changed
-      const p = await propertyRow(q, r.property_id)
-      const auth = await ownerAuthorisation(q, agency, p)
-      if (!(auth.verified && ownerCovers(auth.grants, r))) {
-        await q.query(`UPDATE nexus_distribution_routes SET release_state='awaiting_owner_authorization', updated_at=NOW() WHERE id=$1`, [r.id])
-        out.waitingForOwner++; return
-      }
-      // Only on-market listings are released; an off-market one simply stays scheduled.
-      if (!ON_MARKET.includes(p.available_status) || ['rented', 'archived'].includes(p.lifecycle_state)) { out.heldOffMarket++; return }
-      const plink = await ensurePropertyLink(q, p)
-      const { rows: [u] } = await q.query(`UPDATE nexus_distribution_routes SET release_state='released', released_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`, [r.id])
-      await enqueue(q, { aggregateType: 'property', aggregateId: p.id, eventType: 'distribution.released', payload: {
-        externalId: plink.external_id, routeId: Number(r.id), originAgency: agency, originAgentId: r.origin_agent_id,
-        audienceType: r.audience_type, audienceRefs: r.audience_refs, commercialTermsRef: r.commercial_terms_ref,
-        approvedReleaseAt: new Date(r.approved_release_at).toISOString(), scheduledReleaseAt: new Date(r.scheduled_release_at).toISOString(),
-      } })
-      await audit(q, null, 'NEXUS_ROUTE_RELEASED', { route_id: Number(r.id), released_at: u.released_at }, p)
-      out.released++
-    })
+    try {
+      await tx(async q => {
+        const { rows: [r] } = await q.query(`SELECT * FROM nexus_distribution_routes WHERE id=$1 AND release_state='scheduled' FOR UPDATE SKIP LOCKED`, [id])
+        if (!r) return // another worker has it, or it changed
+        const p = await anyPropertyRow(q, r.property_id)
+        if (over(p)) {
+          // Archived, rented or withdrawn before the release date: the rule ends, nothing was shared.
+          await revoke(q, r, p, { by: 'system', reason: 'listing ended before release' })
+          await audit(q, null, 'NEXUS_ROUTE_REVOKED', { route_id: Number(r.id), was: 'scheduled', by: 'system' }, p)
+          out.revokedEnded++; return
+        }
+        const auth = await ownerAuthorisation(q, agency, p)
+        if (!(auth.verified && ownerCovers(auth.grants, r))) {
+          await q.query(`UPDATE nexus_distribution_routes SET release_state='awaiting_owner_authorization', last_checked_at=NOW(), updated_at=NOW() WHERE id=$1`, [r.id])
+          out.waitingForOwner++; return
+        }
+        // Not on the market right now (for example "Rented?" pending a check): stays scheduled, looked at again later.
+        if (!ON_MARKET.includes(p.available_status)) {
+          await q.query(`UPDATE nexus_distribution_routes SET last_checked_at=NOW() WHERE id=$1`, [r.id])
+          out.heldOffMarket++; return
+        }
+        const plink = await ensurePropertyLink(q, p)
+        const { rows: [u] } = await q.query(`UPDATE nexus_distribution_routes SET release_state='released', released_at=NOW(), last_checked_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`, [r.id])
+        await enqueue(q, { aggregateType: 'property', aggregateId: p.id, eventType: 'distribution.released', payload: {
+          externalId: plink.external_id, routeId: Number(r.id), originAgency: agency, originAgentId: r.origin_agent_id,
+          audienceType: r.audience_type, audienceRefs: r.audience_refs, commercialTermsRef: r.commercial_terms_ref,
+          approvedReleaseAt: new Date(r.approved_release_at).toISOString(), scheduledReleaseAt: new Date(r.scheduled_release_at).toISOString(),
+        } })
+        await audit(q, null, 'NEXUS_ROUTE_RELEASED', { route_id: Number(r.id), released_at: u.released_at }, p)
+        out.released++
+      })
+    } catch (err) {
+      out.errors++
+      log.error('nexus routing: release failed', { route_id: Number(id), err: err.message })
+    }
   }
   return out
+}
+
+// A released listing that has since ended (rented, archived, withdrawn) is taken
+// back: the route is revoked and NEXUS is told once. Temporary states are left alone.
+async function withdrawEndedReleases({ limit = 100 } = {}) {
+  const agency = AGENCY_KEY()
+  const { rows } = await db.query(
+    `SELECT r.id FROM nexus_distribution_routes r JOIN properties p ON p.id=r.property_id
+      WHERE r.agency_key=$1 AND r.release_state='released'
+        AND (p.archived_at IS NOT NULL OR p.available_status = ANY($2::text[]) OR p.lifecycle_state IN ('rented','archived'))
+      ORDER BY r.id LIMIT $3`, [agency, ENDED_STATUS, limit])
+  const out = { withdrawn: 0, errors: 0 }
+  for (const { id } of rows) {
+    try {
+      await tx(async q => {
+        const { rows: [r] } = await q.query(`SELECT * FROM nexus_distribution_routes WHERE id=$1 AND release_state='released' FOR UPDATE SKIP LOCKED`, [id])
+        if (!r) return
+        const p = await anyPropertyRow(q, r.property_id)
+        if (!over(p)) return // changed back in the meantime
+        await revoke(q, r, p, { by: 'system', reason: 'listing ended' })
+        await audit(q, null, 'NEXUS_ROUTE_REVOKED', { route_id: Number(r.id), was: 'released', by: 'system' }, p)
+        out.withdrawn++
+      })
+    } catch (err) {
+      out.errors++
+      log.error('nexus routing: withdrawal failed', { route_id: Number(id), err: err.message })
+    }
+  }
+  return out
+}
+
+// One scheduler pass.
+async function tick(opts = {}) {
+  const releases = await processDueReleases(opts)
+  const gone = await withdrawEndedReleases(opts)
+  return { ...releases, withdrawnEnded: gone.withdrawn, errors: releases.errors + gone.errors }
 }
 
 async function getRoute(propertyId, agent) {
@@ -251,8 +316,9 @@ async function getRoute(propertyId, agent) {
     owner: { verified: auth.verified, channels: auth.grants.map(g => ({ channel: g.channel, audienceRef: g.audience_ref || null })) },
     canEdit: agent.role === 'admin' || p.listed_by_agent_id === agent.id,
     options: OPTIONS,
+    defaults: await require('./nexusSmartDefaults').routeDefaults(db, agent),
     history: history.map(h => view(h)),
   }
 }
 
-module.exports = { OPTIONS, MODES, AUDIENCES, setRoute, approveRelease, revokeRoute, getRoute, processDueReleases, onOwnerAuthorizationChanged, ownerCovers, scheduleFor }
+module.exports = { OPTIONS, MODES, AUDIENCES, setRoute, approveRelease, revokeRoute, getRoute, processDueReleases, withdrawEndedReleases, tick, onOwnerAuthorizationChanged, ownerCovers, scheduleFor }

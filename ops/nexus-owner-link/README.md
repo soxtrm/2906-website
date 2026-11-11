@@ -2,7 +2,9 @@
 
 Branch `claude/argus-nexus-owner-link-20261111` (from `origin/main` f22d862). **Not deployed. Not merged.** The interface NEXUS has to implement is in [CONTRACT.md](CONTRACT.md).
 
-**State in one line:** the ARGUS side is built and tested; NEXUS has no receiver, owner account or activation page yet, so NEXUS synchronisation is **pending** and the UI says so.
+**State in one line (2026-11-12):** the ARGUS side is built and tested. NEXUS Owner Portal Stage A now exists (Codex, `ee61326`); invitation → activation → property link works between the two real systems locally, but owner changes made in NEXUS do not reach ARGUS yet. See [COMPATIBILITY.md](COMPATIBILITY.md). The integration gate (staging end-to-end) is **not passed**; NEXUS synchronisation stays **pending**.
+
+**Decision (Kev, 2026-11-12):** ARGUS Light is a NEXUS Marketplace interface, behind a feature flag until the identity bridge is verified. It is not built in the ARGUS CRM and not in this branch.
 
 ## What exists now
 
@@ -12,6 +14,9 @@ Branch `claude/argus-nexus-owner-link-20261111` (from `origin/main` f22d862). **
 | Owner link service | `backend/services/nexusOwnerLink.js` | Invitations, claims, verification, disputes, sync gate, outbox, inbound events |
 | Tokens and request signing | `backend/services/nexusLinkCrypto.js` | Plaintext invitation tokens are derived, never stored |
 | Agency distribution routing (addendum 01) | `backend/migrations/20261111b_nexus_distribution_routes.sql`, `backend/services/nexusDistributionRouting.js` | Immediate / after N days / on a date / selected audience / none; clock starts at agency approval; needs a matching owner grant; revocable; idempotent release. **API only — no screen yet** |
+| Scheduler | `backend/services/nexusLinkScheduler.js` | One timer: release due routes, take back releases whose listing ended, deliver the outbox. **Off unless `NEXUS_LINK_SCHEDULER=1`.** Independent of `cron.js` |
+| Due-release handling | `nexusDistributionRouting.js` (`processDueReleases`, `withdrawEndedReleases`, `tick`) | A listing rented/archived before release: rule revoked by the system, nothing sent. Rented/archived after release: withdrawn once. "Rented?" is temporary: the route waits. One broken route never stops the others |
+| Smart defaults (backend) | `backend/services/nexusSmartDefaults.js` | Suggestions with source and explanation (mode `none`, usual or own last delay, next working morning). Audience, commercial terms, approval, verification and owner permissions are never prefilled; the builder refuses to create such a suggestion |
 | Freshness classifier | `backend/services/availabilityFreshness.js` | Reads `properties.last_confirmed_available_at`; no second timestamp |
 | Staff API | `backend/routes/crmOwnerNexus.js` → `/api/crm/owner-nexus/:ownerId/…` | Admin, or agent with `feature_entitlements.nexus_owner_link = true`, checked on the live row |
 | Service API for NEXUS | `backend/routes/nexusLinkService.js` → `/api/nexus-link/v1/…` | HMAC-signed; 503 until a secret is configured |
@@ -47,6 +52,10 @@ Branch `claude/argus-nexus-owner-link-20261111` (from `origin/main` f22d862). **
 | `NEXUS_INVITE_TTL_DAYS` | Default 14. |
 | `NEXUS_AVAILABILITY_INTERVAL_HOURS` / `_APPROACHING_HOURS` / `_STALE_HOURS` | Freshness thresholds. Defaults 48 / 36 / 336. |
 | `ARGUS_AGENCY_KEY` | Default `2906`. |
+| `NEXUS_LINK_SCHEDULER` (`1`), `NEXUS_LINK_SCHEDULER_SECONDS` | Turns the scheduler on; interval 30–3600 s, default 300. Unset: releases only fire through `POST …/routes/process-due`. |
+| `NEXUS_LINK_ROUTING_EVENTS` (`1`) | Deliver `distribution.released` / `distribution.release_revoked`. Unset: they are held as pending, because NEXUS Stage A (`ee61326`) rejects them. |
+
+For NEXUS Stage A the receiver base is `NEXUS_OWNER_LINK_URL=https://<nexus host>/api/nexus/housing/bridge/argus` (ARGUS appends and signs `/events`), key id `argus-2906`.
 
 ## Audit: what was already there (and is unchanged)
 
@@ -63,16 +72,18 @@ Branch `claude/argus-nexus-owner-link-20261111` (from `origin/main` f22d862). **
 | Tenancy | `agency_key` on two tables only | Core tables (`owner_contacts`, `properties`) have no agency column. See limits. |
 | NEXUS side | `D:\2906\NExususu`, live mirror v97 | No owner account, invitation, owner↔property link, distribution model, property viewing schedule or service-to-service auth. |
 
-## Tests actually run (2026-11-11, local)
+## Tests actually run (backend 2026-11-12, UI 2026-11-11, local)
 
-Database: local embedded PostgreSQL 16 with the production **schema** (dump of 2026-11-01, 288 tables) and no production rows. The NEXUS receiver is an in-process stub.
+Database: local embedded PostgreSQL 16 with the production **schema** (dump of 2026-11-01, 288 tables) and no production rows. The NEXUS receiver is an in-process stub, except in the cross-system run, which uses the real NEXUS handler.
 
 | Suite | Result |
 |---|---|
 | `backend/test/ownerLink.test.js` (services) | 18/18 |
 | `backend/test/distributionRouting.test.js` (7-day delay, owner authorisation, revocation, concurrency) | 8/8 |
 | `backend/test/routes.test.js` (real routers, real JWTs, real signatures) | 4/4 |
-| `tests/owner-nexus.test.cjs` (Chromium, mocked API; 1440 / 390 / 360 px) | 3/3 |
+| `backend/test/schedulerDefaults.test.js` (scheduler, ended listings, starvation, held routing events, smart defaults) | 6/6 |
+| `backend/test/crossSystem.test.js` (real ARGUS routers ↔ real NEXUS `ee61326`, two local databases) | 8/8 steps, 2 of them pin known gaps |
+| `tests/owner-nexus.test.cjs` (Chromium, mocked API; 1440 / 390 / 360 px) | 3/3 (2026-11-11; the UI was not changed since) |
 | `tsc --noEmit` | No new errors (6 pre-existing in `calendar_interna` and `lib/crm/ui.tsx`) |
 | Existing `tests/availability-agent-links.test.cjs`, `availability-owner-routing.test.cjs` | 1/1, 1/1 |
 
@@ -83,7 +94,9 @@ Run:
 ARGUS_TEST_PGDIR=<dir> ARGUS_SCHEMA_SQL=<schema-only.sql> node ops/nexus-owner-link/backend/test/helpers/localDb.js serve
 # backend
 cd ops/nexus-owner-link/backend
-ARGUS_BASE_DIR=<production mirror with db.js and services/boardAction.js> node --test --test-concurrency=1 test/ownerLink.test.js test/routes.test.js test/distributionRouting.test.js
+ARGUS_BASE_DIR=<production mirror with db.js and services/boardAction.js> node --test --test-concurrency=1 test/ownerLink.test.js test/routes.test.js test/distributionRouting.test.js test/schedulerDefaults.test.js
+# cross-system (skipped unless both are set): a clean export of the NEXUS commit and a python with psycopg + tzdata
+NEXUS_REPO_DIR=<export of ee61326> NEXUS_PYTHON=<python> ARGUS_BASE_DIR=<…> node --test --test-concurrency=1 test/crossSystem.test.js
 # UI (needs `next dev -p 3117 --webpack`)
 CRM_MOCK_BASE=http://localhost:3117 node --test tests/owner-nexus.test.cjs
 ```
@@ -110,17 +123,18 @@ CRM_MOCK_BASE=http://localhost:3117 node --test tests/owner-nexus.test.cjs
 
 ## Limits and decisions to confirm
 
-1. **NEXUS receiver does not exist.** Invitation links point at a page NEXUS has not built. Do not hand links to owners until it has.
+1. **NEXUS receiver exists on a branch only** (`ee61326`, not deployed) and is not yet compatible for owner updates — 11 mismatches are listed in [COMPATIBILITY.md](COMPATIBILITY.md). Do not hand invitation links to owners before the staging gate passes.
 2. **Single-tenant core tables.** `owner_contacts` and `properties` have no agency column, so "which agency owns this owner" is the instance (`ARGUS_AGENCY_KEY`), not a row attribute. Benestates data must not be loaded into this instance on the assumption that the link tables separate it.
 3. **Owner says "rented" in NEXUS** → ARGUS files it as "Rented?" for an agent to confirm, like the existing owner-reply rule. Kev to confirm that a structured portal answer should not flip the listing directly.
 4. **Freshness thresholds** (36 h / 48 h / 14 days) differ from the board's colour ladder (30 h / 60 h). The board is unchanged; aligning them is a product decision.
 5. **Who may use the controls:** admins, plus agents explicitly entitled. No agent is entitled by default.
-6. **Delivery is operator-triggered** (Sync / Retry). No cron job was added. Scheduled releases are stored durably, but they only fire when `POST /api/crm/owner-nexus/routes/process-due` is called; wiring that into `cron.js` is a separate change because the live `cron.js` could not be matched to a mirror by md5.
+6. **Delivery is operator-triggered by default** (Sync / Retry). The link has its own scheduler, started from `index.js` and **off unless `NEXUS_LINK_SCHEDULER=1`**; `cron.js` is untouched. With it off, scheduled releases are stored durably and fire when `POST /api/crm/owner-nexus/routes/process-due` is called.
+8. **No staging ARGUS exists.** The gate's end-to-end test needs a staging backend and database, or an approved way to run it.
 7. **Properties added after the invitation** are not proposed to the owner automatically; a new invitation or a later "propose properties" action is needed.
 
 ## Planned, not built
 
-Structured Q&A · viewing schedule consumption · scheduled owner reconfirmation prompts (outreach untouched) · photos in the payload · commission and referral model · B2B sharing workflow · agency source connections · a screen for distribution routing · ARGUS Light and smart defaults (queue addendum 01) · global profiles and sector streaming (queue addendum 02).
+Structured Q&A · viewing schedule consumption · scheduled owner reconfirmation prompts (outreach untouched) · photos in the payload · commission and referral model · B2B sharing workflow · agency source connections · a screen for distribution routing and for the smart defaults (the backend is done) · ARGUS Light (NEXUS side, feature-flagged) · a pull consumer for the NEXUS outbox, if push is not adopted · global profiles and sector streaming (queue addendum 02).
 
 ## Deploy (needs explicit approval)
 

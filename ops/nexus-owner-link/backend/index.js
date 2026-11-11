@@ -325,6 +325,8 @@ async function start() {
   const server = app.listen(config.port, () => { log.info(`HTTP server listening on :${config.port}`) })
   const { closeAll } = startWorkers()
   startCrons()
+  // ARGUS × NEXUS owner link: due distribution releases + outbox delivery. Off unless NEXUS_LINK_SCHEDULER=1.
+  require('./services/nexusLinkScheduler').start()
   // Kev, 2026-09-10: FB Direct-From-Owner entries get first priority on any
   // restart — awaited (not fire-and-forget) so it genuinely runs BEFORE the
   // FB posting queue reconciliation / warm scan below, per Kev's explicit

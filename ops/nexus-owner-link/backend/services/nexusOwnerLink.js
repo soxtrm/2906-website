@@ -558,6 +558,9 @@ async function markAggregate(q, row, { ok, error = null, response = null }) {
       [row.aggregate_id, ok ? 'synced' : 'error', error])
     return
   }
+  // A routing event says nothing about the listing payload, its publication or its
+  // sync state. Its own outcome lives on the outbox row.
+  if (row.event_type.startsWith('distribution.')) return
   if (!ok) {
     await q.query(`UPDATE nexus_property_links SET sync_state='error', last_sync_attempt_at=NOW(), last_sync_error=$3, updated_at=NOW() WHERE agency_key=$1 AND property_id=$2`, [row.agency_key, row.aggregate_id, error])
     return
@@ -585,10 +588,15 @@ async function deliverDue({ limit = 25, ids = null } = {}) {
     const { rows: [{ n }] } = await db.query(`SELECT COUNT(*)::int AS n FROM nexus_sync_outbox WHERE agency_key=$1 AND state IN ('pending','failed')`, [agency])
     return { receiverConfigured: false, delivered: 0, failed: 0, pending: n, note: 'NEXUS receiver not configured — events stay pending.' }
   }
+  // NEXUS Owner Portal Stage A accepts owner.profile_upserted, property.upserted and
+  // property.withdrawn only. Routing events are held (not dead-lettered) until the
+  // NEXUS side confirms it consumes them: NEXUS_LINK_ROUTING_EVENTS=1.
+  const routingEvents = process.env.NEXUS_LINK_ROUTING_EVENTS === '1'
   const { rows: claimed } = await db.query(
     `UPDATE nexus_sync_outbox SET state='delivering', attempts=attempts+1, updated_at=NOW()
       WHERE id IN (SELECT id FROM nexus_sync_outbox WHERE agency_key=$1 AND state IN ('pending','failed') AND next_attempt_at <= NOW()
-                     AND ($3::bigint[] IS NULL OR id = ANY($3)) ORDER BY id LIMIT $2 FOR UPDATE SKIP LOCKED) RETURNING *`, [agency, limit, ids])
+                     AND ($3::bigint[] IS NULL OR id = ANY($3)) AND ($4::boolean OR event_type NOT LIKE 'distribution.%')
+                   ORDER BY id LIMIT $2 FOR UPDATE SKIP LOCKED) RETURNING *`, [agency, limit, ids, routingEvents])
   let delivered = 0, failed = 0
   for (const row of claimed.sort((a, b) => Number(a.id) - Number(b.id))) {
     const path = '/events'
@@ -603,7 +611,9 @@ async function deliverDue({ limit = 25, ids = null } = {}) {
       })
       response = await res.json().catch(() => null)
       ok = res.status >= 200 && res.status < 300
-      if (!ok) { error = `HTTP ${res.status}${response?.error ? ` ${String(response.error).slice(0, 120)}` : ''}`; permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 }
+      // NEXUS answers errors as { message }, ARGUS-style services as { error }.
+      const said = response?.error || response?.message
+      if (!ok) { error = `HTTP ${res.status}${said ? ` ${String(said).slice(0, 120)}` : ''}`; permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 }
     } catch (err) { error = `Transport: ${String(err.message || err).slice(0, 160)}` }
     await tx(async q => {
       if (ok) {
@@ -618,7 +628,8 @@ async function deliverDue({ limit = 25, ids = null } = {}) {
     ok ? delivered++ : failed++
     if (!ok) log.warn('nexus-owner-link delivery failed', { id: Number(row.id), type: row.event_type, error })
   }
-  return { receiverConfigured: true, delivered, failed, pending: 0 }
+  const { rows: [{ n: held }] } = routingEvents ? { rows: [{ n: 0 }] } : await db.query(`SELECT COUNT(*)::int AS n FROM nexus_sync_outbox WHERE agency_key=$1 AND state IN ('pending','failed') AND event_type LIKE 'distribution.%'`, [agency])
+  return { receiverConfigured: true, delivered, failed, pending: 0, heldRoutingEvents: held }
 }
 
 // "Retry sync": make failed/dead rows of this owner due again, then deliver.
@@ -630,8 +641,10 @@ async function retrySync(ownerId, agent) {
         WHERE o.agency_key=$1 AND o.state IN ('failed','dead','pending')
           AND ((o.aggregate_type='owner' AND o.aggregate_id=$2)
             OR (o.aggregate_type='property' AND o.aggregate_id IN (SELECT id FROM properties WHERE owner_id=$3)))
-          -- never resurrect an event that a later decision made obsolete
-          AND NOT EXISTS (SELECT 1 FROM nexus_sync_outbox n WHERE n.aggregate_type=o.aggregate_type AND n.aggregate_id=o.aggregate_id AND n.agency_key=o.agency_key AND n.id > o.id AND n.state <> 'superseded')
+          -- never resurrect an event that a later decision of the same kind made obsolete
+          -- (listing events and routing events are two independent sequences)
+          AND NOT EXISTS (SELECT 1 FROM nexus_sync_outbox n WHERE n.aggregate_type=o.aggregate_type AND n.aggregate_id=o.aggregate_id AND n.agency_key=o.agency_key AND n.id > o.id AND n.state <> 'superseded'
+                             AND split_part(n.event_type, '.', 1) = split_part(o.event_type, '.', 1))
         RETURNING o.id`, [link.agency_key, link.id, ownerId])
     await audit(q, agent, 'NEXUS_SYNC_RETRY', { owner_contact_id: ownerId, events: rows.length })
     return rows.map(r => r.id)

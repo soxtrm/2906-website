@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS nexus_distribution_routes (
   scheduled_release_at  TIMESTAMPTZ,
   released_at           TIMESTAMPTZ,
   revoked_at            TIMESTAMPTZ,
-  revoked_by            TEXT,                -- 'agency' | 'owner'
+  revoked_by            TEXT,                -- 'agency' | 'owner' | 'system' (listing ended)
   revoked_reason        TEXT,
   origin_agent_id       INTEGER REFERENCES agents(id),
   created_by_agent_id   INTEGER REFERENCES agents(id),
@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS nexus_distribution_routes (
 -- One current rule per listing; revoked rules are kept as history.
 CREATE UNIQUE INDEX IF NOT EXISTS nexus_distribution_routes_current_uniq
   ON nexus_distribution_routes (agency_key, property_id) WHERE release_state <> 'revoked';
+-- When the scheduler last looked at a due route it could not release yet (listing
+-- off market). Keeps one held route from starving the others.
+ALTER TABLE nexus_distribution_routes ADD COLUMN IF NOT EXISTS last_checked_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS nexus_distribution_routes_due_idx
   ON nexus_distribution_routes (scheduled_release_at) WHERE release_state = 'scheduled';
 
