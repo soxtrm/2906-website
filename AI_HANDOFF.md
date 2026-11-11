@@ -139,3 +139,12 @@ Not verified / risks:
 - 'Rented'-reason DNC owners: decision pending
 - outreachPlanner.js was changed in production on 10-28 with no handoff entry (that version is the snapshot base)
 Next: with Kev's OK run `ops/outreach-automation/deploy.sh`, enable Auto on one account, watch one morning run in the logs, then sync the outreach-approval-fix mirror copies.
+
+### 2026-11-11 ARGUS × NEXUS owner link, first slice (Claude)
+Changed (branch `claude/argus-nexus-owner-link-20261111`, worktree `nexus-bridge-work/20261111/argus-nexus-owner-link`): new `ops/nexus-owner-link/` (migration 20261111_nexus_owner_link(.down).sql, services nexusOwnerLink/nexusLinkCrypto/availabilityFreshness, routes crmOwnerNexus + nexusLinkService, index.js = prod bc53d588 + 5 lines, deploy.sh, CONTRACT.md, README.md), `components/crm/owner-nexus-panel.tsx`, NEXUS tab in `app/crm/owner/[id]/page.tsx`, `tests/owner-nexus.test.cjs`.
+Why: owner activation for the NEXUS Owner Portal. Audit found NEXUS has no owner account, invitation, distribution model or service auth; NEXUS only pulls the public `/api/nexus/inventory`.
+Addendum 01 routing (same branch): migration 20261111b_nexus_distribution_routes, services/nexusDistributionRouting.js, 5 endpoints under /api/crm/owner-nexus; API only, no screen, no cron tick.
+Tests: backend 30/30 on a LOCAL embedded Postgres 16 with the 2026-11-01 production schema (no prod rows), NEXUS receiver stubbed; UI 3/3 (1440/390/360, mocked API); tsc no new errors.
+Deployed: **no**. deploy.sh not run. Nothing on the VPS was touched.
+Not verified / risks: no real NEXUS receiver (sync stays "pending"); invitation URL targets a NEXUS page that does not exist; Property Source Sync / outreach suites not re-run (no code of theirs changed); core tables are single-tenant.
+Next: Codex implements CONTRACT.md on NEXUS; then a round trip against a NEXUS test environment before any deploy. Queue addendum 01 (distribution routing, ARGUS Light, smart defaults) and 02 (sector streaming) follow.
