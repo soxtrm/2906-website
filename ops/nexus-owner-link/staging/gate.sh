@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run the integration gate on hosted staging (Claude, 2026-11-13).
+# Run the integration gate on hosted staging (Claude, 2026-11-12).
 #   bash gate.sh
 # Needs the full stack up (setup.sh --with-nexus). Touches only the compose
 # project "argus-nexus-staging"; it records the state of the production

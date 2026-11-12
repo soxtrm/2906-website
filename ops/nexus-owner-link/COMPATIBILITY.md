@@ -2,7 +2,9 @@
 
 2026-11-12 (night) · ARGUS branch `claude/argus-nexus-owner-link-20261111` against NEXUS commit **`9947028`** ("Honor strict ARGUS acknowledgements and push consented owner updates", branch `codex/nexus-argus-signed-reads-20261112`). Contract `2026-11-11.v1`, revision 2 ([CONTRACT.md](CONTRACT.md)).
 
-**Result in one line:** every gate scenario that can be exercised locally passes between the two committed implementations. Still open: NEXUS `9947028` reads the ARGUS database directly, approved Q&A is not pushed, and no hosted staging run has happened. **The gate is not passed until it runs on hosted staging.**
+**Update 2026-11-12, hosted staging:** the gate was run on hosted staging with ARGUS `df5048d` and NEXUS `4c6d44f` (signed reads, no ARGUS database login): 12/12 steps and 8/8 isolation checks passed. The report is [staging/README.md](staging/README.md). The sections below describe the earlier local run against `9947028` and are kept as history.
+
+**Result in one line (local run against `9947028`):** every gate scenario that can be exercised locally passes between the two committed implementations. Still open: NEXUS `9947028` reads the ARGUS database directly, approved Q&A is not pushed, and no hosted staging run has happened. **The gate is not passed until it runs on hosted staging.**
 
 Architecture reference: ARGUS is the real-estate operations and synchronisation backend; the Owner Portal and ARGUS Light are NEXUS STUDIOS surfaces built by Codex; nothing in this branch builds a NEXUS interface.
 

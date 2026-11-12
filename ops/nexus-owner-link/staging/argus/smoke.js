@@ -1,5 +1,5 @@
 'use strict'
-// Hosted-staging smoke test for the ARGUS side (Claude, 2026-11-13).
+// Hosted-staging smoke test for the ARGUS side (Claude, 2026-11-12).
 //   docker compose exec argus node smoke.js
 // Plays the NEXUS server against ARGUS staging THROUGH the staging HTTPS proxy
 // (certificate verified against the staging CA), with real signatures, on

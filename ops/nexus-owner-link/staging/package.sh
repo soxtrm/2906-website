@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the staging bundle from COMMITTED code only (Claude, 2026-11-13).
+# Build the staging bundle from COMMITTED code only (Claude, 2026-11-12).
 #   bash package.sh <out.tgz> [<nexus repo> <nexus commit>]
 # ARGUS code comes from `git archive HEAD`, NEXUS code from `git archive <commit>`:
 # an uncommitted working tree can never end up on staging. No secrets are packed.

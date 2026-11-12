@@ -1,5 +1,5 @@
 #!/bin/bash
-# ARGUS × NEXUS integration-gate staging — bring-up on the VPS (Claude, 2026-11-13).
+# ARGUS × NEXUS integration-gate staging — bring-up on the VPS (Claude, 2026-11-12).
 # Run from /opt/argus-nexus-staging after unpacking the bundle made by package.sh.
 #
 #   bash setup.sh                     ARGUS side (proxy, database, service)

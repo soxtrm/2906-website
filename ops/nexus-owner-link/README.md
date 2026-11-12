@@ -2,7 +2,7 @@
 
 Branch `claude/argus-nexus-owner-link-20261111` (from `origin/main` f22d862). **Not deployed. Not merged.** The interface NEXUS has to implement is in [CONTRACT.md](CONTRACT.md).
 
-**State in one line (2026-11-12, evening):** NEXUS pushes owner changes to ARGUS (decision Kev). Against Codex's committed `9947028`, activation, owner passport and schedule edits, distribution permissions, availability confirmation, listing sync, revocation, retries and rejection of unauthorised events all pass between the two real systems **locally**. Open: NEXUS still reads the ARGUS database directly in that commit (signed reads are in progress on its side) and does not push Q&A yet. See [COMPATIBILITY.md](COMPATIBILITY.md). The integration gate needs a **hosted staging** run and is **not passed**.
+**State in one line (2026-11-12, evening):** NEXUS pushes owner changes to ARGUS (decision Kev). Against Codex's committed `9947028`, activation, owner passport and schedule edits, distribution permissions, availability confirmation, listing sync, revocation, retries and rejection of unauthorised events all pass between the two real systems **locally**. Open: NEXUS still reads the ARGUS database directly in that commit (signed reads are in progress on its side) and does not push Q&A yet. See [COMPATIBILITY.md](COMPATIBILITY.md). **Hosted staging gate passed on 2026-11-12** (ARGUS `df5048d`, NEXUS `4c6d44f`, 12/12 steps): see [staging/README.md](staging/README.md). Not deployed to production, not merged.
 
 **Decision (Kev, 2026-11-12):** ARGUS Light is a NEXUS Marketplace interface, behind a feature flag until the identity bridge is verified. It is not built in the ARGUS CRM and not in this branch.
 

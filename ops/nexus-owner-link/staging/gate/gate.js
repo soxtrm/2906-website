@@ -1,5 +1,5 @@
 'use strict'
-// Integration gate on HOSTED staging (Claude, 2026-11-13).
+// Integration gate on HOSTED staging (Claude, 2026-11-12).
 // Runs inside the staging network (see ../gate.sh). Talks to the two running
 // staging services over HTTPS only, as an owner, as professionals and as staff
 // would; uses the two staging databases to seed synthetic data, to shift the

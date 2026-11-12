@@ -1,5 +1,5 @@
 'use strict'
-// Synthetic staging data only (Claude, 2026-11-13). Idempotent.
+// Synthetic staging data only (Claude, 2026-11-12). Idempotent.
 //   docker compose exec argus node seed.js
 // Invented owners with numbers from a reserved test range, invented listings
 // with STG- references. Nothing is copied from production.

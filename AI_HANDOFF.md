@@ -174,3 +174,14 @@ Tests (local, 2026-11-12): ARGUS backend 46/46; cross-system vs NEXUS 9947028 9/
 Deployed: **no**. Not merged.
 Open: NEXUS 9947028 still reads the ARGUS database (signed reads are uncommitted on Codex's side); Q&A not pushed; no hosted staging ARGUS; ARGUS Property Source Sync / outreach suites not re-run; viewing-request round trip not in the contract; staff accept/reject of owner passport edits not built.
 Next: re-run crossSystemPush.test.js on Codex's signed-reads commit WITHOUT giving NEXUS a database login; hosted staging run. No deploy or merge without Kev's OK.
+
+### 2026-11-12 ARGUS × NEXUS hosted staging and integration gate (Claude)
+Approval: Kev approved a dedicated hosted staging for the gate; production must not be modified, migrated, restarted or deployed.
+Changed (branch `claude/argus-nexus-owner-link-20261111`): new `ops/nexus-owner-link/staging/` — docker-compose.yml (project `argus-nexus-staging`), Caddyfile (own internal CA, loopback 8443), argus/ (owner-link-only server, config, logger, seed, smoke, staff-token, Dockerfile), nexus/ (Dockerfile, entry), setup.sh, package.sh, gate.sh, gate/gate.js, teardown.sh, README.md (the gate report).
+On the VPS: `/opt/argus-nexus-staging` and Docker objects of that compose project only (5 containers, 5 volumes, 3 networks, images argus-staging, nexus-staging, caddy:2-alpine). Read from production: db.js + services/boardAction.js (checksum-verified copies) and one schema-only dump (no rows). Nothing of the production stack was written, restarted or reconfigured; gate.sh verifies container start times, backend index.js md5, Caddyfile md5 and Caddy start time before/after.
+Gate (hosted, pinned ARGUS df5048d ↔ NEXUS 4c6d44f): 12/12 steps, 8/8 isolation checks. First run 11/12 because of a wrong expectation in my driver (fixed in df5048d, whole gate re-run).
+Regressions (local): owner-link backend 46/46; cross-system 9/9 without a NEXUS database login; Property Source Sync 60/60; NEXUS housing 7/7; NEXUS identity 16/17 (pre-existing booking-prefill error). Client Sync has NO automated suite — not verified by a test.
+Deployed to production: **no**. Not merged.
+Not verified / risks: staging is loopback-only (SSH tunnel), not internet-facing; ARGUS staging serves the owner-link surface only; owner-profile UI not on staging; delayed release proven by a clock shift; no second tenant stood up; consumer discovery does not exist yet. Separate deliverables: structured Q&A, viewing appointment round trip, staff accept/reject of owner edits, ARGUS Light screens, further Marketplace modules.
+Observed on the VPS, not changed: production Postgres (5432), Redis (6379) and WAHA (3000) are published on all interfaces and ufw is inactive.
+Next: Kev decides on a production rollout plan. Staging stays up until told otherwise (`bash teardown.sh` removes it).

@@ -1,4 +1,4 @@
-# ARGUS × NEXUS integration-gate staging (Claude, 2026-11-13).
+# ARGUS × NEXUS integration-gate staging (Claude, 2026-11-12).
 # Project name: argus-nexus-staging. Nothing here shares a network, volume,
 # database, secret or port with the production stack (2906-system).
 #
