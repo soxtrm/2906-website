@@ -212,9 +212,13 @@ async function waitUp(base, path) { for (let i = 0; i < 60; i++) { try { if ((aw
     await control('stop nexus')
     const failed = await crm('POST', `/${o.id}/sync-properties`, {})
     await control('start nexus'); await waitUp(N, '/housing/owner')
-    eq([failed.json.delivery.delivered, failed.json.delivery.failed], [0, 1], JSON.stringify(failed.json.delivery))
-    eq((await crm('GET', `/${o.id}`)).json.properties.find(x => x.ref === p1.ref).statuses.sync, 'error', 'no false synced')
-    eq((await crm('POST', `/${o.id}/retry`, {})).json.delivery.delivered, 1)
+    // Both listings changed since their last sync (listing 2 in the previous step), so two events are due.
+    eq([failed.json.delivery.delivered, failed.json.delivery.failed], [0, 2], JSON.stringify(failed.json.delivery))
+    eq((await crm('GET', `/${o.id}`)).json.properties.map(x => x.statuses.sync), ['error', 'error'], 'no false synced')
+    eq((await one(argusDb, `SELECT COUNT(*)::int n FROM nexus_sync_outbox WHERE event_type='property.upserted' AND state='failed' AND aggregate_id = ANY($1::bigint[])`, [[p1.id, p2.id]])).n, 2, 'events stay queued')
+    const retried = (await crm('POST', `/${o.id}/retry`, {})).json.delivery
+    eq([retried.delivered, retried.failed], [2, 0], 'retry')
+    eq((await crm('GET', `/${o.id}`)).json.properties.map(x => x.statuses.sync), ['synced', 'synced'])
     eq((await one(nexusDb, `SELECT facts->>'amount' a FROM nexus_private.housing_argus_listings WHERE external_id=$1`, [ext1])).a, '1700')
     eq((await one(argusDb, `SELECT COUNT(*)::int n FROM nexus_sync_outbox WHERE event_type='property.upserted' AND aggregate_id=$1 AND payload->'rent'->>'amount'='1700'`, [p1.id])).n, 1)
     // NEXUS → ARGUS with ARGUS down
