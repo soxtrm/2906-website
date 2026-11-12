@@ -3385,6 +3385,8 @@ async function processAvailabilityJob(data) {
     if (askedMs && wroteMs > askedMs) {
       await db.query(`UPDATE availability_checks SET needs_review = TRUE, updated_at = NOW() WHERE id = $1 AND status = 'awaiting'`, [check.id])
       log.info('[av] follow-up skipped — owner wrote after the question', { checkId, kind, ref: check.ref })
+      require('./automationEvents').record({ rule: 'availability_followup', action: 'followup_skipped', result: 'skipped', propertyId: check.property_id, ownerId: check.owner_id,
+        account: check.account_session, trigger: 'next-morning follow-up', reason: 'owner wrote after the question; needs review', details: { check_id: check.id } })
       return { skipped: 'owner_wrote_since_question' }
     }
   }

@@ -171,6 +171,8 @@ async function applyOwnerWideUnavailable({ ownerId, text, session = null, chatId
     const alert = deps.alertAdmin || (t => require('../telegram').sendAlert(t))
     await alert(`Owner #${ownerId} said nothing is available. ${changed.length} listing(s) set to not available and unpublished (${changed.map(p => '#' + (p.ref || p.id)).join(', ') || 'none on market'}); ${closedChecks.length} open check(s) closed; availability questions paused. Nothing was marked rented.`)
   } catch (err) { log.warn('[ownerScope] admin alert failed', { ownerId, err: err.message }) }
+  require('./automationEvents').record({ rule: 'owner_nothing_available', action: 'owner_wide_unavailable_applied', result: 'success', ownerId, account: session, messageId,
+    trigger: 'owner reply', details: { properties: changed.map(p => p.ref || p.id || p), closed_checks: closedChecks, blocked_reminders: blockedReminders, removed_jobs: removedJobs, paused_days: 180 } })
   return { handled: true, already: false, properties: changed, closedChecks, blockedReminders, removedJobs }
 }
 
