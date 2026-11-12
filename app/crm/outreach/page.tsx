@@ -4,6 +4,7 @@ import { Zap, Users, MessageSquare, Clock3, ShieldCheck, Radio, Layers } from 'l
 import './outreach-console.css'
 import { crmGet, crmJson } from '@/lib/crm/api'
 import { normalizeOutreachCountDraft } from '@/lib/crm/outreach-count'
+import { formatOutreachTimestamp } from '@/lib/crm/outreach-time'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { AccountRail, ActivityView, AutomationSetup, DayDetail, DayTimeline, KpiBar, LazyDetails, TemplateReview, useOverview, type DayCell } from './control-center'
 import { AccountCards, AutoPauseRow, HealthFilter, PaceCard, PersonaPreview, SevenDays, healthMatches, type P0Account } from './outreach-p0'
@@ -44,7 +45,7 @@ type Account = {
   restrictionDetectedAt?: string | null; restrictionUntil?: string | null; restrictionReason?: string | null
   restrictionsThisWeek?: number
   outreachAutoBaseCount?: number | null; outreachAutoMessage?: string
-  recentRuns?: { id: number; status: string; total_contacts: number; sent_count: number; skip_count: number; started_at: string | null; completed_at: string | null; updated_at: string | null; volume_percent_snapshot: number | null }[]
+  recentRuns?: { id: number; status: string; total_contacts: number; sent_count: number; skip_count: number; started_at: string | null; completed_at: string | null; updated_at: string | null; last_sent_at?: string | null; volume_percent_snapshot: number | null }[]
   planningDays?: {day: string; label: string; status: string; armed: boolean; scheduledAt: string | null; count: number; display?: DayDisplay}[]
   outreachPaceMin?: number | null; outreachPaceMax?: number | null
   outreachAutoEnabled?: boolean; outreachAutoRolling?: boolean
@@ -919,7 +920,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
               the 08:30–19:30 window and the 40/day cap. */}
           <div style={{ fontSize: 9.5, color: FAINT, textAlign: 'right' }}>
             Last outreach: {account.lastOutreachAt
-              ? `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short' }).format(new Date(account.lastOutreachAt))} · ${maltaHM(new Date(account.lastOutreachAt))}`
+              ? <time dateTime={account.lastOutreachAt} title="Malta time">{formatOutreachTimestamp(account.lastOutreachAt)}</time>
               : '—'}
           </div>
         </div>
@@ -956,7 +957,20 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             ? <><small>{account.restrictionUntil ? `Held until ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(account.restrictionUntil))}` : 'Held pending review'}</small><button disabled={busy} onClick={() => setRestriction(false)} style={btnGhost}>Clear after review</button></>
             : <button disabled={busy} onClick={() => setRestriction(true)} style={btnGhost}>Mark restricted · 40h</button>}
         </div>
-        <div className="account-recent-runs"><span>RECENT RUNS</span>{(account.recentRuns || []).slice(0,5).map(run => { const at=run.completed_at||run.updated_at||run.started_at; return <div key={run.id}><b>{run.sent_count}/{run.total_contacts}</b><small>{run.volume_percent_snapshot == null ? 'pace —' : `${run.volume_percent_snapshot}% pace`}</small><time>{at ? `${new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Malta',day:'2-digit',month:'short'}).format(new Date(at))} · ${maltaHM(new Date(at))}` : '—'}</time></div> })}{!(account.recentRuns || []).length && <small>No runs logged.</small>}</div>
+        <div className="account-recent-runs">
+          <span>RECENT RUNS</span>
+          {(account.recentRuns || []).slice(0, 5).map(run => {
+            const sentAt = run.sent_count > 0 ? run.last_sent_at : null
+            const at = sentAt || run.completed_at || run.updated_at || run.started_at
+            const timeLabel = sentAt ? 'Last sent' : run.completed_at ? 'Run ended' : run.updated_at ? 'Run updated' : 'Run started'
+            return <div key={run.id}>
+              <b>{run.sent_count}/{run.total_contacts}{run.sent_count === 0 ? ' · No sends' : ''}</b>
+              <small>{run.volume_percent_snapshot == null ? 'pace —' : `${run.volume_percent_snapshot}% pace`}</small>
+              {at ? <time dateTime={at} title="Malta time">{timeLabel} · {formatOutreachTimestamp(at)}</time> : '—'}
+            </div>
+          })}
+          {!account.recentRuns?.length && <small>No runs logged.</small>}
+        </div>
       </div>
 
       </div>

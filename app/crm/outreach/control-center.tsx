@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, CircleDashed, Clock3, MinusCircle, PauseCircle, PlayCircle, XCircle } from 'lucide-react'
 import { crmGet, crmJson } from '@/lib/crm/api'
+import { formatOutreachTimestamp } from '@/lib/crm/outreach-time'
 import './control-center.css'
 import { DraftEditor } from './outreach-p0'
 
@@ -283,7 +284,9 @@ export function ActivityView({ account }: { account: OverviewAccount }) {
       <header className="cc-activity-head">
         <div><small>ACTIVITY</small><h3>{account.label}</h3></div>
         <dl>
-          <div><dt>Last accepted</dt><dd>{account.lastAcceptedAt ? whenLabel(account.lastAcceptedAt) : 'None logged'}</dd></div>
+          <div><dt>Last outreach</dt><dd>{account.lastAcceptedAt
+            ? <time dateTime={account.lastAcceptedAt} title="Malta time">{formatOutreachTimestamp(account.lastAcceptedAt)}</time>
+            : 'None logged'}</dd></div>
           <div><dt>Next run</dt><dd>{account.nextRun ? whenLabel(account.nextRun.at) : '—'}</dd></div>
           <div><dt>Status</dt><dd>{account.attention[0] || (account.connected ? 'Connected' : account.sessionStatus)}</dd></div>
         </dl>

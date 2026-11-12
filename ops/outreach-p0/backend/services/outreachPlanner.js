@@ -298,10 +298,14 @@ async function listAccounts() {
      ORDER BY session_name, COALESCE(completed_at, updated_at, started_at) DESC, id DESC`)
   const lastRunMap = new Map(lastRuns.rows.map(row => [row.session_name, row]))
   const recentRuns = await db.query(`
-    SELECT * FROM (
+    SELECT ranked.*,
+           (SELECT MAX(item.sent_at)
+              FROM outreach_batch_items item
+             WHERE item.batch_id = ranked.id AND item.status = 'sent') AS last_sent_at
+    FROM (
       SELECT session_name, id, status, total_contacts, sent_count, skip_count,
              started_at, completed_at, updated_at, volume_percent_snapshot,
-             ROW_NUMBER() OVER (PARTITION BY session_name ORDER BY COALESCE(completed_at,updated_at,started_at) DESC,id DESC) AS rn
+             ROW_NUMBER() OVER (PARTITION BY session_name ORDER BY COALESCE(completed_at,updated_at,started_at) DESC NULLS LAST,id DESC) AS rn
         FROM outreach_batches
        WHERE status IN ('completed','cancelled','running')
     ) ranked WHERE rn <= 5 ORDER BY session_name, rn`)

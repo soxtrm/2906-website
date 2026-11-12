@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CheckCircle2, CircleDashed, Clock3, PauseCircle, XCircle } from 'lucide-react'
 import { crmGet, crmJson } from '@/lib/crm/api'
+import { formatOutreachTimestamp } from '@/lib/crm/outreach-time'
 import type { DayCell, OverviewAccount } from './control-center'
 import './outreach-p0.css'
 
@@ -157,7 +158,9 @@ export function AutoPauseRow({ account, onChanged }: { account: P0Account; onCha
       </button>
       <dl>
         <div><dt>Next action</dt><dd>{account.manualPaused ? 'Held — manually paused' : account.nextRun ? `${whenLabel(account.nextRun.at)} Malta` : 'None planned'}</dd></div>
-        <div><dt>Last accepted</dt><dd>{account.lastAcceptedAt ? whenLabel(account.lastAcceptedAt) : 'None logged'}</dd></div>
+        <div><dt>Last outreach</dt><dd>{account.lastAcceptedAt
+          ? <time dateTime={account.lastAcceptedAt} title="Malta time">{formatOutreachTimestamp(account.lastAcceptedAt)}</time>
+          : 'None logged'}</dd></div>
         <div><dt>Sent today</dt><dd>{account.sentToday}</dd></div>
         {account.attention?.length > 0 && <div><dt>Blocked / failed</dt><dd>{account.attention.join(' · ')}</dd></div>}
       </dl>

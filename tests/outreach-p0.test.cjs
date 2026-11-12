@@ -35,6 +35,12 @@ function store() {
   }
 }
 const accountsLegacy = [1, 2, 3, 4].map(id => ({ id, sessionName: ['default', 'Cedric', 'Gabriela', 'kevthirdd'][id - 1], label: ['Kev primary', 'Cedric', 'Gabriela', 'Kev third'][id - 1], phone: `3569900000${id}`, connected: id !== 2, active: true, outreachEnabled: true, outreachEligible: id !== 2, outreachPaceMin: 30, outreachPaceMax: 30, persona: ['kev', 'cedric', 'gabriela', 'kev'][id - 1], pool: 'top', planningDays: [], recentRuns: [] }))
+const lastOutreachAt = '2026-11-09T15:08:54Z'
+accountsLegacy[0].lastOutreachAt = lastOutreachAt
+accountsLegacy[0].recentRuns = [
+  { id: 2, sent_count: 0, total_contacts: 32, completed_at: '2026-11-11T09:06:06Z', last_sent_at: null },
+  { id: 1, sent_count: 19, total_contacts: 38, completed_at: '2026-11-09T16:05:05Z', last_sent_at: lastOutreachAt },
+]
 function overview(s) {
   const health = { 1: H.green, 2: H.red, 3: H.gray, 4: H.unknown }
   return {
@@ -42,7 +48,7 @@ function overview(s) {
     kpi: { sentToday: 28, scheduled: 30, remaining: 0, nextRun: null, activeAccounts: 2, accounts: 4, attention: [], health: { green: 1, yellow: 0, red: 1, gray: 1, unknown: 1 } },
     accounts: accountsLegacy.map(a => ({
       id: a.id, label: a.label, sessionName: a.sessionName, persona: a.persona, sessionStatus: a.id === 2 ? 'SCAN_QR_CODE' : 'WORKING', connected: a.id !== 2, restricted: false, restrictionUntil: null, restrictionReason: null,
-      sentToday: a.id === 1 ? 28 : 0, targetToday: a.id === 1 ? 30 : null, lastAcceptedAt: a.id === 1 ? '2026-11-10T07:24:00Z' : null,
+      sentToday: a.id === 1 ? 28 : 0, targetToday: a.id === 1 ? 30 : null, lastAcceptedAt: a.id === 1 ? lastOutreachAt : null,
       nextRun: a.id === 1 ? { at: '2026-11-11T07:16:00Z', mode: 'manual', status: 'ready' } : null,
       automation: { enabled: false, suspendedReason: null, suspendedRecoverable: null }, legacyAuto: s.legacyAuto[a.id], days, attention: a.id === 2 ? ['Disconnected (SCAN_QR_CODE)'] : [],
       health: s.paused[a.id] ? { color: 'gray', code: 'paused', label: 'Manually paused', reason: 'Paused by kevin', action: 'Resume when ready', telemetryAt: NOW, nextAt: null } : health[a.id],
@@ -103,6 +109,17 @@ for (const [label, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 8
       const s = store(); await mount(page, s)
       await page.goto(`${BASE}/crm/outreach`, { waitUntil: 'networkidle2', timeout: 120000 })
       await page.waitForSelector('[data-testid="pace-card"]', { timeout: 60000 })
+      assert.equal(await page.$eval(`[data-testid="auto-row"] time[datetime="${lastOutreachAt}"]`, e => e.textContent), '09 Nov 2026, 16:08:54')
+      await page.evaluate(() => [...document.querySelectorAll('.cc-tabs button')].find(b => b.textContent.trim() === 'Activity').click())
+      await page.waitForSelector('.cc-activity-head time')
+      assert.equal(await page.$eval('.cc-activity-head time', e => e.textContent), '09 Nov 2026, 16:08:54')
+      await page.evaluate(() => [...document.querySelectorAll('.cc-tabs button')].find(b => b.textContent.trim() === 'Manual planner').click())
+      await page.waitForSelector('.account-recent-runs time')
+      const recent = await page.$$eval('.account-recent-runs > div', rows => rows.map(row => row.textContent))
+      assert.match(recent[0], /0\/32 · No sends.*Run ended · 11 Nov 2026, 10:06:06/)
+      assert.match(recent[1], /19\/38.*Last sent · 09 Nov 2026, 16:08:54/)
+      await page.evaluate(() => [...document.querySelectorAll('.cc-tabs button')].find(b => b.textContent.trim() === 'Overview').click())
+      await page.waitForSelector('[data-testid="pace-card"]')
       // PACING-01 + TRAFFIC: real slider, all four lights with labels (unknown is never green).
       assert.equal(await page.$eval('[data-testid="pace-slider"]', e => e.type), 'range')
       const lights = await page.$$eval('[data-testid^="account-card-"] [data-light]', ns => ns.map(n => [n.dataset.light, n.textContent.trim()]))
