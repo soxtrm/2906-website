@@ -51,7 +51,8 @@ docker compose up -d proxy ca argus_pg
 for i in $(seq 1 60); do [ "$(docker inspect -f '{{.State.Health.Status}}' argus-nexus-staging-argus_pg-1 2>/dev/null)" = "healthy" ] && break; sleep 2; done
 psql_argus() { docker compose exec -T argus_pg psql -U argus_stg -d argus_staging "$@"; }
 if [ "$(psql_argus -At -c "SELECT to_regclass('public.properties') IS NULL")" = "t" ]; then
-  psql_argus -q -v ON_ERROR_STOP=1 < schema.sql >/dev/null
+  # Drop psql meta-commands and the one setting newer pg_dump versions emit that PostgreSQL 16 does not know.
+  grep -v '^SET transaction_timeout' schema.sql | grep -v '^[[:punct:]]restrict\|^[[:punct:]]unrestrict' | psql_argus -q -v ON_ERROR_STOP=1 >/dev/null
   echo "schema loaded: $(psql_argus -At -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'") tables, $(psql_argus -At -c "SELECT COUNT(*) FROM properties") property rows"
 fi
 for m in 20261111_nexus_owner_link.sql 20261111b_nexus_distribution_routes.sql 20261112_nexus_owner_updates.sql; do
