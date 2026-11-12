@@ -134,6 +134,29 @@ services:
     mem_limit: 384m
     cpus: 1.0
 
+  # One-off runner for the integration gate (see gate.sh). Not a long-running service.
+  gate:
+    profiles: [gate]
+    image: argus-staging:${ARGUS_COMMIT:?}
+    restart: "no"
+    working_dir: /srv/argus
+    command: ["node", "/gate/gate.js"]
+    environment:
+      NODE_PATH: /srv/argus/node_modules
+      NODE_EXTRA_CA_CERTS: /ca/root.crt
+      ARGUS_JWT_SECRET: ${ARGUS_JWT_SECRET:?}
+      ARGUS_DB_PASSWORD: ${ARGUS_DB_PASSWORD:?}
+      NEXUS_DB_PASSWORD: ${NEXUS_DB_PASSWORD:?}
+      SECRET_NEXUS_TO_ARGUS: ${SECRET_NEXUS_TO_ARGUS:?}
+      SECRET_ARGUS_TO_NEXUS: ${SECRET_ARGUS_TO_NEXUS:?}
+    volumes:
+      - ./gate:/gate:ro
+      - ./gate-control:/control
+      - ca_pub:/ca:ro
+    networks: [edge, argus_db, nexus_db]
+    mem_limit: 256m
+    cpus: 1.0
+
 networks:
   edge: {}
   argus_db: { internal: true }

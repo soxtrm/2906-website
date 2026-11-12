@@ -24,6 +24,7 @@ const PY = process.env.NEXUS_PYTHON
 const skip = !REPO || !PY ? 'NEXUS_REPO_DIR and NEXUS_PYTHON are required'
   : !fs.existsSync(path.join(REPO, 'nexus_housing_market.py')) ? 'needs a NEXUS revision that pushes owner changes (a2068ab or later)' : false
 // From 9947028 NEXUS also pushes passport and schedule edits (behind its own flag, switched on below).
+const SIGNED_READS = !skip && fs.readFileSync(path.join(REPO, 'nexus_housing_market.py'), 'utf8').includes('/read/market')
 const PUSHES = !skip && fs.readFileSync(path.join(REPO, 'nexus_housing.py'), 'utf8').includes('def push_owner_change')
 
 process.env.JWT_SECRET = 'test-jwt-secret-not-production'
@@ -103,8 +104,8 @@ test.before(async () => {
   nexus = spawn(PY, [path.join(__dirname, 'helpers', 'nexus_server.py'), REPO, '0'], {
     env: { ...process.env, NEXUS_ENV: 'development', NEXUS_ACCOUNT_AUTH: '1', NEXUS_HOUSING_OWNER: '1', NEXUS_HOUSING_PREVERIFIED_INVITES: '0', NEXUS_HOUSING_PROFESSIONAL: '0', NEXUS_HOUSING_ARGUS_OWNER_PUSH: '1',
       NEXUS_BOOKING_DB: path.join(tmp, 'booking.sqlite'), NEXUS_HOUSING_DB_DSN: dsn(NEXUS_DB),
-      // GAP (decision 5): this NEXUS revision still needs a login on the ARGUS database.
-      NEXUS_HOUSING_ARGUS_READ_DSN: dsn('argus_test'),
+      // Decision 5: no login on the ARGUS database. Only revisions before the signed reads (0eedf70) still get one.
+      ...(SIGNED_READS ? {} : { NEXUS_HOUSING_ARGUS_READ_DSN: dsn('argus_test') }),
       NEXUS_HOUSING_2906_BRIDGE_SECRET: TO_NEXUS, NEXUS_HOUSING_ARGUS_LINK_URL: `${argusBase}/api/nexus-link/v1`, NEXUS_HOUSING_ARGUS_LINK_SECRET: TO_ARGUS, PYTHONDONTWRITEBYTECODE: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
