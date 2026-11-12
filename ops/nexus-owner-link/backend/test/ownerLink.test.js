@@ -27,7 +27,7 @@ function receiverStub({ status = 200, body } = {}) {
     const parsed = JSON.parse(init.body)
     calls.push({ url, headers: init.headers, body: parsed })
     const s = typeof status === 'function' ? status(calls.length) : status
-    return { status: s, json: async () => (body ? body(parsed) : { accepted: true, canonicalPropertyId: `nxp_${C.sha256(parsed.data.externalId || 'owner').slice(0, 24)}`, publicationState: 'unpublished' }) }
+    return { status: s, json: async () => (body ? body(parsed) : { applied: true, properties: (parsed.data.confirmedExternalIds || []).map(x => ({ externalId: x, canonicalPropertyId: `nxp_${C.sha256(x).slice(0, 24)}` })), canonicalPropertyId: `nxp_${C.sha256(parsed.data.externalId || 'owner').slice(0, 24)}`, publicationState: 'unpublished' }) }
   })
   process.env.NEXUS_OWNER_LINK_URL = 'https://nexus.test/api/nexus/argus-link/v1'
   process.env.NEXUS_LINK_OUTBOUND_SECRET = 'outbound-secret-0123456789abcdef0123456789'
@@ -262,7 +262,7 @@ test('8 + 14 · syncing never modifies the source rows; 2906 stays the origin ag
   const up = calls.find(c => c.body.eventType === 'property.upserted').body.data
   assert.equal(up.originAgency, '2906'); assert.equal(up.provenance.origin_agency, '2906'); assert.equal(up.provenance.argus_ref, p.ref)
   const ownerEvt = calls.find(c => c.body.eventType === 'owner.profile_upserted').body.data
-  assert.deepEqual(Object.keys(ownerEvt).sort(), ['displayName', 'nexusAccountRef', 'originAgency', 'ownerLinkId', 'verifiedAt'])
+  assert.deepEqual(Object.keys(ownerEvt).sort(), ['confirmedExternalIds', 'displayName', 'nexusAccountRef', 'originAgency', 'ownerLinkId', 'verifiedAt'])
 })
 
 test('9 · an explicit availability confirmation moves properties.last_confirmed_available_at (and only that column)', async () => {

@@ -166,13 +166,16 @@ test('ARGUS owner → invitation → NEXUS activation → property link → owne
     assert.equal((await nx('POST', '/api/nexus/housing/argus-claim', { headers: stranger, body: { token, decisions: [{ externalId: ext(p1), decision: 'confirm' }] } })).status, 409)
   })
 
-  await t.test('sync before verification is refused by ARGUS; after staff verification NEXUS links exactly the confirmed property', async () => {
+  await t.test('sync before verification is refused by ARGUS; after staff verification NEXUS links exactly the confirmed property — without confirming it applied (GAP)', async () => {
     assert.deepEqual((await crm('POST', `/${o.id}/sync-owner`, {})).json.blockedReasons, ['OWNER_LINK_NOT_VERIFIED'])
     assert.equal((await crm('POST', `/${o.id}/verify`, { method: 'ID seen in office' })).status, 200)
     const sync = await crm('POST', `/${o.id}/sync-owner`, {})
     assert.equal(sync.status, 200, JSON.stringify(sync.json))
-    assert.deepEqual({ d: sync.json.delivery.delivered, f: sync.json.delivery.failed }, { d: 1, f: 0 })
-    assert.equal((await crm('GET', `/${o.id}`)).json.link.sync.state, 'synced')
+    // ee61326 answers { linkedProperties: 1 } with no `applied` and no canonical ids. ARGUS
+    // therefore does not report the owner as synced, although NEXUS did link the listing.
+    assert.deepEqual({ d: sync.json.delivery.delivered, f: sync.json.delivery.failed }, { d: 0, f: 1 })
+    const link = (await crm('GET', `/${o.id}`)).json.link
+    assert.equal(link.sync.state, 'error'); assert.match(link.sync.lastError, /without confirming it was applied/)
     const list = (await nx('GET', '/api/nexus/housing/properties', { headers: owner })).json.properties
     assert.deepEqual(list.map(x => x.listingRef), [p1.ref])
     nexusPropertyId = list[0].id
@@ -182,7 +185,7 @@ test('ARGUS owner → invitation → NEXUS activation → property link → owne
   })
 
   await t.test('negative authorisation and duplicate processing on the NEXUS receiver', async () => {
-    const { rows: [row] } = await H.db.query(`SELECT * FROM nexus_sync_outbox WHERE event_type='owner.profile_upserted' AND state='delivered' ORDER BY id DESC LIMIT 1`)
+    const { rows: [row] } = await H.db.query(`SELECT * FROM nexus_sync_outbox WHERE event_type='owner.profile_upserted' ORDER BY id DESC LIMIT 1`)
     const body = { eventId: row.event_id, eventType: row.event_type, contractVersion: row.contract_version, agencyKey: row.agency_key, occurredAt: new Date(row.created_at).toISOString(), idempotencyKey: row.idempotency_key, data: row.payload }
     const url = '/api/nexus/housing/bridge/argus/events'
     assert.equal((await nx('POST', url, { body })).status, 401)
@@ -222,7 +225,7 @@ test('ARGUS owner → invitation → NEXUS activation → property link → owne
     assert.equal((await crm('GET', `/${o.id}`)).json.properties.find(x => x.ref === p1.ref).statuses.canonicalPropertyId, null)
   })
 
-  await t.test('with a grant in the contract format, property sync is acknowledged with the NEXUS canonical id — and NEXUS ignores the payload (GAP)', async () => {
+  await t.test('GAP: NEXUS acknowledges a property sync without applying it — ARGUS refuses to call that synced', async () => {
     const link = (await crm('GET', `/${o.id}`)).json.link
     const grant = { contractVersion: S.CONTRACT_VERSION, agencyKey: '2906', eventId: `xsys-grant-${Date.now()}`, eventType: 'distribution.granted', data: { linkId: link.id, externalId: ext(p1), channel: 'origin_agency', scopes: ['listing_data', 'availability'] } }
     const ts = Math.floor(Date.now() / 1000)
@@ -230,15 +233,14 @@ test('ARGUS owner → invitation → NEXUS activation → property link → owne
     assert.equal(res.status, 200)
     await H.db.query(`UPDATE properties SET longlet_price=1650 WHERE id=$1`, [p1.id])
     const sync = await crm('POST', `/${o.id}/sync-properties`, {})
-    assert.deepEqual({ d: sync.json.delivery.delivered, f: sync.json.delivery.failed }, { d: 1, f: 0 })
+    assert.deepEqual({ d: sync.json.delivery.delivered, f: sync.json.delivery.failed }, { d: 0, f: 1 })
     const s = (await crm('GET', `/${o.id}`)).json.properties.find(x => x.ref === p1.ref).statuses
-    assert.equal(s.canonicalPropertyId, nexusPropertyId)
-    assert.equal(s.sync, 'synced'); assert.equal(s.publication, 'unpublished')
-    // ARGUS says "synced", but the new rent never reached the NEXUS passport.
+    assert.equal(s.sync, 'error'); assert.equal(s.canonicalPropertyId, null)
+    // Rightly so: the new rent never reached the NEXUS passport.
     const passport = (await nx('GET', `/api/nexus/housing/properties/${nexusPropertyId}`, { headers: owner })).json.passport
     assert.equal(passport.rent, 1500)
-    // Nothing duplicated on either side by the second sync.
-    assert.equal((await crm('POST', `/${o.id}/sync-properties`, {})).json.properties.find(x => x.ref === p1.ref).unchanged, true)
+    // The event stays queued for a retry; nothing is duplicated on either side.
+    assert.equal((await H.db.query(`SELECT COUNT(*)::int n FROM nexus_sync_outbox WHERE event_type='property.upserted' AND state='failed'`)).rows[0].n, 1)
     assert.equal((await nexusSql(`SELECT COUNT(*)::int n FROM nexus_private.housing_properties`))[0].n, 1)
   })
 

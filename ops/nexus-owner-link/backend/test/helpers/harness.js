@@ -45,9 +45,10 @@ async function migrate(direction = 'up') {
   const file = direction === 'down' ? '20261111_nexus_owner_link.down.sql' : '20261111_nexus_owner_link.sql'
   const b = direction === 'down' ? '20261111b_nexus_distribution_routes.down.sql' : '20261111b_nexus_distribution_routes.sql'
   // down: routes first (it depends on nothing but properties/agents, kept symmetrical)
-  for (const f of direction === 'down' ? [b, file] : [file, b]) await db.query(fs.readFileSync(path.join(ROOT, 'migrations', f), 'utf8'))
+  const c = direction === 'down' ? '20261112_nexus_owner_updates.down.sql' : '20261112_nexus_owner_updates.sql'
+  for (const f of direction === 'down' ? [c, b, file] : [file, b, c]) await db.query(fs.readFileSync(path.join(ROOT, 'migrations', f), 'utf8'))
 }
-const TABLES = ['nexus_distribution_routes', 'owner_availability_answers', 'nexus_inbound_events', 'nexus_sync_outbox', 'nexus_distribution_grants', 'nexus_property_links', 'nexus_owner_property_claims', 'nexus_owner_invitations', 'nexus_owner_links']
+const TABLES = ['nexus_owner_answers', 'nexus_owner_viewing_schedules', 'nexus_owner_property_updates', 'nexus_distribution_routes', 'owner_availability_answers', 'nexus_inbound_events', 'nexus_sync_outbox', 'nexus_distribution_grants', 'nexus_property_links', 'nexus_owner_property_claims', 'nexus_owner_invitations', 'nexus_owner_links']
 async function reset() {
   for (const t of TABLES) await db.query(`DELETE FROM ${t}`)
   await db.query(`DELETE FROM property_activities WHERE property_id IN (SELECT id FROM properties WHERE ref LIKE 'NXT-%')`)

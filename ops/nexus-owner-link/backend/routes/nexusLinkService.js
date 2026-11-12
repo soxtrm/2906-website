@@ -40,4 +40,12 @@ router.use(limiter, signed)
 router.post('/invitations/resolve', send(req => S.resolveInvitation(req.body?.token)))
 router.post('/events', send(req => S.applyInboundEvent(req.body)))
 
+// Read API: what NEXUS needs to know, over the same signed channel. NEXUS has
+// no login on the ARGUS database. POST so the signature covers the question.
+const R = () => require('../services/nexusOwnerInbound')
+router.post('/read/owner-link', send(req => R().readOwnerLink(req.body)))
+router.post('/read/properties', send(req => R().readProperties(req.body)))
+router.post('/read/viewing-busy', send(req => R().readViewingBusy(req.body)))
+router.post('/read/source-match', send(req => R().readSourceMatch(req.body)))
+
 module.exports = router

@@ -33,6 +33,9 @@ const OUTCOMES = ['available', 'available_from', 'temporarily_held', 'reserved',
 
 // Agency routing reacts to owner grant changes; required lazily (it requires this module).
 const routing = () => require('./nexusDistributionRouting')
+// Further owner events and the read API; required lazily for the same reason.
+const inbound = () => require('./nexusOwnerInbound')
+const P = require('./nexusPermissionMap')
 
 class LinkError extends Error {
   constructor(code, message, status = 400, extra = {}) { super(message); this.code = code; this.status = status; Object.assign(this, extra) }
@@ -69,7 +72,12 @@ async function audit(q, agent, action, details, property) {
 }
 
 function externalId(agencyKey, ref) { return `${agencyKey}:${ref}` }
-function date(v) { return v ? new Date(v).toISOString().slice(0, 10) : null }
+// A DATE column arrives as local midnight; toISOString() would move it a day back east of UTC.
+function date(v) {
+  if (!v) return null
+  if (!(v instanceof Date)) return String(v).slice(0, 10)
+  return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`
+}
 
 // Rent and sale are never guessed. Both prices, or a "sale" below €20k (the
 // upload rule: that is a monthly rent typed into the wrong field), are unclear.
@@ -297,17 +305,27 @@ async function openDispute(q, link, { reason, externalId: extId = null, agent = 
   return { disputed: true }
 }
 
-async function applyGrant(q, link, data, eventId) {
+async function applyGrant(q, link, data, eventId, ctx) {
   if (link.link_state !== 'verified') throw new LinkError('OWNER_LINK_NOT_VERIFIED', 'Distribution can only be authorised by a verified owner.', 409)
-  if (!CHANNELS.includes(data.channel)) throw new LinkError('CHANNEL_INVALID', 'Unknown distribution channel')
-  const scopes = [...new Set(Array.isArray(data.scopes) ? data.scopes : [])]
-  if (!scopes.length || scopes.some(s => !SCOPES.includes(s))) throw new LinkError('SCOPES_INVALID', 'scopes must name exactly what is shared')
+  // One vocabulary. NEXUS permission names are translated by the documented map;
+  // anything unknown or without an exact meaning is refused, never widened.
+  let grant
+  try {
+    if (data.scopes === undefined && data.nexusPermissions !== undefined) {
+      if (data.channel !== undefined && data.channel !== 'origin_agency') throw new P.PermissionError('CHANNEL_INVALID', 'NEXUS permission names only apply to origin_agency')
+      grant = P.fromNexusPermissions(data.nexusPermissions)
+    } else grant = P.assertContractGrant(data)
+  } catch (err) { if (err instanceof P.PermissionError) throw new LinkError(err.code, err.message); throw err }
+  data = { ...data, channel: grant.channel }
+  const scopes = grant.scopes
   const audience = String(data.audienceRef || '').slice(0, 80)
   if (data.channel === 'selected_agency' && !audience) throw new LinkError('AUDIENCE_REQUIRED', 'selected_agency needs audienceRef')
   const p = await claimedProperty(q, link, data.externalId)
   if (!['confirmed', 'corrected'].includes(p.claim_state)) throw new LinkError('OWNER_CLAIM_NOT_CONFIRMED', 'The owner has not confirmed this property.', 409)
-  const grantedAt = data.grantedAt ? new Date(data.grantedAt) : new Date()
+  const grantedAt = data.grantedAt ? new Date(data.grantedAt) : ctx?.occurredAt || new Date()
   if (Number.isNaN(grantedAt.getTime())) throw new LinkError('GRANTED_AT_INVALID', 'grantedAt is not a date')
+  // A grant that arrives after a newer grant or revocation for the same audience is history, not state.
+  if (ctx && await ctx.isStale()) return { applied: false, reason: 'OUT_OF_ORDER' }
   // Replace an active grant for the same audience (scopes may have changed).
   await q.query(`UPDATE nexus_distribution_grants SET revoked_at=NOW() WHERE agency_key=$1 AND property_id=$2 AND channel=$3 AND audience_ref=$4 AND revoked_at IS NULL`,
     [link.agency_key, p.id, data.channel, audience])
@@ -318,16 +336,18 @@ async function applyGrant(q, link, data, eventId) {
   await q.query(`UPDATE nexus_property_links SET distribution_state='approved', updated_at=NOW() WHERE agency_key=$1 AND property_id=$2`, [link.agency_key, p.id])
   await audit(q, null, 'NEXUS_DISTRIBUTION_GRANTED', { channel: data.channel, audience_ref: audience, scopes }, p)
   await routing().onOwnerAuthorizationChanged(q, link.agency_key, p.id)
-  return { distributionState: 'approved' }
+  return { applied: true, distributionState: 'approved', channel: data.channel, audienceRef: audience || null, scopes }
 }
 
-async function applyRevoke(q, link, data) {
+async function applyRevoke(q, link, data, ctx) {
   const p = await claimedProperty(q, link, data.externalId)
   const all = !data.channel
   if (!all && !CHANNELS.includes(data.channel)) throw new LinkError('CHANNEL_INVALID', 'Unknown distribution channel')
   const { rowCount } = await q.query(
     `UPDATE nexus_distribution_grants SET revoked_at=NOW() WHERE agency_key=$1 AND property_id=$2 AND revoked_at IS NULL
-        AND ($3::text IS NULL OR (channel=$3 AND audience_ref=$4))`, [link.agency_key, p.id, all ? null : data.channel, String(data.audienceRef || '')])
+        AND ($3::text IS NULL OR (channel=$3 AND audience_ref=$4))
+        -- a revocation that arrives late never undoes a grant the owner gave after it
+        AND granted_at <= $5`, [link.agency_key, p.id, all ? null : data.channel, String(data.audienceRef || ''), ctx?.occurredAt || new Date()])
   const { rows: [{ n }] } = await q.query(`SELECT COUNT(*)::int AS n FROM nexus_distribution_grants WHERE agency_key=$1 AND property_id=$2 AND revoked_at IS NULL`, [link.agency_key, p.id])
   let withdrawal = null
   if (n === 0) {
@@ -342,7 +362,7 @@ async function applyRevoke(q, link, data) {
   }
   await routing().onOwnerAuthorizationChanged(q, link.agency_key, p.id)
   await audit(q, null, 'NEXUS_DISTRIBUTION_REVOKED', { channel: data.channel || 'all', revoked: rowCount, remaining: n }, p)
-  return { revoked: rowCount, remaining: n, withdrawalQueued: !!withdrawal }
+  return { applied: true, revoked: rowCount, remaining: n, withdrawalQueued: !!withdrawal }
 }
 
 // Structured owner answer about availability. ONLY an explicit availability
@@ -382,10 +402,12 @@ const HANDLERS = {
     return markVerified(q, link, { method: `nexus:${data.method || ''}`.slice(0, 200), evidenceRef: data.evidenceRef || null })
   },
   'owner.dispute_opened': async (q, agency, data) => openDispute(q, await linkByPublicId(q, agency, data.linkId), { reason: data.reason, externalId: data.externalId || null }),
-  'distribution.granted': async (q, agency, data, eventId) => applyGrant(q, await linkByPublicId(q, agency, data.linkId), data, eventId),
-  'distribution.revoked': async (q, agency, data) => applyRevoke(q, await linkByPublicId(q, agency, data.linkId), data),
-  'availability.answered': async (q, agency, data, eventId) => {
+  'distribution.granted': async (q, agency, data, eventId, ctx) => applyGrant(q, await linkByPublicId(q, agency, data.linkId), data, eventId, ctx),
+  'distribution.revoked': async (q, agency, data, _eventId, ctx) => applyRevoke(q, await linkByPublicId(q, agency, data.linkId), data, ctx),
+  'availability.answered': async (q, agency, data, eventId, ctx) => {
     const link = await linkByPublicId(q, agency, data.linkId)
+    // An older answer delivered late must not overwrite what the owner said afterwards.
+    if (await ctx.isStale()) return { applied: false, reason: 'OUT_OF_ORDER' }
     if (link.link_state !== 'verified') throw new LinkError('OWNER_LINK_NOT_VERIFIED', 'Only a verified owner can confirm availability.', 409)
     const p = await claimedProperty(q, link, data.externalId)
     if (!['confirmed', 'corrected'].includes(p.claim_state)) throw new LinkError('OWNER_CLAIM_NOT_CONFIRMED', 'The owner has not confirmed this property.', 409)
@@ -399,22 +421,50 @@ async function applyInboundEvent(envelope) {
   if (e.contractVersion !== CONTRACT_VERSION) throw new LinkError('CONTRACT_VERSION_UNSUPPORTED', `Supported contract version: ${CONTRACT_VERSION}`, 400)
   if (typeof e.eventId !== 'string' || !/^[A-Za-z0-9_-]{8,80}$/.test(e.eventId)) throw new LinkError('EVENT_ID_INVALID', 'eventId is required')
   if (e.agencyKey !== AGENCY_KEY()) throw new LinkError('AGENCY_MISMATCH', 'This ARGUS instance does not serve that agency', 403)
-  const handler = HANDLERS[e.eventType]
+  const handler = HANDLERS[e.eventType] || inbound().HANDLERS[e.eventType]
   if (!handler) throw new LinkError('EVENT_TYPE_UNKNOWN', 'Unknown event type')
   const hash = C.payloadHash(e.data ?? null)
+  const subject = subjectOf(e)
+  // When it happened at the owner's side. Never trusted into the future, so one
+  // wrong clock cannot block everything that follows.
+  const stated = e.occurredAt ? new Date(e.occurredAt) : null
+  if (stated && Number.isNaN(stated.getTime())) throw new LinkError('OCCURRED_AT_INVALID', 'occurredAt is not a date')
+  const occurredAt = stated && stated.getTime() < Date.now() ? stated : new Date()
   return tx(async q => {
     const ins = await q.query(
-      `INSERT INTO nexus_inbound_events (event_id, agency_key, event_type, payload_hash, outcome) VALUES ($1,$2,$3,$4,'applying') ON CONFLICT (event_id) DO NOTHING`,
-      [e.eventId, e.agencyKey, e.eventType, hash])
+      `INSERT INTO nexus_inbound_events (event_id, agency_key, event_type, payload_hash, outcome, subject_key, occurred_at) VALUES ($1,$2,$3,$4,'applying',$5,$6) ON CONFLICT (event_id) DO NOTHING`,
+      [e.eventId, e.agencyKey, e.eventType, hash, subject?.key || null, occurredAt])
     if (!ins.rowCount) {
       const { rows: [prev] } = await q.query(`SELECT payload_hash, outcome, detail FROM nexus_inbound_events WHERE event_id=$1`, [e.eventId])
       if (prev.payload_hash !== hash) throw new LinkError('EVENT_ID_REUSED', 'eventId was already used with different content', 409)
-      return { duplicate: true, result: prev.detail }
+      return { duplicate: true, applied: prev.detail?.applied !== false, result: prev.detail }
     }
-    const result = await handler(q, e.agencyKey, e.data || {}, e.eventId)
-    await q.query(`UPDATE nexus_inbound_events SET outcome='applied', detail=$2::jsonb WHERE event_id=$1`, [e.eventId, JSON.stringify(result || {})])
-    return { duplicate: false, result }
+    const ctx = {
+      occurredAt,
+      // Call after the owner link is locked: is there a newer applied event on the same subject?
+      isStale: async () => !!subject && (await q.query(
+        `SELECT 1 FROM nexus_inbound_events WHERE agency_key=$1 AND outcome='applied' AND event_id<>$2 AND occurred_at > $3 AND subject_key = ANY($4::text[]) LIMIT 1`,
+        [e.agencyKey, e.eventId, occurredAt, subject.rivals])).rowCount > 0,
+    }
+    const result = await handler(q, e.agencyKey, e.data || {}, e.eventId, ctx)
+    const applied = result?.applied !== false
+    await q.query(`UPDATE nexus_inbound_events SET outcome=$2, detail=$3::jsonb WHERE event_id=$1`, [e.eventId, applied ? 'applied' : 'stale', JSON.stringify(result || {})])
+    // `applied: true` means validated AND persisted. `false` is a successful, final
+    // answer too (an older version arrived late): the sender must not retry it.
+    return { duplicate: false, applied, result }
   })
+}
+
+// Events of one subject are applied in the order they happened, not arrived.
+function subjectOf(e) {
+  const d = e.data || {}
+  if (e.eventType === 'availability.answered') { const key = `avail:${d.externalId}`; return { key, rivals: [key] } }
+  if (e.eventType === 'distribution.granted' || e.eventType === 'distribution.revoked') {
+    const all = `dist:${d.externalId}:*`
+    const key = d.channel ? `dist:${d.externalId}:${d.channel}:${d.audienceRef || ''}` : all
+    return { key, rivals: [...new Set([key, all])] }
+  }
+  return null
 }
 
 // ── outbound: gate, payload, outbox ─────────────────────────────────────────
@@ -501,9 +551,10 @@ async function syncOwner(ownerId, agent) {
     }
     // Only what activation needs: the link, the claimed account and a display
     // name. No phone, e-mail, address, notes or conversation data.
-    const payload = { ownerLinkId: link.public_id, nexusAccountRef: link.nexus_account_ref, originAgency: link.agency_key, displayName: owner.name || null, verifiedAt: new Date(link.verified_at).toISOString() }
+    const payload = { ownerLinkId: link.public_id, nexusAccountRef: link.nexus_account_ref, originAgency: link.agency_key, displayName: owner.name || null, verifiedAt: new Date(link.verified_at).toISOString(),
+      confirmedExternalIds: (await confirmedExternalIds(link.id)).sort() }
     const { rows: [last] } = await q.query(`SELECT payload_hash FROM nexus_sync_outbox WHERE aggregate_type='owner' AND aggregate_id=$1 AND agency_key=$2 AND state='delivered' ORDER BY id DESC LIMIT 1`, [link.id, link.agency_key])
-    if (last?.payload_hash === C.payloadHash(payload)) return { queued: false, unchanged: true, blockedReasons: [] }
+    if (last?.payload_hash === C.payloadHash(payload) && link.sync_state === 'synced') return { queued: false, unchanged: true, blockedReasons: [] }
     const { created } = await enqueue(q, { aggregateType: 'owner', aggregateId: link.id, eventType: 'owner.profile_upserted', payload, agent })
     await q.query(`UPDATE nexus_owner_links SET sync_state='pending', updated_at=NOW() WHERE id=$1`, [link.id])
     await audit(q, agent, 'NEXUS_OWNER_SYNC_QUEUED', { owner_contact_id: ownerId, created })
@@ -554,6 +605,12 @@ function setTransport(fn) { transport = fn }
 
 async function markAggregate(q, row, { ok, error = null, response = null }) {
   if (row.aggregate_type === 'owner') {
+    // NEXUS owns the canonical ids; the owner acknowledgement is where ARGUS first learns them.
+    if (ok) for (const x of Array.isArray(response?.properties) ? response.properties : []) {
+      if (typeof x?.externalId !== 'string' || typeof x?.canonicalPropertyId !== 'string') continue
+      await q.query(`UPDATE nexus_property_links SET canonical_property_id=$3, link_state='linked', updated_at=NOW() WHERE agency_key=$1 AND external_id=$2 AND (canonical_property_id IS NULL OR canonical_property_id=$3)`,
+        [row.agency_key, x.externalId, x.canonicalPropertyId.slice(0, 120)])
+    }
     await q.query(`UPDATE nexus_owner_links SET sync_state=$2, last_sync_attempt_at=NOW(), last_sync_at = CASE WHEN $2='synced' THEN NOW() ELSE last_sync_at END, last_sync_error=$3, updated_at=NOW() WHERE id=$1`,
       [row.aggregate_id, ok ? 'synced' : 'error', error])
     return
@@ -579,6 +636,15 @@ async function markAggregate(q, row, { ok, error = null, response = null }) {
       WHERE agency_key=$1 AND property_id=$2`, [row.agency_key, row.aggregate_id, row.payload_hash, canonical, publication])
 }
 
+async function confirmedExternalIds(ownerLinkId) {
+  const { rows } = await db.query(
+    `SELECT l.external_id FROM nexus_owner_property_claims c JOIN nexus_owner_links o ON o.id=c.owner_link_id
+       JOIN properties p ON p.id=c.property_id AND p.owner_id=o.owner_contact_id AND ${REAL_PROPERTY} AND NOT COALESCE(p.duplicate_flagged, false)
+       JOIN nexus_property_links l ON l.property_id=p.id AND l.agency_key=o.agency_key
+      WHERE c.owner_link_id=$1 AND c.claim_state IN ('confirmed','corrected')`, [ownerLinkId])
+  return rows.map(r => r.external_id)
+}
+
 // Deliver due outbox rows. With no receiver configured nothing is sent and
 // nothing is marked delivered: the rows simply stay pending.
 async function deliverDue({ limit = 25, ids = null } = {}) {
@@ -602,7 +668,7 @@ async function deliverDue({ limit = 25, ids = null } = {}) {
     const path = '/events'
     const body = { eventId: row.event_id, eventType: row.event_type, contractVersion: row.contract_version, agencyKey: row.agency_key, occurredAt: new Date(row.created_at).toISOString(), idempotencyKey: row.idempotency_key, data: row.payload }
     const timestamp = Math.floor(Date.now() / 1000)
-    let ok = false, error = null, response = null, permanent = false
+    let ok = false, error = null, response = null, permanent = false, unapplied = false
     try {
       const res = await transport(rc.url + path, {
         method: 'POST',
@@ -611,9 +677,19 @@ async function deliverDue({ limit = 25, ids = null } = {}) {
       })
       response = await res.json().catch(() => null)
       ok = res.status >= 200 && res.status < 300
+      // A 2xx alone is not enough: the receiver must state that it validated and
+      // persisted the event. "Acknowledged but ignored" is never reported as synced.
+      if (ok && response?.applied !== true) { ok = false; unapplied = true }
+      else if (ok && row.event_type === 'owner.profile_upserted') {
+        const expected = await confirmedExternalIds(row.aggregate_id)
+        const linked = new Set((Array.isArray(response.properties) ? response.properties : []).map(x => x?.externalId))
+        const missing = expected.filter(x => !linked.has(x))
+        if (missing.length) { ok = false; error = `NEXUS linked ${expected.length - missing.length} of ${expected.length} confirmed properties` }
+      }
       // NEXUS answers errors as { message }, ARGUS-style services as { error }.
       const said = response?.error || response?.message
-      if (!ok) { error = `HTTP ${res.status}${said ? ` ${String(said).slice(0, 120)}` : ''}`; permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 }
+      if (unapplied) error = 'NEXUS acknowledged the event without confirming it was applied'
+      else if (!ok && !error) { error = `HTTP ${res.status}${said ? ` ${String(said).slice(0, 120)}` : ''}`; permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 }
     } catch (err) { error = `Transport: ${String(err.message || err).slice(0, 160)}` }
     await tx(async q => {
       if (ok) {
@@ -689,6 +765,7 @@ async function status(ownerId, agent) {
     link ? db.query(`SELECT * FROM nexus_owner_invitations WHERE owner_link_id=$1 ORDER BY id DESC LIMIT 1`, [link.id]) : { rows: [] },
   ])
   const rc = receiver()
+  const ownerInput = await inbound().ownerInputSummary(db, agency, ids)
   const properties = props.map(p => {
     const pl = plinks.find(l => l.property_id === p.id)
     const claim = claims.find(c => c.property_id === p.id)
@@ -713,6 +790,8 @@ async function status(ownerId, agent) {
       eligible: gate.allowed, blockedReasons: gate.reasons,
       distribution: g.map(x => ({ channel: x.channel, audienceRef: x.audience_ref || null, scopes: x.scopes, grantedAt: x.granted_at })),
       lastSyncAt: pl?.last_sync_at || null, lastSyncError: pl?.last_sync_error || null,
+      // What the owner changed in NEXUS. Stored for review; the listing itself is not altered by it.
+      ownerInput: ownerInput(p.id),
       pendingEvents: events.filter(e => ['pending', 'failed', 'delivering'].includes(e.state)).length,
     }
   })
@@ -749,5 +828,5 @@ module.exports = {
   status, createInvitation, copyInvitationLink, revokeInvitation, resolveInvitation,
   verifyOwner, disputeOwner, resolveDispute, syncOwner, syncProperties, retrySync, deliverDue,
   applyInboundEvent, recordAnswerByStaff, evaluateGate, transactionType, propertyPayload, receiver, setTransport,
-  _internal: { tx, enqueue, activeGrants, audit, AGENCY_KEY, ensurePropertyLink, PROPERTY_COLUMNS, REAL_PROPERTY },
+  _internal: { date, tx, enqueue, activeGrants, audit, AGENCY_KEY, ensurePropertyLink, PROPERTY_COLUMNS, REAL_PROPERTY, linkByPublicId, claimedProperty },
 }

@@ -36,7 +36,7 @@ function receiverOn(handler) {
   process.env.NEXUS_OWNER_LINK_URL = 'https://nexus.invalid/bridge'
   process.env.NEXUS_LINK_OUTBOUND_SECRET = 'outbound-secret-0123456789abcdef0123456789'
   const seen = []
-  S.setTransport(async (url, init) => { const body = JSON.parse(init.body); seen.push(body); const r = handler ? handler(body) : { status: 200, json: {} }; return { status: r.status, json: async () => r.json } })
+  S.setTransport(async (url, init) => { const body = JSON.parse(init.body); seen.push(body); const r = handler ? handler(body) : { status: 200, json: { applied: true } }; return { status: r.status, json: async () => r.json } })
   return seen
 }
 function receiverOff() { delete process.env.NEXUS_OWNER_LINK_URL; delete process.env.NEXUS_LINK_OUTBOUND_SECRET; delete process.env.NEXUS_LINK_ROUTING_EVENTS }
@@ -124,7 +124,7 @@ test('one broken route does not stop the others; held routes do not starve newer
 test('routing events are held, not dead-lettered, until NEXUS consumes them; they never disturb the listing sync state', async () => {
   const a = await listing()
   await R.tick()
-  const seen = receiverOn(body => (body.eventType.startsWith('distribution.') ? { status: 400, json: { message: 'Unsupported ARGUS event or contract version.' } } : { status: 200, json: { canonicalPropertyId: 'c0ffee00-0000-4000-8000-000000000001', publicationState: 'unpublished' } }))
+  const seen = receiverOn(body => (body.eventType.startsWith('distribution.') ? { status: 400, json: { message: 'Unsupported ARGUS event or contract version.' } } : { status: 200, json: { applied: true, canonicalPropertyId: 'c0ffee00-0000-4000-8000-000000000001', publicationState: 'unpublished' } }))
   // Default: Stage A does not know routing events → they wait.
   const sync = await S.syncProperties(a.owner.id, admin)
   assert.equal(sync.delivery.delivered, 1); assert.equal(sync.delivery.heldRoutingEvents, 1)
