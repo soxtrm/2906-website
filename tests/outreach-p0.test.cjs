@@ -193,13 +193,14 @@ for (const [label, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 8
       assert.deepEqual(s.puts.at(-1), { id: 1, target: 18, variation: 5, version: 4 })
       await page.reload({ waitUntil: 'networkidle2' }); await page.waitForSelector('[data-testid="pace-card"]')
       await page.waitForFunction(() => document.querySelector('[data-testid="pace-number"]')?.value === '18')
+      await page.waitForSelector('.argus-intro', { hidden: true })
       // PACING-07: switch to Cedric (20), edit without saving, back to Kev keeps 18, back to Cedric keeps the draft.
-      await page.$eval('[data-testid="account-card-1"]', e => e.scrollIntoView({ block: 'center' })); await page.click('[data-testid="account-card-2"]')
+      await page.$eval('[data-testid="account-card-2"]', e => e.scrollIntoView({ block: 'center', inline: 'center' })); await page.click('[data-testid="account-card-2"]')
       await page.waitForFunction(() => document.querySelector('[data-testid="pace-number"]')?.value === '20')
       await page.click('[data-testid="pace-number"]', { clickCount: 3 }); await page.keyboard.type('22')
       await page.$eval('[data-testid="account-card-1"]', e => e.scrollIntoView({ block: 'center' })); await page.click('[data-testid="account-card-1"]')
       await page.waitForFunction(() => document.querySelector('[data-testid="pace-number"]')?.value === '18')
-      await page.$eval('[data-testid="account-card-1"]', e => e.scrollIntoView({ block: 'center' })); await page.click('[data-testid="account-card-2"]')
+      await page.$eval('[data-testid="account-card-2"]', e => e.scrollIntoView({ block: 'center', inline: 'center' })); await page.click('[data-testid="account-card-2"]')
       await page.waitForFunction(() => document.querySelector('[data-testid="pace-number"]')?.value === '22')
       assert.equal(s.pace[2].target, 20, 'unsaved Cedric draft never reached the server')
       // PACING-08: another tab saved Cedric meanwhile → conflict surfaced, Load latest.
