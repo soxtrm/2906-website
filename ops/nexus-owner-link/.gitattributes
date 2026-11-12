@@ -1,1 +1,3 @@
 backend/index.js -text
+staging/*.sh text eol=lf
+staging/** text eol=lf

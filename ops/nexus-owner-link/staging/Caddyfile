@@ -1,0 +1,26 @@
+# Staging-only reverse proxy. Its own Caddy, its own internal certificate
+# authority, published on the VPS loopback only. The production Caddy and its
+# configuration are not touched.
+{
+	admin off
+	local_certs
+	auto_https disable_redirects
+}
+
+argus.staging.test:8443 {
+	tls internal
+	reverse_proxy argus:3001
+	log {
+		output stdout
+		format json
+	}
+}
+
+nexus.staging.test:8443 {
+	tls internal
+	reverse_proxy nexus:4188
+	log {
+		output stdout
+		format json
+	}
+}

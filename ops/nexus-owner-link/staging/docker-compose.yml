@@ -1,0 +1,147 @@
+# ARGUS × NEXUS integration-gate staging (Claude, 2026-11-13).
+# Project name: argus-nexus-staging. Nothing here shares a network, volume,
+# database, secret or port with the production stack (2906-system).
+#
+#   edge      proxy ↔ argus ↔ nexus (HTTPS between the two services goes through the proxy)
+#   argus_db  argus ↔ its database. NEXUS is NOT on this network: it cannot reach the ARGUS database.
+#   nexus_db  nexus ↔ its database. ARGUS is NOT on this network.
+#
+# The only published port is 127.0.0.1:8443 (loopback). Access is by SSH tunnel.
+name: argus-nexus-staging
+
+x-common: &common
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 200
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  proxy:
+    <<: *common
+    image: caddy:2-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    ports: ["127.0.0.1:8443:8443"]
+    networks:
+      edge:
+        aliases: [argus.staging.test, nexus.staging.test]
+    mem_limit: 128m
+    cpus: 0.5
+
+  # Publishes only the public root certificate of the staging CA to the other containers.
+  ca:
+    image: caddy:2-alpine
+    restart: "no"
+    depends_on: [proxy]
+    command: ["sh", "-c", "until [ -s /data/caddy/pki/authorities/local/root.crt ]; do sleep 1; done; cp /data/caddy/pki/authorities/local/root.crt /out/root.crt && chmod 644 /out/root.crt"]
+    volumes:
+      - caddy_data:/data:ro
+      - ca_pub:/out
+    network_mode: none
+    mem_limit: 32m
+
+  argus_pg:
+    <<: *common
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: argus_staging
+      POSTGRES_USER: argus_stg
+      POSTGRES_PASSWORD: ${ARGUS_DB_PASSWORD:?}
+    volumes: [argus_pgdata:/var/lib/postgresql/data]
+    networks: [argus_db]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U argus_stg -d argus_staging"], interval: 5s, timeout: 3s, retries: 20 }
+    mem_limit: 512m
+    cpus: 1.0
+
+  argus:
+    <<: *common
+    image: argus-staging:${ARGUS_COMMIT:?}
+    build:
+      context: ./build/argus
+      args: { ARGUS_COMMIT: "${ARGUS_COMMIT:?}" }
+    depends_on:
+      argus_pg: { condition: service_healthy }
+      proxy: { condition: service_started }
+    environment:
+      ARGUS_STAGING: "1"
+      STAGING_DB_HOST: argus_pg
+      STAGING_DB_NAME: argus_staging
+      STAGING_DB_USER: argus_stg
+      STAGING_DB_PASSWORD: ${ARGUS_DB_PASSWORD:?}
+      JWT_SECRET: ${ARGUS_JWT_SECRET:?}
+      NEXUS_INVITE_SECRET: ${ARGUS_INVITE_SECRET:?}
+      ARGUS_AGENCY_KEY: "2906"
+      NEXUS_LINK_INBOUND_SECRET: ${SECRET_NEXUS_TO_ARGUS:?}
+      NEXUS_LINK_OUTBOUND_SECRET: ${SECRET_ARGUS_TO_NEXUS:?}
+      NEXUS_OWNER_LINK_URL: https://nexus.staging.test:8443/api/nexus/workspaces/argus-link/v1
+      NEXUS_OWNER_PORTAL_URL: https://nexus.staging.test:8443/owner/activate
+      NEXUS_LINK_ROUTING_EVENTS: "1"
+      NEXUS_LINK_SCHEDULER: "1"
+      NEXUS_LINK_SCHEDULER_SECONDS: "60"
+      NODE_EXTRA_CA_CERTS: /ca/root.crt
+    volumes: [ca_pub:/ca:ro]
+    networks: [edge, argus_db]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 384m
+    cpus: 1.0
+
+  nexus_pg:
+    <<: *common
+    profiles: [nexus]
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: nexus_staging
+      POSTGRES_USER: nexus_stg
+      POSTGRES_PASSWORD: ${NEXUS_DB_PASSWORD:?}
+    volumes: [nexus_pgdata:/var/lib/postgresql/data]
+    networks: [nexus_db]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U nexus_stg -d nexus_staging"], interval: 5s, timeout: 3s, retries: 20 }
+    mem_limit: 512m
+    cpus: 1.0
+
+  nexus:
+    <<: *common
+    profiles: [nexus]
+    image: nexus-staging:${NEXUS_COMMIT:-unpinned}
+    build:
+      context: ./build/nexus
+      args: { NEXUS_COMMIT: "${NEXUS_COMMIT:-unpinned}" }
+    depends_on:
+      nexus_pg: { condition: service_healthy }
+      proxy: { condition: service_started }
+    environment:
+      NEXUS_PUBLIC_ORIGIN: https://nexus.staging.test:8443
+      NEXUS_ACCOUNT_AUTH: "1"
+      NEXUS_HOUSING_OWNER: "1"
+      NEXUS_HOUSING_PROFESSIONAL: "1"
+      NEXUS_HOUSING_PREVERIFIED_INVITES: "0"
+      NEXUS_HOUSING_ARGUS_OWNER_PUSH: "1"
+      NEXUS_BOOKING_DB: /data/booking.sqlite
+      NEXUS_HOUSING_DB_DSN: postgresql://nexus_stg:${NEXUS_DB_PASSWORD:?}@nexus_pg:5432/nexus_staging
+      NEXUS_HOUSING_2906_BRIDGE_SECRET: ${SECRET_ARGUS_TO_NEXUS:?}
+      NEXUS_HOUSING_ARGUS_LINK_URL: https://argus.staging.test:8443/api/nexus-link/v1
+      NEXUS_HOUSING_ARGUS_LINK_SECRET: ${SECRET_NEXUS_TO_ARGUS:?}
+      SSL_CERT_FILE: /ca/root.crt
+      # Deliberately absent: NEXUS_HOUSING_ARGUS_READ_DSN, any payment key, any mail or messaging key.
+    volumes:
+      - ca_pub:/ca:ro
+      - nexus_data:/data
+    networks: [edge, nexus_db]
+    mem_limit: 384m
+    cpus: 1.0
+
+networks:
+  edge: {}
+  argus_db: { internal: true }
+  nexus_db: { internal: true }
+
+volumes:
+  caddy_data: {}
+  ca_pub: {}
+  argus_pgdata: {}
+  nexus_pgdata: {}
+  nexus_data: {}
