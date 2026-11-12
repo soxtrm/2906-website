@@ -28,6 +28,12 @@ function store() {
   return {
     pace: { 1: { target: 30, variation: 5, version: 4 }, 2: { target: 20, variation: 0, version: 2 }, 3: { target: 30, variation: 5, version: 1 }, 4: { target: 10, variation: 0, version: 1 } },
     paused: {}, legacyAuto: { 1: true, 2: false, 3: false, 4: true }, puts: [], posts: [], failNextPut: false,
+    manualPlans: [
+      { id: 901, label: 'TODAY', scheduled_date: '2026-11-12', status: 'ready', armed: true, stats: { total: 0, eligible: 0 } },
+      { id: 902, label: 'TOMORROW', scheduled_date: '2026-11-13', status: 'cancelled', armed: false, stats: { total: 0, eligible: 0 } },
+      { id: 903, label: 'IN_2_DAYS', scheduled_date: '2026-11-14', status: 'draft', armed: false, stats: { total: 0, eligible: 0 } },
+    ],
+    listRequests: [],
     templates: [
       { id: 51, persona: 'kev', period: 'morning', slot: 1, status: 'approved', active: true, title: null, approved_by: null, body: 'Good morning! Kevin here. I\'m currently assisting several clients…' },
       { id: 61, persona: 'kev', period: 'morning', slot: 6, status: 'draft', active: true, title: 'Kevin — Availability update', body: 'Good morning,\n\nMy name is Kevin. I\'m a real estate consultant with the 2906 independent-agent collective, focusing on residential rentals and sales in Malta.\n\nWould you have any apartments available now or becoming available soon?\n\nKind regards,\nKevin' },
@@ -83,7 +89,22 @@ async function mount(page, s) {
     if (p === 'outreach/persona-templates' && m === 'PUT') { const b = JSON.parse(req.postData() || '{}'); s.posts.push({ p, b }); const t = s.templates.find(x => x.persona === b.persona && x.slot === b.slot && x.period === b.period); t.body = b.body; return json({ ok: true, template: t }) }
     if (p === 'outreach/persona-templates') { const per = u.searchParams.get('persona'); return json({ templates: s.templates.filter(t => !per || t.persona === per) }) }
     if (p.startsWith('outreach/automation/')) return json({ config: null, timeline: days })
-    if (p.includes('outreach/plans')) return json({ plans: [] })
+    if (p === 'outreach/plans') return json({ plans: s.manualPlans })
+    if ((mm = /^outreach\/plans\/(\d+)(?:\/(generate|pause))?$/.exec(p))) {
+      const plan = s.manualPlans.find(plan => plan.id === Number(mm[1]))
+      if (!plan) return json({ error: 'Unknown fixture plan' }, 404)
+      if (mm[2] === 'generate') {
+        s.listRequests.push(plan.id)
+        if (plan.armed) return json({ code: 'plan_not_editable', error: 'This plan is scheduled. Pause it before changing the list, or choose an editable day.' }, 409)
+        return json({ added: 2, need: 2 })
+      }
+      if (mm[2] === 'pause') {
+        plan.status = 'saved'
+        plan.armed = false
+        return json({ ok: true })
+      }
+      return json({ plan })
+    }
     return json({ rows: [], tasks: [], templates: [], perAccount: [] })
   })
 }
@@ -118,6 +139,26 @@ for (const [label, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 8
       const recent = await page.$$eval('.account-recent-runs > div', rows => rows.map(row => row.textContent))
       assert.match(recent[0], /0\/32 · No sends.*Run ended · 11 Nov 2026, 10:06:06/)
       assert.match(recent[1], /19\/38.*Last sent · 09 Nov 2026, 16:08:54/)
+      if (label === 'desktop') {
+        const queue = '.queue-contacts'
+        await page.waitForFunction(sel => document.querySelector(sel)?.textContent.includes('Use PAUSE'), {}, queue)
+        assert.equal(await page.$eval(`${queue} textarea`, e => e.readOnly), true)
+        assert.deepEqual(s.listRequests, [])
+        await page.evaluate(() => [...document.querySelectorAll('.queue-day-tabs button')].find(b => /Tomorrow/i.test(b.textContent)).click())
+        await page.waitForFunction(sel => document.querySelector(sel)?.textContent.includes('This plan is cancelled'), {}, queue)
+        await page.evaluate(sel => [...document.querySelectorAll(`${sel} button`)].find(b => /^Open /.test(b.textContent)).click(), queue)
+        await page.waitForFunction(sel => !document.querySelector(`${sel} textarea`).readOnly, {}, queue)
+        await page.evaluate(sel => [...document.querySelectorAll(`${sel} button`)].find(b => /Create/.test(b.textContent)).click(), queue)
+        await page.waitForFunction(sel => document.querySelector(sel)?.textContent.includes('2 added'), {}, queue)
+        assert.deepEqual(s.listRequests, [903])
+        s.manualPlans[2].armed = true
+        s.manualPlans[2].status = 'ready'
+        await page.evaluate(sel => [...document.querySelectorAll(`${sel} button`)].find(b => /Create/.test(b.textContent)).click(), queue)
+        await page.waitForFunction(sel => document.querySelector(`${sel} textarea`).readOnly && document.querySelector(sel)?.textContent.includes('Use PAUSE'), {}, queue)
+        await page.evaluate(() => [...document.querySelectorAll('.queue-release button')].find(b => b.textContent === 'PAUSE').click())
+        await page.waitForFunction(sel => !document.querySelector(`${sel} textarea`).readOnly, {}, queue)
+        assert.deepEqual(s.listRequests, [903, 903])
+      }
       await page.evaluate(() => [...document.querySelectorAll('.cc-tabs button')].find(b => b.textContent.trim() === 'Overview').click())
       await page.waitForSelector('[data-testid="pace-card"]')
       // PACING-01 + TRAFFIC: real slider, all four lights with labels (unknown is never green).

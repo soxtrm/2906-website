@@ -763,6 +763,7 @@ router.post('/outreach/plans/:planId/generate', auth, adminOnly, async (req, res
     })
     res.json(result)
   } catch (err) {
+    if (err.code === 'plan_not_editable') return res.status(409).json({ error: err.message, code: err.code })
     log.error('crm/outreach/generate error', err)
     res.status(500).json({ error: 'Failed to generate list' })
   }
@@ -780,6 +781,7 @@ router.post('/outreach/plans/:planId/regenerate', auth, adminOnly, async (req, r
     })
     res.json(result)
   } catch (err) {
+    if (err.code === 'plan_not_editable') return res.status(409).json({ error: err.message, code: err.code })
     log.error('crm/outreach/regenerate error', err)
     res.status(500).json({ error: 'Failed to regenerate list' })
   }
@@ -820,6 +822,7 @@ router.post('/outreach/plans/:planId/arm', auth, adminOnly, async (req, res) => 
     if (!result.ok) return res.status(400).json(result)
     res.json(result)
   } catch (err) {
+    if (err.code === 'plan_not_editable') return res.status(409).json({ error: err.message, code: err.code })
     log.error('crm/outreach/arm error', err)
     res.status(500).json({ error: 'Failed to arm plan' })
   }

@@ -68,6 +68,9 @@ type Plan = {
   message_mode?: 'free_text' | 'persona_rotation' | null; template_slot?: number | null
   target_count?: number | null; display?: DayDisplay
 }
+function canEditOutreachList(plan: Plan): boolean {
+  return !plan.armed && !['ready', 'running', 'completed', 'cancelled'].includes(plan.status)
+}
 type DueReminder = {
   id: number; owner_name: string | null; phone_last4: string | null; note: string
   contact_due_date: string; contact_classification: 'owner' | 'friend' | 'unknown'
@@ -630,6 +633,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   }, [plans, activeLabel])
 
   const activePlan = plans?.find(p => p.label === activeLabel) || null
+  const listEditable = activePlan != null && canEditOutreachList(activePlan)
+  const nextEditablePlan = plans?.find(plan => OUTREACH_DAY_LABELS.includes(plan.label as OutreachDayLabel) && canEditOutreachList(plan))
+  const planCanBePaused = activePlan?.armed && !['running', 'completed', 'cancelled'].includes(activePlan.status)
 
   function commitCountDraft() {
     const validated = normalizeOutreachCountDraft(countDraft, count, accountListMax)
@@ -688,7 +694,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // and only fetches as many ADDITIONAL eligible owners as needed to reach
   // `count` total, never duplicating what's already there.
   async function generate(topUp = false, overrideCount?: number) {
-    if (!activePlan) return
+    if (!activePlan || !listEditable) return
     const n = overrideCount == null ? commitCountDraft() : Math.min(accountListMax, overrideCount)
     setBusy(true); setNote('')
     try {
@@ -696,7 +702,10 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       await refresh(activePlan.id)
       saveLastUsed(account.id, { text: msgDraft, count: n })
       setNote(`${r.added} added${r.need && r.added < r.need ? ` (only ${r.added}/${r.need} eligible found)` : ''}.`)
-    } catch (e: any) { setNote(e?.message || 'Failed to generate') } finally { setBusy(false) }
+    } catch (e: any) {
+      setNote(e?.message || 'Failed to generate')
+      if (e?.data?.code === 'plan_not_editable') await loadPlans().catch(() => {})
+    } finally { setBusy(false) }
   }
 
   async function clearList() {
@@ -799,6 +808,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         setNote(`Armed for ${armTime}.${moved.length ? ` Following days moved: ${moved.map((f: any) => f.time).join(' → ')} (+${DAILY_SHIFT_MIN} min each).` : ''}${failed.length ? ` ${failed.length} following day(s) could not be re-armed — check them.` : ''}`)
       }
       await refresh()
+    } catch (e: any) {
+      setNote(e?.message || 'Failed to arm plan')
+      if (e?.data?.code === 'plan_not_editable') await loadPlans().catch(() => {})
     } finally { setBusy(false) }
   }
 
@@ -1038,7 +1050,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           value={queueText}
           onChange={e => setQueueText(e.target.value)}
           aria-label="Contact queue"
-          disabled={activePlan?.status === 'running'}
+          readOnly={!listEditable}
           placeholder={'Paste numbers, one per line:\n+35679932938 Mark\n+35679409341 Sarah'}
           spellCheck={false}
           style={{
@@ -1056,10 +1068,24 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           <span>{s.hot} hot</span><span>{s.cold} cold</span><span>{s.skip} skip</span>
         </div>
       )}
-      {note && <div style={{ fontSize: 11, color: accent.a }}>{note}</div>}
+      {note && <div role="status" style={{ fontSize: 11, color: accent.a }}>{note}</div>}
+
+      {activePlan && !listEditable && (
+        <div className="queue-help">
+          <p>{planCanBePaused
+            ? 'This plan is scheduled. Use PAUSE in Release window to edit its list.'
+            : `This plan is ${activePlan.status}. Choose an editable day to create a list.`}</p>
+          {nextEditablePlan && (
+            <button type="button" style={btnGhost} onClick={() => {
+              setNote('')
+              setActiveLabel(nextEditablePlan.label as OutreachDayLabel)
+            }}>Open {dayLabelText(nextEditablePlan.label)}</button>
+          )}
+        </div>
+      )}
 
       {/* generate row */}
-      {!isCompleted && (
+      {listEditable && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             disabled={busy || account.operationalStatus === 'restricted' || !activePlan} onClick={() => autoRun([activeLabel])}

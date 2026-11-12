@@ -873,8 +873,12 @@ async function generateList(planId, requestedCount, {
 } = {}) {
   const plan = await db.query(`SELECT p.*, a.label AS account_label FROM outreach_plans p LEFT JOIN whatsapp_accounts a ON a.id=p.account_id WHERE p.id = $1`, [planId])
   if (!plan.rows.length) throw new Error('plan not found')
-  if (plan.rows[0].armed || ['ready','running','completed','cancelled'].includes(plan.rows[0].status)) {
-    const err = new Error('plan is not editable')
+  const { status, armed } = plan.rows[0]
+  if (armed || ['ready', 'running', 'completed', 'cancelled'].includes(status)) {
+    const message = status === 'running' || status === 'completed' || status === 'cancelled'
+      ? `This plan is ${status}. Choose an editable day to create a list.`
+      : 'This plan is scheduled. Pause it before changing the list, or choose an editable day.'
+    const err = new Error(message)
     err.code = 'plan_not_editable'
     throw err
   }
