@@ -179,10 +179,17 @@ Replaces any direct database access. Same signing as section 1 (key `nexus`, the
 | `POST /read/properties` | `linkId`, `externalIds[1–100]` | `linkState` and per listing of that link: `accessValid`, `availability {status, availableFrom, availableUntil, availability_last_confirmed_at, freshness, lastOwnerOutcome}`, `grants[]`. Listings that are not part of the link are absent. After a dispute `accessValid` is `false` and no availability or grants are returned. |
 | `POST /read/viewing-busy` | `linkId`, `externalId`, `from` (`YYYY-MM-DD`), `days` (1–31) | Pending and confirmed appointments as timing only: `date`, `time`, `startsAt`, `durationMin`. |
 | `POST /read/source-match` | `linkId`, `externalId`, `url` | The reviewed source facts for exactly that link and listing, or `404 SOURCE_NOT_REVIEWED`. ARGUS fetches nothing. |
+| `POST /read/market` | `externalIds[1–100]` | Agency-wide, for the professional workspace. Per listing either `{externalId, eligible: false, reason}` and nothing else, or `eligible: true` with `ref`, `features[]`, `availability`, `grants[]`, `releases[] {routeId, audienceType, audienceRefs, commercialTermsRef, releasedAt}` (released and due only) and `viewingWindow` (next full window; only with the owner's `viewing_schedule` scope). Without the owner's `availability` scope, `availability` is `{status, consumerDiscoverable}` only. Reasons: `UNKNOWN_LISTING`, `OWNER_NOT_VERIFIED`, `LISTING_NOT_ACTIVE`, `PRICE_UNCLEAR`, `OFF_MARKET`, `HELD_BY_OWNER`, `NO_DISTRIBUTION_AUTHORIZATION`. |
 
 NEXUS calls `/read/properties` whenever it shows availability or permissions (it may cache the answer briefly for display) and treats `accessValid: false` as "no access".
 
-**Not yet covered by the read API** and therefore still to be specified before NEXUS can drop its database login: the professional workspace's agency-wide reads (on-market state, live release state and next viewing window per released listing), claim status by account before verification, and the staff listing lookup by reference for routing.
+`/read/market` tells NEXUS *whether and under which authorisations* a listing may be shown; NEXUS still decides per viewer (own agency, audience of a release, scopes of the matching grant). It is the only read that is not bound to one owner link.
+
+**`consumerDiscoverable`** (in `/read/properties` and `/read/market`): `false` once the last genuine confirmation is older than the consumer window (`NEXUS_AVAILABILITY_CONSUMER_HOURS`, default 120 hours, about five days) or missing. NEXUS removes such a listing from active consumer discovery until it is reconfirmed; professionals may still see it, marked unconfirmed. It never changes the listing's status: stale is not rented.
+
+**Staff listing lookup** for routing in the professional workspace is part of the ARGUS staff API, not the service API: `GET /api/crm/owner-nexus/listing/<ref>` with the staff session returns `{propertyId, ref, onMarket}` to an administrator or the listing agent and `404` to anyone else.
+
+With these, every read NEXUS `9947028` makes against the ARGUS database for ARGUS-linked listings has a signed equivalent.
 
 ## 5. Events ARGUS → NEXUS: `POST <NEXUS_OWNER_LINK_URL>/events`
 

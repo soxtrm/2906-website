@@ -341,3 +341,55 @@ test('read API: NEXUS gets operational facts over signed HTTP — scoped to the 
   assert.equal((await post('/read/source-match', { linkId: b.linkId, externalId: b.ext, url: 'https://example.org/none' })).json.error, 'SOURCE_NOT_REVIEWED')
   assert.equal((await post('/read/source-match', { linkId: b.linkId, externalId: b.ext, url: 'http://example.org/x' })).json.error, 'URL_INVALID')
 })
+
+test('agency-wide market read: only shareable listings carry data, each "no" names its reason, and staleness is explicit', async () => {
+  const F = H.load('services/availabilityFreshness')
+  const ok = await owner(); const noGrant = await owner(); const off = await owner(); const held = await owner(); const unverified = await owner({ verify: false }); const noAvail = await owner()
+  const grant = (x, scopes, channel = 'all_eligible_agencies', at = 60) => push('distribution.granted', { linkId: x.linkId, externalId: x.ext, channel, scopes }, { occurredAt: minutesAgo(at) })
+  for (const x of [ok, off, held]) await grant(x, ['listing_data', 'availability', 'viewing_schedule'])
+  await grant(noAvail, ['listing_data'])
+  await push('availability.answered', { linkId: ok.linkId, externalId: ok.ext, outcome: 'available' }, { occurredAt: minutesAgo(5) })
+  await db.query(`UPDATE properties SET available_status='not_available' WHERE id=$1`, [off.p.id])
+  await push('availability.answered', { linkId: held.linkId, externalId: held.ext, outcome: 'reserved' }, { occurredAt: minutesAgo(5) })
+  await db.query(`UPDATE properties SET feature_tags=ARRAY['lift','ac','secret_internal_tag'] WHERE id=$1`, [ok.p.id])
+  await db.query(`INSERT INTO property_viewing_windows (property_id, kind, starts_at, ends_at, source_type) VALUES ($1,'window', NOW() + interval '1 day', NOW() + interval '1 day 2 hours', 'test')`, [ok.p.id])
+  await R.setRoute(ok.p.id, admin, { mode: 'immediate', audienceType: 'selected_agencies', audienceRefs: ['agency-a'], commercialTermsRef: 'AGR-7' })
+  await R.approveRelease(ok.p.id, admin); await R.tick()
+
+  assert.equal((await post('/read/market', { externalIds: [ok.ext] }, { sign: false })).status, 401)
+  const res = await post('/read/market', { externalIds: [ok.ext, noGrant.ext, off.ext, held.ext, unverified.ext, noAvail.ext, '2906:nope'] })
+  assert.equal(res.status, 200, JSON.stringify(res.json))
+  const by = Object.fromEntries(res.json.properties.map(x => [x.externalId, x]))
+  assert.deepEqual(by[noGrant.ext], { externalId: noGrant.ext, eligible: false, reason: 'NO_DISTRIBUTION_AUTHORIZATION' })
+  assert.deepEqual(by[off.ext], { externalId: off.ext, eligible: false, reason: 'OFF_MARKET' })
+  assert.deepEqual(by[held.ext], { externalId: held.ext, eligible: false, reason: 'HELD_BY_OWNER' })
+  assert.deepEqual(by[unverified.ext], { externalId: unverified.ext, eligible: false, reason: 'OWNER_NOT_VERIFIED' })
+  assert.deepEqual(by['2906:nope'], { externalId: '2906:nope', eligible: false, reason: 'UNKNOWN_LISTING' })
+
+  const m = by[ok.ext]
+  assert.equal(m.eligible, true)
+  assert.deepEqual(m.features, ['ac', 'lift'])
+  assert.deepEqual([m.availability.freshness, m.availability.consumerDiscoverable], ['recently_confirmed', true])
+  assert.deepEqual(m.releases.map(r => [r.audienceType, r.audienceRefs, r.commercialTermsRef]), [['selected_agencies', ['agency-a'], 'AGR-7']])
+  assert.ok(m.viewingWindow.startsAt < m.viewingWindow.endsAt)
+  assert.doesNotMatch(JSON.stringify(res.json), /Secret Street|\+356|Test Owner|secret_internal_tag/)
+  // Without the owner's `availability` scope: on-market yes, timing and history no. Never confirmed → not for consumers.
+  assert.deepEqual(by[noAvail.ext].availability, { status: 'available', consumerDiscoverable: false })
+  assert.equal(by[noAvail.ext].viewingWindow, null)
+  // Agency revokes the release → it is gone from the next read.
+  await R.revokeRoute(ok.p.id, admin, 'exclusive')
+  assert.deepEqual((await post('/read/market', { externalIds: [ok.ext] })).json.properties[0].releases, [])
+
+  // Staleness: about five days without a fresh confirmation ends consumer discovery, without changing the status.
+  const now = Date.now(); const h = n => new Date(now - n * 3600000)
+  assert.deepEqual([F.classify(h(100), { now }).consumerDiscoverable, F.classify(h(100), { now }).state], [true, 'confirmation_overdue'])
+  assert.equal(F.classify(h(121), { now }).consumerDiscoverable, false)
+  assert.equal(F.classify(null, { now }).consumerDiscoverable, false)
+  assert.equal(F.settings({ NEXUS_AVAILABILITY_CONSUMER_HOURS: '72' }).consumerHours, 72)
+
+  // Staff lookup by reference: the listing agent and admins only; for anyone else it does not exist.
+  const other = await H.agent('agent', { nexus_owner_link: true })
+  assert.deepEqual(await R.findListing(ok.p.ref, admin), { propertyId: ok.p.id, ref: ok.p.ref, onMarket: true })
+  await assert.rejects(R.findListing(ok.p.ref, other), e => e.code === 'PROPERTY_NOT_FOUND' && e.status === 404)
+  await assert.rejects(R.findListing('no-such-ref', admin), e => e.code === 'PROPERTY_NOT_FOUND')
+})

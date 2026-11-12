@@ -228,7 +228,8 @@ async function readProperties(body) {
       // The one authoritative confirmation time. NEXUS may cache it for display, never replace it.
       availability: accessValid ? { status: r.available_status, availableFrom: day(r.available_date), availableUntil: day(r.available_until),
         availability_last_confirmed_at: r.last_confirmed_available_at ? new Date(r.last_confirmed_available_at).toISOString() : null,
-        freshness: freshness.classify(r.last_confirmed_available_at).state, lastOwnerOutcome: r.last_outcome || null } : null,
+        freshness: freshness.classify(r.last_confirmed_available_at).state, consumerDiscoverable: freshness.classify(r.last_confirmed_available_at).consumerDiscoverable,
+        lastOwnerOutcome: r.last_outcome || null } : null,
       grants: grants.map(g => ({ channel: g.channel, audienceRef: g.audience_ref || null, scopes: g.scopes, grantedAt: new Date(g.granted_at).toISOString() })),
     })
   }
@@ -274,4 +275,64 @@ async function readSourceMatch(body) {
   return { externalId: String(body.externalId), checkedAt: new Date(r.last_checked_at).toISOString(), facts: Object.fromEntries(Object.entries(facts).filter(([, v]) => v !== null && v !== '')) }
 }
 
-module.exports = { HANDLERS, ownerInputSummary, passportFields, scheduleValue, readOwnerLink, readProperties, readViewingBusy, readSourceMatch, AMENITIES }
+// Agency-wide read for the professional workspace in NEXUS: is a listing
+// currently shareable, and under which owner grants and agency releases?
+// Fail closed: a listing that is not eligible comes back as
+// { externalId, eligible: false, reason } and nothing else.
+const ON_MARKET = ['available', 'available_confirmed', 'upcoming']
+const HOLDING = ['temporarily_held', 'reserved', 'rented']
+async function readMarket(body) {
+  const agency = AGENCY_KEY()
+  const ids = [...new Set(Array.isArray(body?.externalIds) ? body.externalIds.map(String) : [])]
+  if (!ids.length || ids.length > 100) throw new LinkError('EXTERNAL_IDS_INVALID', 'externalIds must name 1–100 listings')
+  const { rows } = await db.query(
+    `SELECT l.external_id, p.id, p.ref, p.feature_tags, p.available_status, p.available_date, p.available_until, p.last_confirmed_available_at,
+            p.longlet_price, p.sale_price, COALESCE(p.lifecycle_state, 'active') AS lifecycle, (${ACTIVE_LISTING}) AS active,
+            o.link_state, c.claim_state,
+            (SELECT a.outcome FROM owner_availability_answers a WHERE a.agency_key=l.agency_key AND a.property_id=p.id
+                AND a.outcome IN ('temporarily_held','reserved','rented','available','available_from')
+                AND a.created_at >= COALESCE(p.last_confirmed_available_at, '-infinity') ORDER BY a.created_at DESC, a.id DESC LIMIT 1) AS last_outcome
+       FROM nexus_property_links l JOIN properties p ON p.id=l.property_id
+       LEFT JOIN nexus_owner_links o ON o.agency_key=l.agency_key AND o.owner_contact_id=p.owner_id
+       LEFT JOIN nexus_owner_property_claims c ON c.owner_link_id=o.id AND c.property_id=p.id
+      WHERE l.agency_key=$1 AND l.external_id = ANY($2::text[])`, [agency, ids])
+  const out = []
+  for (const id of ids) {
+    const r = rows.find(x => x.external_id === id)
+    const no = reason => out.push({ externalId: id, eligible: false, reason })
+    if (!r) { no('UNKNOWN_LISTING'); continue }
+    if (r.link_state !== 'verified' || !['confirmed', 'corrected'].includes(r.claim_state)) { no('OWNER_NOT_VERIFIED'); continue }
+    if (!r.active || r.lifecycle !== 'active') { no('LISTING_NOT_ACTIVE'); continue }
+    if (L.transactionType(r).type === null) { no('PRICE_UNCLEAR'); continue }
+    if (!ON_MARKET.includes(r.available_status)) { no('OFF_MARKET'); continue }
+    if (HOLDING.includes(r.last_outcome)) { no('HELD_BY_OWNER'); continue }
+    const grants = await activeGrants(db, agency, r.id)
+    if (!grants.length) { no('NO_DISTRIBUTION_AUTHORIZATION'); continue }
+    const scopes = new Set(grants.flatMap(g => g.scopes))
+    const fresh = freshness.classify(r.last_confirmed_available_at)
+    const { rows: releases } = await db.query(
+      `SELECT id, audience_type, audience_refs, commercial_terms_ref, released_at FROM nexus_distribution_routes
+        WHERE agency_key=$1 AND property_id=$2 AND release_state='released' AND scheduled_release_at <= NOW() ORDER BY id`, [agency, r.id])
+    let viewingWindow = null
+    if (scopes.has('viewing_schedule')) {
+      const { rows: [w] } = await db.query(
+        `SELECT starts_at, ends_at FROM property_viewing_windows WHERE property_id=$1 AND status='active' AND kind='window' AND confirmation='full_window' AND ends_at > NOW() ORDER BY starts_at LIMIT 1`, [r.id])
+      if (w) viewingWindow = { startsAt: new Date(w.starts_at).toISOString(), endsAt: new Date(w.ends_at).toISOString() }
+    }
+    out.push({
+      externalId: id, eligible: true, ref: r.ref,
+      features: (r.feature_tags || []).filter(t => AMENITIES.includes(t)).sort(),
+      // On-market state is part of eligibility. Exact timing and confirmation history need the owner's `availability` scope.
+      availability: scopes.has('availability')
+        ? { status: r.available_status, availableFrom: day(r.available_date), availableUntil: day(r.available_until),
+            availability_last_confirmed_at: fresh.lastConfirmedAt, freshness: fresh.state, consumerDiscoverable: fresh.consumerDiscoverable }
+        : { status: r.available_status, consumerDiscoverable: fresh.consumerDiscoverable },
+      grants: grants.map(g => ({ channel: g.channel, audienceRef: g.audience_ref || null, scopes: g.scopes })),
+      releases: releases.map(x => ({ routeId: Number(x.id), audienceType: x.audience_type, audienceRefs: x.audience_refs, commercialTermsRef: x.commercial_terms_ref, releasedAt: new Date(x.released_at).toISOString() })),
+      viewingWindow,
+    })
+  }
+  return { contractVersion: L.CONTRACT_VERSION, agencyKey: agency, properties: out }
+}
+
+module.exports = { HANDLERS, ownerInputSummary, passportFields, scheduleValue, readOwnerLink, readProperties, readViewingBusy, readSourceMatch, readMarket, AMENITIES }

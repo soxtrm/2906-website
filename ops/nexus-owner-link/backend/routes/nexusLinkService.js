@@ -47,5 +47,7 @@ router.post('/read/owner-link', send(req => R().readOwnerLink(req.body)))
 router.post('/read/properties', send(req => R().readProperties(req.body)))
 router.post('/read/viewing-busy', send(req => R().readViewingBusy(req.body)))
 router.post('/read/source-match', send(req => R().readSourceMatch(req.body)))
+// Agency-wide: which listings are shareable right now, under which grants and releases.
+router.post('/read/market', send(req => R().readMarket(req.body)))
 
 module.exports = router

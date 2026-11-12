@@ -20,6 +20,10 @@ function settings(env = process.env) {
     approachingHours: n(env.NEXUS_AVAILABILITY_APPROACHING_HOURS, intervalHours * 0.75),
     // after this the confirmation is too old to say anything about (14 days).
     staleHours: n(env.NEXUS_AVAILABILITY_STALE_HOURS, 336),
+    // Consumer discovery: after this long without a fresh confirmation a listing is no
+    // longer offered to consumers as available (about five days). Professionals may
+    // still see it, marked unconfirmed. A policy value, not a status change.
+    consumerHours: n(env.NEXUS_AVAILABILITY_CONSUMER_HOURS, 120),
   }
 }
 
@@ -37,7 +41,7 @@ function classify(lastConfirmedAt, opts = {}) {
   const now = opts.now ? new Date(opts.now).getTime() : Date.now()
   const at = lastConfirmedAt ? new Date(lastConfirmedAt).getTime() : NaN
   if (!Number.isFinite(at)) {
-    return { state: 'unknown_stale', label: LABELS.unknown_stale, lastConfirmedAt: null, ageHours: null, dueAt: null }
+    return { state: 'unknown_stale', label: LABELS.unknown_stale, lastConfirmedAt: null, ageHours: null, dueAt: null, consumerDiscoverable: false }
   }
   const ageHours = Math.max(0, (now - at) / HOUR)
   let state = 'recently_confirmed'
@@ -50,6 +54,7 @@ function classify(lastConfirmedAt, opts = {}) {
     lastConfirmedAt: new Date(at).toISOString(),
     ageHours: Math.round(ageHours * 10) / 10,
     dueAt: new Date(at + cfg.intervalHours * HOUR).toISOString(),
+    consumerDiscoverable: ageHours < cfg.consumerHours,
   }
 }
 

@@ -2,7 +2,7 @@
 
 Branch `claude/argus-nexus-owner-link-20261111` (from `origin/main` f22d862). **Not deployed. Not merged.** The interface NEXUS has to implement is in [CONTRACT.md](CONTRACT.md).
 
-**State in one line (2026-11-12, evening):** NEXUS pushes owner changes to ARGUS (decision Kev). Against Codex's committed `a2068ab`, activation, distribution permissions, availability confirmation, listing sync, revocation, retries and rejection of unauthorised events all pass between the two real systems **locally**. Open: NEXUS does not yet push passport, schedule and Q&A changes and still reads the ARGUS database directly. See [COMPATIBILITY.md](COMPATIBILITY.md). The integration gate needs a **hosted staging** run and is **not passed**.
+**State in one line (2026-11-12, evening):** NEXUS pushes owner changes to ARGUS (decision Kev). Against Codex's committed `9947028`, activation, owner passport and schedule edits, distribution permissions, availability confirmation, listing sync, revocation, retries and rejection of unauthorised events all pass between the two real systems **locally**. Open: NEXUS still reads the ARGUS database directly in that commit (signed reads are in progress on its side) and does not push Q&A yet. See [COMPATIBILITY.md](COMPATIBILITY.md). The integration gate needs a **hosted staging** run and is **not passed**.
 
 **Decision (Kev, 2026-11-12):** ARGUS Light is a NEXUS Marketplace interface, behind a feature flag until the identity bridge is verified. It is not built in the ARGUS CRM and not in this branch.
 
@@ -85,8 +85,8 @@ Database: local embedded PostgreSQL 16 with the production **schema** (dump of 2
 | `backend/test/distributionRouting.test.js` (7-day delay, owner authorisation, revocation, concurrency) | 8/8 |
 | `backend/test/routes.test.js` (real routers, real JWTs, real signatures) | 4/4 |
 | `backend/test/schedulerDefaults.test.js` (scheduler, ended listings, starvation, held routing events, smart defaults) | 6/6 |
-| `backend/test/ownerPush.test.js` (signed owner events, ordering, permission mapping, strict acknowledgement, read API) | 9/9 |
-| `backend/test/crossSystemPush.test.js` (this branch ↔ real NEXUS `a2068ab`, two local databases, real signatures) | 9/9 steps, 1 of them pins a known gap |
+| `backend/test/ownerPush.test.js` (signed owner events, ordering, permission mapping, strict acknowledgement, read API incl. market read) | 10/10 |
+| `backend/test/crossSystemPush.test.js` (this branch ↔ real NEXUS `9947028`, two local databases, real signatures) | 9/9 steps, no gap step left |
 | `backend/test/crossSystem.test.js` (baseline against NEXUS `ee61326`) | 8/8 steps, 3 of them pin gaps that `a2068ab` has since closed or ARGUS now refuses |
 | Codex's own `tests.test_nexus_housing` on `a2068ab`, run here on fresh fixture databases | 6/6 |
 | `tests/owner-nexus.test.cjs` (Chromium, mocked API; 1440 / 390 / 360 px) | 3/3 (2026-11-11; the UI was not changed since) |
@@ -102,7 +102,7 @@ ARGUS_TEST_PGDIR=<dir> ARGUS_SCHEMA_SQL=<schema-only.sql> node ops/nexus-owner-l
 cd ops/nexus-owner-link/backend
 ARGUS_BASE_DIR=<production mirror with db.js and services/boardAction.js> node --test --test-concurrency=1 test/ownerLink.test.js test/routes.test.js test/distributionRouting.test.js test/schedulerDefaults.test.js test/ownerPush.test.js
 # cross-system (skipped unless both are set): a clean export of the NEXUS commit and a python with psycopg + tzdata
-NEXUS_REPO_DIR=<export of a2068ab or later> NEXUS_PYTHON=<python> ARGUS_BASE_DIR=<…> node --test --test-concurrency=1 test/crossSystemPush.test.js
+NEXUS_REPO_DIR=<export of 9947028 or later> NEXUS_PYTHON=<python> ARGUS_BASE_DIR=<…> node --test --test-concurrency=1 test/crossSystemPush.test.js
 NEXUS_REPO_DIR=<export of ee61326> NEXUS_PYTHON=<python> ARGUS_BASE_DIR=<…> node --test --test-concurrency=1 test/crossSystem.test.js   # historical baseline
 # UI (needs `next dev -p 3117 --webpack`)
 CRM_MOCK_BASE=http://localhost:3117 node --test tests/owner-nexus.test.cjs
@@ -130,7 +130,7 @@ CRM_MOCK_BASE=http://localhost:3117 node --test tests/owner-nexus.test.cjs
 
 ## Limits and decisions to confirm
 
-1. **NEXUS receiver exists on a branch only** (`a2068ab`, not deployed). Remaining mismatches are listed in [COMPATIBILITY.md](COMPATIBILITY.md). Do not hand invitation links to owners before the staging gate passes.
+1. **NEXUS receiver exists on a branch only** (`9947028`, not deployed). Remaining mismatches are listed in [COMPATIBILITY.md](COMPATIBILITY.md). Do not hand invitation links to owners before the staging gate passes.
 2. **Single-tenant core tables.** `owner_contacts` and `properties` have no agency column, so "which agency owns this owner" is the instance (`ARGUS_AGENCY_KEY`), not a row attribute. Benestates data must not be loaded into this instance on the assumption that the link tables separate it.
 3. **Owner says "rented" in NEXUS** → ARGUS files it as "Rented?" for an agent to confirm, like the existing owner-reply rule. Kev to confirm that a structured portal answer should not flip the listing directly.
 4. **Freshness thresholds** (36 h / 48 h / 14 days) differ from the board's colour ladder (30 h / 60 h). The board is unchanged; aligning them is a product decision.

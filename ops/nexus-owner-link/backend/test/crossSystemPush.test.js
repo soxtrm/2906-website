@@ -23,6 +23,8 @@ const REPO = process.env.NEXUS_REPO_DIR
 const PY = process.env.NEXUS_PYTHON
 const skip = !REPO || !PY ? 'NEXUS_REPO_DIR and NEXUS_PYTHON are required'
   : !fs.existsSync(path.join(REPO, 'nexus_housing_market.py')) ? 'needs a NEXUS revision that pushes owner changes (a2068ab or later)' : false
+// From 9947028 NEXUS also pushes passport and schedule edits (behind its own flag, switched on below).
+const PUSHES = !skip && fs.readFileSync(path.join(REPO, 'nexus_housing.py'), 'utf8').includes('def push_owner_change')
 
 process.env.JWT_SECRET = 'test-jwt-secret-not-production'
 const TO_ARGUS = 'nexus-to-argus-secret-0123456789abcdef01'
@@ -99,7 +101,7 @@ test.before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-xpush-'))
   const dsn = db => `postgresql://test:test@127.0.0.1:${PGPORT}/${db}`
   nexus = spawn(PY, [path.join(__dirname, 'helpers', 'nexus_server.py'), REPO, '0'], {
-    env: { ...process.env, NEXUS_ENV: 'development', NEXUS_ACCOUNT_AUTH: '1', NEXUS_HOUSING_OWNER: '1', NEXUS_HOUSING_PREVERIFIED_INVITES: '0', NEXUS_HOUSING_PROFESSIONAL: '0',
+    env: { ...process.env, NEXUS_ENV: 'development', NEXUS_ACCOUNT_AUTH: '1', NEXUS_HOUSING_OWNER: '1', NEXUS_HOUSING_PREVERIFIED_INVITES: '0', NEXUS_HOUSING_PROFESSIONAL: '0', NEXUS_HOUSING_ARGUS_OWNER_PUSH: '1',
       NEXUS_BOOKING_DB: path.join(tmp, 'booking.sqlite'), NEXUS_HOUSING_DB_DSN: dsn(NEXUS_DB),
       // GAP (decision 5): this NEXUS revision still needs a login on the ARGUS database.
       NEXUS_HOUSING_ARGUS_READ_DSN: dsn('argus_test'),
@@ -248,15 +250,41 @@ test('integration gate, local: NEXUS pushes owner changes to ARGUS and ARGUS syn
     assert.equal((await one(`SELECT COUNT(*)::int n FROM nexus_inbound_events`)).n, n)
   })
 
-  await t.test('GAP: passport edits and viewing-schedule changes are saved in NEXUS but not pushed to ARGUS', async () => {
-    const edit = await act('passport', { fields: { bedrooms: 3, description: 'Bright corner flat' } })
+  await t.test(PUSHES ? 'owner edits the passport and the viewing schedule in NEXUS → ARGUS receives exactly what the owner consented to share' : 'GAP: passport edits and viewing-schedule changes are saved in NEXUS but not pushed to ARGUS', async () => {
+    const schedule = { duration: 30, notice: 24, buffer: 0, exceptions: [], weekly: [{ day: 1, kind: 'available', start: '09:00', end: '13:00' }] }
+    const count = async table => (await one(`SELECT COUNT(*)::int n FROM ${table}`)).n
+    if (!PUSHES) {
+      assert.equal((await act('passport', { fields: { bedrooms: 3, description: 'Bright corner flat' } })).status, 200)
+      assert.equal((await act('schedule', { schedule })).status, 200)
+      assert.deepEqual([await count('nexus_owner_property_updates'), await count('nexus_owner_viewing_schedules')], [0, 0])
+      return
+    }
+    // The owner has shared listing data but not the viewing schedule: the schedule stays in NEXUS.
+    const kept = await act('schedule', { schedule })
+    assert.equal(kept.status, 200, JSON.stringify(kept.json))
+    assert.equal(await count('nexus_owner_viewing_schedules'), 0)
+    // The passport edit is pushed, limited to shareable facts: the private description never leaves NEXUS.
+    const edit = await act('passport', { fields: { bedrooms: 3, description: 'Bright corner flat, private note' } })
     assert.equal(edit.status, 200, JSON.stringify(edit.json))
-    const sched = await act('schedule', { schedule: { duration: 30, notice: 24, buffer: 0, exceptions: [], weekly: [{ day: 1, kind: 'available', start: '09:00', end: '13:00' }] } })
-    assert.equal(sched.status, 200, JSON.stringify(sched.json))
-    // ARGUS is ready to receive both (ownerPush.test.js); this NEXUS revision sends neither.
-    assert.equal((await one(`SELECT COUNT(*)::int n FROM nexus_owner_property_updates`)).n, 0)
-    assert.equal((await one(`SELECT COUNT(*)::int n FROM nexus_owner_viewing_schedules`)).n, 0)
-    assert.equal((await one(`SELECT COUNT(*)::int n FROM nexus_inbound_events WHERE event_type IN ('property.owner_updated','viewing.schedule_updated')`)).n, 0)
+    const { rows: [u] } = await H.db.query(`SELECT version, fields, review_state FROM nexus_owner_property_updates WHERE property_id=$1`, [p.id])
+    assert.ok(u, 'ARGUS stored the owner update')
+    assert.equal(u.fields.bedrooms, 3); assert.equal(u.review_state, 'pending')
+    assert.equal(u.fields.description, undefined)
+    assert.doesNotMatch(JSON.stringify(u.fields), /private note/)
+    // Stored for review: the ARGUS listing itself is not overwritten.
+    assert.equal((await one(`SELECT bedrooms FROM properties WHERE id=$1`, [p.id])).bedrooms, 2)
+    const shown = (await crm('GET', `/${o.id}`)).json.properties[0].ownerInput.passportUpdate
+    assert.deepEqual([shown.version, shown.reviewState, shown.fields.bedrooms], [u.version, 'pending', 3])
+    // After the owner also shares the viewing schedule, a schedule change reaches ARGUS.
+    assert.equal((await act('distribution', { channel: 'origin_agency', action: 'grant', scopes: ['listing_data', 'availability', 'viewing_schedule'], commandId: crypto.randomUUID() })).status, 200)
+    const sent = await act('schedule', { schedule: { ...schedule, duration: 60 } })
+    assert.equal(sent.status, 200, JSON.stringify(sent.json))
+    const { rows: [sc] } = await H.db.query(`SELECT version, schedule FROM nexus_owner_viewing_schedules WHERE property_id=$1`, [p.id])
+    assert.equal(sc.schedule.duration, 60)
+    assert.ok(sc.version > u.version)
+    // No echo: storing the owner's input queued nothing back to NEXUS, and created no appointment.
+    assert.equal((await one(`SELECT COUNT(*)::int n FROM nexus_sync_outbox WHERE state IN ('pending','failed')`)).n, 0)
+    assert.equal((await one(`SELECT COUNT(*)::int n FROM property_viewings WHERE property_id=$1`, [p.id])).n, 0)
   })
 
   await t.test('owner revokes access → ARGUS stops sharing and NEXUS withdraws; an older update cannot bring the listing back', async () => {

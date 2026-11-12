@@ -52,6 +52,9 @@ router.use(staffAuth)
 // checks that the caller is an admin or the listing agent.
 const propertyId = req => { const n = Number(req.params.propertyId); if (!Number.isInteger(n) || n <= 0) throw new S.LinkError('INVALID_ID', 'Invalid property id'); return n }
 const adminOnly = (req, res, next) => (req.agent.role === 'admin' ? next() : res.status(403).json({ error: 'Admin only' }))
+// A professional workspace addresses a listing by its reference. Only an administrator or
+// the listing agent gets an answer; for anyone else the listing does not exist.
+router.get('/listing/:ref', send(req => R.findListing(req.params.ref, req.agent)))
 router.get('/property/:propertyId/route', send(req => R.getRoute(propertyId(req), req.agent)))
 router.put('/property/:propertyId/route', send(req => R.setRoute(propertyId(req), req.agent, req.body || {})))
 router.post('/property/:propertyId/route/approve', send(req => R.approveRelease(propertyId(req), req.agent)))

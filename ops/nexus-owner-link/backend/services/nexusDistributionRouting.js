@@ -304,6 +304,13 @@ async function tick(opts = {}) {
   return { ...releases, withdrawnEnded: gone.withdrawn, errors: releases.errors + gone.errors }
 }
 
+async function findListing(ref, agent) {
+  const { rows } = await db.query(`SELECT p.id, p.ref, p.listed_by_agent_id, p.available_status FROM properties p WHERE p.ref=$1 AND ${REAL_PROPERTY} LIMIT 2`, [String(ref || '').slice(0, 80)])
+  const p = rows.length === 1 ? rows[0] : null
+  if (!p || (agent.role !== 'admin' && p.listed_by_agent_id !== agent.id)) throw new LinkError('PROPERTY_NOT_FOUND', 'Listing not found', 404)
+  return { propertyId: p.id, ref: p.ref, onMarket: ON_MARKET.includes(p.available_status) }
+}
+
 async function getRoute(propertyId, agent) {
   const p = await propertyRow(db, propertyId)
   const agency = AGENCY_KEY()
@@ -321,4 +328,4 @@ async function getRoute(propertyId, agent) {
   }
 }
 
-module.exports = { OPTIONS, MODES, AUDIENCES, setRoute, approveRelease, revokeRoute, getRoute, processDueReleases, withdrawEndedReleases, tick, onOwnerAuthorizationChanged, ownerCovers, scheduleFor }
+module.exports = { OPTIONS, MODES, AUDIENCES, setRoute, approveRelease, revokeRoute, getRoute, processDueReleases, withdrawEndedReleases, tick, findListing, onOwnerAuthorizationChanged, ownerCovers, scheduleFor }
