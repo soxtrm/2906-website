@@ -679,12 +679,15 @@ async function deliverDue({ limit = 25, ids = null } = {}) {
       ok = res.status >= 200 && res.status < 300
       // A 2xx alone is not enough: the receiver must state that it validated and
       // persisted the event. "Acknowledged but ignored" is never reported as synced.
-      if (ok && response?.applied !== true) { ok = false; unapplied = true }
+      // The contract name is `applied`; `accepted: true` is NEXUS's earlier spelling of the same statement.
+      if (ok && response?.applied !== true && response?.accepted !== true) { ok = false; unapplied = true }
       else if (ok && row.event_type === 'owner.profile_upserted') {
         const expected = await confirmedExternalIds(row.aggregate_id)
-        const linked = new Set((Array.isArray(response.properties) ? response.properties : []).map(x => x?.externalId))
-        const missing = expected.filter(x => !linked.has(x))
-        if (missing.length) { ok = false; error = `NEXUS linked ${expected.length - missing.length} of ${expected.length} confirmed properties` }
+        // Preferred: the linked listings by id. Earlier form: only their number.
+        const linked = Array.isArray(response.properties)
+          ? expected.filter(x => response.properties.some(y => y?.externalId === x)).length
+          : Number.isInteger(response.linkedProperties) ? Math.min(response.linkedProperties, expected.length) : 0
+        if (linked < expected.length) { ok = false; error = `NEXUS linked ${linked} of ${expected.length} confirmed properties` }
       }
       // NEXUS answers errors as { message }, ARGUS-style services as { error }.
       const said = response?.error || response?.message

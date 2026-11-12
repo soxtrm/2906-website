@@ -18,7 +18,7 @@ SRC=/tmp/nol-deploy/backend
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 BK=/opt/2906-system/backups/nexus-owner-link-$STAMP
 q() { docker exec -e SQL="$1" 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "$SQL"'; }
-NEW="services/nexusOwnerLink.js services/nexusLinkCrypto.js services/availabilityFreshness.js services/nexusDistributionRouting.js services/nexusLinkScheduler.js services/nexusSmartDefaults.js routes/crmOwnerNexus.js routes/nexusLinkService.js"
+NEW="services/nexusOwnerLink.js services/nexusOwnerInbound.js services/nexusPermissionMap.js services/nexusLinkCrypto.js services/availabilityFreshness.js services/nexusDistributionRouting.js services/nexusLinkScheduler.js services/nexusSmartDefaults.js routes/crmOwnerNexus.js routes/nexusLinkService.js"
 
 # 1. Production index.js must be exactly the base this release was built on
 #    (Property Source Sync, live since 2026-11-09). If another release changed
@@ -38,7 +38,7 @@ q "$COUNTS" > "$BK/counts.txt"
 echo "backup: $BK (properties/owner_contacts/swipe_links = $(cat "$BK/counts.txt"))"
 
 # 3. Additive migration (single transaction, stops on first error).
-for m in 20261111_nexus_owner_link.sql 20261111b_nexus_distribution_routes.sql; do
+for m in 20261111_nexus_owner_link.sql 20261111b_nexus_distribution_routes.sql 20261112_nexus_owner_updates.sql; do
   docker exec -i 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' < "$SRC/migrations/$m"
 done
 [ "$(q "$COUNTS")" = "$(cat "$BK/counts.txt")" ] || { echo "ABORT: existing row counts changed"; exit 1; }
@@ -59,4 +59,4 @@ echo "unauthenticated /api/crm/owner-nexus/1 -> $C1 (expected 401)"
 echo "unsigned /api/nexus-link/v1/events -> $C2 (expected 503 while no secret is set, else 401)"
 echo "public /api/nexus/inventory -> $C3 (expected 200, unchanged)"
 { [ "$C1" = "401" ] && { [ "$C2" = "503" ] || [ "$C2" = "401" ]; } && [ "$C3" = "200" ]; } || echo "WARNING: unexpected status; consider rollback"
-echo "rollback: cp -p $BK/index.js $B/ && (cd $B && rm -f $NEW) && docker restart 2906_backend && docker exec -i 2906_postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1' < $SRC/migrations/20261111b_nexus_distribution_routes.down.sql && docker exec -i 2906_postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1' < $SRC/migrations/20261111_nexus_owner_link.down.sql"
+echo "rollback: cp -p $BK/index.js $B/ && (cd $B && rm -f $NEW) && docker restart 2906_backend && for m in 20261112_nexus_owner_updates 20261111b_nexus_distribution_routes 20261111_nexus_owner_link; do docker exec -i 2906_postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -v ON_ERROR_STOP=1' < $SRC/migrations/\$m.down.sql; done"

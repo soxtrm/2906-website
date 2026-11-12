@@ -1,8 +1,18 @@
 # ARGUS ↔ NEXUS Owner Link — integration contract
 
-**Contract version: `2026-11-11.v1`** · Status: **ARGUS side implemented and tested; NEXUS side not implemented.**
+**Contract version: `2026-11-11.v1`, revision 2 (2026-11-12)** · Status: **both sides implemented on branches; verified against each other locally (see [COMPATIBILITY.md](COMPATIBILITY.md)); hosted staging gate open.**
 
-This is the interface the NEXUS implementation (Codex) builds against. The ARGUS half exists in `ops/nexus-owner-link/backend` and is exercised by tests that use a stub receiver. Nothing in this document is live in production.
+This is the interface both implementations build against. The ARGUS half is in `ops/nexus-owner-link/backend`; the NEXUS half is on `codex/nexus-property-network-20261111`. Nothing in this document is live in production.
+
+**Revision 2 is additive** — the version string on the wire stays `2026-11-11.v1`, and everything a revision 1 implementation sends is still accepted. It records the decisions of 2026-11-12:
+
+1. **NEXUS pushes owner changes to ARGUS** as signed events. There is no pull mechanism in either direction.
+2. **`properties.last_confirmed_available_at` in ARGUS is the only availability-confirmation timestamp.** NEXUS may cache it for display and never keeps a competing one.
+3. **One permission vocabulary** (section 4a). Anything unrecognised is refused.
+4. **An acknowledgement means "validated and persisted"** (sections 4 and 5). ARGUS never reports "synced" on anything less.
+5. **No database access between the systems.** NEXUS reads operational data through the signed read API (section 4b).
+
+New in revision 2: events `property.owner_updated`, `viewing.schedule_updated`, `qa.answer_approved`, `qa.answer_withdrawn`; ordering rules; `applied` in every acknowledgement; `nexusPermissions` on grants; the read API; `confirmedExternalIds` in `owner.profile_upserted` and `properties[]` in its acknowledgement.
 
 Roles:
 
@@ -98,7 +108,18 @@ Envelope:
 }
 ```
 
-Response `200`: `{"duplicate": false, "result": { … }}`. Re-sending the same `eventId` with the same content returns `duplicate: true` and changes nothing. The same `eventId` with different content is `409 EVENT_ID_REUSED`. A rejected event leaves no trace and may be corrected and re-sent with the same id.
+Response `200`: `{"duplicate": false, "applied": true, "result": { … }}`. Re-sending the same `eventId` with the same content returns `duplicate: true` with the stored result and changes nothing. The same `eventId` with different content is `409 EVENT_ID_REUSED`. A rejected event (`4xx`) leaves no trace and may be corrected and re-sent with the same id.
+
+**`applied`** (revision 2): `true` means ARGUS validated the event and persisted its effect in the same transaction. `false` is also a final `200` answer: the event was valid but an event that happened later on the same subject had already been applied (`result.reason` is `STALE_VERSION` or `OUT_OF_ORDER`). NEXUS must not retry it and must not show it as saved over the newer state. If ARGUS is unreachable or answers `5xx`, nothing was recorded; NEXUS reports the failure to the owner and may send the same `eventId` again.
+
+**Ordering.** Events are applied in the order the owner made the changes, not the order they arrive:
+
+- `occurredAt` is required for `distribution.*` and `availability.answered` (if absent, arrival time is used; a time in the future is treated as arrival time).
+- A grant is not applied if a later grant or revocation for the same listing and audience (or a later "revoke all") was already applied. A revocation only revokes grants made before it.
+- An availability answer is not applied if a later answer for the same listing was already applied.
+- `property.owner_updated`, `viewing.schedule_updated` and `qa.*` carry an integer `version` that NEXUS increases per listing (per question for `qa.*`). A version that is not higher than the stored one is not applied.
+
+**No feedback loop.** Applying an inbound event never makes ARGUS emit an event about the same change. An owner's passport edit does not alter the ARGUS listing, so it cannot come back as `property.upserted`. A confirmed availability does change the listing's availability, and the next `property.upserted` carries it — NEXUS applies that as source data and emits nothing in return.
 
 | `eventType` | `data` | Effect in ARGUS |
 |---|---|---|
@@ -108,6 +129,18 @@ Response `200`: `{"duplicate": false, "result": { … }}`. Re-sending the same `
 | `distribution.granted` | `linkId`, `externalId`, `channel`, `audienceRef?`, `scopes[]`, `grantedAt?`, `termsVersion?` | Records the owner's authorisation. Replaces an active grant for the same channel and audience. |
 | `distribution.revoked` | `linkId`, `externalId`, `channel?`, `audienceRef?` | Revokes one grant, or all grants when `channel` is omitted. If none remain, ARGUS stops sharing and queues `property.withdrawn`. |
 | `availability.answered` | `linkId`, `externalId`, `outcome`, `availableFrom?`, `askAgainAt?` | Records the owner's structured answer (section 7). |
+| `property.owner_updated` | `linkId`, `externalId`, `version`, `fields` | Stores the owner's Property Passport edit for staff review. `fields` is the **complete** set of owner-edited fields at that version, not a delta. Never written to the ARGUS listing. |
+| `viewing.schedule_updated` | `linkId`, `externalId`, `version`, `schedule: {weekly[], exceptions[], duration, notice, buffer}` | Stores the owner's viewing preferences (one current row per listing). Creates no appointment. |
+| `qa.answer_approved` | `linkId`, `externalId`, `questionKey`, `question`, `answer`, `version` | Stores an answer the owner approved for sharing. |
+| `qa.answer_withdrawn` | `linkId`, `externalId`, `questionKey`, `version` | Withdraws it. |
+
+All four revision 2 events require a verified owner link and a confirmed claim on that listing.
+
+`fields` (unknown key or invalid value → `400`, nothing stored): `locality` (≤100), `type` (≤80), `description` (≤4000), `restrictions` (≤1000), `preferences` (≤1000), `bedrooms`, `bathrooms` (integer 0–100 or null), `rent` (integer 1–10 000 000 or null), `sale` (integer 1–1 000 000 000 or null), `intent` (`rent`, `sale`, `both`, empty), `availableFrom` (`YYYY-MM-DD` or null), `amenities` (list from: `ac`, `balcony`, `terrace`, `lift`, `furnished`, `washing_machine`, `dishwasher`, `parking`, `storage`, `heating`, `internet`, `garden`, `pool`, `dryer`, `sea_view`).
+
+`schedule`: `weekly[]` of `{day 0–6, kind: "available"|"blocked", start, end}` and `exceptions[]` of `{date, start, end}` with `HH:MM` times (`24:00` allowed as an end), `duration` 15, 30 or 60, `notice` 0–720 hours, `buffer` 0–240 minutes. No other keys.
+
+`questionKey`: `[a-z0-9][a-z0-9_.-]{1,79}`; `question` ≤300, `answer` 1–2000 characters.
 
 `channel`: `origin_agency`, `selected_agency` (requires `audienceRef`), `approved_large_agencies`, `all_eligible_agencies`, `independent_agents`, `nexus_direct_from_owner`, `other_approved`.
 
@@ -115,7 +148,41 @@ Response `200`: `{"duplicate": false, "result": { … }}`. Re-sending the same `
 
 Error codes: `CONTRACT_VERSION_UNSUPPORTED`, `EVENT_ID_INVALID`, `EVENT_TYPE_UNKNOWN`, `AGENCY_MISMATCH` (403), `LINK_NOT_FOUND`, `PROPERTY_NOT_IN_LINK`, `INVITATION_INVALID`, `INVITATION_CONSUMED`, `ACCOUNT_REF_INVALID`, `ACCOUNT_ALREADY_LINKED`, `ACCOUNT_MISMATCH`, `DECISION_INVALID`, `NOT_CLAIMED`, `LINK_DISPUTED`, `OWNER_LINK_NOT_VERIFIED`, `OWNER_CLAIM_NOT_CONFIRMED`, `CHANNEL_INVALID`, `SCOPES_INVALID`, `AUDIENCE_REQUIRED`, `OUTCOME_INVALID`, `AVAILABLE_FROM_REQUIRED`.
 
+Revision 2 error codes: `FIELDS_INVALID`, `FIELD_UNKNOWN`, `FIELD_INVALID`, `VERSION_REQUIRED`, `SCHEDULE_INVALID`, `QUESTION_KEY_INVALID`, `ANSWER_INVALID`, `OCCURRED_AT_INVALID`, `PERMISSIONS_INVALID`, `PERMISSION_UNRECOGNIZED`, `PERMISSION_NOT_MAPPED`, `EXTERNAL_IDS_INVALID`, `RANGE_INVALID`, `URL_INVALID`, `SOURCE_NOT_REVIEWED`.
+
 **Consent rule for NEXUS:** no distribution channel and no scope may be pre-selected in the Owner Portal. ARGUS has no way to create a grant on the owner's behalf; the only accepted source is `nexus_owner_portal`.
+
+## 4a. Permission vocabulary and mapping
+
+The contract vocabulary — `channel` + `audienceRef` + `scopes` — is the only one on the wire and in ARGUS. NEXUS Stage A also has five per-agency permission names. Their mapping is fixed here and implemented in `backend/services/nexusPermissionMap.js` (tests: `ownerPush.test.js`):
+
+| NEXUS permission | Contract meaning | In an event |
+|---|---|---|
+| `view_facts` | channel `origin_agency`, scope `listing_data` | accepted |
+| `manage_viewings` | channel `origin_agency`, scope `viewing_schedule` | accepted |
+| `market` | none yet | **refused** (`PERMISSION_NOT_MAPPED`) |
+| `contact_owner` | none yet | **refused** |
+| `receive_leads` | none yet | **refused** |
+| anything else | — | **refused** (`PERMISSION_UNRECOGNIZED`) |
+
+Scopes `availability`, `photos` and `approved_answers` have no NEXUS permission name; they are granted in contract form only. In the reverse direction a NEXUS permission is shown as held only when all its scopes are granted on `origin_agency`.
+
+A grant is sent either in contract form (`channel`, `scopes[]`) or, for the mapped names only, as `nexusPermissions: [...]` (the channel is then `origin_agency`). An unknown channel, an unknown scope, an empty scope list or an unmapped permission refuses the **whole** event: nothing is widened, guessed or partially applied. A listing with no valid grant is never sent by ARGUS and never released to another agency (section 6).
+
+## 4b. Read API (NEXUS server → ARGUS)
+
+Replaces any direct database access. Same signing as section 1 (key `nexus`, the path signed is the path below, `POST` so the signature covers the question). Rate limited. Returns no owner name, phone, e-mail, street address, notes or client data.
+
+| Endpoint | Request | Response |
+|---|---|---|
+| `POST /read/owner-link` | `linkId`, `nexusAccountRef` | `linkState`, `verified`, and for a verified link the confirmed listings: `externalId`, `sourcePropertyId`, `ref`, `claimState`, `facts {locality, type, bedrooms, bathrooms, rent, sale, availableFrom, amenities[], photos[]}`. `404` if the account is not the one that claimed the link. |
+| `POST /read/properties` | `linkId`, `externalIds[1–100]` | `linkState` and per listing of that link: `accessValid`, `availability {status, availableFrom, availableUntil, availability_last_confirmed_at, freshness, lastOwnerOutcome}`, `grants[]`. Listings that are not part of the link are absent. After a dispute `accessValid` is `false` and no availability or grants are returned. |
+| `POST /read/viewing-busy` | `linkId`, `externalId`, `from` (`YYYY-MM-DD`), `days` (1–31) | Pending and confirmed appointments as timing only: `date`, `time`, `startsAt`, `durationMin`. |
+| `POST /read/source-match` | `linkId`, `externalId`, `url` | The reviewed source facts for exactly that link and listing, or `404 SOURCE_NOT_REVIEWED`. ARGUS fetches nothing. |
+
+NEXUS calls `/read/properties` whenever it shows availability or permissions (it may cache the answer briefly for display) and treats `accessValid: false` as "no access".
+
+**Not yet covered by the read API** and therefore still to be specified before NEXUS can drop its database login: the professional workspace's agency-wide reads (on-market state, live release state and next viewing window per released listing), claim status by account before verification, and the staff listing lookup by reference for routing.
 
 ## 5. Events ARGUS → NEXUS: `POST <NEXUS_OWNER_LINK_URL>/events`
 
@@ -123,7 +190,7 @@ Same envelope, plus `idempotencyKey`. NEXUS must treat `eventId` (or `idempotenc
 
 | `eventType` | `data` |
 |---|---|
-| `owner.profile_upserted` | `ownerLinkId`, `nexusAccountRef`, `originAgency`, `displayName`, `verifiedAt` — and nothing else |
+| `owner.profile_upserted` | `ownerLinkId`, `nexusAccountRef`, `originAgency`, `displayName`, `verifiedAt`, `confirmedExternalIds[]` (revision 2: the listings the owner confirmed) — and nothing else |
 | `property.upserted` | see below |
 | `property.withdrawn` | `externalId`, `canonicalPropertyId`, `reason: "owner_authorization_withdrawn"` |
 | `distribution.released` | `externalId`, `routeId`, `originAgency`, `originAgentId`, `audienceType`, `audienceRefs[]`, `commercialTermsRef`, `approvedReleaseAt`, `scheduledReleaseAt` — see section 5a |
@@ -160,8 +227,12 @@ Same envelope, plus `idempotencyKey`. NEXUS must treat `eventId` (or `idempotenc
 Expected response `2xx`:
 
 ```json
-{ "accepted": true, "canonicalPropertyId": "nxp_…", "publicationState": "unpublished" }
+{ "applied": true, "canonicalPropertyId": "nxp_…", "publicationState": "unpublished" }
 ```
+
+**Acknowledgement rule (revision 2).** A `2xx` must carry `applied: true`, and that must mean the receiver validated the event and persisted its effect. `accepted: true` (the revision 1 spelling) is read as the same statement. A `2xx` without either is treated by ARGUS as **not delivered**: the event stays queued, the status shows an error, and nothing is reported as synced. A receiver that accepted an event but deliberately did not apply it (for example an older event after a withdrawal) answers `applied: true` only if its stored state is now at least as new as the event.
+
+For `owner.profile_upserted` the acknowledgement lists what was linked: `"properties": [{ "externalId": "2906:…", "canonicalPropertyId": "…" }]` (revision 1 form: `"linkedProperties": <count>`). If fewer listings are linked than `confirmedExternalIds` names, ARGUS treats the event as not delivered. ARGUS stores the canonical ids from this acknowledgement.
 
 `publicationState`: `unpublished`, `published`, `held`, `withdrawn`. ARGUS stores `canonicalPropertyId` and `publicationState` as reported. A `4xx` (except 408/429) is a permanent refusal and is not retried automatically; `5xx` and network errors are retried with backoff, at most 5 attempts, then wait for a manual retry.
 
@@ -236,20 +307,20 @@ An expired window never makes a listing unavailable by itself.
 These are agreed directions without an implemented contract yet. Do not build against them until a new contract version defines them.
 
 - Photos and media.
-- Structured property Q&A (approved answers, outstanding questions).
-- Viewing availability (weekly windows, 15/30/60-minute slots, breaks, exceptions, minimum notice, Europe/Malta DST). NEXUS will own the owner calendar; ARGUS will consume it.
+- Outstanding questions to the owner (approved answers are in revision 2).
+- Turning the owner's viewing schedule into ARGUS appointments. ARGUS receives and stores the schedule (revision 2); its appointment lengths are still 10 and 20 minutes against the owner's 15/30/60.
+- Staff review actions on an owner's passport edit (accept into the listing, reject). ARGUS stores the edit and shows it; nothing is written to the listing yet.
 - Scheduled reconfirmation prompts sent to owners (the 48-hour cadence). ARGUS outreach and WhatsApp behaviour are unchanged by this version.
 - Commission and referral terms.
 - The professional "ARGUS Light" view (queue addendum 01). Routing itself is section 5a.
 - Agency-to-agency source connections.
 
-## 9. What NEXUS has to build for v1
+## 9. State of the NEXUS side and what is left (for Codex)
 
-1. Signed service authentication (section 1) and an `argus-link` receiver with idempotent `/events`.
-2. An owner account type and the activation page at the portal URL, calling `/invitations/resolve` from its server.
-3. Owner ↔ `(agencyKey, externalId)` links and a canonical property record with external-id mapping and a duplicate review queue.
-4. The Owner Portal distribution screen, with nothing pre-selected, emitting `distribution.granted` / `distribution.revoked`.
-5. The availability answer control, emitting `availability.answered`.
-6. Honouring `property.withdrawn` and reporting `publicationState`.
+Items 1–6 of the original list exist at NEXUS `a2068ab` and pass against ARGUS (COMPATIBILITY.md). Left to do on the NEXUS side for revision 2:
 
-Until items 1–3 exist and a round trip has been verified against a NEXUS test environment, ARGUS reports NEXUS synchronisation as **pending**.
+1. **Push the remaining owner changes**: `property.owner_updated` when the owner saves the passport, `viewing.schedule_updated` when the schedule is saved, `qa.answer_approved` / `qa.answer_withdrawn`. Send the complete owner-edited field set with a per-listing increasing `version`; treat `applied: false` as "a newer change is already stored".
+2. **Remove the ARGUS database login** (`NEXUS_HOUSING_ARGUS_READ_DSN`). Use `/read/owner-link`, `/read/properties`, `/read/viewing-busy`, `/read/source-match`. Name the reads that are still missing (section 4b, last paragraph) so they can be added to this contract first.
+3. **Answer `applied: true`** (the current `accepted: true` is still read), and return `properties[]` with canonical ids for `owner.profile_upserted`.
+4. **Retire the pull outbox for ARGUS** (`GET /bridge/events`, `/bridge/events/ack`). ARGUS will not poll it.
+5. Owner-facing errors: when ARGUS answers `5xx` or is unreachable, nothing was saved — keep the owner's input and let them retry with the same `commandId` (this already works for availability and distribution).

@@ -22,7 +22,9 @@ const { Client } = require('pg')
 
 const REPO = process.env.NEXUS_REPO_DIR
 const PY = process.env.NEXUS_PYTHON
-const skip = !REPO || !PY ? 'NEXUS_REPO_DIR and NEXUS_PYTHON are required' : false
+// Baseline for NEXUS Stage A at ee61326 only. Later revisions are covered by crossSystemPush.test.js.
+const skip = !REPO || !PY ? 'NEXUS_REPO_DIR and NEXUS_PYTHON are required'
+  : fs.existsSync(path.join(REPO, 'nexus_housing_market.py')) ? 'this baseline is for NEXUS ee61326; use crossSystemPush.test.js for later revisions' : false
 
 process.env.JWT_SECRET = 'test-jwt-secret-not-production'
 const TO_ARGUS = 'nexus-to-argus-secret-0123456789abcdef01'

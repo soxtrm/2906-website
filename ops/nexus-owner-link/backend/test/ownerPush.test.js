@@ -268,7 +268,7 @@ test('ARGUS never reports "synced" for an acknowledgement that did not apply; th
   await push('distribution.granted', { linkId: a.linkId, externalId: a.ext, channel: 'origin_agency', scopes: ['listing_data'] })
   // A receiver that answers 200 but ignores the payload (NEXUS Stage A at ee61326 behaved like this).
   let mode = 'ignore'
-  const seen = nexusReceiver(body => (mode === 'ignore' ? { json: { accepted: true, linkedProperties: 1, canonicalPropertyId: 'x', publicationState: 'unpublished' } }
+  const seen = nexusReceiver(body => (mode === 'ignore' ? { json: { linkedProperties: 1, canonicalPropertyId: 'x', publicationState: 'unpublished' } }
     : mode === 'partial' ? { json: { applied: true, properties: [] } } : mode === 'down' ? { status: 503, json: { message: 'temporarily unavailable' } } : applying(body)))
   const first = await S.syncOwner(a.o.id, admin)
   assert.deepEqual([first.delivery.delivered, first.delivery.failed], [0, 1])
