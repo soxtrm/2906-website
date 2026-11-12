@@ -13,6 +13,15 @@
 # NEXUS_LINK_SCHEDULER=1 is set; until then delayed releases only fire when an
 # admin calls POST /api/crm/owner-nexus/routes/process-due.
 set -euo pipefail
+
+# 0. Mandatory backup gate (2026-11-12). Fails closed: this script does nothing unless
+#    /opt/2906-system/ops/backup-v2/pre_migration_backup.sh produced a restore-verified
+#    dump of THIS production database within the last 30 minutes and the file is unchanged.
+#    ARGUS_DEPLOY_GATE_ONLY=1 checks the gate and stops before anything else.
+GATE=/opt/2906-system/ops/backup-v2/require_fresh_backup.sh
+[ -x "$GATE" ] || { echo "ABORT: backup gate $GATE is missing"; exit 1; }
+"$GATE" 30 || { echo "ABORT: no fresh verified backup; run pre_migration_backup.sh first"; exit 1; }
+[ "${ARGUS_DEPLOY_GATE_ONLY:-0}" = 1 ] && { echo "gate passed; nothing deployed"; exit 0; }
 B=/opt/2906-system/backend
 SRC=/tmp/nol-deploy/backend
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
@@ -38,6 +47,7 @@ q "$COUNTS" > "$BK/counts.txt"
 echo "backup: $BK (properties/owner_contacts/swipe_links = $(cat "$BK/counts.txt"))"
 
 # 3. Additive migration (single transaction, stops on first error).
+"$GATE" 30 || { echo "ABORT: verified backup expired before the migration step"; exit 1; }
 for m in 20261111_nexus_owner_link.sql 20261111b_nexus_distribution_routes.sql 20261112_nexus_owner_updates.sql; do
   docker exec -i 2906_postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' < "$SRC/migrations/$m"
 done
