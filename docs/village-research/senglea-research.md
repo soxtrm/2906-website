@@ -1,6 +1,6 @@
 # L-Isla (Senglea) edition — sourced research draft
 
-Language: English. Status: **RESEARCH DRAFT — NOT PUBLISHED**. Sources checked 4 November 2026 (Europe/Malta).
+Language: English. Status: **ASSET VERIFIED — NOT PUBLISHED**. Editorial sources checked 4 November 2026; image metadata, original hashes and selected derivative checked 14 November 2026 (Europe/Malta). No preview or public edition exists yet.
 
 ## Why this is a distinct edition
 
@@ -90,7 +90,7 @@ The frame is for locality orientation only. It must not draw a council boundary,
 
 ## Licensed image candidates
 
-The Wikimedia Commons API returned the following technically suitable candidates. No original has yet been downloaded or approved. Before selection, each full original must be downloaded outside Git, matched against the Commons SHA-1, assigned a local SHA-256 and inspected for people, plates, private details, misleading neighbouring-city context and responsive crop quality.
+The six originals already present outside Git in `D:\2906\nexus-bridge-work\artifacts\20261113-senglea-originals` were reused on 14 November 2026. All six match the current Commons SHA-1, byte count and pixel dimensions and decode completely. Each original was visually reviewed from the source file (the image viewer downscales large originals); the selected 1800px derivative was also inspected at its delivered resolution. This does not substitute for the still-pending mobile and desktop page-frame review. Exact original SHA-256 values, source URLs, licences and decisions are retained in [senglea-image-audit.json](senglea-image-audit.json).
 
 1. **Senglea - Malta.jpg** — Plamen Agov / MrPanyGoff; 5 May 2008; 2418×1600; 1,859,315 bytes; CC BY-SA 3.0; Commons SHA-1 `332d83ff8bacb29694359c75ede35c780a13d6ab`.
    - https://commons.wikimedia.org/wiki/File:Senglea_-_Malta.jpg
@@ -107,7 +107,25 @@ The Wikimedia Commons API returned the following technically suitable candidates
 
 The sixth candidate explicitly shows a Senglea waterfront foreground and Birgu in the background. If used, both contexts and the visible foreground boat must remain clear; it must not present Birgu as part of L-Isla. Montage, event and festival images are excluded from the lead shortlist because they can distort everyday locality context or foreground identifiable people.
 
-## Verification and publication boundary
+## Image selection — 14 November 2026
+
+**Selected:** Diego Delso's 25 August 2021 photograph of the Senglea fortifications. It puts Senglea Point and the Gardjola in the foreground while visibly retaining the working harbour, cranes and cruise ships behind. The image establishes a dated harbour context, not a present-day condition, a property view or a claim that every background building is in Senglea. No identifiable face, legible vehicle plate or private contact detail was observed in the delivered 1800px derivative.
+
+The checked-in asset is [assets/senglea-point-diego-delso.webp](assets/senglea-point-diego-delso.webp), **1800×978 pixels, 288,944 bytes**, SHA-256 `de3f345406d1398e6621209a5ac87850cb465d2860c51e287a7c1bdcef746091`. Its original has SHA-256 `69b1836f108661edf474cc75656f06814ac8af6657de36c668029448b85e485e`. Sharp 0.34.5 converted the original proportionally to WebP at quality 82 and removed embedded metadata; no crop, retouching, montage, colour treatment or generative change was applied. The derivative remains under **CC BY-SA 4.0**.
+
+Required visible credit for the later page: **Diego Delso / Wikimedia Commons / CC BY-SA 4.0**, linking the [exact file page](https://commons.wikimedia.org/wiki/File:Fortificaci%C3%B3n_de_Senglea,_isla_de_Malta,_Malta,_2021-08-25,_DD_194.jpg) and [licence](https://creativecommons.org/licenses/by-sa/4.0/). State the **25 August 2021** capture date and proportional WebP conversion. Describe any later CSS display crop separately. Suggested caption: “Senglea Point and the working harbour, 25 August 2021. Historical photograph; not a current property view.”
+
+Other decisions:
+
+- The 2008 MrPanyGoff photograph is a valid landward waterfront/basilica alternative, with substantially more sky and older context. If used later, preserve the source's requested credit `© Plamen Agov • studiolemontree.com` as well as its file and CC BY-SA 3.0 links.
+- The Triq is-Sur panorama looks **from Senglea toward Valletta waterfront**. It was rejected as a lead showing Senglea itself; neither its filename nor the camera position changes the visible neighbouring-city subject.
+- The Berthold Werner photograph shows Senglea's basilica behind marina masts, but the 2011 capture and obstructed skyline make it a secondary alternative.
+- Ir-Rampa Ta' L-Isla provides useful steps/street context, but foreground domestic facades, house numbers and plates make it unsuitable for this broad locality lead. Do not use it as evidence for a private listing or accessibility claim.
+- The boat image explicitly shows **Birgu in the background**. It was rejected as the Senglea lead; a later use must label both sides of the creek accurately.
+
+The earlier `20261113-senglea-assets/manifest.json` contains four failed download/hash attempts. It is not the current verification record and was left intact. The six distinct originals in `20261113-senglea-originals` all match the refreshed official metadata; none was downloaded again. The new audit manifest supersedes the stale failure status for those originals only.
+
+## Research-stage verification and publication boundary — 4 November 2026
 
 On 4 November 2026 the public inventory, Address Registrar, Heritage Malta trail, both VisitMalta sources, Malta Public Transport pages, both exact MTA filters, Commons API and Nominatim returned HTTP 200 to the neutral direct client. The Local Government Port Region and Primary HealthCare pages returned HTTP 403 to that client while remaining current browser-readable official sources. The council destination linked by Local Government timed out for the browser client, and the ferry schedule returned HTTP 503 to the neutral direct client while the current browser index still exposed the operator schedule and Cospicua departure label. No claim was expanded from any access difference.
 
@@ -115,6 +133,6 @@ No image, preview, public page, canonical, social metadata, structured data, nav
 
 ## Next gates
 
-1. Download all six originals outside Git and verify Commons SHA-1, local SHA-256, privacy, context and full-resolution composition.
-2. Select one image on editorial fit, create only a proportional web derivative, and document visible attribution and capture-date limitations.
-3. Build a private `noindex,nofollow` preview with no canonical or sitemap entry, then verify real 390px and desktop crops plus the deferred 2D map before any public release.
+1. **Complete:** reuse and verify all six originals, retain local SHA-256 values, reject misleading neighbouring-city leads and select the licensed derivative. Do not repeat the download or candidate research.
+2. Refresh mutable editorial/transport sources, then build a private `noindex,nofollow` preview with no canonical or sitemap entry. Reuse the selected asset and document its visible credit/capture date.
+3. Verify real 390px and desktop page frames, attribution and the deferred 2D map before any public release. The asset currently lives only under `docs/`, outside public serving, and has not been deployed.
