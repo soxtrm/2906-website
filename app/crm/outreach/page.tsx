@@ -646,7 +646,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   // top up, clear) can force a reload immediately, not just tab-switching.
   const loadEntries = useCallback(async (planId: number) => {
     const r = await crmGet(`outreach/plans/${planId}`)
-    setQueueText((r.plan.entries || []).map((e: Entry) => `+${e.normalized_phone}${e.display_name ? ' ' + e.display_name : ''}`).join('\n'))
+    setQueueText((r?.plan?.entries || []).map((e: Entry) => `+${e.normalized_phone}${e.display_name ? ' ' + e.display_name : ''}`).join('\n'))
   }, [])
 
   useEffect(() => {
