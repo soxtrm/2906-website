@@ -22,6 +22,14 @@ export default function proxy(req: NextRequest) {
   const host = (req.headers.get('host') || '').toLowerCase()
   const { pathname } = req.nextUrl
 
+  // Private NEXUS presentation; authorization happens in the server page.
+  if (pathname === '/rating' || pathname.startsWith('/rating/')) {
+    const response = NextResponse.next()
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive')
+    response.headers.set('Cache-Control', 'private, no-store')
+    return response
+  }
+
   // Nexus Link has a fast marketplace at /link and the deeper Matrix at
   // /link-matrix. Keep both static surfaces out of locale and CRM rewriting.
   // The legacy scorecard still lives in public/Link for /link-matrix. Its

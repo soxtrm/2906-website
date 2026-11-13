@@ -1,0 +1,134 @@
+{
+  "at": "2026-11-13T22:57:07.179Z",
+  "browser": "Chrome/147.0.7727.57",
+  "environment": "Local production build, loopback identity fixture; desktop CPU, mobile viewports, not physical-device benchmark",
+  "results": [
+    {
+      "name": "authorization anonymous HTML denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization anonymous RSC denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization invalid HTML denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization invalid RSC denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization fixture-agent HTML denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization fixture-agent RSC denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization fixture-board HTML denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization fixture-board RSC denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization fixture-outage HTML denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization fixture-outage RSC denies presentation",
+      "status": "PASS"
+    },
+    {
+      "name": "anonymous sign-in form visible",
+      "status": "PASS"
+    },
+    {
+      "name": "authorized presenter server rendering",
+      "status": "PASS"
+    },
+    {
+      "name": "two distinct expected and delivered burger images",
+      "status": "PASS"
+    },
+    {
+      "name": "10 versus 30 minute timeline",
+      "status": "PASS"
+    },
+    {
+      "name": "arrival and contextual expectations scenes",
+      "status": "PASS"
+    },
+    {
+      "name": "rating boundary, immutable history and three six-axis modes",
+      "status": "PASS"
+    },
+    {
+      "name": "dislike drill-down, effect, corrected interpretation and local save",
+      "status": "PASS"
+    },
+    {
+      "name": "positive semantic branch",
+      "status": "PASS"
+    },
+    {
+      "name": "optional semantic skip",
+      "status": "PASS"
+    },
+    {
+      "name": "ingredient FIT and unknown is not dislike",
+      "status": "PASS"
+    },
+    {
+      "name": "dish-specific endorsements and hide consent",
+      "status": "PASS"
+    },
+    {
+      "name": "all six loop steps and no fabricated experiment outcome",
+      "status": "PASS"
+    },
+    {
+      "name": "four vertical teasers",
+      "status": "PASS"
+    },
+    {
+      "name": "global animation pause",
+      "status": "PASS"
+    },
+    {
+      "name": "reduced motion respected",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile 390px touch layout without horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile 430px touch layout without horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile walkthrough video captured",
+      "status": "PASS"
+    },
+    {
+      "name": "headless mobile performance sample",
+      "status": "PASS",
+      "loadMs": 33,
+      "domContentLoadedMs": 27,
+      "medianFrameMs": 4.199999999998909,
+      "jsDecodedBytes": 601338,
+      "webglCanvases": 0
+    },
+    {
+      "name": "no browser exceptions and zero outgoing mutations",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "writes": []
+}
