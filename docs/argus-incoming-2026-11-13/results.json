@@ -1,0 +1,67 @@
+[
+  {
+    "name": "dashboard shows Properties of the Day cards",
+    "ok": true,
+    "extra": "/incoming?id=29756 /incoming?id=29749 /incoming?id=29752 /incoming?id=29751 /incoming?id=29750"
+  },
+  {
+    "name": "dashboard summary lines from real counts",
+    "ok": true,
+    "extra": "Olga uploaded 1 property today | 5 need verification | 4 ready to approve | 1 missing a price"
+  },
+  {
+    "name": "Incoming nav entry shows the pending count",
+    "ok": true,
+    "extra": "5"
+  },
+  {
+    "name": "inbox lists every pending property",
+    "ok": true,
+    "extra": "5"
+  },
+  {
+    "name": "unverified card shows an orange \"Verification required\" badge (not green)",
+    "ok": true,
+    "extra": "Verification required rgb(232, 89, 12)"
+  },
+  {
+    "name": "Approve without a price opens Edit with the missing field",
+    "ok": true,
+    "extra": "Add price to approve"
+  },
+  {
+    "name": "Edit & approve sends the corrected price to the verify endpoint",
+    "ok": true,
+    "extra": "{\"p\":\"intake/items/29750/verify\",\"body\":{\"edits\":{\"longlet_price\":\"1950\"},\"note\":null}}"
+  },
+  {
+    "name": "approved property leaves the queue and the next one is shown",
+    "ok": true,
+    "extra": "4"
+  },
+  {
+    "name": "mobile inbox has no horizontal page scroll",
+    "ok": true,
+    "extra": "0"
+  },
+  {
+    "name": "Rabat card shows all 38 photos",
+    "ok": true,
+    "extra": " 1 / 38"
+  },
+  {
+    "name": "primary action is a full-width, thumb-sized button",
+    "ok": true,
+    "extra": "340x48"
+  },
+  {
+    "name": "Next moves to the following property",
+    "ok": true,
+    "extra": "#2906-9707· house → #2906-9710· penthouse"
+  },
+  {
+    "name": "Inventory \"Pending verification\" shows the drafts with the warning badge",
+    "ok": true,
+    "extra": "5"
+  }
+]

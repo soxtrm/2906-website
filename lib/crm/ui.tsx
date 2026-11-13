@@ -1,12 +1,13 @@
 'use client'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
 import { crmFetch, crmJson, type Me, type NavKey, type Reveals } from './api'
 import { ArgusIntro, ARGUS_INTRO_ENTRANCE_MS } from '@/components/crm/argus-intro'
+import { useIntakeSummary } from './intake'
 
 // ── design tokens ────────────────────────────────────────────────────────────
 // These are the brand values from tailwind.config.ts / globals.css, not the
@@ -200,7 +201,7 @@ export const useCrm = () => {
 
 const THEME_STORAGE_KEY = 'crm_theme_pref'
 
-const FULL_NAV: NavKey[] = ['dashboard', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory', 'sources', 'bookings']
+const FULL_NAV: NavKey[] = ['dashboard', 'incoming', 'inventory', 'board', 'access', 'owners', 'clientgroups', 'ownergroups', 'earnings', 'admin', 'outreach', 'agentchats', 'profile', 'baseinventory', 'sources', 'bookings']
 
 // Every CRM page mounts its own CrmProvider, so without this each navigation
 // re-fetched /me behind a full-screen splash. The last good session is kept
@@ -395,6 +396,8 @@ export function Masked({ entityType, entityId, masked, hasValue, propertyId, siz
 // ── app shell (sidebar / header / mobile bottom nav) ─────────────────────────
 const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: boolean; adminOnly?: boolean }[] = [
   { key: 'dashboard', icon: '▦', label: 'Dashboard', href: '/' },
+  // Incoming Properties (2026-11-13): WhatsApp uploads waiting for content verification.
+  { key: 'incoming', icon: '⇣', label: 'Incoming', href: '/incoming' },
   { key: 'inventory', icon: '≡', label: 'Inventory', href: '/inventory' },
   { key: 'board',     icon: '◈', label: 'Board',     href: '/schedule-board' },
   // Booking engine (Kev, 2026-09-23): the team viewing diary — every agent, board-only included.
@@ -490,11 +493,11 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight }
 
 // Board desktop header (founder mockup 2026-10-19): these carry labels in the
 // header; every other workspace sits behind "More".
-const HEADER_PRIMARY: NavKey[] = ['dashboard', 'inventory', 'board', 'bookings', 'outreach', 'profile']
+const HEADER_PRIMARY: NavKey[] = ['dashboard', 'incoming', 'inventory', 'board', 'bookings', 'outreach', 'profile']
 
 export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, children, dark: darkDefault, mobileImmersive, sidebar }:
   { title: string; subtitle?: string; onAdd?: () => void; filterBar?: React.ReactNode; mobileActions?: React.ReactNode; children: React.ReactNode; dark?: boolean; mobileImmersive?: boolean
@@ -507,6 +510,9 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const normalizedPath = pathname.replace(/^\/crm(?=\/|$)/, '') || '/'
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
+  // Pending count on the Incoming entry: staff only, refreshed while ARGUS is open.
+  const intake = useIntakeSummary(60_000, items.some(i => i.key === 'incoming') && (me?.role === 'admin' || me?.role === 'agent'))
+  const pendingIntake = intake?.counts.needs_verification || 0
   const [moreOpen, setMoreOpen] = useState(false)
   const [navigationCompact, setNavigationCompact] = useState(false)
   const contentRef = useRef<HTMLElement>(null)
@@ -549,7 +555,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
     const Icon = NAV_ICONS[item.key]
     return item.disabled
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
-      : <Link key={item.key} className="crm-nav-item" title={item.label} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}</Link>
+      : <Link key={item.key} className="crm-nav-item" title={item.label} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}{item.key === 'incoming' && pendingIntake > 0 && <span className="crm-nav-count" aria-label={`${pendingIntake} waiting for verification`}>{pendingIntake}</span>}</Link>
   }
   return <div className={`crm-workspace${mobileImmersive ? ' crm-mobile-immersive' : ''}${sidebar ? ' crm-has-sidebar-slot' : ''}${navigationCompact ? ' crm-navigation-compact' : ''}${moreOpen ? ' crm-menu-cloud-open' : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
@@ -585,7 +591,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation" data-compact={navigationCompact || undefined}>
       <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Show mobile navigation" tabIndex={navigationCompact ? 0 : -1}><span /></button>
-      {items.filter(i => !i.disabled).slice(0, 4).map(item => {
+      {items.filter(i => !i.disabled && i.key !== 'incoming').slice(0, 4).map(item => {
         const Icon = NAV_ICONS[item.key]
         const current = active(item.href)
         const primaryMap = item.key === 'board' && current

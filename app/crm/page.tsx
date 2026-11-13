@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Brain, Presentation } from 'lucide-react'
 import { crmFetch } from '@/lib/crm/api'
+import { PropertiesOfTheDay } from '@/components/crm/properties-of-the-day'
+import './intake.css'
 import {
   CrmProvider, CrmShell, DTEXT_FAINT, F, FM, fmtDate, useCrm, glowFor,
 } from '@/lib/crm/ui'
@@ -39,6 +41,8 @@ function Dashboard() {
             )
           })}
         </div>
+
+        <PropertiesOfTheDay />
 
         <section className="crm-dashboard-panel" aria-labelledby="recent-activity-title">
           <h2 id="recent-activity-title" className="crm-dashboard-eyebrow">Recent activity feed</h2>

@@ -8,6 +8,14 @@ import {
   DCARD, DCARD_BORDER, DTRAY, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
 } from '@/lib/crm/ui'
 import { RentalModeBadges, UntilLine, RentalTabs } from '@/components/crm/rental-modes'
+import { useIntakeSummary } from '@/lib/crm/intake'
+import '../intake.css'
+
+// Incoming Properties (2026-11-13): content not yet confirmed by Olga or an administrator.
+const pendingVerification = (p: any) => !!p.verification && p.verification.status !== 'verified' && p.availableStatus !== 'archived'
+const VerifyBadge = ({ p }: { p: any }) => pendingVerification(p)
+  ? <a className="inv-verify-badge" href={`/incoming?id=${p.id}`} onClick={e => e.stopPropagation()} title={p.verification.note || 'Uploaded via WhatsApp; facts not yet confirmed'}>⚠ {p.verification.status === 'needs_correction' ? 'FIX' : 'VERIFY'}</a>
+  : null
 
 export default function InventoryPage() {
   return <CrmProvider><Inventory /></CrmProvider>
@@ -26,7 +34,7 @@ function Inventory() {
   const [locations, setLocations] = useState<string[]>([])
   const [ownerPanel, setOwnerPanel] = useState<number | null>(null)
   const [f, setF] = useState<any>({ town: '', beds: '', status: '', viewing: '', agent: '', price: '', only_mine: false, exclusive: false, only_favourites: false, sublet: false, rental: '' })
-  const [inventoryView, setInventoryView] = useState<'live' | 'drafts' | 'all'>('live')
+  const [inventoryView, setInventoryView] = useState<'live' | 'drafts' | 'all' | 'verify'>('live')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   // Kev, 2026-09-04: ~50 empty/ref-less listings went out again -- admins
   // need to clear bad inventory in bulk, not one property-detail-page at a
@@ -79,20 +87,22 @@ function Inventory() {
     if (f.exclusive) q.set('exclusive', '1')
     if (f.only_favourites) q.set('only_favourites', '1')
     if (f.sublet) q.set('sublet', '1')
+    if (inventoryView === 'verify') q.set('verification', 'pending')
     if (f.rental) q.set('rental_mode', f.rental)   // Long / Winter / Short tab (2026-09-21) — server filters on effective modes
     if (f.price) {
       const [mn, mx] = f.price.split('-')
       if (mn) q.set('price_min', mn); if (mx) q.set('price_max', mx)
     }
     crmFetch(`properties?${q.toString()}`).then(d => { if (myReq !== reqRef.current) return; setRows(d.properties || []); setTotal(d.total || 0) }).catch(() => {})
-  }, [f])
+  }, [f, inventoryView === 'verify'])
   useEffect(() => { load() }, [load])
 
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }))
   const liveRows = rows.filter(p => p.published)
   const draftRows = rows.filter(p => !p.published)
-  const visibleRows = inventoryView === 'live' ? liveRows : inventoryView === 'drafts' ? draftRows : rows
-  const changeInventoryView = (next: 'live' | 'drafts' | 'all') => { setInventoryView(next); setSelected(new Set()) }
+  const intakeSummary = useIntakeSummary(60_000, me?.role === 'admin' || me?.role === 'agent')
+  const visibleRows = inventoryView === 'live' ? liveRows : inventoryView === 'drafts' ? draftRows : inventoryView === 'verify' ? rows.filter(pendingVerification) : rows
+  const changeInventoryView = (next: 'live' | 'drafts' | 'all' | 'verify') => { setInventoryView(next); setSelected(new Set()) }
   const activeFilterCount = [f.rental, f.town, f.beds, f.price, f.status, f.viewing, f.agent, f.only_mine, f.exclusive, f.sublet, f.only_favourites].filter(Boolean).length
 
   const filterControls = (
@@ -116,7 +126,7 @@ function Inventory() {
   const filterBar = (
     <div className="inventory-filterbar">
       <div style={{ display: 'inline-flex', padding: 3, gap: 3, borderRadius: 9, border: `1px solid ${DBORDER}`, background: DTRAY }} aria-label="Inventory sections">
-        {([['live', 'Live', liveRows.length], ['drafts', 'Drafts', draftRows.length], ['all', 'All', rows.length]] as const).map(([key, label, count]) => {
+        {([['live', 'Live', liveRows.length], ['drafts', 'Drafts', draftRows.length], ['all', 'All', rows.length], ['verify', '⚠ Pending verification', intakeSummary?.counts.needs_verification ?? rows.filter(pendingVerification).length]] as const).map(([key, label, count]) => {
           const active = inventoryView === key
           return <button key={key} type="button" aria-pressed={active} onClick={() => changeInventoryView(key)} style={{ border: 0, borderRadius: 6, padding: '5px 9px', background: active ? A : 'transparent', color: active ? '#151C2C' : DTEXT_DIM, fontFamily: F, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label} <span style={{ opacity: .72 }}>{count}</span></button>
         })}
@@ -128,7 +138,7 @@ function Inventory() {
   )
 
   return (
-    <CrmShell title="Property Inventory" subtitle={`${visibleRows.length} ${inventoryView === 'live' ? 'live' : inventoryView} shown · ${rows.length} loaded · ${total} total`} onAdd={() => router.push('/property/new')} filterBar={filterBar} dark>
+    <CrmShell title="Property Inventory" subtitle={`${visibleRows.length} ${inventoryView === 'live' ? 'live' : inventoryView === 'verify' ? 'pending verification' : inventoryView} shown · ${rows.length} loaded · ${total} total`} onAdd={() => router.push('/property/new')} filterBar={filterBar} dark>
       {ownerPanel != null && <OwnerPanel ownerId={ownerPanel} onClose={() => setOwnerPanel(null)} />}
       {isAdmin && selected.size > 0 && (
         <div style={{ position: 'sticky', top: 0, zIndex: 6, display: 'flex', alignItems: 'center', gap: 10, background: DTRAY, borderBottom: `1px solid ${DBORDER}`, color: DTEXT, padding: '9px 16px', fontFamily: F, fontSize: 12 }}>
@@ -194,6 +204,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
                 {p.published
                   ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE ↗</span>
                   : <span style={{ fontSize: 9, background: DTRAY, border: `1px solid ${DBORDER}`, color: DTEXT_FAINT, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
+                <VerifyBadge p={p} />
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 {p.exclusive && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--crm-accent)', background: AD, border: `1px solid ${AB}`, borderRadius: 4, padding: '2px 6px' }}>🔒 EXCL</span>}
@@ -318,6 +329,7 @@ function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, o
                 {p.published
                   ? <span style={{ fontSize: 9, background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>LIVE</span>
                   : <span style={{ fontSize: 9, background: DTRAY, border: `1px solid ${DBORDER}`, color: DTEXT_FAINT, borderRadius: 4, padding: '1px 5px', fontFamily: F, fontWeight: 700 }}>DRAFT</span>}
+                <VerifyBadge p={p} />
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: DTEXT, fontFamily: F, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><span>{p.location.town} · {p.type}</span><RentalModeBadges modes={p.rentalModes} availableUntil={p.availableUntil} /></div>
               {p.location.street && <div style={{ fontSize: 10, color: DTEXT_FAINT, fontFamily: F, marginTop: 1 }}>{p.location.street}</div>}
