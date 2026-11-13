@@ -1351,6 +1351,73 @@ async function cancelPlan(planId) {
   await logTransition(planId, plan.rows[0]?.status, 'cancelled', 'cancelled_by_user', 'admin')
 }
 
+// Cancelling is intentionally terminal for automation, but it must not make
+// the account/date row unusable forever. Reopening is an explicit operator
+// action and is safe only while this plan has never sent a contact. It keeps
+// the preview/message, clears execution state, and never arms or schedules a
+// job. A repeated request is idempotent so a retried browser request cannot
+// turn into a second state transition.
+async function reopenPlan(planId, actor = 'admin') {
+  const client = await db.connect()
+  let fromState = null
+  let reopened = false
+  try {
+    await client.query('BEGIN')
+    const current = (await client.query(
+      `SELECT * FROM outreach_plans WHERE id = $1 FOR UPDATE`, [planId])).rows[0]
+    if (!current) {
+      const err = new Error('plan not found')
+      err.code = 'plan_not_found'
+      err.status = 404
+      throw err
+    }
+
+    // Treat a retry after a successful reopen as success, but do not mutate
+    // any other live/terminal state through this endpoint.
+    if (['draft', 'saved'].includes(current.status) && !current.armed && !current.job_id) {
+      await client.query('COMMIT')
+      return getPlanWithEntries(planId)
+    }
+    if (current.status !== 'cancelled') {
+      const err = new Error('only a cancelled plan can be reopened')
+      err.code = 'plan_not_reopenable'
+      err.status = 409
+      throw err
+    }
+
+    const sent = Number((await client.query(
+      `SELECT COUNT(*)::int AS total
+         FROM outreach_plan_entries
+        WHERE plan_id = $1 AND send_status = 'sent'`, [planId])).rows[0]?.total || 0)
+    if (sent > 0 || Number(current.accepted_count || 0) > 0) {
+      const err = new Error('a plan with sent contacts cannot be reopened')
+      err.code = 'plan_has_sent_contacts'
+      err.status = 409
+      throw err
+    }
+
+    fromState = current.status
+    await client.query(
+      `UPDATE outreach_plans SET
+         status = 'draft', armed = FALSE, job_id = NULL,
+         outcome = NULL, outcome_reason = NULL,
+         accepted_count = 0, failed_count = 0, skipped_count = 0,
+         dispatch_started_at = NULL, executed_at = NULL, retry_attempt = 0,
+         updated_at = NOW()
+       WHERE id = $1`, [planId])
+    await client.query('COMMIT')
+    reopened = true
+  } catch (err) {
+    try { await client.query('ROLLBACK') } catch (_) {}
+    throw err
+  } finally {
+    client.release()
+  }
+
+  if (reopened) await logTransition(planId, fromState, 'draft', 'reopened_by_user', actor)
+  return getPlanWithEntries(planId)
+}
+
 // A plan whose own session is down, or whose send attempt crashed before any
 // message went out, is NOT the same as a plan nobody wants any more — it
 // stays ARMED (visibly, as 'blocked_session') and gets a bounded, spaced
@@ -1820,7 +1887,7 @@ module.exports = {
   saveAllPrepared, setAutoEnabled, maintainAutoSchedules, dayDisplayState, setRotationTemplate,
   listAccounts, setAccountVolume, ensurePlan, getPlanWithEntries, listRollingPlans, computeStats,
   setMessageTemplate, addEntriesFromPaste, generateList, removeEntry, clearEntries, regenerate,
-  saveDraft, armPlan, pausePlan, cancelPlan, runScheduledPlan, accountCooldown,
+  saveDraft, armPlan, pausePlan, cancelPlan, reopenPlan, runScheduledPlan, accountCooldown,
   setAccountRestriction,
   reconcileOverdueArmedPlans, reconcilePlanFromBatch, reconcilePlanFromRun,
   checkDuplicatesGlobal, todayContactedSummary,

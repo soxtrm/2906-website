@@ -803,6 +803,17 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
   async function pause() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/pause`, 'POST', {}); await refresh() } finally { setBusy(false) } }
   async function cancel() { if (!activePlan) return; setBusy(true); try { await crmJson(`outreach/plans/${activePlan.id}/cancel`, 'POST', {}); await refresh() } finally { setBusy(false) } }
+  async function reopen() {
+    if (!activePlan) return
+    setBusy(true); setNote('')
+    try {
+      await crmJson(`outreach/plans/${activePlan.id}/reopen`, 'POST', {})
+      await refresh(activePlan.id)
+      setNote(`${dayLabelText(activeLabel)} reopened as an editable draft. Nothing was armed or sent.`)
+    } catch (e: any) {
+      setNote(e?.message || 'Failed to reopen this plan')
+    } finally { setBusy(false) }
+  }
 
   async function saveVolume() {
     const pace = Number(paceDraft)
@@ -864,6 +875,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
   const s = activePlan?.stats
   const isCompleted = activePlan?.status === 'completed'
+  const isCancelled = activePlan?.status === 'cancelled'
+  const isTerminal = isCompleted || isCancelled
   const displayName = accountDisplayName(account)
   const initials = displayName.slice(0, 1).toUpperCase()
 
@@ -997,7 +1010,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
                 <label key={label} className={checked ? 'is-checked' : ''}>
                   <input type="checkbox" checked={checked} disabled={busy} onChange={() => togglePrepareDay(label)} />
                   <span>{dayLabelText(label)}</span>
-                  <small>{outreachTimeLabel(plan?.scheduled_at || null) || (plan?.armed ? 'Armed · kept' : plan?.status === 'completed' ? 'Done · kept' : plan?.stats?.total ? `${plan.stats.eligible} queued · kept` : 'Empty draft')}</small>
+                  <small>{plan?.status === 'cancelled' ? 'Cancelled · reopen first' : outreachTimeLabel(plan?.scheduled_at || null) || (plan?.armed ? 'Armed · kept' : plan?.status === 'completed' ? 'Done · kept' : plan?.stats?.total ? `${plan.stats.eligible} queued · kept` : 'Empty draft')}</small>
                 </label>
               )
             })}
@@ -1018,6 +1031,14 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           <div style={{ color: 'var(--crm-success)', fontWeight: 700, fontSize: 12.5 }}>✓ OUTREACH COMPLETED</div>
           <div style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>{s?.sent} sent · {s?.skip} skipped</div>
           {activePlan?.scheduled_at && <div style={{ fontSize: 11, color: FAINT, marginTop: 2 }}>Finished around {maltaHM(new Date(activePlan.scheduled_at))}</div>}
+        </div>
+      ) : isCancelled ? (
+        <div style={{ background: EDITOR, border: `1px solid ${HAIRLINE}`, borderRadius: 12, padding: 16 }}>
+          <div style={{ color: 'var(--crm-danger)', fontWeight: 700, fontSize: 12.5 }}>THIS PLAN IS CANCELLED</div>
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>Reopen {dayLabelText(activeLabel)} to edit this queue or create a new list. Reopening does not arm or send anything.</div>
+          <button disabled={busy} onClick={reopen} style={{ ...btnPrimary(accent), marginTop: 12 }}>
+            {busy ? 'Reopening…' : `Reopen ${dayLabelText(activeLabel)}`}
+          </button>
         </div>
       ) : (
         <textarea
@@ -1045,7 +1066,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       {note && <div style={{ fontSize: 11, color: accent.a }}>{note}</div>}
 
       {/* generate row */}
-      {!isCompleted && (
+      {!isTerminal && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             disabled={busy || account.operationalStatus === 'restricted' || !activePlan} onClick={() => autoRun([activeLabel])}
@@ -1068,7 +1089,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         ? `Persona rotation · variant ${activePlan.template_slot ?? '—'}. The greeting and closing are chosen at the moment of sending (Malta time). Editing the text below switches this day to your own wording.`
         : 'Your own wording. A leading greeting and the closing are corrected to the Malta time of sending.'}</p>
       {/* message + save */}
-      {!isCompleted && (
+      {!isTerminal && (
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => setMsgOpen(o => !o)} style={{ ...btnGhost, flex: 1, borderColor: activePlan?.message_template ? accent.a : HAIRLINE }}>
             ✏️ Message {activePlan?.message_template ? '· set' : '· empty'}
@@ -1076,7 +1097,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           <button disabled={busy} onClick={saveDraft} style={{ ...btnGhost, flex: 1 }}>Save Draft</button>
         </div>
       )}
-      {msgOpen && !isCompleted && (
+      {msgOpen && !isTerminal && (
         <div style={{ background: EDITOR, border: `1px solid ${accent.glow}`, borderRadius: 12, padding: 10, position: 'relative' }}>
           <textarea value={msgDraft} onChange={e => setMsgDraft(e.target.value)} placeholder="Hi [name], quick check on your property…" style={{ width: '100%', background: 'transparent', border: 'none', color: TEXT, fontFamily: F, fontSize: 12.5, resize: 'vertical', height: 80, outline: 'none' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, marginTop: 6 }}>
@@ -1107,7 +1128,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       </section>
       <section className="queue-release"><h3><Clock3 size={17} /> Release window <span>03</span></h3><p className="queue-help">Malta time · sends only 08:30–19:30, max 40 owners per account per day. Each eligible day starts 15 minutes later. When the cutoff is reached, that day is skipped and the next eligible day resets to the saved baseline. Owner checks run again before every message.</p>
       {/* schedule / arm */}
-      {!isCompleted && (
+      {!isTerminal && (
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Outreach Plan</span>

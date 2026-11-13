@@ -862,6 +862,18 @@ router.post('/outreach/plans/:planId/cancel', auth, adminOnly, async (req, res) 
   }
 })
 
+router.post('/outreach/plans/:planId/reopen', auth, adminOnly, async (req, res) => {
+  try {
+    const plan = await outreachPlanner.reopenPlan(
+      parseInt(req.params.planId),
+      req.agent?.username || req.user?.username || 'admin')
+    res.json({ ok: true, plan })
+  } catch (err) {
+    log.error('crm/outreach/reopen error', err)
+    res.status(err.status || 500).json({ error: err.message || 'Failed to reopen plan', code: err.code || 'reopen_failed' })
+  }
+})
+
 router.get('/outreach/duplicates', auth, adminOnly, async (req, res) => {
   try {
     res.json({ conflicts: await outreachPlanner.checkDuplicatesGlobal() })

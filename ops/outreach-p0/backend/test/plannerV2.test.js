@@ -53,6 +53,64 @@ test.beforeEach(async () => {
   await seedPool()
 })
 
+test('cancelled zero-send plan can be explicitly reopened as an unarmed editable draft', async () => {
+  const acc = await gabriela()
+  const p = await P.ensurePlan(acc.id, '2026-11-24', 'test')
+  await P.setMessageTemplate(p.id, 'Quick availability check.')
+  await P.generateList(p.id, 7)
+  const before = await P.getPlanWithEntries(p.id)
+  assert.equal(before.entries.length, 7)
+
+  await P.cancelPlan(p.id)
+  const cancelled = await plan(p.id)
+  assert.equal(cancelled.status, 'cancelled')
+  assert.equal(cancelled.armed, false)
+  await assert.rejects(() => P.generateList(p.id, 7), err => err.code === 'plan_not_editable')
+
+  const reopened = await P.reopenPlan(p.id, 'test-admin')
+  assert.equal(reopened.status, 'draft')
+  assert.equal(reopened.armed, false)
+  assert.equal(reopened.job_id, null)
+  assert.equal(reopened.outcome, null)
+  assert.equal(reopened.outcome_reason, null)
+  assert.equal(reopened.message_template, 'Quick availability check.')
+  assert.equal(reopened.entries.length, 7, 'the preview is preserved for editing')
+  assert.equal(H.sent.length, 0, 'reopening never sends')
+
+  const regenerated = await P.generateList(p.id, 5)
+  assert.equal(regenerated.added, 5, 'the same account/date row is editable again')
+  const transition = (await H.db.query(
+    `SELECT from_state, to_state, reason, actor
+       FROM outreach_plan_transitions
+      WHERE plan_id=$1 AND reason='reopened_by_user'`, [p.id])).rows
+  assert.deepEqual(transition, [{ from_state: 'cancelled', to_state: 'draft', reason: 'reopened_by_user', actor: 'test-admin' }])
+
+  const retry = await P.reopenPlan(p.id, 'test-admin')
+  assert.equal(retry.status, 'draft', 'a retried browser request is idempotent')
+  const transitionCount = Number((await H.db.query(
+    `SELECT COUNT(*)::int AS n FROM outreach_plan_transitions
+      WHERE plan_id=$1 AND reason='reopened_by_user'`, [p.id])).rows[0].n)
+  assert.equal(transitionCount, 1)
+})
+
+test('cancelled plan with a sent contact remains terminal and cannot be reopened', async () => {
+  const acc = await gabriela()
+  const p = await P.ensurePlan(acc.id, '2026-11-24', 'test')
+  await H.db.query(
+    `INSERT INTO outreach_plan_entries(plan_id, normalized_phone, eligibility_status, send_status, sent_at)
+     VALUES ($1, '35679999991', 'eligible', 'sent', NOW())`, [p.id])
+  await H.db.query(
+    `UPDATE outreach_plans
+        SET status='cancelled', armed=FALSE, accepted_count=1, outcome='cancelled', outcome_reason='cancelled_by_user'
+      WHERE id=$1`, [p.id])
+
+  await assert.rejects(
+    () => P.reopenPlan(p.id, 'test-admin'),
+    err => err.code === 'plan_has_sent_contacts' && err.status === 409)
+  assert.equal((await plan(p.id)).status, 'cancelled')
+  assert.equal(H.sent.length, 0)
+})
+
 test('A: a paused/skipped day is not executed — the next run starts at the base time, nothing counted', async () => {
   const acc = await gabriela()
   await A.saveConfig(acc.id, { ...BASE, enabled: true }, 'test', at('2026-11-22', '20:00'))
