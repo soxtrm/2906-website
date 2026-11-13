@@ -14,6 +14,8 @@ host, expected = sys.argv[1:]
 if not re.fullmatch(r'2906-website-6zbi-[a-z0-9]+-kevinsony1-9794s-projects\.vercel\.app', host):
     raise SystemExit('Unexpected deployment host')
 config = Path('/etc/caddy/Caddyfile')
+if not Path('/etc/caddy/nexus-brain-upstream-header.caddy').is_file():
+    raise SystemExit('Missing server-only Vercel automation credential')
 before = config.read_bytes()
 digest = lambda data: hashlib.sha256(data).hexdigest()
 if digest(before) != expected:
@@ -28,8 +30,12 @@ block = f'''\t# BEGIN NEXUS BRAIN PRIVATE ROUTE
 \t# Only this private presentation and its build assets use the pinned release.
 \t@nexus_brain path /rating /rating/* /nexus-brain/* /_next/static/*
 \thandle @nexus_brain {{
+\t\t@brain_cookie_request query x-vercel-set-bypass-cookie=*
+\t\trespond @brain_cookie_request 400
 \t\treverse_proxy https://{host} {{
 \t\t\theader_up Host {host}
+\t\t\theader_up -x-vercel-set-bypass-cookie
+\t\t\timport /etc/caddy/nexus-brain-upstream-header.caddy
 \t\t}}
 \t\theader X-Robots-Tag "noindex, nofollow, noarchive"
 \t\theader Cache-Control "private, no-store"

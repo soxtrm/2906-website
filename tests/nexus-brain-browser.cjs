@@ -110,6 +110,27 @@ async function run() {
   await page.evaluate(()=>scrollTo(0,0));await sleep(300);
   const metrics=await page.evaluate(async()=>{const nav=performance.getEntriesByType('navigation')[0];const frames=[];await new Promise(resolve=>{let last=performance.now();const tick=t=>{frames.push(t-last);last=t;if(frames.length<120)requestAnimationFrame(tick);else resolve();};requestAnimationFrame(tick);});return{loadMs:Math.round(nav.loadEventEnd),domContentLoadedMs:Math.round(nav.domContentLoadedEventEnd),medianFrameMs:frames.sort((a,b)=>a-b)[60],jsDecodedBytes:performance.getEntriesByType('resource').filter(r=>r.initiatorType==='script').reduce((sum,r)=>sum+r.decodedBodySize,0),webglCanvases:document.querySelectorAll('canvas').length};});
   check('headless mobile performance sample',metrics);
+  const cdp=await page.createCDPSession();
+  await cdp.send('Emulation.setCPUThrottlingRate',{rate:4});
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions',{offline:false,latency:150,downloadThroughput:200000,uploadThroughput:96000});
+  await page.setCacheEnabled(false);
+  await page.goto(origin+'/rating',{waitUntil:'networkidle0'});
+  const cold=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return {loadMs:Math.round(n.loadEventEnd),domContentLoadedMs:Math.round(n.domContentLoadedEventEnd),decodedJsBytes:performance.getEntriesByType('resource').filter(r=>r.initiatorType==='script').reduce((sum,r)=>sum+r.decodedBodySize,0)}});
+  await page.tap('.case-tabs button:nth-child(2)');await page.waitForSelector('.wait-scene');
+  assert.match(await page.$eval('.wait-scene',el=>el.textContent),/30min/);
+  await page.tap('.mode-tabs button:last-child');assert.match(await page.$eval('.radar-score',el=>el.textContent),/Delivery/);
+  await page.tap('.reactions button:last-child');await page.tap('.question-block .reason-chips button:first-child');
+  assert.match(await page.$eval('.interview',el=>el.textContent),/Was it the salami/);
+  await page.$eval('#rating-input',el=>el.scrollIntoView({block:'center'}));
+  await page.focus('#rating-input');const beforeKey=await page.$eval('#rating-input',el=>Number(el.value));
+  await page.keyboard.press('ArrowRight');assert.equal(await page.$eval('#rating-input',el=>Number(el.value)),Math.round((beforeKey+.1)*10)/10);
+  await page.$eval('.mode-tabs',el=>el.scrollIntoView({block:'center'}));
+  await page.evaluate(()=>{window.brainTapLatency=null;document.querySelector('.mode-tabs button').addEventListener('click',event=>requestAnimationFrame(()=>window.brainTapLatency=performance.now()-event.timeStamp),{once:true})});
+  await page.tap('.mode-tabs button');await page.waitForFunction(()=>window.brainTapLatency!==null);
+  const tapLatencyMs=Math.round(await page.evaluate(()=>window.brainTapLatency));
+  const heap=await page.metrics();
+  check('cold mobile simulation and actual touch/keyboard actions',{...cold,cpuSlowdown:4,network:'1.6 Mbps down / 150ms latency',tapToNextFrameMs:tapLatencyMs,jsHeapMiB:Math.round(heap.JSHeapUsedSize/1024/1024*10)/10});
   assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);check('no browser exceptions and zero outgoing mutations');
   fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({at:new Date().toISOString(),browser:await browser.version(),environment:'Local production build, loopback identity fixture; desktop CPU, mobile viewports, not physical-device benchmark',results,errors,writes},null,2));
 }

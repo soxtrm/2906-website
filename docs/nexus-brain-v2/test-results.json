@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-13T22:57:07.179Z",
+  "at": "2026-11-13T23:11:41.943Z",
   "browser": "Chrome/147.0.7727.57",
   "environment": "Local production build, loopback identity fixture; desktop CPU, mobile viewports, not physical-device benchmark",
   "results": [
@@ -118,11 +118,22 @@
     {
       "name": "headless mobile performance sample",
       "status": "PASS",
-      "loadMs": 33,
+      "loadMs": 34,
       "domContentLoadedMs": 27,
       "medianFrameMs": 4.199999999998909,
       "jsDecodedBytes": 601338,
       "webglCanvases": 0
+    },
+    {
+      "name": "cold mobile simulation and actual touch/keyboard actions",
+      "status": "PASS",
+      "loadMs": 3621,
+      "domContentLoadedMs": 1339,
+      "decodedJsBytes": 601338,
+      "cpuSlowdown": 4,
+      "network": "1.6 Mbps down / 150ms latency",
+      "tapToNextFrameMs": 27,
+      "jsHeapMiB": 7.7
     },
     {
       "name": "no browser exceptions and zero outgoing mutations",

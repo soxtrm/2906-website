@@ -32,6 +32,8 @@ Create a versioned Vercel deployment of the existing project with `--prod --skip
 
 The script validates a candidate, refuses concurrent config changes, saves an exact timestamped backup, reloads Caddy gracefully, and restores the original if reload fails. Release receipt is `/etc/caddy/nexus-brain-release.json`. To remove this feature without disturbing later edits, remove only the marked BEGIN/END NEXUS BRAIN PRIVATE ROUTE block, validate, then reload. Restore the exact full backup only if the current config hash still equals the release receipt's after hash.
 
+Vercel Deployment Protection stays enabled. The existing automation credential is kept only in `/etc/caddy/nexus-brain-upstream-header.caddy` (root:caddy, 0640) and forwarded to the single pinned upstream over TLS; it is never sent to the browser or committed. The application still checks the admin session. Client requests for a Vercel bypass cookie are rejected/stripped. Rotating that existing credential requires updating this server-only file and revalidating Caddy.
+
 ## Remaining limits
 
 This is a functioning private concept presentation, not a deployed ratings engine. Device measurements are headless Chromium mobile viewports on a desktop CPU, not physical phone GPU benchmarks. External authenticated founder access requires an existing ARGUS admin account. No admin password is created, changed or captured. Backend identity transport follows the existing CRM HTTP upstream; a future shared-auth HTTPS migration is separate work.

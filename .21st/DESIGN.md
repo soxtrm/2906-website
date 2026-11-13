@@ -139,3 +139,11 @@ Generated from project sources at 2026-10-15T14:06:20.479Z.
 - Use Mapbox Dark v11 for both the Link Matrix embed and the direct 3D map entry point.
 - Keep sunrise, day and sunset within the dark graphite material system; time changes can adjust atmosphere without returning the ground, roads, water or architecture to pale surfaces.
 - Preserve mapped geometry, labels, road guidance, interaction and accessibility while changing the visual surface treatment.
+
+## NEXUS BRAIN private presentation
+
+- `/rating` is a hidden admin-only presentation; no public navigation or sitemap entry.
+- Scope navy `#09131b`, ivory `#f3eee4`, champagne `#e7c791` and mint `#a5d1bb` to `.brain`. Use editorial serif emphasis with a restrained sans-serif interface.
+- Realistically rendered fictional food photography, soft orbital depth, thin connectors and compact controls replace abstract dashboard cards. Food, time and specific operational observations lead the story.
+- Use CSS/Framer Motion already in the project; no WebGL runtime. Pause offscreen/background animation, honor reduced motion and retain direct touch/keyboard controls.
+- Catalog access returned 401; the orbital composition is original code informed by https://docs.21st.dev/@jatin-yadav05/components/radial-orbital-timeline. CLI review has no errors and three informational color findings consistent with this palette.

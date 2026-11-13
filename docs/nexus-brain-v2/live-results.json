@@ -1,0 +1,64 @@
+{
+  "at": "2026-11-13T23:08:55.102Z",
+  "origin": "https://nexuslink.fit",
+  "results": [
+    {
+      "name": "live anonymous HTML protected",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "live anonymous RSC protected",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "live invalid session HTML protected",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "live invalid session RSC protected",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "client cannot request platform bypass cookie",
+      "status": "PASS"
+    },
+    {
+      "name": "canonical login reachable and rejects missing credentials",
+      "status": "PASS",
+      "http": 400
+    },
+    {
+      "name": "existing route preserved /",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "existing route preserved /anima",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "existing route preserved /robots.txt",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "existing route preserved /sitemap.xml",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "live HTTPS sign-in 1440px with styles and scripts",
+      "status": "PASS"
+    },
+    {
+      "name": "live HTTPS sign-in 390px with styles and scripts",
+      "status": "PASS"
+    }
+  ],
+  "limitation": "Live admin login not exercised: no founder password or session was requested or captured. Authorized interaction evidence uses actual local production build with loopback identity fixture."
+}
