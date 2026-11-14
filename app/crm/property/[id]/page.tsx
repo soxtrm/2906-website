@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { CrmProvider, CrmShell, Masked, Pill, Bar, Heart, LocationSelect, AVAIL, VIEW, A, AD, AB, F, FM, fmtMoney, fmtDate, useCrm, describe } from '@/lib/crm/ui'
 import { RentalModePicker, RentalModeBadges, UntilLine } from '@/components/crm/rental-modes'
+import { FacebookListingPanel } from '@/components/crm/facebook/listing-action'
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -206,6 +207,9 @@ function Detail({ id }: { id: number }) {
                   </div>
                 )}
               </div>
+
+              {/* Facebook Business Page publishing (listing agent / admin only) */}
+              <FacebookListingPanel p={p} />
 
               {/* editable fields */}
               <div style={card}>

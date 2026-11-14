@@ -96,9 +96,14 @@ async function openPage(browser, { path = '/crm/schedule-board', theme = 'light'
       const path = url.pathname.replace('/api/crm/', '')
       page.crmCalls.push({ method: req.method(), path, body: req.postData() || null })
       if (path === 'me' && fixtures.meDelayMs) await new Promise(r => setTimeout(r, fixtures.meDelayMs))
-      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(respond(fixtures, path, req.method(), req.postData(), url.searchParams)) })
+      const out = respond(fixtures, path, req.method(), req.postData(), url.searchParams)
+      // A route may answer with a non-200 status: return { __status, body }.
+      if (out && out.__status) return req.respond({ status: out.__status, contentType: 'application/json', body: JSON.stringify(out.body) })
+      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(out) })
     }
     if (/maps\.googleapis|mapbox|tiles\./.test(req.url())) return req.respond({ status: 204, body: '' })
+    // Tests never reach Facebook: an OAuth redirect or share link is recorded and stopped here.
+    if (/(^|\.)(facebook\.com|fbcdn\.net)$/.test(url.hostname)) return req.abort()
     req.continue()
   })
   await page.goto(`${BASE}${path}`, { waitUntil: wait, timeout: 180000 })

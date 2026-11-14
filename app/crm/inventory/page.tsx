@@ -9,6 +9,7 @@ import {
 } from '@/lib/crm/ui'
 import { RentalModeBadges, UntilLine, RentalTabs } from '@/components/crm/rental-modes'
 import { useIntakeSummary } from '@/lib/crm/intake'
+import { FacebookListingAction } from '@/components/crm/facebook/listing-action'
 import '../intake.css'
 
 // Incoming Properties (2026-11-13): content not yet confirmed by Olga or an administrator.
@@ -246,6 +247,7 @@ function RowFragment({ p, isOpen, incomplete, tdS, isAdmin, checked, onToggleSel
         <td style={tdS}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <button onClick={() => onOpen(p.id)} style={{ background: AD, border: `1px solid ${AB}`, color: 'var(--crm-accent)', borderRadius: 7, padding: '5px 11px', fontSize: 10, cursor: 'pointer', fontFamily: F, fontWeight: 700 }}>Edit</button>
+            <FacebookListingAction p={p} compact style={{ minHeight: 28, fontSize: 10, borderRadius: 7, padding: '0 9px' }} />
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <span style={{ background: DTRAY, border: `1px solid ${DBORDER}`, borderRadius: 6, padding: '3px 8px', display: 'inline-flex' }}><Heart propertyId={p.id} fav={p.fav} size={13} /></span>
               {[['⏱', 'History'], ['⚑', 'Report']].map(([ico, tip]) => (
@@ -365,6 +367,7 @@ function MobileCard({ p, isAdmin, selected, onToggleSelect, onDelete, onOwner, o
           <div style={{ marginTop: 12, marginBottom: 14 }}><Bar pct={p.completeness} dark /></div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={onOpen} style={{ flex: 1, background: A, color: '#151C2C', border: 'none', borderRadius: 9, padding: '11px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>Open / Edit</button>
+            <FacebookListingAction p={p} style={{ minHeight: 42, borderRadius: 9 }} />
             {isAdmin && (
               <button onClick={onDelete} style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 9, padding: '11px 14px', fontSize: 12, fontWeight: 700, fontFamily: F, cursor: 'pointer' }}>🗑</button>
             )}

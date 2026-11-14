@@ -19,6 +19,7 @@ import { useSearchParams } from 'next/navigation'
 import { ArrowUpRight, BellRing, Building2, CalendarClock, MessageSquareText, Radar, SlidersHorizontal, Sparkles, Target, Wifi } from 'lucide-react'
 import { CrmProvider, CrmShell, useCrm, DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, A, AD, F } from '@/lib/crm/ui'
 import { crmFetch, crmJson } from '@/lib/crm/api'
+import { FacebookIntegrationCard } from '@/components/crm/facebook/integration-card'
 import './profile.css'
 // Dynamically imported inside buildInvoicePdf() instead of a static top-level
 // import: jspdf pulls in fflate's Node build (a dynamic Worker() require)
@@ -405,6 +406,9 @@ function AgentProfilePage() {
 
       {/* ── WhatsApp connection ──────────────────────────────────────────── */}
       <WhatsAppConnectionPanel agentId={agentId!} agent={a} whatsapp={bundle.whatsapp} canSeeFull={canSeeFull} onChange={load} />
+
+      {/* ── Integrations → Facebook Business Pages (own profile only) ───── */}
+      {isSelf && <div style={{ marginBottom: 16 }}><FacebookIntegrationCard /></div>}
 
       {/* ── Notification Engine ──────────────────────────────────────────── */}
       <NotificationEnginePanel agentId={agentId!} bundle={bundle} onChange={load} />
