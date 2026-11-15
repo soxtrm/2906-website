@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils'
 import { PropertyGallery } from './gallery'
 import { PropertyLifeOverview } from '@/components/property-life-overview'
 import { getPropertyLifeOverview } from '@/lib/nexus-property-context'
-import { isPubliclyPlausibleProperty } from '@/lib/public-property-safety'
+import { getPublicProperty } from '@/lib/public-property'
+import type { Property } from '@/lib/types'
 
 const VPS = 'http://178.104.162.193:3001'
 const COMMERCIAL_TYPES = ['Office', 'Retail', 'Warehouse']
@@ -23,53 +24,13 @@ function cleanPropertyTitle(property: Property) {
   return property.location ? `${type} in ${property.location}` : `Selected ${type}`
 }
 
-interface Property {
-  id: string
-  title: string
-  slug: string
-  listingType: string
-  price: number
-  priceAfter: string
-  priceType: string
-  bedrooms: number | null
-  bathrooms: number
-  area: number | null
-  size: number | null
-  propertyType: string
-  category: string
-  region: string
-  location: string
-  status: 'available' | 'viewings' | 'rented'
-  images: string[]
-  summary: string
-  description: string
-  fullDescription: string
-  features: string[]
-  availableFrom: string
-  propertyReference: string
-  localityId?: number | null
-  featured: boolean
-  documents?: Array<{ filename: string; url: string }>
-}
-
-async function getProperty(slug: string): Promise<Property | null> {
-  try {
-    const res = await fetch(`${VPS}/api/properties/${slug}`, { next: { revalidate: 60 } })
-    if (!res.ok) return null
-    const property = await res.json()
-    return isPubliclyPlausibleProperty(property) ? property : null
-  } catch {
-    return null
-  }
-}
-
 export default async function PropertyPage({
   params,
 }: {
   params: Promise<{ slug: string; locale: string }>
 }) {
   const { slug } = await params
-  const property = await getProperty(slug)
+  const property = await getPublicProperty(slug)
 
   if (!property) notFound()
 
@@ -88,7 +49,7 @@ export default async function PropertyPage({
 
   const displaySize = property.size || property.area
 
-  const formatPrice = (price: number, priceAfter: string) => {
+  const formatPrice = (price: number, priceAfter?: string) => {
     const formatted = `€${price.toLocaleString()}`
     if (!priceAfter || priceAfter === 'total') return formatted
     return `${formatted}/${priceAfter.replace('per ', '')}`

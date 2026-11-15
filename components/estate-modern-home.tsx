@@ -32,7 +32,7 @@ import styles from './estate-modern-home.module.css'
 
 type Collection = 'aesthetic' | 'all'
 type SmartPriority = 'weekly-shop' | 'swimming' | 'health' | 'gym'
-type SmartContext = { name: string; distanceKm: number; label: string }
+type SmartContext = { name: string; distanceKm: number; label: string; sourceBasis: 'property' | 'locality' }
 
 const FALLBACK_FEATURES = ['Property facts', 'Local context', 'Human guidance']
 
@@ -110,7 +110,7 @@ function ModernPropertyCard({ property, index, smartContext }: { property: Prope
       {smartContext && <div className={styles.smartContext}>
         <span>SMART FILTER</span>
         <strong>{smartContext.name}</strong>
-        <p><b>{smartContext.distanceKm < 1 ? `${Math.max(50, Math.round(smartContext.distanceKm * 1000 / 50) * 50)} m` : `${smartContext.distanceKm.toFixed(1)} km`}</b> approx. from the area pin</p>
+        <p><b>{smartContext.distanceKm < 1 ? `${Math.max(50, Math.round(smartContext.distanceKm * 1000 / 50) * 50)} m` : `${smartContext.distanceKm.toFixed(1)} km`}</b> {smartContext.sourceBasis === 'locality' ? 'approx. from the locality pin' : 'approx. from the listing’s mapped pin'}</p>
         <small>Powered by Nexus Link</small>
       </div>}
       <div className={styles.cardFooter}>
@@ -129,7 +129,7 @@ function PropertyCollection() {
   const [loading, setLoading] = useState(true)
   const [smartOpen, setSmartOpen] = useState(false)
   const [smartPriority, setSmartPriority] = useState<SmartPriority | null>(null)
-  const [smartContexts, setSmartContexts] = useState<Record<string, SmartContext>>({})
+  const [smartResult, setSmartResult] = useState<{ query: string; contexts: Record<string, SmartContext> } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -160,17 +160,24 @@ function PropertyCollection() {
   }, [all, featured])
 
   const visible = (collection === 'aesthetic' ? aesthetic : all).slice(0, 6)
+  const smartQuery = smartPriority && visible.length
+    ? new URLSearchParams([['priority', smartPriority], ...visible.map(property => ['slug', property.slug])]).toString()
+    : null
+  const smartContexts = smartResult && smartResult.query === smartQuery ? smartResult.contexts : {}
 
   useEffect(() => {
-    const refs = visible.map(property => property.propertyReference).filter(Boolean) as string[]
-    if (!smartPriority || !refs.length) { setSmartContexts({}); return }
-    let active = true
-    fetch(`/api/property-context?priority=${smartPriority}&refs=${encodeURIComponent(refs.join(','))}`)
+    if (!smartQuery) return
+    const request = new AbortController()
+    fetch(`/api/property-context?${smartQuery}`, { signal: request.signal })
       .then(response => response.ok ? response.json() : { contexts: {} })
-      .then(data => { if (active) setSmartContexts(data.contexts || {}) })
-      .catch(() => { if (active) setSmartContexts({}) })
-    return () => { active = false }
-  }, [smartPriority, collection, all, featured])
+      .then(data => {
+        if (!request.signal.aborted) setSmartResult({ query: smartQuery, contexts: data.contexts || {} })
+      })
+      .catch(() => {
+        if (!request.signal.aborted) setSmartResult({ query: smartQuery, contexts: {} })
+      })
+    return () => request.abort()
+  }, [smartQuery])
 
   return (
     <section className={styles.collection} id="collection">
@@ -216,7 +223,7 @@ function PropertyCollection() {
           </div>
         ) : visible.length ? (
           <div className={styles.propertyGrid}>
-            {visible.map((property, index) => <ModernPropertyCard key={property.id} property={property} index={index} smartContext={property.propertyReference ? smartContexts[property.propertyReference] : undefined} />)}
+            {visible.map((property, index) => <ModernPropertyCard key={property.id} property={property} index={index} smartContext={Object.hasOwn(smartContexts, property.slug) ? smartContexts[property.slug] : undefined} />)}
           </div>
         ) : (
           <p className={styles.empty}>{t('empty')}</p>

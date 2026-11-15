@@ -197,51 +197,61 @@ const normaliseArea = (value?: string | null) => String(value || '')
   .trim()
   .toLowerCase()
 
+export function resolvePropertyLifeOverview(
+  data: NexusContext,
+  reference?: string | null,
+  area?: string | null,
+  localityId?: number | null,
+) {
+  const requestedReference = reference?.replace(/^#/, '') || ''
+  const exact = data.properties.find(item => item.id === requestedReference)
+  if (exact && hasCoordinates(exact.coordinates)) {
+    return buildLifeOverview(exact, data.places, { requestedReference, sourceBasis: 'property' })
+  }
+
+  const areaKey = normaliseArea(area)
+  const bindings = (placeBindings as { bindings?: Array<{
+    argus_village_id?: number
+    argus_label?: string
+    public_coordinates?: number[] | null
+  }> }).bindings || []
+  const binding = bindings.find(item => localityId != null && item.argus_village_id === localityId)
+    || bindings.find(item => areaKey && normaliseArea(item.argus_label) === areaKey)
+
+  if (hasCoordinates(binding?.public_coordinates)) {
+    return buildLifeOverview({
+      id: requestedReference,
+      coordinates: binding.public_coordinates,
+      locationDisclosure: 'locality',
+      areaLabel: binding.argus_label || area || undefined,
+    }, data.places, { requestedReference, sourceBasis: 'locality' })
+  }
+
+  // A shared locality pin can stand in for a missing binding. A different
+  // listing's precise coordinates cannot.
+  const locality = data.properties.find(item =>
+    areaKey && normaliseArea(item.areaLabel) === areaKey
+    && item.locationDisclosure === 'locality' && hasCoordinates(item.coordinates),
+  )
+  return locality ? buildLifeOverview(locality, data.places, { requestedReference, sourceBasis: 'locality' }) : null
+}
+
+function hasCoordinates(value?: number[] | null): value is [number, number] {
+  return Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
+    && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90 && (value[0] !== 0 || value[1] !== 0)
+}
+
 export async function getPropertyLifeOverview(reference?: string | null, area?: string | null, localityId?: number | null) {
-  if (!reference) return null
   try {
-    const data = await fetchNexusContext()
-    const requestedReference = reference.replace(/^#/, '')
-    const exact = data.properties.find(item => item.id === requestedReference)
-    if (exact) return buildLifeOverview(exact, data.places, { requestedReference, sourceBasis: 'property' })
-
-    const areaKey = normaliseArea(area)
-    if (!areaKey) return null
-    const requestedTokens = areaKey.split(' ').filter(token => token.length > 1 && token !== 'ta')
-    const locality = data.properties
-      .map(item => ({ item, key: normaliseArea(item.areaLabel) }))
-      .filter(candidate => candidate.key === areaKey || requestedTokens.every(token => candidate.key.split(' ').includes(token)))
-      .sort((a, b) => Math.abs(a.key.length - areaKey.length) - Math.abs(b.key.length - areaKey.length))[0]?.item
-    if (locality) return buildLifeOverview(locality, data.places, { requestedReference, sourceBasis: 'locality' })
-
-    // New website properties can arrive before the periodic Nexus inventory
-    // export. The canonical public locality binding is available immediately,
-    // so build an honestly labelled locality model instead of hiding the whole
-    // Smart Area Brief until the next export catches up.
-    const bindings = (placeBindings as { bindings?: Array<{ argus_village_id?: number; argus_label?: string; public_coordinates?: number[] | null }> }).bindings || []
-    const binding = bindings.find(item => localityId != null && item.argus_village_id === localityId)
-      || bindings
-        .map(item => ({ item, key: normaliseArea(item.argus_label) }))
-        .filter(candidate => candidate.key === areaKey || requestedTokens.every(token => candidate.key.split(' ').includes(token)))
-        .sort((a, b) => Math.abs(a.key.length - areaKey.length) - Math.abs(b.key.length - areaKey.length))[0]?.item
-    if (binding?.public_coordinates?.length === 2) {
-      return buildLifeOverview({
-        id: requestedReference,
-        coordinates: [Number(binding.public_coordinates[0]), Number(binding.public_coordinates[1])],
-        locationDisclosure: 'locality',
-        areaLabel: binding.argus_label || area || 'Malta',
-      }, data.places, { requestedReference, sourceBasis: 'locality' })
-    }
-    return null
+    return resolvePropertyLifeOverview(await fetchNexusContext(), reference, area, localityId)
   } catch {
     return null
   }
 }
 
-export function contextForPriority(property: NexusInventoryProperty, places: NexusPlace[], priority: SmartPriority) {
-  const overview = buildLifeOverview(property, places)
+export function contextForPriority(overview: PropertyLifeOverview, priority: SmartPriority) {
   const categoryKey = priority === 'weekly-shop' ? 'groceries' : priority === 'swimming' ? 'coast' : priority === 'health' ? 'health' : 'movement'
   const category = overview.categories.find(item => item.key === categoryKey)
   const place = category?.places.find(item => priority !== 'weekly-shop' || item.role === 'weekly-shop') || category?.places[0]
-  return place ? { name: place.name, distanceKm: place.distanceKm, label: category?.label || priority } : null
+  return place ? { name: place.name, distanceKm: place.distanceKm, label: category?.label || priority, sourceBasis: overview.sourceBasis } : null
 }

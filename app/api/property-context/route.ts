@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { contextForPriority, fetchNexusContext, type SmartPriority } from '@/lib/nexus-property-context'
+import { contextForPriority, fetchNexusContext, resolvePropertyLifeOverview, type SmartPriority } from '@/lib/nexus-property-context'
+import { getPublicProperty } from '@/lib/public-property'
 
 const priorities = new Set<SmartPriority>(['weekly-shop', 'swimming', 'health', 'gym'])
 
 export async function GET(request: NextRequest) {
   const priority = request.nextUrl.searchParams.get('priority') as SmartPriority | null
-  const refs = (request.nextUrl.searchParams.get('refs') || '').split(',').map(value => value.trim()).filter(Boolean).slice(0, 12)
-  if (!priority || !priorities.has(priority) || !refs.length) return NextResponse.json({ contexts: {} })
+  const slugs = [...new Set(request.nextUrl.searchParams.getAll('slug').filter(Boolean))].slice(0, 12)
+  const headers = { 'Cache-Control': 'no-store' }
+  if (!priority || !priorities.has(priority) || !slugs.length) return NextResponse.json({ contexts: {} }, { headers })
   try {
-    const data = await fetchNexusContext()
-    const contexts = Object.fromEntries(data.properties.filter(property => refs.includes(property.id)).flatMap(property => {
-      const context = contextForPriority(property, data.places, priority)
-      return context ? [[property.id, context]] : []
+    const [data, properties] = await Promise.all([
+      fetchNexusContext(),
+      Promise.all(slugs.map(slug => getPublicProperty(slug, { fresh: true }))),
+    ])
+    const contexts = Object.fromEntries(properties.flatMap(property => {
+      if (!property) return []
+      const overview = resolvePropertyLifeOverview(data, property.propertyReference, property.location, property.localityId)
+      const context = overview && contextForPriority(overview, priority)
+      return context ? [[property.slug, context]] : []
     }))
-    return NextResponse.json({ contexts }, { headers: { 'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=3600' } })
+    return NextResponse.json({ contexts }, { headers })
   } catch {
-    return NextResponse.json({ contexts: {} }, { status: 200 })
+    return NextResponse.json({ contexts: {} }, { headers })
   }
 }
