@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-11-14T08:08:19.978294+00:00",
+  "language": "en",
+  "status": "ASSET VERIFIED — NOT PUBLISHED",
+  "base": "f364a59a342cb70e3b396969c1fa410c12dac455",
+  "preEditHead": "2d5a686a0ea8f39a57deda8744f6a3a2ce1423d7",
+  "preEditHashes": {
+    "TRAVEL_WORKLOG.md": "79f5e5336a7fb64d8d4c250b90cb7cfdb4cb3d366983b338cda703add56f3a75",
+    "docs/village-research/tarxien-research.md": "e584ae69596599071f73eddde5349a36b63565fe6bc91f0da04a7762f362cc0d",
+    "docs/village-research/tarxien-image-candidates.json": "76d4a34d7c49a65b84b0f18a1eba4fd352d8d19c1cb5521fd65a255b81794d55"
+  },
+  "originalEvidenceDirectory": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-originals",
+  "images": [
+    {
+      "title": "File:Tarxien Parish Church.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Tarxien_Parish_Church.jpg",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/1/14/Tarxien_Parish_Church.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "artist": "Grestei",
+      "date": "2016-09-21 08:51:57",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "width": 3000,
+      "height": 3744,
+      "bytes": 1435219,
+      "commonsSha1": "21812f43fc57b724daed8fb567c29dc9672c6566",
+      "sha256": "cc693df5d91f13f349d82fe4219f569ac591b10570bc62703cfce4ae8f49eb69",
+      "originalEvidenceFile": "tarxien-parish-grestei.jpg",
+      "hashAndSizeMatch": true,
+      "fullyDecoded": true,
+      "visualReview": "Complete parish facade, blue sky and side scaffolding; foreground cars have readable number plates. Not selected for unredacted publication.",
+      "decision": "DEFERRED"
+    },
+    {
+      "title": "File:Ħal Tarxien. Knisja 1.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:%C4%A6al_Tarxien._Knisja_1.jpg",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d5/%C4%A6al_Tarxien._Knisja_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "artist": "Enrique Íñiguez Rodríguez (Qoan)",
+      "date": "2017-11-28 16:00:52",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "width": 5908,
+      "height": 3858,
+      "bytes": 10182332,
+      "commonsSha1": "9962f93559dc40542b22e962616bdaba02fa451e",
+      "sha256": "fc9ea40e73575cabf647c5e8ce222fc561d9145b6c79a944c35022e357d4d870",
+      "originalEvidenceFile": "tarxien-parish-qoan.jpg",
+      "hashAndSizeMatch": true,
+      "fullyDecoded": true,
+      "visualReview": "Landscape parish/street view includes readable vehicle plates and overhead wires. Not selected for unredacted publication.",
+      "decision": "DEFERRED"
+    },
+    {
+      "title": "File:At Tarxien temples - East temple 01.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:At_Tarxien_temples_-_East_temple_01.jpg",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/8/8d/At_Tarxien_temples_-_East_temple_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "artist": "Kritzolina",
+      "date": "2019-11-27 16:03:07",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "width": 5472,
+      "height": 3648,
+      "bytes": 10154496,
+      "commonsSha1": "f08049a31b522a24c769909162533da0eea5c688",
+      "sha256": "7c291d4a73d3bf55a35bbf1ebcd21f26c7e5d95ac053a13e58fcf2354ebb08f2",
+      "originalEvidenceFile": "tarxien-east-temple-kritzolina.jpg",
+      "hashAndSizeMatch": true,
+      "fullyDecoded": true,
+      "visualReview": "East Temple masonry under a shelter with modern walkway and boundary wall. Site context only, not a panorama of the town. Tiny partial visitor head at the far right is not recognisable in the inspected derivative; do not claim that the photograph contains no people.",
+      "decision": "SELECTED FOR PRIVATE PREVIEW",
+      "derivative": {
+        "sourceTitle": "File:At Tarxien temples - East temple 01.jpg",
+        "file": "docs/village-research/assets/tarxien-east-temple-kritzolina.webp",
+        "width": 1800,
+        "height": 1200,
+        "bytes": 368128,
+        "sha256": "7c54b167743f754c7175b4f3fd1fc36b154f2085265fa81ea2fe900e6ba399df",
+        "format": "webp",
+        "decoded": true,
+        "embeddedMetadata": false,
+        "conversion": {
+          "sharp": "0.34.5",
+          "webp": "1.6.0",
+          "width": 1800,
+          "quality": 82,
+          "effort": 6,
+          "crop": false,
+          "retouch": false,
+          "generative": false
+        },
+        "visualReviewPassed": true,
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+      }
+    },
+    {
+      "title": "File:Church of St. Augustine Tarxien.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Church_of_St._Augustine_Tarxien.jpg",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Church_of_St._Augustine_Tarxien.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "artist": "Grestei",
+      "date": "2016-09-21 08:34:39",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "width": 2653,
+      "height": 4182,
+      "bytes": 1175148,
+      "commonsSha1": "956f0b7139cead367f2fbb4ebc3375bb9e488eaa",
+      "sha256": "2193f2108233993f6dced1f4c6313b49221f10843823a5a4cdc594fc12bd048d",
+      "originalEvidenceFile": "tarxien-st-augustine-grestei.jpg",
+      "hashAndSizeMatch": true,
+      "fullyDecoded": true,
+      "visualReview": "Augustinian church exterior, bell tower, recessed entrance, steps and street context. No identifiable person, vehicle plate or readable private contact observed. Retain complete portrait; distinguish this church from the Annunciation parish.",
+      "decision": "SELECTED FOR PRIVATE PREVIEW",
+      "derivative": {
+        "sourceTitle": "File:Church of St. Augustine Tarxien.jpg",
+        "file": "docs/village-research/assets/tarxien-augustinian-church-grestei.webp",
+        "width": 1200,
+        "height": 1892,
+        "bytes": 189952,
+        "sha256": "7d5be0ee60c53de65280665ccfdddcf07a8598298610520afdb299ae3c74a6d2",
+        "format": "webp",
+        "decoded": true,
+        "embeddedMetadata": false,
+        "conversion": {
+          "sharp": "0.34.5",
+          "webp": "1.6.0",
+          "width": 1200,
+          "quality": 82,
+          "effort": 6,
+          "crop": false,
+          "retouch": false,
+          "generative": false
+        },
+        "visualReviewPassed": true,
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+      }
+    },
+    {
+      "title": "File:Ħal Tarxien. Knisja 2.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:%C4%A6al_Tarxien._Knisja_2.jpg",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0f/%C4%A6al_Tarxien._Knisja_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "artist": "Enrique Íñiguez Rodríguez (Qoan)",
+      "date": "2017-11-28 16:00:57",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "width": 3868,
+      "height": 5914,
+      "bytes": 8997631,
+      "commonsSha1": "5a1c6b798494f94cf315f2d479907cb427904c7a",
+      "sha256": "294a418bfde4cd989e0240f41700caeff9dd308e1825e0f8f85e0b822ee72bea",
+      "originalEvidenceFile": "tarxien-parish-qoan-portrait.jpg",
+      "hashAndSizeMatch": true,
+      "fullyDecoded": true,
+      "visualReview": "Portrait parish view retains readable foreground vehicle plates and large sky/paving areas. No forced wide crop or retouch prepared.",
+      "decision": "DEFERRED"
+    }
+  ],
+  "identityClarification": {
+    "source": "https://tarxienlc.gov.mt/en/churches-chapels/",
+    "access": "readable through web tool, 14 November 2026",
+    "finding": "The council describes the Augustinian church as dedicated to St Nicholas of Tolentino. Commons uses Church of St. Augustine in its filename, and St Nicholas of Tolentino in structured data. Use Augustinian church of St Nicholas of Tolentino in editorial captions; keep the original file title in provenance. It is not the Annunciation parish.",
+    "inventoryPdfAttempt": {
+      "url": "https://schmalta.mt/wp-content/uploads/2023/08/DC-02050.pdf",
+      "result": "web tool inaccessible; not used as verification evidence"
+    }
+  },
+  "sourcePageChecks": [
+    {
+      "url": "https://commons.wikimedia.org/wiki/File:At_Tarxien_temples_-_East_temple_01.jpg",
+      "result": "Commons file page readable; author, capture date, dimensions, original SHA-1 and CC BY-SA 4.0 verified",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "url": "https://commons.wikimedia.org/wiki/File:Church_of_St._Augustine_Tarxien.jpg",
+      "result": "Commons file page readable; author, capture date, dimensions, original SHA-1 and CC BY-SA 4.0 verified",
+      "checkedOn": "2026-11-14"
+    }
+  ],
+  "publicationRules": [
+    "Visible author, source file page, CC BY-SA 4.0 link, capture date and resize/WebP credit with each image.",
+    "No crop, retouch, colour treatment or generative modification. Web derivatives remain CC BY-SA 4.0.",
+    "Keep full photograph visible at every responsive breakpoint; no wide object-fit cover crop of the portrait.",
+    "Historical images do not prove current access, opening, maintenance, parking, traffic, visitor facilities or property views.",
+    "Site photo and civic church must be explicitly distinguished from each other and neighbouring Paola."
+  ],
+  "remainingGates": [
+    "Original English brochure and private noindex preview",
+    "Actual mobile/desktop framing, attribution and deferred-map browser checks",
+    "Current source refresh, canonical/sitemap/internal links and protected release from actual latest production snapshot"
+  ],
+  "publicChanges": false,
+  "browserPreviewTested": false,
+  "productionDeployment": false,
+  "validation": {
+    "checkedAt": "2026-11-14T08:09:34.759818+00:00",
+    "originalsHashSizeAndFullDecode": "5/5 PASS",
+    "derivativeHashSizeAndFullDecode": "2/2 PASS",
+    "derivativeVisualInspection": "2/2 PASS",
+    "route-segments": "PASS",
+    "property-route-ferry-presentation": "PASS",
+    "matrix-routing": "PASS",
+    "gitDiffCheck": "PASS",
+    "responsiveBrowserPreview": "NOT RUN — no brochure page in this asset step"
+  },
+  "rawEvidenceFiles": {
+    "commons-current.json": "cd7f21bdfc61aa3269e61f2eee299c55426bc838a88ff76f4f45252f9cd814ca",
+    "downloads.json": "1372b5b48e037781267e711e3a37d590da8f09818a73fc5ad14b221a11b2ef80",
+    "decoded.json": "fe608c79770e5d2465f7fe2746ce3f1381051d0af2461e529033ce2a3e4229b9",
+    "derivatives.json": "468e57f5860ac6e5ba61ec1033fbaf681f9f45d45c78c771d0ce844a6c00a516"
+  }
+}

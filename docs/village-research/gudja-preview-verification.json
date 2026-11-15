@@ -1,0 +1,248 @@
+{
+  "status": "PRIVATE PREVIEW VERIFIED — NOT PUBLISHED",
+  "language": "en",
+  "intendedPublicURL": "https://www.2906.estate/link-marketplace/areas/gudja.html",
+  "testedURL": "http://127.0.0.1:8773/gudja-preview.html",
+  "baseline": {
+    "originMain": "f364a59a342cb70e3b396969c1fa410c12dac455",
+    "preEditHead": "87299358cec12c5b218904587cbb158d9c548751",
+    "worklogSHA256Before": "a357254492f54763897d51b2d3b8787cba2e7b3072194fd92631fde6fe6c8bf6",
+    "researchSHA256Before": "d4e81f7d0f67a2266102cfae938674e49a99e320af1b8f8dc54657f80140525d"
+  },
+  "browser": {
+    "startedAt": "2026-11-14T15:06:34.719Z",
+    "url": "http://127.0.0.1:8773/gudja-preview.html",
+    "results": [
+      {
+        "name": "small",
+        "width": 360,
+        "height": 844,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.4945518%2C35.8387313%2C14.5119863%2C35.8591452&layer=mapnik",
+        "mapSize": {
+          "x": 42,
+          "y": 867.796875,
+          "width": 276,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 276,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1607,
+            "fit": "contain",
+            "rendered": {
+              "x": 24,
+              "y": 295.75,
+              "width": 312,
+              "height": 417.8125,
+              "top": 295.75,
+              "right": 336,
+              "bottom": 713.5625,
+              "left": 24
+            },
+            "alt": "Limestone façade and bell towers of Gudja's parish church, with benches and an iron fence in the foreground"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.4945518%2C35.8387313%2C14.5119863%2C35.8591452&layer=mapnik",
+        "mapSize": {
+          "x": 43.5,
+          "y": 867.5,
+          "width": 303,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 303,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1607,
+            "fit": "contain",
+            "rendered": {
+              "x": 24,
+              "y": 273.15625,
+              "width": 342,
+              "height": 457.984375,
+              "top": 273.15625,
+              "right": 366,
+              "bottom": 731.140625,
+              "left": 24
+            },
+            "alt": "Limestone façade and bell towers of Gudja's parish church, with benches and an iron fence in the foreground"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "large-mobile",
+        "width": 430,
+        "height": 932,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.4945518%2C35.8387313%2C14.5119863%2C35.8591452&layer=mapnik",
+        "mapSize": {
+          "x": 45.5,
+          "y": 955.84375,
+          "width": 339,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 339,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1607,
+            "fit": "contain",
+            "rendered": {
+              "x": 25,
+              "y": 328.734375,
+              "width": 380,
+              "height": 508.875,
+              "top": 328.734375,
+              "right": 405,
+              "bottom": 837.609375,
+              "left": 25
+            },
+            "alt": "Limestone façade and bell towers of Gudja's parish church, with benches and an iron fence in the foreground"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.4945518%2C35.8387313%2C14.5119863%2C35.8591452&layer=mapnik",
+        "mapSize": {
+          "x": 144,
+          "y": 1024.140625,
+          "width": 1152,
+          "height": 480
+        },
+        "mapCanvas": {
+          "width": 1152,
+          "height": 480
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1607,
+            "fit": "contain",
+            "rendered": {
+              "x": 913,
+              "y": 125,
+              "width": 420,
+              "height": 562.4375,
+              "top": 125,
+              "right": 1333,
+              "bottom": 687.4375,
+              "left": 913
+            },
+            "alt": "Limestone façade and bell towers of Gudja's parish church, with benches and an iron fence in the foreground"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      }
+    ],
+    "passed": true,
+    "noJavaScriptFallback": true,
+    "finishedAt": "2026-11-14T15:06:47.586Z"
+  },
+  "files": {
+    "docs/village-research/gudja-preview.html": {
+      "sha256": "bd525da4584654a742a247d8b5decf8585ac13bef6132c2f0454fb6d04bb7914",
+      "bytes": 13730
+    },
+    "docs/village-research/gudja-preview.css": {
+      "sha256": "3dbd34ba8f836d9126b3a0f7dd76527b01de2bfca2e7815ad93804bb9afd09da",
+      "bytes": 5749
+    },
+    "docs/village-research/assets/gudja-parish-continentaleurope.webp": {
+      "sha256": "65a4c1902280ab3696c19f81051b101924eb6f5cbce1e0273b6afad230f4d8aa",
+      "bytes": 215896
+    }
+  },
+  "screenshots": {
+    "desktop-food.png": "eb303b00f3705e50d28ed4e459853282c2356b4f46db57ddad05407170a09334",
+    "desktop-full.png": "38ed58f1a134b39acf544980aba5b59fbd9c4876cd57bf3aa34ea7346a33b58c",
+    "desktop-hero.png": "651f08c7751c0b7f677ec33acbf6c478000ac793d7b39d490959dc15428ce2e5",
+    "desktop-map.png": "2206e2f1513e80f7c0a6c8367fddbcb7d4f8a81d8423143e80b73f1821adc7a4",
+    "desktop-portrait.png": "4a6fc958b479f6600ce1660237c306ccb8e46365000bcccc44bafae4fa59a9f3",
+    "large-mobile-food.png": "265b5671f23917d173e20bf5db82ce68aa8733cfe975d7036682bf5db879ae3f",
+    "large-mobile-full.png": "76501c4466abe558152a5b237d694d513d64781f28770fe1a1f87ce48ad8c6c2",
+    "large-mobile-hero.png": "65d34eeabae425e3329d06893be277439b639da120010e368c442bd1364011f4",
+    "large-mobile-map.png": "eb5bc9e59a15ad371f593251b1749ccb1bea5277bfd2e958fbc204eaaea63d18",
+    "large-mobile-portrait.png": "32f25d07437469436a1e6c6e9a0242b05e4abdeddf792f8d56a3400efa1cf02b",
+    "mobile-food.png": "519987273d8c4a4683aedb1baf5287b00c6415fdf32b07df192dd8f3881098a4",
+    "mobile-full.png": "09d671e855ea4040b77001f0f5a0b526c8106e51e2ac95e481593dd3c3a60322",
+    "mobile-hero.png": "74b5b5c2f9eee4a78641f733005439ea45507d11187d568a0cbae16aa4df93dc",
+    "mobile-map.png": "2c67bc46c59033d98d5490a12dcbce708a93dcc2084206fbb547a761607fcf40",
+    "mobile-portrait.png": "e97ef7976878b7979ee94b34906439d96e4c6e6647125dfa6e395207676c6493",
+    "small-food.png": "79351dcd9a5c232c1b3d45f19cc608606fb2f1d36217afccc5f13c061dc50909",
+    "small-full.png": "40851ed7ebd73457d8725ec30bfdcfee4be70dd7a11ae56049088dcece45d640",
+    "small-hero.png": "2732be28d8a16541016c229080a14de4b47e823aea12757549ef5d57d3284066",
+    "small-map.png": "e7edbf0b167da1341bb58f4b10565ae776999d628a11aefd729c49df32d47aa6",
+    "small-portrait.png": "a52d69ba7663549400ff05535f52236a23c039a61db899f627bc7aaa82b602d7"
+  },
+  "limitations": [
+    "No public URL, SEO promotion, deployment or new source fetch in this preview step.",
+    "Same-day verified research and approved photograph reused. Current operation and access remain unverified where noted.",
+    "No Next application build needed or claimed for private static documents.",
+    "Future release must preserve the separately published /nexussecret presentation and use actual latest live pointers."
+  ],
+  "completedAt": "2026-11-14T15:07:45.520303+00:00"
+}

@@ -1,0 +1,548 @@
+{
+  "at": "2026-11-14T12:15:13.818Z",
+  "status": "PUBLISHED AND LIVE-VERIFIED",
+  "language": "en",
+  "url": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+  "sourceCommit": "508788a37dfea26c511186c923c463377edf6690",
+  "publisherCommit": "53cea888575eb32a2be3c43aa84dc183fdbecff1",
+  "activation": {
+    "at": "2026-11-14T12:12:29.433Z",
+    "mode": "activate",
+    "sourceCommit": "508788a37dfea26c511186c923c463377edf6690",
+    "head": "53cea888575eb32a2be3c43aa84dc183fdbecff1",
+    "base": "f364a59a342cb70e3b396969c1fa410c12dac455",
+    "oldDeployment": "dpl_FDaWAaxZ4RYkDXAJDyYRUwGB55Dr",
+    "candidate": "dpl_4nLnYPgRoFz4MZhvhWUz4cxQEpV9",
+    "domain": "www.2906.estate",
+    "before": {
+      "www.2906.estate": {
+        "deploymentId": "dpl_FDaWAaxZ4RYkDXAJDyYRUwGB55Dr",
+        "redirect": null
+      },
+      "2906.estate": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": "www.2906.estate"
+      },
+      "crm.2906.estate": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": null
+      },
+      "2906-website-6zbi.vercel.app": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": null
+      }
+    },
+    "hashes": {
+      "public/link-marketplace/areas/tarxien.html": "0175a116550536eebcef6ad1cf59c86bf455b8b8493e6e9500ec02ac1c4d2971",
+      "public/link-marketplace/assets/tarxien-augustinian-church-grestei.webp": "7d5be0ee60c53de65280665ccfdddcf07a8598298610520afdb299ae3c74a6d2",
+      "public/link-marketplace/assets/tarxien-east-temple-kritzolina.webp": "7c54b167743f754c7175b4f3fd1fc36b154f2085265fa81ea2fe900e6ba399df",
+      "public/link-marketplace/index.html": "3e57e821c2a2433226254b77d11e39aded5f6e9360eadbe5b2abca4c0cf3df1f",
+      "public/neighbourhood-sitemap.xml": "3536ddd5154d1405bfdddc2e559f76b743ebfacefdb65e859b97cb96e3ee1f91",
+      "public/link-marketplace/areas/paola.html": "21b6036a1dc88087950f0e3ff933f9decfa62cc046c21d835d0bfad22207a547"
+    },
+    "nexus": "/opt/nexusbooking/releases/20261114-homepage-p0-v112",
+    "caddySha256": "317d85a6cd017cb7940c06fa90bd757839072589d48f99e323d0092b8404f4d8",
+    "brain": "dpl_6Tk8TWarZdSX5wJHS8kVjxTYK7Go",
+    "mutation": true,
+    "displaced": "dpl_FDaWAaxZ4RYkDXAJDyYRUwGB55Dr",
+    "after": {
+      "www.2906.estate": {
+        "deploymentId": "dpl_4nLnYPgRoFz4MZhvhWUz4cxQEpV9",
+        "redirect": null
+      },
+      "2906.estate": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": "www.2906.estate"
+      },
+      "crm.2906.estate": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": null
+      },
+      "2906-website-6zbi.vercel.app": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": null
+      }
+    },
+    "completedAt": "2026-11-14T12:12:30.762Z"
+  },
+  "http": {
+    "at": "2026-11-14T12:13:25.712Z",
+    "passed": true,
+    "files": [
+      {
+        "url": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+        "status": 200,
+        "sha256": "0175a116550536eebcef6ad1cf59c86bf455b8b8493e6e9500ec02ac1c4d2971",
+        "bytes": 21429,
+        "matchesStaged": true
+      },
+      {
+        "url": "https://www.2906.estate/link-marketplace/assets/tarxien-augustinian-church-grestei.webp",
+        "status": 200,
+        "sha256": "7d5be0ee60c53de65280665ccfdddcf07a8598298610520afdb299ae3c74a6d2",
+        "bytes": 189952,
+        "matchesStaged": true
+      },
+      {
+        "url": "https://www.2906.estate/link-marketplace/assets/tarxien-east-temple-kritzolina.webp",
+        "status": 200,
+        "sha256": "7c54b167743f754c7175b4f3fd1fc36b154f2085265fa81ea2fe900e6ba399df",
+        "bytes": 368128,
+        "matchesStaged": true
+      },
+      {
+        "url": "https://www.2906.estate/link-marketplace/index.html",
+        "status": 200,
+        "sha256": "3e57e821c2a2433226254b77d11e39aded5f6e9360eadbe5b2abca4c0cf3df1f",
+        "bytes": 11941,
+        "matchesStaged": true
+      },
+      {
+        "url": "https://www.2906.estate/neighbourhood-sitemap.xml",
+        "status": 200,
+        "sha256": "3536ddd5154d1405bfdddc2e559f76b743ebfacefdb65e859b97cb96e3ee1f91",
+        "bytes": 18191,
+        "matchesStaged": true
+      },
+      {
+        "url": "https://www.2906.estate/link-marketplace/areas/paola.html",
+        "status": 200,
+        "sha256": "21b6036a1dc88087950f0e3ff933f9decfa62cc046c21d835d0bfad22207a547",
+        "bytes": 17858,
+        "matchesStaged": true
+      }
+    ],
+    "responses": [
+      {
+        "url": "https://2906.estate/link-marketplace/areas/tarxien.html",
+        "finalURL": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+        "status": 200
+      },
+      {
+        "url": "https://www.2906.estate/",
+        "finalURL": "https://www.2906.estate/",
+        "status": 200
+      },
+      {
+        "url": "https://www.2906.estate/link-marketplace/areas/senglea.html",
+        "finalURL": "https://www.2906.estate/link-marketplace/areas/senglea.html",
+        "status": 200
+      },
+      {
+        "url": "https://nexuslink.fit/rating",
+        "finalURL": "https://nexuslink.fit/rating",
+        "status": 200,
+        "noindex": true
+      }
+    ]
+  },
+  "browser": {
+    "startedAt": "2026-11-14T12:12:50.153Z",
+    "url": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+    "results": [
+      {
+        "name": "small",
+        "width": 360,
+        "height": 844,
+        "status": 200,
+        "robots": "published and indexable",
+        "canonical": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 42,
+          "y": 868.375,
+          "width": 276,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 276,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 24,
+              "y": 221.703125,
+              "width": 312,
+              "height": 491.90625,
+              "top": 221.703125,
+              "right": 336,
+              "bottom": 713.609375,
+              "left": 24
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 18,
+              "y": 220.75,
+              "width": 324,
+              "height": 216,
+              "top": 220.75,
+              "right": 342,
+              "bottom": 436.75,
+              "left": 18
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "status": 200,
+        "robots": "published and indexable",
+        "canonical": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 43.5,
+          "y": 868.03125,
+          "width": 303,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 303,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 24,
+              "y": 191.8125,
+              "width": 342,
+              "height": 539.21875,
+              "top": 191.8125,
+              "right": 366,
+              "bottom": 731.03125,
+              "left": 24
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 19.5,
+              "y": 221.640625,
+              "width": 351,
+              "height": 234,
+              "top": 221.640625,
+              "right": 370.5,
+              "bottom": 455.640625,
+              "left": 19.5
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "large-mobile",
+        "width": 430,
+        "height": 932,
+        "status": 200,
+        "robots": "published and indexable",
+        "canonical": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 45.5,
+          "y": 955.5625,
+          "width": 339,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 339,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 25,
+              "y": 238.703125,
+              "width": 380,
+              "height": 599.125,
+              "top": 238.703125,
+              "right": 405,
+              "bottom": 837.828125,
+              "left": 25
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 21.5,
+              "y": 253.859375,
+              "width": 387,
+              "height": 258,
+              "top": 253.859375,
+              "right": 408.5,
+              "bottom": 511.859375,
+              "left": 21.5
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "status": 200,
+        "robots": "published and indexable",
+        "canonical": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 144,
+          "y": 1023.71875,
+          "width": 1152,
+          "height": 480
+        },
+        "mapCanvas": {
+          "width": 1152,
+          "height": 480
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 913,
+              "y": 125,
+              "width": 420,
+              "height": 662.1875,
+              "top": 125,
+              "right": 1333,
+              "bottom": 787.1875,
+              "left": 913
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 72,
+              "y": 24.375,
+              "width": 1296,
+              "height": 864,
+              "top": 24.375,
+              "right": 1368,
+              "bottom": 888.375,
+              "left": 72
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      }
+    ],
+    "passed": true,
+    "noJavaScriptFallback": true,
+    "finishedAt": "2026-11-14T12:13:07.530Z"
+  },
+  "protectedTargets": {
+    "at": "2026-11-14T12:14:14.357Z",
+    "passed": true,
+    "aliases": {
+      "www.2906.estate": {
+        "deploymentId": "dpl_4nLnYPgRoFz4MZhvhWUz4cxQEpV9",
+        "redirect": null
+      },
+      "2906.estate": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": "www.2906.estate"
+      },
+      "crm.2906.estate": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": null
+      },
+      "2906-website-6zbi.vercel.app": {
+        "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+        "redirect": null
+      }
+    },
+    "nexus": "/opt/nexusbooking/releases/20261114-homepage-p0-v112",
+    "caddySha256": "317d85a6cd017cb7940c06fa90bd757839072589d48f99e323d0092b8404f4d8",
+    "brain": {
+      "id": "dpl_6Tk8TWarZdSX5wJHS8kVjxTYK7Go",
+      "readyState": "READY"
+    },
+    "deployment": {
+      "id": "dpl_4nLnYPgRoFz4MZhvhWUz4cxQEpV9",
+      "readyState": "READY",
+      "projectId": "prj_Nox2RhJN4ZHW05KnXpTskMAog1Wb"
+    }
+  },
+  "visualInspection": [
+    "small-hero.png",
+    "desktop-hero.png",
+    "desktop-map.png",
+    "mobile-portrait.png"
+  ],
+  "artifacts": [
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\browser-evidence.json",
+      "sha256": "298fbfc8d00699c18f3f520964785f440401478cc0a0ee156fe1ad7bf266cc48"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\desktop-food.png",
+      "sha256": "22db4973ca345028434b3c53a3c24c8e4b11a18db5b80b16440b72d8f60cf8f5"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\desktop-full.png",
+      "sha256": "136e2e7414930a18e5e80199c42bcc7932fd536d0ac949602b3e9f2b714efeee"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\desktop-hero.png",
+      "sha256": "15b39cb98c84e08f515b1c003acc5b255d464a7cf4a5deb15a761b21a6d4d8e9"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\desktop-map.png",
+      "sha256": "721d8f3b818dbad0b9e265ce929bd54f58b5e46351441007579b385b3dc28586"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\desktop-portrait.png",
+      "sha256": "2d3e5725437c5ffd219fb1d80ea2cf0d55407568bdfc03a67ea8fe8196ef950f"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\large-mobile-food.png",
+      "sha256": "d2e34b1fdc7d35199503b59318e0a435999e72406dae6a18279e6083d6fda656"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\large-mobile-full.png",
+      "sha256": "a0da1781e7192f5f0ca56a126cd5f23a8b9a62cbf958576d604797f6c803d309"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\large-mobile-hero.png",
+      "sha256": "8108a046b77c686c327e7fb6153398d06f95be018ce843c444a8a754a5fa9b44"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\large-mobile-map.png",
+      "sha256": "6134eef1b9eada2f4313b6819e295f0d7b232dbd7db862f56f74c677c083e975"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\large-mobile-portrait.png",
+      "sha256": "9c804793421897528329f251974e54367407b18db7bcbee09ec417e328d9ef76"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\live-http-verification.json",
+      "sha256": "4a7f477bb92216b04b71f4070d9bb55e5cdc09a326ebcc4ffb2c9016edee841e"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\mobile-food.png",
+      "sha256": "ff2f5507e58acbc83b23ee88d18d3faafe55fc753bcf066bb2afa96bb7ff88fd"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\mobile-full.png",
+      "sha256": "29310745529367cf3f0d5f089a6a35d15a73266c801823a307064cbd88c8135f"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\mobile-hero.png",
+      "sha256": "ad6b0916b27466aa584b6ceb4487d0f3ee0dd0014133e83bb0fb9d7f59381b69"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\mobile-map.png",
+      "sha256": "8604a79efb234fcf1c8059ea70f5de7184cd97a9056284d6782bf22162d4fb7f"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\mobile-portrait.png",
+      "sha256": "c9596680b150ce867fa4c9377e41e056c98dc7cb9167ce425bb0fcdd554243ad"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\protected-targets.json",
+      "sha256": "f97f46cbc263158dd48f2f4037abe57b2963e65c78bc5c7b57f023bbac624bc8"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\small-food.png",
+      "sha256": "85ec1148ee99c4f24fb330d1a59338192b33f7ae29bf1a9b2beb92a0de13c446"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\small-full.png",
+      "sha256": "6f2666d1823b374e4ee394d3d7b04b6499132d6649c386fbb874230debeb81a5"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\small-hero.png",
+      "sha256": "f8ea0b04fa5ac73285b80f9e9f90b7df46b49ed79e2cf8ac36cdc0a1a976ee41"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\small-map.png",
+      "sha256": "1e2fce6b893804b1d893f2363ed4b6d11899d18e19ee12c2f4f8f05fe853f430"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\small-portrait.png",
+      "sha256": "9c6c4ab84d722c1b2ef9c96bc4d83ae1d7122f3af4de67519cfce85e3bf52871"
+    },
+    {
+      "path": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-live\\verify.cjs",
+      "sha256": "430147191786aca455d5608b9923c2f6a535b4ef1b683deda123f7c2a8be7820"
+    }
+  ],
+  "validation": {
+    "guardTests": "8 PASS",
+    "seoContract": "64 editions PASS",
+    "routeSegments": "PASS",
+    "ferryPresentation": "PASS",
+    "matrixRouting": "PASS",
+    "build": "Previously verified unchanged candidate: webpack 55/55 PASS",
+    "typecheck": "Known unchanged origin/main error lib/crm/ui.tsx:446 ownerquality not assignable to NavKey; NOT PASS"
+  },
+  "rollback": {
+    "command": "node scripts/publish-tarxien.cjs rollback D:/2906/nexus-bridge-work/artifacts/20261114-tarxien-publish",
+    "onlyIfCurrent": "dpl_4nLnYPgRoFz4MZhvhWUz4cxQEpV9",
+    "target": "dpl_FDaWAaxZ4RYkDXAJDyYRUwGB55Dr",
+    "note": "Guarded single alias assignment with conflict detection; not a server-side conditional Vercel API."
+  }
+}

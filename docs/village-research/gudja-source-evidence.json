@@ -1,0 +1,417 @@
+{
+  "status": "RESEARCH DRAFT — NOT PUBLISHED",
+  "language": "en",
+  "compiledAt": "2026-11-14T14:11:02.575535+00:00",
+  "baseline": "f364a59a342cb70e3b396969c1fa410c12dac455",
+  "preEditHead": "72cab4096ef9d5a3c2aa87852e42d0f9aebd08ba",
+  "carriedPublicTravelSource": "508788a37dfea26c511186c923c463377edf6690",
+  "worklogBeforeSha256": "d4541149cc6e7b666120a04a3d64990db57534c225d6f8d53012df004ffcf369",
+  "intendedUrl": "https://www.2906.estate/link-marketplace/areas/gudja.html",
+  "published": false,
+  "directSources": [
+    {
+      "id": "address",
+      "url": "https://address.gov.mt/local-council/",
+      "finalUrl": "https://address.gov.mt/local-council/",
+      "checkedAt": "2026-11-14T13:12:10.574364+00:00",
+      "status": 200,
+      "bytes": 133338,
+      "sha256": "927b92a470fa379b475f16c1fd0827a588ffae8b9fad4510f9a16495c29aa776",
+      "file": "address.html"
+    },
+    {
+      "id": "council",
+      "url": "https://gudjalc.gov.mt/en/",
+      "finalUrl": "https://gudjalc.gov.mt/en/",
+      "checkedAt": "2026-11-14T13:12:09.705354+00:00",
+      "status": 403,
+      "bytes": 5574,
+      "sha256": "2aa26a028377c9b40ce50364ec0efbe4a90dc3cace25074ecf073de9892f63b8",
+      "file": "council.html"
+    },
+    {
+      "id": "churches",
+      "url": "https://gudjalc.gov.mt/en/churches-chapels/",
+      "finalUrl": "https://gudjalc.gov.mt/en/churches-chapels/",
+      "checkedAt": "2026-11-14T13:12:09.716356+00:00",
+      "status": 403,
+      "bytes": 5646,
+      "sha256": "87e4a70c69aa1027e44333c91e4b76fc42a2d7e3a0724677f76af84cbc9e45af",
+      "file": "churches.html"
+    },
+    {
+      "id": "gardens",
+      "url": "https://gudjalc.gov.mt/en/open-spaces-gardens/",
+      "finalUrl": "https://gudjalc.gov.mt/en/open-spaces-gardens/",
+      "checkedAt": "2026-11-14T13:12:09.832564+00:00",
+      "status": 403,
+      "bytes": 5655,
+      "sha256": "4a3b0ca362480713ae42a091509b43f91d716b34233072b3acee2970b8b1b2c5",
+      "file": "gardens.html"
+    },
+    {
+      "id": "clinics",
+      "url": "https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/",
+      "finalUrl": "https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/",
+      "checkedAt": "2026-11-14T13:12:09.848564+00:00",
+      "status": 403,
+      "bytes": 5722,
+      "sha256": "d58332b8b1f3b2ddd0291c8c159c54ae5b2e3d490fc3e267b1019a674d99d17a",
+      "file": "clinics.html"
+    },
+    {
+      "id": "health-centres",
+      "url": "https://primaryhealthcare.gov.mt/en/health-centers/",
+      "finalUrl": "https://primaryhealthcare.gov.mt/en/health-centers/",
+      "checkedAt": "2026-11-14T13:12:09.973714+00:00",
+      "status": 403,
+      "bytes": 5650,
+      "sha256": "a3df8d164914c385f50c616ca47903f99c600b715988d95d7f7d0e5aecf43361",
+      "file": "health-centres.html"
+    },
+    {
+      "id": "grocer",
+      "url": "https://my.mt/locations/",
+      "checkedAt": "2026-11-14T13:12:09.973714+00:00",
+      "error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)>"
+    },
+    {
+      "id": "bir-miftuh",
+      "url": "https://dinlarthelwa.org/heritage-sites/managed-heritage-sites/chapel-of-santa-marija-ta-bir-miftuh-2/",
+      "finalUrl": "https://dinlarthelwa.org/heritage-sites/managed-heritage-sites/chapel-of-santa-marija-ta-bir-miftuh-2/",
+      "checkedAt": "2026-11-14T13:12:11.615997+00:00",
+      "status": 404,
+      "bytes": 458974,
+      "sha256": "53344f4153aebc6ee943e5cc8dbeba0ee506e33121e4cd39766716ea22976584",
+      "file": "bir-miftuh.html"
+    },
+    {
+      "id": "mta-restaurants",
+      "url": "https://www.mta.com.mt/licences/licences/?type=restaurants&town=GUDJA&size=250",
+      "finalUrl": "https://www.mta.com.mt/licences/licences/?type=restaurants&town=GUDJA&size=250",
+      "checkedAt": "2026-11-14T13:12:10.317128+00:00",
+      "status": 200,
+      "bytes": 22104,
+      "sha256": "0da6c0bc319232a03c3f795bfa4575d64f918d6dbab474e554b4bc4cd0cadf0d",
+      "file": "mta-restaurants.html",
+      "rows": [
+        "Ref Sector Name ▲ Establishment Address 1 Address 2 Town Post Code",
+        "RST-31391 RESTAURANT Verani Restaurant Malta International Airport, Departure Lounge — WESGHET ANGLU DALLI GUDJA —",
+        "RST-23078 RESTAURANT Wagamama Restaurant Skyparks Business Centre Level 0 — Triq il- Karwija GUDJA —"
+      ]
+    },
+    {
+      "id": "mta-snack-bars",
+      "url": "https://www.mta.com.mt/licences/licences/?type=snack-bars&town=GUDJA&size=250",
+      "finalUrl": "https://www.mta.com.mt/licences/licences/?type=snack-bars&town=GUDJA&size=250",
+      "checkedAt": "2026-11-14T13:12:10.652167+00:00",
+      "status": 200,
+      "bytes": 24173,
+      "sha256": "e6922190b16013edaae1ec929aa9f6fd5e11a356e6d1abd1dd35a556b0a66df9",
+      "file": "mta-snack-bars.html",
+      "rows": [
+        "Ref Sector Name ▲ Establishment Address 1 Address 2 Town Post Code",
+        "SBR-31526 SNACK BAR Burger King MIA Malta International Airport — WESGHET ANGLU DALLI GUDJA —",
+        "SBR-25547 SNACK BAR Il Patrun snack bar Shop 1 — TRIQ HAL TARXIEN GUDJA —",
+        "SBR-32745 SNACK BAR Jammin Snack Bar Dalli industrial Estate — TRIQ HAL TARXIEN GUDJA GDJ 1907",
+        "SBR-17366 SNACK BAR Jet Express Snack Bar MIA Departure Lounge — WESGHET ANGLU DALLI GUDJA —",
+        "SBR-12065 SNACK BAR MC Donald's (Airport) Malta International Airport — Triq il- Karwija GUDJA —",
+        "SBR-17502 SNACK BAR Talbot and Bons Snack Bar — 95 TRIQ IL- KBIRA GUDJA —",
+        "SBR-31645 SNACK BAR Tat-Te Snack Bar (Arrival Lounge) — — TRIQ L- ANNUNZJATA GUDJA —"
+      ]
+    },
+    {
+      "id": "route88",
+      "url": "https://www.publictransport.com.mt/route/88/",
+      "finalUrl": "https://www.publictransport.com.mt/route/88/",
+      "checkedAt": "2026-11-14T13:12:10.958984+00:00",
+      "status": 200,
+      "bytes": 4252873,
+      "sha256": "79807d37ac2c75ffb40a8e19207190a29450631db13812f98585c781ad9d760b",
+      "file": "route88.html"
+    },
+    {
+      "id": "route135",
+      "url": "https://www.publictransport.com.mt/route/135/",
+      "finalUrl": "https://www.publictransport.com.mt/route/135/",
+      "checkedAt": "2026-11-14T13:12:11.151042+00:00",
+      "status": 200,
+      "bytes": 3298779,
+      "sha256": "c63e306a5efc77710d8018a2627f6dda39ac23bfec9294fdf81edf4fe6b915dc",
+      "file": "route135.html"
+    },
+    {
+      "id": "route226",
+      "url": "https://www.publictransport.com.mt/route/226/",
+      "finalUrl": "https://www.publictransport.com.mt/route/226/",
+      "checkedAt": "2026-11-14T13:12:11.528409+00:00",
+      "status": 200,
+      "bytes": 2406608,
+      "sha256": "c958a1eed843aaa29864efe69fced202dff072f8a0d5aec690ecdfd6c6549924",
+      "file": "route226.html"
+    },
+    {
+      "id": "commons-search",
+      "url": "https://commons.wikimedia.org/w/api.php?action=query&format=json&list=search&srsearch=Gudja+filetype%3Abitmap&srnamespace=6&srlimit=15",
+      "checkedAt": "2026-11-14T13:12:38.009140+00:00",
+      "error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)>"
+    },
+    {
+      "id": "map",
+      "url": "https://nominatim.openstreetmap.org/search?q=Gudja%2C+Malta&format=jsonv2&limit=1",
+      "finalUrl": "https://nominatim.openstreetmap.org/search?q=Gudja%2C+Malta&format=jsonv2&limit=1",
+      "checkedAt": "2026-11-14T13:12:38.221524+00:00",
+      "status": 200,
+      "bytes": 443,
+      "sha256": "aa3c9abb1f6c5e183da9ae44e172f08834b277eb8d37aaeb5150504096133d04",
+      "file": "map.json"
+    },
+    {
+      "id": "grocer-node",
+      "url": "https://my.mt/locations/",
+      "finalUrl": "https://my.mt/locations/",
+      "checkedAt": "2026-11-14T14:07:02.059Z",
+      "status": 200,
+      "bytes": 765957,
+      "sha256": "b84612d8899c222884ee0735400d57735c4cbe86fb93740bc950cab001163d52",
+      "file": "grocer-node.html"
+    },
+    {
+      "id": "talbot-operator",
+      "url": "https://talbotbons.com/contact-us/",
+      "finalUrl": "https://talbotbons.com/contact-us/",
+      "checkedAt": "2026-11-14T14:07:02.117Z",
+      "status": 200,
+      "bytes": 63029,
+      "sha256": "56f37fc4c097431f7e90fcdc43e09bfe6af73dec6ea03c715ec72f780abe5ff7",
+      "file": "talbot-operator.html"
+    },
+    {
+      "id": "dlh-churches",
+      "url": "https://dinlarthelwa.org/churches-and-chapels/",
+      "finalUrl": "https://dinlarthelwa.org/churches-and-chapels/",
+      "checkedAt": "2026-11-14T14:07:03.353Z",
+      "status": 200,
+      "bytes": 484228,
+      "sha256": "99d476da5467924a11fd0e1bb0b933029b46a3e6967aee5936c6749ae1d70679",
+      "file": "dlh-churches.html"
+    },
+    {
+      "id": "commons-search-focused",
+      "url": "https://commons.wikimedia.org/w/api.php?action=query&format=json&list=search&srsearch=%22Bir+Miftuh%22+filetype%3Abitmap&srnamespace=6&srlimit=8",
+      "finalUrl": "https://commons.wikimedia.org/w/api.php?action=query&format=json&list=search&srsearch=%22Bir+Miftuh%22+filetype%3Abitmap&srnamespace=6&srlimit=8",
+      "checkedAt": "2026-11-14T14:07:03.903Z",
+      "status": 200,
+      "bytes": 2666,
+      "sha256": "353b2fd109b5c1a7924c2266eba8b4a668a6569d77ac8930e08c0538675bac24",
+      "file": "commons-search-focused.json"
+    },
+    {
+      "id": "commons-image-metadata",
+      "url": "https://commons.wikimedia.org/w/api.php?action=query&format=json&titles=File%3AParish+Church+of+the+Assumption.jpg%7CFile%3AGudja+08.jpg%7CFile%3AGudja+11.jpg%7CFile%3AGudja+06.jpg%7CFile%3AGudja+07.jpg%7CFile%3AParish+Church+of+the+Assumption.jpg%7CFile%3ABir+Miftu%C4%A7+Chapel.jpg%7CFile%3ATar-Ru%C5%BCarju+Fireworks%2C+Gudja%2C+Malta%2C+%282025%29+%2802%29.jpg&prop=imageinfo&iiprop=url%7Csize%7Csha1%7Cextmetadata&iiextmetadatalanguage=en",
+      "finalUrl": "https://commons.wikimedia.org/w/api.php?action=query&format=json&titles=File%3AParish+Church+of+the+Assumption.jpg%7CFile%3AGudja+08.jpg%7CFile%3AGudja+11.jpg%7CFile%3AGudja+06.jpg%7CFile%3AGudja+07.jpg%7CFile%3AParish+Church+of+the+Assumption.jpg%7CFile%3ABir+Miftu%C4%A7+Chapel.jpg%7CFile%3ATar-Ru%C5%BCarju+Fireworks%2C+Gudja%2C+Malta%2C+%282025%29+%2802%29.jpg&prop=imageinfo&iiprop=url%7Csize%7Csha1%7Cextmetadata&iiextmetadatalanguage=en",
+      "checkedAt": "2026-11-14T14:07:04.225Z",
+      "status": 200,
+      "bytes": 15442,
+      "sha256": "43454affa14147852a70240ab2c2f0ffb89b8f620320a07c77108299ceaa5f0e",
+      "file": "commons-image-metadata.json"
+    },
+    {
+      "id": "bir-miftuh-current",
+      "url": "https://dinlarthelwa.org/chapel-of-santa-marija-ta-bir-miftuh/",
+      "finalUrl": "https://dinlarthelwa.org/chapel-of-santa-marija-ta-bir-miftuh/",
+      "checkedAt": "2026-11-14T14:07:33.432461+00:00",
+      "status": 200,
+      "bytes": 522760,
+      "sha256": "e5ee25d4bc34244d3f6fb60fb9ec1f000118d2e18ea1320f218544809f36b811",
+      "file": "bir-miftuh-current.html"
+    }
+  ],
+  "webSources": [
+    {
+      "id": "council-web",
+      "url": "https://gudjalc.gov.mt/en/",
+      "supports": "Village/parish context, Bir Miftuh on the outskirts; historical overview is not visitor access permission.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    },
+    {
+      "id": "churches-web",
+      "url": "https://gudjalc.gov.mt/en/churches-chapels/",
+      "supports": "Council directory lists the parish church, Bir Miftuh, St Catherine, Annunciation and Ta Loretu chapels.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    },
+    {
+      "id": "gardens-web",
+      "url": "https://gudjalc.gov.mt/en/open-spaces-gardens/",
+      "supports": "Lieutenant's Garden / Gnien il-Kmand; hours and entrance accessibility not verified.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    },
+    {
+      "id": "clinics-web",
+      "url": "https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/",
+      "supports": "Gudja Community Clinic, 20 William Baker Street; no current appointment availability asserted.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    },
+    {
+      "id": "health-centres-web",
+      "url": "https://primaryhealthcare.gov.mt/en/health-centers/",
+      "supports": "Gudja listed in Paola catchment. Paola street address omitted because retrieved versions conflict.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    },
+    {
+      "id": "bir-miftuh-web",
+      "url": "https://dinlarthelwa.org/chapel-of-santa-marija-ta-bir-miftuh/",
+      "supports": "Current custodian page found from current Churches and Chapels navigation. Fifteenth-century chapel, frescoes, limited opening/appointments; specific visit date must be checked.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    },
+    {
+      "id": "grocer-web",
+      "url": "https://my.mt/locations/",
+      "supports": "Gudja 1 at 56 Vjal it-Torri is distinct from the separately listed airport SkyParks branch.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    },
+    {
+      "id": "talbot-web",
+      "url": "https://talbotbons.com/contact-us/",
+      "supports": "95 Triq il-Kbira address corroboration; accommodation information does not verify a public walk-in food service.",
+      "checkedDate": "2026-11-14",
+      "method": "web reader, official source",
+      "httpStatus": null,
+      "httpStatusNote": "Reader availability does not override direct-client response status."
+    }
+  ],
+  "routes": [
+    {
+      "route": "88",
+      "url": "https://www.publictransport.com.mt/route/88/",
+      "label": "Valletta - Gudja - Airport",
+      "stopEvidence": [
+        {
+          "stop": 1637,
+          "exactStopLabel": "Gudja - 1637",
+          "context": "Marsaskala - Mater Dei\n135\nMater Dei - Marsaskala\nGudja - 1637\n06:02 06:22 06:42 07:02 07:22 07:42 08:02 08:22 08:42 09:02"
+        }
+      ],
+      "scope": "Actual route stop lists checked. No timetable or property-relative travel-time promise."
+    },
+    {
+      "route": "135",
+      "url": "https://www.publictransport.com.mt/route/135/",
+      "label": "Mater Dei - Marsaskala",
+      "stopEvidence": [
+        {
+          "stop": 1637,
+          "exactStopLabel": "Gudja - 1637",
+          "context": "er Dei - Marsaskala\n88\nValletta - Gudja - Airport\nGudja - 1637\n06:41 07:07 08:07 09:02 10:02 11:02 12:02 13:02 14:03 15:03"
+        }
+      ],
+      "scope": "Actual route stop lists checked. No timetable or property-relative travel-time promise."
+    },
+    {
+      "route": "226",
+      "url": "https://www.publictransport.com.mt/route/226/",
+      "label": "Mater Dei - Gudja",
+      "stopEvidence": [
+        {
+          "stop": 1637,
+          "exactStopLabel": "Gudja - 1637",
+          "context": "Marsaskala - Mater Dei\n135\nMater Dei - Marsaskala\nGudja - 1637\n06:21 07:24 08:16 09:16 10:16 11:16 12:16 13:16 14:21 15:19"
+        },
+        {
+          "stop": 6407,
+          "exactStopLabel": "Gudja - 6407",
+          "context": "Marsaskala\n88\nValletta - Gudja - Airport\nIl-Gudja\nGudja - 6407\n05:30 06:30 07:30 08:30 09:30 10:30 11:30 12:30 13:30 14:30"
+        }
+      ],
+      "scope": "Actual route stop lists checked. No timetable or property-relative travel-time promise."
+    }
+  ],
+  "map": {
+    "source": "https://nominatim.openstreetmap.org/search?q=Gudja%2C+Malta&format=jsonv2&limit=1",
+    "result": {
+      "place_id": 53921689,
+      "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+      "osm_type": "relation",
+      "osm_id": 7510557,
+      "lat": "35.8483258",
+      "lon": "14.5030882",
+      "category": "boundary",
+      "type": "administrative",
+      "place_rank": 16,
+      "importance": 0.4698263622952075,
+      "addresstype": "village",
+      "name": "Il-Gudja",
+      "display_name": "Il-Gudja, Reġjun tan-Nofsinhar, Malta",
+      "boundingbox": [
+        "35.8387313",
+        "35.8591452",
+        "14.4945518",
+        "14.5119863"
+      ]
+    },
+    "candidateBbox": [
+      14.4945518,
+      35.8387313,
+      14.5119863,
+      35.8591452
+    ],
+    "use": "Neutral orientation only; no route, property marker or surveyed boundary."
+  },
+  "food": {
+    "sourceDate": "2026-11-14",
+    "restaurantRows": 2,
+    "snackBarRows": 7,
+    "currentTradingVerified": false,
+    "localAddressCandidates": [
+      "SBR-25547",
+      "SBR-32745",
+      "SBR-17502"
+    ],
+    "airportContextExcluded": [
+      "RST-31391",
+      "RST-23078",
+      "SBR-31526",
+      "SBR-17366",
+      "SBR-12065",
+      "SBR-31645"
+    ],
+    "limits": [
+      "Jammin is explicitly in Dalli Industrial Estate.",
+      "Talbot contact page corroborates accommodation address only, not unrestricted dining.",
+      "Register listings do not prove current trading, rankings or availability."
+    ]
+  },
+  "transportLimitations": [
+    "No source-derived route geometry produced.",
+    "Gozo stops in network-wide selector excluded.",
+    "No airside access or pedestrian airport shortcut inferred."
+  ],
+  "sourceLimitations": [
+    "Old Din l-Art Helwa slug returned 404; replacement current URL returned 200.",
+    "Python certificate errors for Commons and MyConvenience were resolved with a normal validating Node HTTPS client. TLS validation was not disabled.",
+    "Council and Primary HealthCare direct-client 403 responses remain recorded; official text independently read with web reader.",
+    "Paola health centre street address omitted due to differing retrieved versions."
+  ],
+  "rawEvidenceDirectory": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-gudja-research"
+}

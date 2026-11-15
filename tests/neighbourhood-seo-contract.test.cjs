@@ -8,7 +8,7 @@ const hub = fs.readFileSync(path.join(root, 'public', 'link-marketplace', 'index
 const sitemap = fs.readFileSync(path.join(root, 'public', 'neighbourhood-sitemap.xml'), 'utf8')
 const files = fs.readdirSync(areasDir).filter(file => file.endsWith('.html')).sort()
 
-assert.equal(files.length, 62, 'expected the current 62 neighbourhood editions')
+assert.equal(files.length, 64, 'expected the current 64 neighbourhood editions')
 
 const titles = new Map()
 const descriptions = new Map()
@@ -119,8 +119,8 @@ for (const file of files) {
     assert.ok(/frame\.title\s*=/i.test(html), `${file}: deferred map iframe needs an accessible title`)
     assert.ok(/frame\.loading\s*=\s*["']eager["']/i.test(html), `${file}: clicked map must load immediately`)
     assert.ok(
-      /frame\.referrerPolicy\s*=\s*["']strict-origin-when-cross-origin["']/i.test(html),
-      `${file}: deferred map iframe needs the strict referrer policy`,
+      /frame\.referrerPolicy\s*=\s*["'](?:no-referrer|strict-origin-when-cross-origin)["']/i.test(html),
+      `${file}: deferred map iframe needs a privacy-safe referrer policy`,
     )
     assert.ok(/\{\s*once\s*:\s*true\s*\}/i.test(html), `${file}: map button must create only one iframe`)
   } else {
@@ -144,12 +144,12 @@ for (const file of files) {
   assert.ok(hub.includes(`href="${publicPath}"`), `${file}: missing from neighbourhood hub`)
 
   assert.ok(imageTags.length > 0, `${file}: missing a locality image`)
-  for (const imageTag of imageTags) {
+  for (const [imageIndex, imageTag] of imageTags.entries()) {
     const src = value(imageTag, [/\bsrc=["']([^"']+)["']/i])
     assert.ok(src.startsWith('../assets/'), `${file}: locality images must be self-hosted`)
     assert.ok(/\bwidth=["']\d+["']/i.test(imageTag), `${file}: image width is required`)
     assert.ok(/\bheight=["']\d+["']/i.test(imageTag), `${file}: image height is required`)
-    assert.ok(/\bfetchpriority=["']high["']/i.test(imageTag), `${file}: hero image must receive high fetch priority`)
+    if (imageIndex === 0) assert.ok(/\bfetchpriority=["']high["']/i.test(imageTag), `${file}: hero image must receive high fetch priority`)
     assert.ok(fs.existsSync(path.resolve(areasDir, src)), `${file}: image asset does not exist: ${src}`)
   }
 
@@ -190,4 +190,4 @@ for (const file of files) {
   assert.ok(inbound.length > 0, `${file}: needs an inbound contextual link from another distinct edition`)
 }
 
-console.log('Neighbourhood SEO, sitemap, hub, social image and deferred-map accessibility contract passed for all 62 editions')
+console.log('Neighbourhood SEO, sitemap, hub, social image and deferred-map accessibility contract passed for all 64 editions')

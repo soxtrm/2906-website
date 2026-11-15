@@ -1,0 +1,440 @@
+{
+  "status": "PRIVATE PREVIEW VERIFIED — NOT PUBLISHED",
+  "language": "en",
+  "recorded_at": "2026-11-14T10:13:03.293744+00:00",
+  "worktree": "D:\\2906\\nexus-bridge-work\\20261114\\tarxien-preview",
+  "branch": "travel/tarxien-preview-20261114",
+  "canonical_repo": "D:/2906/2906-website",
+  "origin_main": "f364a59a342cb70e3b396969c1fa410c12dac455",
+  "head_before_preview": "55f7a05651b7f691563459d0d2781dc3dd38b05f",
+  "origin_refetched_unchanged": true,
+  "preserved_main_head": "c0dfe76151452fb224845e578464d19b0700e23a",
+  "pre_edit_sha256": {
+    "TRAVEL_WORKLOG.md": "79bed1f244434f32b4cfb0b367eb4d95ac2c0b04636ba85cd9b26bd57720eb91",
+    "docs/village-research/tarxien-research.md": "369e470ac13c4acf71f65b1063f54d813f7df38e3e250a6a79226f1293c14be0",
+    "docs/village-research/tarxien-preview.html": "fc4beabcbaeff68f6b0a88c7aab6614f9aa3dc13cf1455e5311862efb5c91478",
+    "docs/village-research/assets/tarxien-augustinian-church-grestei.webp": "7d5be0ee60c53de65280665ccfdddcf07a8598298610520afdb299ae3c74a6d2",
+    "docs/village-research/assets/tarxien-east-temple-kritzolina.webp": "7c54b167743f754c7175b4f3fd1fc36b154f2085265fa81ea2fe900e6ba399df"
+  },
+  "preview_url": "http://127.0.0.1:8771/tarxien-preview.html",
+  "preview_url_scope": "Loopback only; no public deployment or authenticated external preview",
+  "preview_sha256": "fc4beabcbaeff68f6b0a88c7aab6614f9aa3dc13cf1455e5311862efb5c91478",
+  "browser": {
+    "startedAt": "2026-11-14T09:18:44.367Z",
+    "url": "http://127.0.0.1:8771/tarxien-preview.html",
+    "results": [
+      {
+        "name": "small",
+        "width": 360,
+        "height": 844,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 42,
+          "y": 868.375,
+          "width": 276,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 276,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 24,
+              "y": 221.703125,
+              "width": 312,
+              "height": 491.90625,
+              "top": 221.703125,
+              "right": 336,
+              "bottom": 713.609375,
+              "left": 24
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 18,
+              "y": 220.75,
+              "width": 324,
+              "height": 216,
+              "top": 220.75,
+              "right": 342,
+              "bottom": 436.75,
+              "left": 18
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 43.5,
+          "y": 868.03125,
+          "width": 303,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 303,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 24,
+              "y": 191.8125,
+              "width": 342,
+              "height": 539.21875,
+              "top": 191.8125,
+              "right": 366,
+              "bottom": 731.03125,
+              "left": 24
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 19.5,
+              "y": 221.640625,
+              "width": 351,
+              "height": 234,
+              "top": 221.640625,
+              "right": 370.5,
+              "bottom": 455.640625,
+              "left": 19.5
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "large-mobile",
+        "width": 430,
+        "height": 932,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 45.5,
+          "y": 955.5625,
+          "width": 339,
+          "height": 340
+        },
+        "mapCanvas": {
+          "width": 339,
+          "height": 340
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 25,
+              "y": 238.703125,
+              "width": 380,
+              "height": 599.125,
+              "top": 238.703125,
+              "right": 405,
+              "bottom": 837.828125,
+              "left": 25
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 21.5,
+              "y": 253.859375,
+              "width": 387,
+              "height": 258,
+              "top": 253.859375,
+              "right": 408.5,
+              "bottom": 511.859375,
+              "left": 21.5
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "status": 200,
+        "robots": "noindex,nofollow",
+        "canonical": 0,
+        "h1": 1,
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "keyboardSkip": true,
+        "keyboardMapLoad": true,
+        "idempotentMap": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5058080%2C35.8614943%2C14.5206040%2C35.8715399&layer=mapnik",
+        "mapSize": {
+          "x": 144,
+          "y": 1023.71875,
+          "width": 1152,
+          "height": 480
+        },
+        "mapCanvas": {
+          "width": 1152,
+          "height": 480
+        },
+        "images": [
+          {
+            "width": 1200,
+            "height": 1892,
+            "fit": "contain",
+            "rendered": {
+              "x": 913,
+              "y": 125,
+              "width": 420,
+              "height": 662.1875,
+              "top": 125,
+              "right": 1333,
+              "bottom": 787.1875,
+              "left": 913
+            },
+            "alt": "Limestone facade and bell tower of the Augustinian church in Tarxien, with a recessed entrance and front steps"
+          },
+          {
+            "width": 1800,
+            "height": 1200,
+            "fit": "contain",
+            "rendered": {
+              "x": 72,
+              "y": 24.375,
+              "width": 1296,
+              "height": 864,
+              "top": 24.375,
+              "right": 1368,
+              "bottom": 888.375,
+              "left": 72
+            },
+            "alt": "Megalithic stones at Tarxien's East Temple beneath a protective shelter, with a raised visitor walkway behind"
+          }
+        ],
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      }
+    ],
+    "passed": true,
+    "noJavaScriptFallback": true,
+    "finishedAt": "2026-11-14T09:18:56.925Z"
+  },
+  "visual_review": [
+    "Mobile and desktop hero and complete portrait framing with visible attribution",
+    "Desktop food examples: three register records, unranked and current-trading limitation visible",
+    "Mobile and desktop actual OSM map with Tarxien and distinct neighbours, visible attribution, keyboard focus",
+    "No crop, hidden content, invented routes or private-property pin"
+  ],
+  "test_harness_note": "Initial harness waited for requestAnimationFrame in an offscreen iframe and was stopped. The actual keyboard map interaction already worked. Scrolling the iframe into view before waiting for frame render fixed the test. The final 09:18 run passed on the final HTML revision.",
+  "sources": {
+    "mutable_register_refresh": [
+      {
+        "url": "https://www.mta.com.mt/licences/licences/?type=restaurants&town=TARXIEN&size=250",
+        "status": 200,
+        "checkedAt": "2026-11-14T09:11:20.413182+00:00",
+        "sha256": "358355d0f1c8da90926b91d9af9c5536fcebdd99bb8e49734b384af20fdcc0db",
+        "expectedReferencesFound": {
+          "RST-30587": true,
+          "RST-32256": true
+        }
+      },
+      {
+        "url": "https://www.mta.com.mt/licences/licences/?type=snack-bars&town=TARXIEN&size=250",
+        "status": 200,
+        "checkedAt": "2026-11-14T09:11:20.664963+00:00",
+        "sha256": "4dbc44a19e0943c20efc32ed8d2029a35aedd65a227df02cfad6480102256cd2",
+        "expectedReferencesFound": {
+          "SBR-22571": true
+        }
+      }
+    ],
+    "operator_web_checks_from_09xx_preview_step": [
+      "https://heritagemalta.mt/explore/hal-tarxien-prehistoric-complex/",
+      "https://www.publictransport.com.mt/route/85/",
+      "https://www.publictransport.com.mt/route/88/"
+    ],
+    "reused_verified_research": "tarxien-source-evidence.json",
+    "reused_verified_image_provenance": "tarxien-image-audit.json",
+    "note": "Same-day completed research and photo selection reused; no repeated originals download. Register entries do not prove current trading."
+  },
+  "regressions": {
+    "route-segments.test.cjs": "PASS",
+    "property-route-ferry-presentation.test.cjs": "PASS",
+    "matrix-routing.test.mjs": "PASS",
+    "git diff --check": "PASS before documentation; repeated before commit"
+  },
+  "evidence_root": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-preview",
+  "evidence_files": {
+    "browser-evidence.json": {
+      "sha256": "ac6e8e727d5961bbc37d0c97cb19add6b4e62e496daa58af350f8b5f24621fc5",
+      "bytes": 7069
+    },
+    "desktop-food.png": {
+      "sha256": "22db4973ca345028434b3c53a3c24c8e4b11a18db5b80b16440b72d8f60cf8f5",
+      "bytes": 52781
+    },
+    "desktop-full.png": {
+      "sha256": "1a5711fadd5d5c89e4f779c4aaeb23a1ad0815feb372d3f3b9c6ee8ae1e1ad27",
+      "bytes": 2677638
+    },
+    "desktop-hero.png": {
+      "sha256": "1f63fbb3602653818a76e49524d40eb982729accfe2f35b61cd7f1e1a3ba7db1",
+      "bytes": 507254
+    },
+    "desktop-map.png": {
+      "sha256": "721d8f3b818dbad0b9e265ce929bd54f58b5e46351441007579b385b3dc28586",
+      "bytes": 614266
+    },
+    "desktop-portrait.png": {
+      "sha256": "2d3e5725437c5ffd219fb1d80ea2cf0d55407568bdfc03a67ea8fe8196ef950f",
+      "bytes": 410107
+    },
+    "large-mobile-food.png": {
+      "sha256": "d2e34b1fdc7d35199503b59318e0a435999e72406dae6a18279e6083d6fda656",
+      "bytes": 43349
+    },
+    "large-mobile-full.png": {
+      "sha256": "8596cfab2a2ba57f97bbf2358e3bbe4f39e4c07924def7ef8428ff0e0bfdb94b",
+      "bytes": 916330
+    },
+    "large-mobile-hero.png": {
+      "sha256": "a24cf6c5ddd980f8ba752140d14c1d1d67f6b1770bec95b355b03ef4c7322a26",
+      "bytes": 184138
+    },
+    "large-mobile-map.png": {
+      "sha256": "6134eef1b9eada2f4313b6819e295f0d7b232dbd7db862f56f74c677c083e975",
+      "bytes": 169844
+    },
+    "large-mobile-portrait.png": {
+      "sha256": "9c804793421897528329f251974e54367407b18db7bcbee09ec417e328d9ef76",
+      "bytes": 350240
+    },
+    "mobile-food.png": {
+      "sha256": "ff2f5507e58acbc83b23ee88d18d3faafe55fc753bcf066bb2afa96bb7ff88fd",
+      "bytes": 43364
+    },
+    "mobile-full.png": {
+      "sha256": "f47beb50955e18043c146eb8ed75d3103cc9c1ae0e78946bc61e25d453a30a2e",
+      "bytes": 820502
+    },
+    "mobile-hero.png": {
+      "sha256": "5d97570a7dfd79b902ed98f90c5c02feed613e67162291ed7b9d6fb9472829a2",
+      "bytes": 119620
+    },
+    "mobile-map.png": {
+      "sha256": "8604a79efb234fcf1c8059ea70f5de7184cd97a9056284d6782bf22162d4fb7f",
+      "bytes": 157347
+    },
+    "mobile-portrait.png": {
+      "sha256": "c9596680b150ce867fa4c9377e41e056c98dc7cb9167ce425bb0fcdd554243ad",
+      "bytes": 296356
+    },
+    "mta-restaurants.html": {
+      "sha256": "358355d0f1c8da90926b91d9af9c5536fcebdd99bb8e49734b384af20fdcc0db",
+      "bytes": 22048
+    },
+    "mta-snack-bars.html": {
+      "sha256": "4dbc44a19e0943c20efc32ed8d2029a35aedd65a227df02cfad6480102256cd2",
+      "bytes": 23741
+    },
+    "small-food.png": {
+      "sha256": "85ec1148ee99c4f24fb330d1a59338192b33f7ae29bf1a9b2beb92a0de13c446",
+      "bytes": 42891
+    },
+    "small-full.png": {
+      "sha256": "027042d6781b36ed90d39c4f29eec01616310ea3f72d958058f0e849aa95c692",
+      "bytes": 758551
+    },
+    "small-hero.png": {
+      "sha256": "f64519a993b3455754b888b7d8e1cb9a0437ade0db156aeb410a15ba55d249b1",
+      "bytes": 87954
+    },
+    "small-map.png": {
+      "sha256": "1e2fce6b893804b1d893f2363ed4b6d11899d18e19ee12c2f4f8f05fe853f430",
+      "bytes": 167639
+    },
+    "small-portrait.png": {
+      "sha256": "9c6c4ab84d722c1b2ef9c96bc4d83ae1d7122f3af4de67519cfce85e3bf52871",
+      "bytes": 255636
+    },
+    "source-refresh.json": {
+      "sha256": "e261ff818ff41bb7316bfa762c31d02c43b41b226cfc6498c3d531e4d2441ec4",
+      "bytes": 690
+    },
+    "verify-initial.cjs": {
+      "sha256": "d688f89b917233c2f9426be935a5fcfd90c8880b9721e343c46b991a521db0cd",
+      "bytes": 6799
+    },
+    "verify.cjs": {
+      "sha256": "ef7fb64b72852f01c083230650624999034445e2c6c842d846fb180264894a19",
+      "bytes": 6882
+    }
+  },
+  "publication": {
+    "public_page": false,
+    "public_images": false,
+    "canonical": false,
+    "sitemap": false,
+    "alias_change": false,
+    "deployment": false,
+    "next_gate": "Fresh isolated release candidate with SEO/internal links; inspect actual 2906/NEXUS/Brain pointers before publication and transfer only the travel delta to newest production snapshot."
+  },
+  "boundaries": "No Next application, CRM, WhatsApp, outreach, payment, backend, scheduler, traffic or production data changes."
+}

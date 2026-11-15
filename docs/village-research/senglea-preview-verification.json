@@ -1,0 +1,158 @@
+{
+  "checkedAt": "2026-11-14T00:47:01.876Z",
+  "url": "http://127.0.0.1:8769/senglea-preview.html",
+  "results": [
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "robots": "noindex,nofollow",
+      "h1": 1,
+      "canonical": 0,
+      "initialExternalRequests": 0,
+      "initialIframes": 0,
+      "iframeCount": 1,
+      "ariaExpanded": true,
+      "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5135644%2C35.8837833%2C14.5201760%2C35.8910491&layer=mapnik",
+      "mapSize": {
+        "x": 43.5,
+        "y": 470.265625,
+        "width": 303,
+        "height": 340
+      },
+      "mapTiles": null,
+      "mapCanvas": {
+        "width": 303,
+        "height": 340
+      },
+      "mapObservation": "Current OSM embed uses a MapLibre canvas, not Leaflet tile images; rendered geography and labels visually checked in captured screenshots.",
+      "image": {
+        "width": 1800,
+        "height": 978,
+        "fit": "contain",
+        "rendered": {
+          "x": 0,
+          "y": 443.453125,
+          "width": 390,
+          "height": 211.890625,
+          "top": 443.453125,
+          "right": 390,
+          "bottom": 655.34375,
+          "left": 0
+        }
+      },
+      "errors": [],
+      "failed": [],
+      "horizontalOverflow": false
+    },
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "status": 200,
+      "robots": "noindex,nofollow",
+      "h1": 1,
+      "canonical": 0,
+      "initialExternalRequests": 0,
+      "initialIframes": 0,
+      "iframeCount": 1,
+      "ariaExpanded": true,
+      "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5135644%2C35.8837833%2C14.5201760%2C35.8910491&layer=mapnik",
+      "mapSize": {
+        "x": 144,
+        "y": 548.625,
+        "width": 1152,
+        "height": 480
+      },
+      "mapTiles": null,
+      "mapCanvas": {
+        "width": 1152,
+        "height": 480
+      },
+      "mapObservation": "Current OSM embed uses a MapLibre canvas, not Leaflet tile images; rendered geography and labels visually checked in captured screenshots.",
+      "image": {
+        "width": 1800,
+        "height": 978,
+        "fit": "contain",
+        "rendered": {
+          "x": 60,
+          "y": 419.78125,
+          "width": 1320,
+          "height": 717.1875,
+          "top": 419.78125,
+          "right": 1380,
+          "bottom": 1136.96875,
+          "left": 60
+        }
+      },
+      "errors": [],
+      "failed": [],
+      "horizontalOverflow": false
+    }
+  ],
+  "status": "PRIVATE PREVIEW VERIFIED — NOT PUBLISHED",
+  "htmlSha256": "ebd1f826c10b6bc8024d7234c7edd0a4f919631133f3ceb1c4aad7c72b9965ed",
+  "artifactDirectory": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-senglea-preview",
+  "artifacts": [
+    {
+      "name": "desktop-food.png",
+      "bytes": 58000,
+      "sha256": "1911d9194e5db62f520749594d20c3ee730670a71258428634d3c728c0fbc554"
+    },
+    {
+      "name": "desktop-full.png",
+      "bytes": 1813330,
+      "sha256": "225590e43f45a91903c040f0c29b13607656b936fecab957086d0820b9601063"
+    },
+    {
+      "name": "desktop-hero.png",
+      "bytes": 1156548,
+      "sha256": "92fe9de4c5b4dd66074374b42ca7f0052b344736e1b1c15f405cdd22d5d4b552"
+    },
+    {
+      "name": "desktop-map.png",
+      "bytes": 568298,
+      "sha256": "90b24a921801c753f790fc13b7c8a78a605edcbeaf939981f04ae6ff1a6ba2fb"
+    },
+    {
+      "name": "mobile-food.png",
+      "bytes": 44277,
+      "sha256": "70eaa138ee0bfbeae24b4d3465d2953bdd3227a7f3157cfebb3c2b542e809647"
+    },
+    {
+      "name": "mobile-full.png",
+      "bytes": 488687,
+      "sha256": "fee0b711cc3046fdb473d4cff2f146cede7853e58f3d20cc1e9b21641a66f94f"
+    },
+    {
+      "name": "mobile-hero.png",
+      "bytes": 174746,
+      "sha256": "d8c3705e7609b1cc948cf0f8636d98cb9ef0124e9a53dd74a98483481be2809a"
+    },
+    {
+      "name": "mobile-map.png",
+      "bytes": 138664,
+      "sha256": "04677dfd1e2ac00e8d55970a65c2260d43b4e1e5aa0607608000f71c47b3ef80"
+    },
+    {
+      "name": "verify.cjs",
+      "bytes": 4949,
+      "sha256": "398cb7abe423de809674d56072321f9039caf1f28e97ebd763b771355c9a2fe5"
+    }
+  ],
+  "regressionCommands": [
+    {
+      "command": "node tests/route-segments.test.cjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node tests/property-route-ferry-presentation.test.cjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node tests/matrix-routing.test.mjs",
+      "exitCode": 0
+    }
+  ]
+}

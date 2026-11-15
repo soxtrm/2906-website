@@ -435,4 +435,14 @@
       <image:loc>https://www.2906.estate/link-marketplace/assets/birgu-vittoriosa-mrpanygoff.webp</image:loc>
     </image:image>
   </url>
+  <url>
+    <loc>https://www.2906.estate/link-marketplace/areas/senglea.html</loc>
+    <lastmod>2026-11-14</lastmod>
+    <image:image><image:loc>https://www.2906.estate/link-marketplace/assets/senglea-point-diego-delso.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://www.2906.estate/link-marketplace/areas/tarxien.html</loc>
+    <lastmod>2026-11-14</lastmod>
+    <image:image><image:loc>https://www.2906.estate/link-marketplace/assets/tarxien-augustinian-church-grestei.webp</image:loc></image:image>
+  </url>
 </urlset>

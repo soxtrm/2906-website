@@ -1,0 +1,177 @@
+{
+  "status": "RESEARCH DRAFT — NOT PUBLISHED",
+  "language": "en",
+  "checkedDate": "2026-11-14",
+  "baseline": "f364a59a342cb70e3b396969c1fa410c12dac455",
+  "carriedPublicTravelHead": "03743d69233e24bdf44162fbc3ebe8d580f9f864",
+  "worklogBeforeSha256": "DBFC444677986F1BF346D30E00761F1C7DFF9ECD7AC67CFB18AB61E6AA50D68B",
+  "directSources": [
+    {
+      "id": "mta-restaurants",
+      "url": "https://www.mta.com.mt/licences/licences/?type=restaurants&town=TARXIEN&size=250",
+      "finalUrl": "https://www.mta.com.mt/licences/licences/?type=restaurants&town=TARXIEN&size=250",
+      "checkedAt": "2026-11-14T05:12:09.065430+00:00",
+      "status": 200,
+      "bytes": 22048,
+      "sha256": "358355d0f1c8da90926b91d9af9c5536fcebdd99bb8e49734b384af20fdcc0db",
+      "rows": [
+        "Ref Sector Name ▲ Establishment Address 1 Address 2 Town Post Code",
+        "RST-30587 RESTAURANT Il-Kastell Restaurant — — TRIQ IL- KBIRA TARXIEN —",
+        "RST-32256 RESTAURANT Ta' Gustu Fusion — — TRIQ LANZON TARXIEN —"
+      ]
+    },
+    {
+      "id": "mta-snack-bars",
+      "url": "https://www.mta.com.mt/licences/licences/?type=snack-bars&town=TARXIEN&size=250",
+      "finalUrl": "https://www.mta.com.mt/licences/licences/?type=snack-bars&town=TARXIEN&size=250",
+      "checkedAt": "2026-11-14T05:12:09.068438+00:00",
+      "status": 200,
+      "bytes": 23741,
+      "sha256": "4dbc44a19e0943c20efc32ed8d2029a35aedd65a227df02cfad6480102256cd2",
+      "rows": [
+        "Ref Sector Name ▲ Establishment Address 1 Address 2 Town Post Code",
+        "SBR-31904 SNACK BAR Goat Cafe' Bar Misrah is-Suq 45 MISRAH TAS- SUQ TARXIEN —",
+        "SBR-22571 SNACK BAR Napolermo — 12 MISRAH TAS- SUQ TARXIEN —",
+        "SBR-12300 SNACK BAR Paramount Snack Bar — 69 TRIQ HAL TARXIEN TARXIEN TXN 1095",
+        "SBR-12101 SNACK BAR Patakkus Snack Bar — 1 TRIQ SANTA TEREZA TARXIEN TXN 1070",
+        "SBR-23939 SNACK BAR Pretoria Snack Bar — 47 MISRAH TAS- SUQ TARXIEN —",
+        "SBR-24940 SNACK BAR Vi-Vi Cafe Bar — — TRIQ HAL LUQA TARXIEN —"
+      ]
+    },
+    {
+      "id": "council",
+      "url": "https://tarxienlc.gov.mt/en/",
+      "finalUrl": "https://tarxienlc.gov.mt/en/",
+      "checkedAt": "2026-11-14T05:12:08.831744+00:00",
+      "status": 403,
+      "bytes": 5532,
+      "sha256": "f10be0bebd0693e126a69d7ba1e5e80b383663f89f761526d4e2d99b90a21fab"
+    },
+    {
+      "id": "heritage",
+      "url": "https://heritagemalta.mt/explore/hal-tarxien-prehistoric-complex/",
+      "finalUrl": "https://heritagemalta.mt/explore/hal-tarxien-prehistoric-complex/",
+      "checkedAt": "2026-11-14T05:12:10.535119+00:00",
+      "status": 200,
+      "bytes": 232829,
+      "sha256": "3b3e70dbf1aa0d725bf3e3af4f30af41111fb41739774f1bd0ffbffb8170550f"
+    },
+    {
+      "id": "address",
+      "url": "https://address.gov.mt/local-council/",
+      "finalUrl": "https://address.gov.mt/local-council/",
+      "checkedAt": "2026-11-14T05:12:09.696119+00:00",
+      "status": 200,
+      "bytes": 133827,
+      "sha256": "732b8daecfe8f2e39d14e44af660f2f6b613474c75c5d452132116ce044f45c4"
+    },
+    {
+      "id": "health",
+      "url": "https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/",
+      "finalUrl": "https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/",
+      "checkedAt": "2026-11-14T05:12:09.233759+00:00",
+      "status": 403,
+      "bytes": 5679,
+      "sha256": "769cf22135040ac83cc939d487d50dfb2826712e41eff43cb5aff62e5906819e"
+    },
+    {
+      "id": "map",
+      "url": "https://nominatim.openstreetmap.org/search?q=Tarxien%2C%20Malta&format=jsonv2&addressdetails=1&countrycodes=mt&limit=3",
+      "finalUrl": "https://nominatim.openstreetmap.org/search?q=Tarxien%2C%20Malta&format=jsonv2&addressdetails=1&countrycodes=mt&limit=3",
+      "checkedAt": "2026-11-14T05:12:09.296761+00:00",
+      "status": 200,
+      "bytes": 580,
+      "sha256": "e9290faec611b3e3b7a7bbfb2c6123767ddf34856cec2ff4a58f214e7355cf75",
+      "places": [
+        {
+          "osm_type": "relation",
+          "osm_id": 7510559,
+          "lat": "35.8648857",
+          "lon": "14.5114877",
+          "category": "boundary",
+          "type": "administrative",
+          "addresstype": "village",
+          "display_name": "Ħal Tarxien, Reġjun tal-Port, Malta",
+          "boundingbox": [
+            "35.8614943",
+            "35.8715399",
+            "14.5058080",
+            "14.5206040"
+          ]
+        }
+      ]
+    }
+  ],
+  "officialWebChecks": [
+    {
+      "url": "https://address.gov.mt/local-council/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Official current table: Hal Tarxien, Port Region."
+    },
+    {
+      "url": "https://tarxienlc.gov.mt/en/churches-chapels/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Council lists Annunciation parish, St Augustine and St Mary Tar-Rokna; direct client 403, web readable."
+    },
+    {
+      "url": "https://schmalta.mt/wp-content/uploads/2023/08/DC-02045.pdf",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Inventory 2045: Parish Church of the Annunciation, Misrah ir-Repubblika, Tarxien; published 2013-12-27."
+    },
+    {
+      "url": "https://primaryhealthcare.gov.mt/en/clinics/malta-community-clinics/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Tarxien Community Clinic on St Carmel Street, Malta section. Later temporary closures refer to Gozo."
+    },
+    {
+      "url": "https://primaryhealthcare.gov.mt/en/faqs/appointment-information/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Tarxien listed in Paola Health Centre catchment."
+    },
+    {
+      "url": "https://www.publictransport.com.mt/route/85/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Actual route stops include Neolitici 358 under Hal Tarxien; no copied timetable."
+    },
+    {
+      "url": "https://www.publictransport.com.mt/route/88/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Actual route stops include Neolitici 358 and Tarxien 359; no nearest-home stop inferred."
+    },
+    {
+      "url": "https://heritagemalta.mt/explore/hal-tarxien-prehistoric-complex/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Site address Triq it-Tempji Neolitici; archaeological context, vulnerable finds in Valletta, site-specific access statement."
+    },
+    {
+      "url": "https://heritagemalta.mt/explore/hal-saflieni-hypogeum/",
+      "checkedDate": "2026-11-14",
+      "access": "readable in web tool",
+      "supportedClaim": "Operator identifies Hypogeum in Paola; no Tarxien reclassification or evergreen ticket offer."
+    }
+  ],
+  "tests": [
+    {
+      "command": "node tests/route-segments.test.cjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node tests/property-route-ferry-presentation.test.cjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node tests/matrix-routing.test.mjs",
+      "result": "PASS"
+    }
+  ],
+  "rawSourceDirectory": "D:\\2906\\nexus-bridge-work\\artifacts\\20261114-tarxien-research",
+  "productionChanged": false
+}

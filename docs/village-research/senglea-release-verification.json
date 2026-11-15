@@ -1,0 +1,165 @@
+{
+  "status": "RELEASE CANDIDATE — NOT PUBLISHED",
+  "language": "en",
+  "checkedAt": "2026-11-14T04:06:58.461987+00:00",
+  "originMain": "f364a59a342cb70e3b396969c1fa410c12dac455",
+  "sourceCommitsReused": [
+    "93b142f",
+    "b3315b2"
+  ],
+  "productionBaseline": {
+    "checkedAt": "2026-11-14T04:05:28.678Z",
+    "id": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+    "url": "2906-website-6zbi-33h2ntair-kevinsony1-9794s-projects.vercel.app",
+    "source": "cli",
+    "gitSource": {
+      "sha": "f364a59a342cb70e3b396969c1fa410c12dac455",
+      "ref": "main"
+    },
+    "projectId": "prj_Nox2RhJN4ZHW05KnXpTskMAog1Wb",
+    "readyState": "READY"
+  },
+  "nexusPointer": "/opt/nexusbooking/releases/20261114-homepage-p0-v112",
+  "caddySha256": "317d85a6cd017cb7940c06fa90bd757839072589d48f99e323d0092b8404f4d8",
+  "build": {
+    "command": "npm run build -- --webpack",
+    "result": "PASS",
+    "staticPages": 55,
+    "typeValidationSkippedByExistingConfig": true
+  },
+  "typecheck": {
+    "command": "npx tsc --noEmit",
+    "result": "FAIL — existing unchanged baseline error",
+    "detail": "lib/crm/ui.tsx(446,5): TS2322 ownerquality is not assignable to NavKey",
+    "sourceMatchesOriginMain": true
+  },
+  "tests": [
+    "neighbourhood-seo-contract: PASS (63 editions)",
+    "route-segments: PASS",
+    "property-route-ferry-presentation: PASS",
+    "matrix-routing: PASS",
+    "git diff --check: PASS"
+  ],
+  "browser": {
+    "checkedAt": "2026-11-14T04:01:47.449Z",
+    "url": "http://127.0.0.1:8770/link-marketplace/areas/senglea.html",
+    "results": [
+      {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "status": 200,
+        "robots": "indexable release candidate",
+        "h1": 1,
+        "canonical": "https://www.2906.estate/link-marketplace/areas/senglea.html",
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "iframeCount": 1,
+        "ariaExpanded": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5135644%2C35.8837833%2C14.5201760%2C35.8910491&layer=mapnik",
+        "mapSize": {
+          "x": 43.5,
+          "y": 470.765625,
+          "width": 303,
+          "height": 340
+        },
+        "mapTiles": null,
+        "mapCanvas": {
+          "width": 303,
+          "height": 340
+        },
+        "mapObservation": "Current OSM embed uses a MapLibre canvas, not Leaflet tile images; rendered geography and labels visually checked in captured screenshots.",
+        "image": {
+          "width": 1800,
+          "height": 978,
+          "fit": "contain",
+          "rendered": {
+            "x": 0,
+            "y": 459.953125,
+            "width": 390,
+            "height": 211.890625,
+            "top": 459.953125,
+            "right": 390,
+            "bottom": 671.84375,
+            "left": 0
+          }
+        },
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      },
+      {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "status": 200,
+        "robots": "indexable release candidate",
+        "h1": 1,
+        "canonical": "https://www.2906.estate/link-marketplace/areas/senglea.html",
+        "initialExternalRequests": 0,
+        "initialIframes": 0,
+        "iframeCount": 1,
+        "ariaExpanded": true,
+        "mapURL": "https://www.openstreetmap.org/export/embed.html?bbox=14.5135644%2C35.8837833%2C14.5201760%2C35.8910491&layer=mapnik",
+        "mapSize": {
+          "x": 144,
+          "y": 548.625,
+          "width": 1152,
+          "height": 480
+        },
+        "mapTiles": null,
+        "mapCanvas": {
+          "width": 1152,
+          "height": 480
+        },
+        "mapObservation": "Current OSM embed uses a MapLibre canvas, not Leaflet tile images; rendered geography and labels visually checked in captured screenshots.",
+        "image": {
+          "width": 1800,
+          "height": 978,
+          "fit": "contain",
+          "rendered": {
+            "x": 60,
+            "y": 419.78125,
+            "width": 1320,
+            "height": 717.1875,
+            "top": 419.78125,
+            "right": 1380,
+            "bottom": 1136.96875,
+            "left": 60
+          }
+        },
+        "errors": [],
+        "failed": [],
+        "horizontalOverflow": false
+      }
+    ]
+  },
+  "beforeHashes": {
+    "TRAVEL_WORKLOG.md": "2f9391bfbb9fac4d912e7f51b7cc9a6d89306feeeec6e31d47cb173c677c4e09",
+    "docs/village-research/senglea-research.md": "683f315f76dba46d72978ab5cb0b1e6f91de02dbf53fa0fbe5ee6627d4ceebfb",
+    "docs/village-research/senglea-preview.html": "e6421b9736752dfd32d7e087fc63a4df58a14260e73a2ce672409eb6558ebc02",
+    "public/link-marketplace/index.html": "91f418b7092d18a06ec09a4ba4bedb12ea3c18514206e895bf89578548bd4dfb",
+    "public/neighbourhood-sitemap.xml": "30f90f40295a931b5b4fe47edc3cfcd2acb78bb61dc3c002d50b42c38a9a5b93",
+    "public/link-marketplace/areas/bormla.html": "7eec72dc628f085c2abaea0ee24462c25d62f5fcc5bb72db633ff14d4867f9a5",
+    "tests/neighbourhood-seo-contract.test.cjs": "bcce2af4cd868683ca1edbfe610648c1f4826ed74dc84046e2afeff8b233ef0b"
+  },
+  "shippingHashes": {
+    "public/link-marketplace/areas/senglea.html": "59f59e035b8dc1dde2deee11d1e8904a20b1a8b0a0201d08692c95b44b003643",
+    "public/link-marketplace/assets/senglea-point-diego-delso.webp": "de3f345406d1398e6621209a5ac87850cb465d2860c51e287a7c1bdcef746091",
+    "public/link-marketplace/index.html": "caf607a50ae3046aea787f9748e82cf1c380d61b73eeb57340c7b9ecad74fa7d",
+    "public/neighbourhood-sitemap.xml": "ad056d4e77f36bfad579e428f3e5955098b07de6f5680fb7a1be794da91d764e",
+    "public/link-marketplace/areas/bormla.html": "01272d3f311ffbc05598c18af28935c4d554226adb9ae328bbb208907f04a49e"
+  },
+  "evidenceHashes": {
+    "desktop-food.png": "1911d9194e5db62f520749594d20c3ee730670a71258428634d3c728c0fbc554",
+    "desktop-full.png": "c8e0e1179443b3236960aea6cc32df06e99acb8e8a2f7197b36fe421f6c0814d",
+    "desktop-hero.png": "4dbef381a5eafe45a75246db63103a4829fcfa55d88f8010f1bc28b96bde879c",
+    "desktop-map.png": "90b24a921801c753f790fc13b7c8a78a605edcbeaf939981f04ae6ff1a6ba2fb",
+    "mobile-food.png": "806dabd8e14dcbcf6d2b31d7d7567dbb140da014230d675d79d9d19ef2cbd5ef",
+    "mobile-full.png": "e6fc2698b5988ea36851ecc22f2ac67d36be8bf2558336ca36dfdbaee24723ef",
+    "mobile-hero.png": "516a30958fb891b88b8d6dac665a547154901a03fbb5b51b454f7b560b5c56da",
+    "mobile-map.png": "d5ddae0a0ec53cf70a7d0df84f03d6ea7a4358896ad0867fd695d7aa9ddfb4b4",
+    "verify.cjs": "b05ec07ba541286ff5e738df08a85f5699d99437de111a69eb3e4a0f686c3d7b"
+  },
+  "publication": "Not attempted. No Vercel alias promotion, Git main push, Caddy change or live static-file change."
+}

@@ -1,0 +1,93 @@
+{
+  "at": "2026-11-14T12:10:54.488Z",
+  "sourceCommit": "508788a37dfea26c511186c923c463377edf6690",
+  "deployment": {
+    "id": "dpl_4nLnYPgRoFz4MZhvhWUz4cxQEpV9",
+    "projectId": "prj_Nox2RhJN4ZHW05KnXpTskMAog1Wb",
+    "url": "2906-website-6zbi-54tszpoay-kevinsony1-9794s-projects.vercel.app",
+    "readyState": "READY",
+    "target": "production"
+  },
+  "aliases": {
+    "www.2906.estate": {
+      "deploymentId": "dpl_FDaWAaxZ4RYkDXAJDyYRUwGB55Dr",
+      "redirect": null
+    },
+    "2906.estate": {
+      "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+      "redirect": "www.2906.estate"
+    },
+    "crm.2906.estate": {
+      "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+      "redirect": null
+    },
+    "2906-website-6zbi.vercel.app": {
+      "deploymentId": "dpl_GnJ1kxu9zDqQZgt2Qrg3LXZyyp2W",
+      "redirect": null
+    }
+  },
+  "files": [
+    {
+      "path": "public/link-marketplace/areas/tarxien.html",
+      "artifact": "staged-tarxien.html",
+      "httpStatus": 200,
+      "sha256": "0175a116550536eebcef6ad1cf59c86bf455b8b8493e6e9500ec02ac1c4d2971",
+      "localSha256": "0175a116550536eebcef6ad1cf59c86bf455b8b8493e6e9500ec02ac1c4d2971",
+      "contentMatches": true
+    },
+    {
+      "path": "public/link-marketplace/assets/tarxien-augustinian-church-grestei.webp",
+      "artifact": "staged-church.webp",
+      "httpStatus": 200,
+      "sha256": "7d5be0ee60c53de65280665ccfdddcf07a8598298610520afdb299ae3c74a6d2",
+      "localSha256": "7d5be0ee60c53de65280665ccfdddcf07a8598298610520afdb299ae3c74a6d2",
+      "contentMatches": true
+    },
+    {
+      "path": "public/link-marketplace/assets/tarxien-east-temple-kritzolina.webp",
+      "artifact": "staged-temple.webp",
+      "httpStatus": 200,
+      "sha256": "7c54b167743f754c7175b4f3fd1fc36b154f2085265fa81ea2fe900e6ba399df",
+      "localSha256": "7c54b167743f754c7175b4f3fd1fc36b154f2085265fa81ea2fe900e6ba399df",
+      "contentMatches": true
+    },
+    {
+      "path": "public/link-marketplace/index.html",
+      "artifact": "staged-index.html",
+      "httpStatus": 200,
+      "sha256": "3e57e821c2a2433226254b77d11e39aded5f6e9360eadbe5b2abca4c0cf3df1f",
+      "localSha256": "3e57e821c2a2433226254b77d11e39aded5f6e9360eadbe5b2abca4c0cf3df1f",
+      "contentMatches": true
+    },
+    {
+      "path": "public/neighbourhood-sitemap.xml",
+      "artifact": "staged-sitemap.xml",
+      "httpStatus": 200,
+      "sha256": "3536ddd5154d1405bfdddc2e559f76b743ebfacefdb65e859b97cb96e3ee1f91",
+      "localSha256": "3536ddd5154d1405bfdddc2e559f76b743ebfacefdb65e859b97cb96e3ee1f91",
+      "contentMatches": true
+    },
+    {
+      "path": "public/link-marketplace/areas/paola.html",
+      "artifact": "staged-paola.html",
+      "httpStatus": 200,
+      "sha256": "21b6036a1dc88087950f0e3ff933f9decfa62cc046c21d835d0bfad22207a547",
+      "localSha256": "21b6036a1dc88087950f0e3ff933f9decfa62cc046c21d835d0bfad22207a547",
+      "contentMatches": true
+    }
+  ],
+  "preEdit": [
+    {
+      "path": "TRAVEL_WORKLOG.md",
+      "sha256": "f68b6c7a47dde991bf3f2ddc4aa7d951e0f4f405a94fbea822a1d324a1c1ce40"
+    },
+    {
+      "path": "scripts/publish-tarxien.cjs",
+      "sha256": "11a05ef48529e877f5c8c7052817589b9db5943abaf2044692e8f29a8039d713"
+    },
+    {
+      "path": "tests/tarxien-release-guard.test.cjs",
+      "sha256": "5c48b5e690f619eb30ebec8c5ecd894286b186aed8206cf5641e928e7e75c95a"
+    }
+  ]
+}
