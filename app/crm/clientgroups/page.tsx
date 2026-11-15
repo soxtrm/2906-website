@@ -265,7 +265,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
   }
 
   const load = useCallback(() => {
-    crmFetch(`clientgroups/${id}`).then(d => {
+    return crmFetch(`clientgroups/${id}`).then(d => {
       setData(d)
       setProfileDraft({
         name: d.client?.name || '', phone: d.client?.phone || '',
@@ -297,7 +297,11 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
         gallery_daily_limit: d.state?.gallery_daily_limit ?? 2,
         link_daily_limit: d.state?.link_daily_limit ?? 3,
       })
-    }).catch(e => setErr(e?.data?.error || e?.message || 'Failed to load'))
+      return true
+    }).catch(e => {
+      setErr(e?.data?.error || e?.message || 'Failed to load')
+      return false
+    })
   }, [id])
   useEffect(() => { load() }, [load])
 
@@ -404,11 +408,21 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
   // next scheduled proactive check, which can be almost a day out. This is
   // the manual escape hatch — pure compute, never sends anything.
   const [matchNowBusy, setMatchNowBusy] = useState(false)
+  const [matchRunCount, setMatchRunCount] = useState<number | null>(null)
+  const matchBlocked = !data?.state?.client_id || !data?.client
+    ? 'Link a client search profile before running matching.'
+    : data.client.status === 'closed'
+      ? 'This client search is closed. If the client is looking again, review and reactivate their search in Clients before running matching.'
+      : null
   async function matchNow() {
+    if (matchNowBusy || matchBlocked) return
     setMatchNowBusy(true); setErr(null)
+    setMatchRunCount(null)
     try {
-      await crmJson(`clientgroups/${id}/match-now`, 'POST', {})
-      load(); onChanged()
+      const result = await crmJson(`clientgroups/${id}/match-now`, 'POST', {})
+      setMatchFilter('all')
+      if (await load()) setMatchRunCount(result.matchCount)
+      onChanged()
     } catch (e: any) {
       setErr(e?.data?.error || e?.message || 'Could not find matches')
     } finally { setMatchNowBusy(false) }
@@ -661,7 +675,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-bold uppercase tracking-wide text-white/50">Matches ({data.matches?.length || 0})</h3>
               <div className="flex items-center gap-2">
-                <button disabled={matchNowBusy} onClick={matchNow}
+                <button disabled={matchNowBusy || !!matchBlocked} onClick={matchNow}
                   title="Run the matching engine right now instead of waiting for the next scheduled check"
                   className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20 disabled:opacity-40 transition-colors">
                   {matchNowBusy ? 'Searching…' : 'Find Matches Now'}
@@ -679,6 +693,12 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 </div>
               </div>
             </div>
+            {matchBlocked && <p role="status" className="mb-2 text-xs text-white/70">{matchBlocked}</p>}
+            {!matchBlocked && matchRunCount !== null && (
+              <p role="status" className="mb-2 text-xs text-white/70">
+                {matchRunCount === 0 ? 'No available properties met the saved search criteria.' : `Search completed with ${matchRunCount} match${matchRunCount === 1 ? '' : 'es'}.`}
+              </p>
+            )}
             <div className="space-y-1.5 max-h-[520px] overflow-y-auto">
               {(data.matches || [])
                 .filter((m: any) => {
@@ -739,7 +759,7 @@ function DetailSheet({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     </div>
                   )
                 })}
-              {(!data.matches || data.matches.length === 0) && <p className="text-xs text-white/30">No matches yet.</p>}
+              {(!data.matches || data.matches.length === 0) && !matchBlocked && matchRunCount === null && <p className="text-xs text-white/30">No matches yet.</p>}
             </div>
           </div>
 

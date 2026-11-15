@@ -49,7 +49,16 @@ const listeners = new Set<(s: IntakeSummary | null) => void>()
 export function refreshIntakeSummary(): Promise<IntakeSummary | null> {
   if (cache.inflight) return cache.inflight
   cache.inflight = crmFetch('intake/summary')
-    .then((d: IntakeSummary) => { cache = { at: Date.now(), data: d, inflight: null }; listeners.forEach(l => l(d)); return d })
+    .then((d: IntakeSummary) => {
+      // An incomplete summary must not take down the CRM navigation.
+      if (!Number.isFinite(d?.counts?.needs_verification) || !Array.isArray(d?.uploadsToday)) {
+        cache.inflight = null
+        return cache.data
+      }
+      cache = { at: Date.now(), data: d, inflight: null }
+      listeners.forEach(listener => listener(d))
+      return d
+    })
     .catch(() => { cache.inflight = null; return cache.data })
   return cache.inflight
 }
