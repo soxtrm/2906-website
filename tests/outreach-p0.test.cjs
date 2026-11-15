@@ -136,7 +136,7 @@ for (const [label, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 8
       await page.reload({ waitUntil: 'networkidle2' }); await page.waitForSelector('[data-testid="pace-card"]')
       await page.waitForFunction(() => document.querySelector('[data-testid="pace-number"]')?.value === '18')
       // PACING-07: switch to Cedric (20), edit without saving, back to Kev keeps 18, back to Cedric keeps the draft.
-      await page.$eval('[data-testid="account-card-1"]', e => e.scrollIntoView({ block: 'center' })); await page.click('[data-testid="account-card-2"]')
+      await page.locator('[data-testid="account-card-2"]').click()
       await page.waitForFunction(() => document.querySelector('[data-testid="pace-number"]')?.value === '20')
       await page.click('[data-testid="pace-number"]', { clickCount: 3 }); await page.keyboard.type('22')
       await page.$eval('[data-testid="account-card-1"]', e => e.scrollIntoView({ block: 'center' })); await page.click('[data-testid="account-card-1"]')

@@ -244,6 +244,27 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     await shot(page, 'desktop-dark')
   })
 
+  await t.test('the owner-contact lock explains the reason to admins only', async t2 => {
+    for (const width of [1440, 390]) {
+      for (const role of ['admin', 'agent']) {
+        const f = fixtures()
+        f.me.agent.role = role
+        f.listings[0].contact.lastContactAt = new Date().toISOString()
+        const page = await open(t2, browser, { fixtures: f, width })
+        await page.waitForSelector('[data-ref="2906-9101"]')
+        const lock = await page.$('[data-contact-block-reason="2906-9101"]')
+        if (role === 'admin') {
+          assert.ok(lock, 'admins see the explicit lock reason')
+          assert.match(await lock.evaluate(el => el.innerText), /No contact until the owner reopens viewings/)
+          assert.match(await lock.evaluate(el => el.title), /Last contact/)
+        } else {
+          assert.equal(lock, null)
+        }
+        assert.equal(page.crmCalls.some(call => call.method !== 'GET'), false)
+      }
+    }
+  })
+
   await t.test('availability calendar: Save never reposts, Save & Repost reposts once', async t2 => {
     const f = fixtures()
     f.listings[0] = { ...f.listings[0], availableDate: '2026-11-01' }

@@ -1,0 +1,2 @@
+deploy.sh text eol=lf
+preserve-closed-matches.patch text eol=lf
