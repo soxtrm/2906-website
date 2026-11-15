@@ -1771,3 +1771,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree `20261115/kirkop-research` aus `origin/main` `ca51c76175e7d292afebf1017d8a42ba51ffa70c`, bestehendes Live-Reisejournal bis `ac79fbc` per Fast-forward übernommen. Vor-SHA-256 des Worklogs `96bbd3ce9f2e778bd52581de2d7a434c7ebc8b5aabfeae93b6d3953823398d93`. Git-Historie und neueste travel-Refs auf vorhandene Kirkop-Arbeit geprüft.
 - **Privater Rechercheentwurf**, Englisch geplant, Ziel https://www.2906.estate/link-marketplace/areas/kirkop.html. Quellen zu Ortsname und Region, St Leonard, Menhir, Gesundheitszentrum, Sport und Buslinie 73 erfasst. Direkte Abrufe der beiden MTA-Registerzeilen, der Buslinie, des OSM-Objekts und der Commons-Dateimetadaten ergaben HTTP 200. Lizenz und Originalhash geprüft. Belege und inhaltliche Grenzen in `docs/village-research/kirkop-research.md`.
 - Nächster Schritt: Originalfoto und Bildausschnitt visuell prüfen, private Vorschau mit bedarfsgeladener Karte bauen und mobil sowie auf Desktop testen. Kein öffentlicher Eintrag oder Aliaswechsel für diesen Recherche-Schritt.
+
+## 15.11 — Ħal Kirkop Bild für private Vorschau geprüft
+
+- Isolierter Worktree `20261115/kirkop-asset` ab aktuellem `origin/main` `ca51c76` mit Recherchestand `4f72de7`. Worklog-SHA-256 vor Bearbeitung `b5dd540f206396fa09b84ca5ec0ededeae9febb2e3833a9291dd92372b2a14b4`.
+- Zwei Commons-Originale anhand ihrer SHA-1 geprüft und visuell verglichen. Für die englische Ausgabe das vollständige Querformat von IsaacBTTF gewählt. CC BY-SA 3.0, 1440 × 960 WebP, 131.920 Bytes, Bild und Autorenhinweis in `docs/village-research`. Dekodierung, Bildgröße, Metadaten und Ausgabehash geprüft.
+- Status **unveröffentlicht**. Vorgesehene URL https://www.2906.estate/link-marketplace/areas/kirkop.html. Nächster Schritt ist die private Browser-Vorschau mit On-Demand-Karte.

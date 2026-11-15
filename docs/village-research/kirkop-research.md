@@ -29,7 +29,7 @@ Both URL checks returned HTTP 200 on 15 November 2026 and the matching town rows
 ## Map and photograph
 
 - The planned 2D map opens on demand and centres on Kirkop Parish Church, approximately 35.8423, 14.4858. OpenStreetMap way 138258011 returned HTTP 200 and identifies the mapped church. Label it as a landmark and include the attribution and a direct map link. The map is for orientation, with no route lines, asserted boundaries or private listing locations. [OpenStreetMap church](https://www.openstreetmap.org/way/138258011), [OpenStreetMap attribution](https://www.openstreetmap.org/copyright)
-- Photo candidate is *!!! Kirkop Church.jpg* by Continentaleurope, taken 14 February 2017 and licensed CC BY-SA 4.0. Commons returned a 1080 × 1620 original with SHA-1 `2c4412d873ebda5ee640f093005d25e8ec6a4771`. Asset preparation still needs byte verification, visual review, optimisation and a visible credit with an adaptation note. [Original file page](https://commons.wikimedia.org/wiki/File%3A%21%21%21_Kirkop_Church.jpg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- The selected photo is IsaacBTTF’s 2016 landscape of St Leonard’s under CC BY-SA 3.0. The alternate portrait remains a private reference. See [photo credits and verification](kirkop-image-credits.md) for the original, derivative and required caption.
 
 ## Release prerequisites
 
