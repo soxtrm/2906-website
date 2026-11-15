@@ -168,7 +168,7 @@ test('ARGUS functional UI', { timeout: 900000 }, async t => {
     await page.waitForSelector('[data-testid=board-filter-rail]')
     assert.ok(await page.$eval('.crm-agency-brand img', el => el.getAttribute('alt') === '2906' && el.getBoundingClientRect().width > 40), '2906 mark visible')
     const navLabels = await page.$$eval('.crm-header-nav > .crm-nav-item', els => els.filter(e => e.getBoundingClientRect().width > 0).map(e => e.textContent.trim()))
-    assert.deepEqual(navLabels, ['Dashboard', 'Inventory', 'Board', 'Bookings', 'Outreach', 'Profile'], 'labelled primary nav')
+    assert.deepEqual(navLabels, ['Dashboard', 'Incoming', 'Inventory', 'Board', 'Bookings', 'Outreach', 'Profile'], 'labelled primary nav')
     // Header order: 2906 · ARGUS group (over the results) · nav · theme.
     const xs = await page.evaluate(() => ['.crm-agency-brand', '.crm-argus-orbit', '[data-testid=board-tools-button]', '.crm-header-nav', '.crm-header-actions'].map(s => Math.round(document.querySelector(s).getBoundingClientRect().left)))
     assert.deepEqual([...xs].sort((a, b) => a - b), xs, `left-to-right order ${xs}`)

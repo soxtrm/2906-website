@@ -1,0 +1,14 @@
+--- a/services/matchEngine.js
++++ b/services/matchEngine.js
+@@ -1215 +1215,6 @@
+-    return { matches: [] }
++    return { matches: [], reason: 'Client search not found.' }
++  }
++  // A closed search is skipped, not a completed run with zero candidates.
++  // Preserve its stored matches for history and explicit reactivation.
++  if (INACTIVE_CLIENT_STATUSES.includes(client.status)) {
++    return { matches: [], reason: 'This client search is closed.' }
+--- a/services/clientAssistant.js
++++ b/services/clientAssistant.js
+@@ -2530,0 +2531 @@
++  if (result.reason) return { ok: false, reason: result.reason }

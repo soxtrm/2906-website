@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { launch, openPage, defaultFixtures } = require('./helpers/crm-mock.cjs')
+const { launch, openPage, defaultFixtures, listing } = require('./helpers/crm-mock.cjs')
 const conversation = {
   id: 71, label: 'Fixture client search', shortCode: 'C71', session: 'test',
   status: 'ARMED', enabled: true, autoMode: false,
@@ -59,8 +59,43 @@ test('Clientgroups distinguishes closed, empty and successful matching', { timeo
       await page.waitForFunction(() => document.body.innerText.includes('Search completed with 1 match.'))
       assert.match(await page.$eval('[role="dialog"]', dialog => dialog.innerText), /TEST-1/)
       assert.equal(runs, 2)
-      assert.deepEqual(page.crmCalls.filter(call => call.method !== 'GET').map(call => call.path), ['clientgroups/71/match-now', 'clientgroups/71/match-now'])
+
+      await (await findButton()).asElement().click()
+      await page.waitForFunction(() => document.body.innerText.includes('Search completed with 1 match.'))
+      assert.equal(runs, 3)
+      assert.equal((await page.$eval('[role="dialog"]', dialog => dialog.innerText)).match(/TEST-1/g)?.length, 1)
+      assert.deepEqual(page.crmCalls.filter(call => call.method !== 'GET').map(call => call.path), Array(3).fill('clientgroups/71/match-now'))
       await page.close()
+    }
+  } finally {
+    await browser.close()
+  }
+})
+
+test('Board matching shows eligible clients and handles a genuine empty result', { timeout: 60000 }, async () => {
+  const browser = await launch()
+  try {
+    for (const width of [1440, 390]) {
+      const fixtures = defaultFixtures()
+      fixtures.listings = [listing(1), listing(2)]
+      fixtures.routes = [
+        [/^schedule-board\/property-matches\/2906-9101$/, 'GET', () => ({
+          matches: [{ clientId: 'QA-1', clientName: 'QA Client', score: 86, reasons: [{ key: 'budget', ok: true, label: 'Within budget' }] }],
+        })],
+        [/^schedule-board\/property-matches\/2906-9102$/, 'GET', () => ({ matches: [] })],
+      ]
+      for (const [ref, expected] of [['2906-9101', '86% — QA Client'], ['2906-9102', 'No active clients score high enough']]) {
+        const page = await openPage(browser, { width, fixtures, fakeKeyboard: false })
+        await page.locator(`[data-ref="${ref}"] button[title="More actions"]`).click()
+        await page.locator(`button[data-match-btn="${ref}"]`).click()
+        await page.waitForFunction(text => document.body.innerText.includes(text), {}, expected)
+        assert.deepEqual(
+          page.crmCalls.filter(call => call.path.includes('property-matches')).map(({ method, path }) => [method, path]),
+          [['GET', `schedule-board/property-matches/${ref}`]],
+        )
+        assert.equal(page.crmCalls.some(call => call.method !== 'GET'), false)
+        await page.close()
+      }
     }
   } finally {
     await browser.close()
