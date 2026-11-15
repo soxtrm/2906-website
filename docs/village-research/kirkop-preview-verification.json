@@ -1,0 +1,99 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "directLinkWithoutJavaScript": true,
+  "results": [
+    {
+      "width": 360,
+      "initial": {
+        "lang": "en",
+        "viewport": 360,
+        "content": 360,
+        "robots": "noindex,nofollow",
+        "image": [
+          1440,
+          960
+        ],
+        "ratio": 1.5,
+        "caption": "St Leonard’s parish church, 11 September 2016. IsaacBTTF / Wikimedia Commons · CC BY-SA 3.0. Resized and converted to WebP.",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "initial": {
+        "lang": "en",
+        "viewport": 390,
+        "content": 390,
+        "robots": "noindex,nofollow",
+        "image": [
+          1440,
+          960
+        ],
+        "ratio": 1.5,
+        "caption": "St Leonard’s parish church, 11 September 2016. IsaacBTTF / Wikimedia Commons · CC BY-SA 3.0. Resized and converted to WebP.",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 430,
+      "initial": {
+        "lang": "en",
+        "viewport": 430,
+        "content": 430,
+        "robots": "noindex,nofollow",
+        "image": [
+          1440,
+          960
+        ],
+        "ratio": 1.500061357221745,
+        "caption": "St Leonard’s parish church, 11 September 2016. IsaacBTTF / Wikimedia Commons · CC BY-SA 3.0. Resized and converted to WebP.",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "initial": {
+        "lang": "en",
+        "viewport": 1440,
+        "content": 1440,
+        "robots": "noindex,nofollow",
+        "image": [
+          1440,
+          960
+        ],
+        "ratio": 1.5,
+        "caption": "St Leonard’s parish church, 11 September 2016. IsaacBTTF / Wikimedia Commons · CC BY-SA 3.0. Resized and converted to WebP.",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    }
+  ]
+}

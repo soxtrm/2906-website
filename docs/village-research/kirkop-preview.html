@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Ħal Kirkop — private neighbourhood edition</title>
+  <link rel="stylesheet" href="gudja-preview.css">
+  <style>
+    .hero-layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:5vw}
+    .hero-photo{max-width:none}
+    .hero-photo img{aspect-ratio:3/2}
+    .contexts{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .map{margin:0}
+    .map-actions{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+    @media(max-width:700px){.hero-layout,.contexts{grid-template-columns:minmax(0,1fr)}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the edition</a>
+  <nav aria-label="Edition">
+    <a href="https://www.2906.estate/link-marketplace/index.html">2906 / LOCAL LIFE</a>
+    <small>PRIVATE PREVIEW</small>
+  </nav>
+  <main id="main">
+    <header class="hero">
+      <div class="hero-layout">
+        <div class="hero-copy">
+          <span class="eyebrow">Ħal Kirkop / Western Region</span>
+          <h1>From St Leonard’s square</h1>
+          <p>The church towers give Kirkop a landmark. The prehistoric menhir, local sports grounds and bus stops tell you more about how the village fits into this part of Malta.</p>
+          <div class="hero-links"><a href="#everyday">Everyday Kirkop ↓</a><a href="#orientation">Locality map ↓</a></div>
+        </div>
+        <figure class="hero-photo">
+          <img src="assets/kirkop-parish-isaacbttf.webp" width="1440" height="960" fetchpriority="high" alt="Limestone St Leonard’s church with a red dome and two bell towers behind the stone balustrade.">
+          <figcaption>St Leonard’s parish church, 11 September 2016. <a href="https://commons.wikimedia.org/wiki/File%3AKirkop%27s_Saint_Leonard%27s_parish_church.jpg">IsaacBTTF / Wikimedia Commons</a> · <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>. Resized and converted to WebP.</figcaption>
+        </figure>
+      </div>
+    </header>
+
+    <section class="section" aria-labelledby="heritage-title">
+      <div class="intro">
+        <h2 id="heritage-title">Two landmarks, different histories</h2>
+        <p>The parish stands on Misraħ San’ Anard. The menhir takes Kirkop’s history much further back, to a period whose traces are harder to interpret.</p>
+      </div>
+      <div class="contexts">
+        <article>
+          <h3>St Leonard’s parish</h3>
+          <p>Start in the square for a view of the dome, the twin bell towers and the balustrade. The church is recorded as item 01870 in the national heritage inventory. Check with the parish before planning an interior visit.</p>
+          <a class="source-link" href="https://parishes.church.mt/parish/hal-kirkop/">Archdiocese parish information ↗</a>
+        </article>
+        <article>
+          <h3>The menhir</h3>
+          <p>The local council identifies the standing stone as a prehistoric monolith and a symbol of Kirkop. Its original purpose remains uncertain.</p>
+          <a class="source-link" href="https://kirkoplc.gov.mt/en/historical-places/">Local council heritage notes ↗</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="everyday" aria-labelledby="everyday-title">
+      <div class="intro"><h2 id="everyday-title">Getting around and getting things done</h2></div>
+      <div class="daily-grid">
+        <article><span class="eyebrow">Public transport</span><h3>Valletta and Żurrieq</h3><p>Route 73 runs via Kirkop. Leonardu and Guzeppi appear in the timetable with different stop numbers by direction. Check the operator’s timetable for your travel date.</p><a href="https://www.publictransport.com.mt/route/73/">Route 73 timetable ↗</a></article>
+        <article><span class="eyebrow">Health services</span><h3>Kirkop Health Centre</h3><p>The centre is on Triq Danny Cremona. Check Primary HealthCare’s current service and appointment information before attending.</p><a href="https://primaryhealthcare.gov.mt/en/health-centers/kirkop-health-center/">Health centre information ↗</a></article>
+        <article><span class="eyebrow">Local recreation</span><h3>Sports complex and football ground</h3><p>The council lists both facilities in Kirkop. Confirm venue access and booking arrangements before planning a session.</p><a href="https://kirkoplc.gov.mt/en/sports-facilities/">Council sports directory ↗</a></article>
+      </div>
+    </section>
+
+    <section class="food" aria-labelledby="food-title">
+      <div>
+        <h2 id="food-title">From the square to Triq il-Barrieri</h2>
+        <p>Malta Tourism Authority records a snack bar on the parish square and a takeaway on Triq il-Barrieri. Contact the venue for current trading hours and menus.</p>
+      </div>
+      <div class="food-list">
+        <article><h3>Socialising snackbar</h3><p>9 Misraħ San’ Anard</p><a href="https://mta.com.mt/licences/licences/?dir=asc&amp;page=3&amp;size=250&amp;sort=LicenceRef&amp;type=snack-bars">MTA snack-bar entry SBR-21426 ↗</a></article>
+        <article><h3>Maem’s Snack Bar</h3><p>Triq il-Barrieri</p><a href="https://mta.com.mt/licences/licences/?dir=desc&amp;page=4&amp;size=50&amp;sort=EstablishmentTown&amp;type=take-away">MTA takeaway entry TKY-24470 ↗</a></article>
+      </div>
+    </section>
+
+    <section class="section" id="orientation" aria-labelledby="map-title">
+      <div class="map">
+        <h2 id="map-title">Find the parish square</h2>
+        <p>The marker identifies St Leonard’s church. Use the map to place the square in the surrounding street network.</p>
+        <div class="map-actions">
+          <button id="load-map" type="button" aria-controls="area-map" aria-expanded="false" hidden>Open the 2D map</button>
+          <a href="https://www.openstreetmap.org/way/138258011">Open Kirkop Parish Church on OpenStreetMap ↗</a>
+        </div>
+        <div id="area-map" class="map-frame" role="region" aria-label="Kirkop locality map" hidden></div>
+        <p class="map-attribution">Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.</p>
+      </div>
+    </section>
+
+    <section class="section sources" aria-labelledby="sources-title">
+      <h2 id="sources-title">Sources and nearby editions</h2>
+      <p>Sources reviewed on 15 November 2026.</p>
+      <ul>
+        <li><a href="https://address.gov.mt/local-council/">Office of the Address Registrar · Ħal Kirkop and the Western Region</a></li>
+        <li><a href="https://parlament.mt/media/126246/02958.pdf">National heritage inventory · St Leonard’s, item 01870</a></li>
+      </ul>
+      <div class="neighbours">
+        <a href="https://www.2906.estate/link-marketplace/areas/luqa.html">Explore Ħal Luqa ↗</a>
+        <a href="https://www.2906.estate/link-marketplace/areas/gudja.html">Explore Il-Gudja ↗</a>
+        <a href="https://www.2906.estate/link-marketplace/index.html">All neighbourhood editions ↗</a>
+      </div>
+    </section>
+  </main>
+  <footer><p><strong>2906 Estate</strong>Independent agency · neighbourhood editorial</p><p>Local intelligence by Nexus Link<br>Ħal Kirkop / English · private preview</p></footer>
+  <script>
+    const loadMap = document.getElementById('load-map');
+    loadMap.hidden = false;
+    loadMap.addEventListener('click', () => {
+      const region = document.getElementById('area-map');
+      const frame = document.createElement('iframe');
+      frame.title = 'Ħal Kirkop orientation map — OpenStreetMap';
+      frame.src = 'https://www.openstreetmap.org/export/embed.html?bbox=14.4770%2C35.8360%2C14.4950%2C35.8490&layer=mapnik&marker=35.8423%2C14.4858';
+      frame.referrerPolicy = 'no-referrer';
+      region.append(frame);
+      region.hidden = false;
+      loadMap.setAttribute('aria-expanded', 'true');
+      loadMap.textContent = '2D map opened';
+    }, { once: true });
+  </script>
+</body>
+</html>
