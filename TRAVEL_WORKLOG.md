@@ -1947,3 +1947,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/hamrun-preview.html. Die Hochstraße, beide Pfarreien, Mile End, Klinik, Spielort und die drei belegten MTA-Adressen sind enthalten. Die einzige verwendete Aufnahme zeigt San Gejtanu und ist mit Datum und CC0 verlinkt.
 - Chrome bei 360, 390, 430 und 1440 px bestanden. Foto und sichtbarer Credit, kein horizontaler Überlauf oder Seitenfehler. Kein OSM-Abruf vor dem Kartenklick. Danach 2D-Kacheln mit beschriftetem Kirchenmarker. Nachbarlinks nach Santa Venera und Pietà liefern HTTP 200. Browserbelege unter artifacts/20261116-hamrun-preview und Ergebnisse in docs/village-research/hamrun-preview-verification.json.
 - Geplante öffentliche URL https://www.2906.estate/link-marketplace/areas/hamrun.html. Als Nächstes Canonical, Sitemap, Marktplatz und Rücklink auf dem aktuellen produktiven Snapshot vorbereiten. Kein Aliaswechsel.
+
+## 16.11 — Il-Ħamrun als Releasekandidat
+
+- Isolierter Worktree 20261116/hamrun-release aus origin/main ca51c76 mit Vorschau 765b31a. Aktueller produktiver www-Quellcommit 1501021 ist Vorfahr. Worklog-SHA-256 vor Edits b498ebafa541d71c5b9ee2d68192e6ccdd74cdd9a4c98b7534e4ee6200cf2a97. Bildhash gegen die geprüfte CC0-Datei abgeglichen.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/hamrun.html. Self-Canonical, Social-Vorschaubild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Santa Venera. SEO-Vertrag für 71 Editionen, Routensegmente und Fährendarstellung bestanden.
+- www-Ausgangsdeployment dpl_FRZRczwfXY253M5C3VtLRK7cHTAi, getrennte CRM-, Projekt- und Brain-Deployments sowie Nexus ONE v117 und Caddy geprüft.

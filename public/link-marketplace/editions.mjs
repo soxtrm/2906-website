@@ -19,6 +19,7 @@ export const editions = [
   {"slug":"ghaxaq","name":"Ħal Għaxaq","island":"Malta","key":"malta:ghaxaq","center":[14.516,35.849],"aliases":["Ghaxaq"]},
   {"slug":"gudja","name":"Il-Gudja","island":"Malta","key":"malta:gudja","center":[14.503269,35.848938],"aliases":["Gudja"]},
   {"slug":"gzira","name":"Gżira","island":"Malta","key":"malta:gzira","center":[14.4935,35.905],"aliases":["Gzira"]},
+  {"slug":"hamrun","name":"Il-Ħamrun","island":"Malta","key":"malta:hamrun","center":[14.48722,35.88656],"aliases":["Hamrun","Ħamrun","Il-Hamrun"]},
   {"slug":"haz-zebbug","name":"Ħaż-Żebbuġ","island":"Malta","key":"malta:zebbug","center":[14.441,35.87],"aliases":["Haz Zebbug","Zebbug"]},
   {"slug":"iklin","name":"Iklin","island":"Malta","key":"malta:iklin","center":[14.455,35.909],"aliases":["Iklin"]},
   {"slug":"kalkara","name":"Il-Kalkara","island":"Malta","key":"malta:kalkara","center":[14.532,35.889],"aliases":["Kalkara"]},
