@@ -1874,3 +1874,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 
 - Isolierter Worktree 20261116/mqabba-research vom aktuellen origin/main ca51c76175e7d292afebf1017d8a42ba51ffa70c. Live-Marktplatz eacfea70 und Reisejournal 7a52bdf per Fast-forward übernommen. Worklog vor Edits SHA-256 cd165e9930d2f267ba389eb1ca34ba0079ed0ee8451e43fe154c4d96283b8216. Neuere Reiserefs und vorhandene Recherchen geprüft.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/mqabba.html (HTTP 404). Pfarrplatz, Kalksteingeschichte, zugangsbeschränkte Ta’ Mintna Catacombs, Buslinien 72 und 218, Kirkop-Gesundheitsbezirk sowie drei MTA-Lizenzeinträge mit Adressen in docs/village-research/mqabba-research.md belegt. OSM-Kirchenobjekt 150800483 per API bestätigt. Drei Commons-Bildkandidaten mit Urhebern, Lizenzen und Originalhashes dokumentiert. Nächster Schritt sind Originalprüfung, Bildauswahl und lokale Vorschau. Kein Aliaswechsel.
+
+## 16.11 — L-Imqabba Ortsfotografie für Vorschau geprüft
+
+- Isolierter Worktree 20261116/mqabba-asset ab origin/main ca51c76 mit Recherche f57b809. Worklog-SHA-256 vor Edits a93739a83a5b89cf7383bb822756d5e3eb5d712c1a4e06d551b5d04382d715a4.
+- Zwei Commons-Originale mit SHA-1 geprüft und visuell verglichen. Pfarrkirche und Kapellen von Continentaleurope, beide CC BY-SA 3.0, zu WebP mit 143.964 und 64.148 Bytes exportiert und dekodiert. Die nicht ausgewählte Alternative lieferte HTTP 429. Credits, Abmessungen und Hashes in docs/village-research/mqabba-image-credits.md. Originale und Prüfdaten unter artifacts/20261116-mqabba-originals.
+- **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/mqabba.html. Die private responsive Vorschau ist der nächste Schritt.
