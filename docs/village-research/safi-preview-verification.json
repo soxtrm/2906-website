@@ -1,0 +1,119 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "directLinkWithoutJavaScript": true,
+  "results": [
+    {
+      "width": 360,
+      "initial": {
+        "lang": "en",
+        "viewport": 360,
+        "content": 360,
+        "robots": "noindex,nofollow",
+        "image": [
+          1024,
+          735
+        ],
+        "ratio": 1.3932458833379848,
+        "caption": "St Paul’s parish church, Ħal Safi, 7 July 2012. Sudika / Wikimedia Commons · CC BY-SA 3.0. Converted to WebP.",
+        "gardenLazy": "lazy",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "garden": [
+        1120,
+        630
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "initial": {
+        "lang": "en",
+        "viewport": 390,
+        "content": 390,
+        "robots": "noindex,nofollow",
+        "image": [
+          1024,
+          735
+        ],
+        "ratio": 1.393252705283259,
+        "caption": "St Paul’s parish church, Ħal Safi, 7 July 2012. Sudika / Wikimedia Commons · CC BY-SA 3.0. Converted to WebP.",
+        "gardenLazy": "lazy",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "garden": [
+        1120,
+        630
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 430,
+      "initial": {
+        "lang": "en",
+        "viewport": 430,
+        "content": 430,
+        "robots": "noindex,nofollow",
+        "image": [
+          1024,
+          735
+        ],
+        "ratio": 1.3932072031000684,
+        "caption": "St Paul’s parish church, Ħal Safi, 7 July 2012. Sudika / Wikimedia Commons · CC BY-SA 3.0. Converted to WebP.",
+        "gardenLazy": "lazy",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "garden": [
+        1120,
+        630
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "initial": {
+        "lang": "en",
+        "viewport": 1440,
+        "content": 1440,
+        "robots": "noindex,nofollow",
+        "image": [
+          1024,
+          735
+        ],
+        "ratio": 1.3932187352152656,
+        "caption": "St Paul’s parish church, Ħal Safi, 7 July 2012. Sudika / Wikimedia Commons · CC BY-SA 3.0. Converted to WebP.",
+        "gardenLazy": "lazy",
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "garden": [
+        1120,
+        630
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    }
+  ]
+}
