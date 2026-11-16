@@ -1940,3 +1940,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261116/hamrun-asset ab origin/main ca51c76 mit Recherche 972d810. Worklog-SHA-256 vor Edits 049af54ead69911102f8f2c83ebed1b8501b3d131e56b59c900ad1bb26042a47.
 - Zwei Commons-Originale gegen ihre SHA-1-Werte geprüft und visuell beurteilt. Qasinkas Innenaufnahme von San Gejtanu (CC0, 2025) als 1080 × 1440 WebP mit 258.280 Bytes geprüft. Die Straßenaufnahme bleibt wegen lesbarer Kfz-Kennzeichen privat. Ein alternatives Kirchenfoto lieferte HTTP 429. Credits und Dateihash in docs/village-research/hamrun-image-credits.md. Quelle und Prüfdaten unter artifacts/20261116-hamrun-originals.
 - **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/hamrun.html. Als Nächstes folgt die lokale responsive Vorschau. Kein Aliaswechsel.
+
+## 16.11 — Englische Il-Ħamrun-Vorschau im Browser geprüft
+
+- Isolierter Worktree 20261116/hamrun-preview aus origin/main ca51c76 mit dem geprüften Bildstand 0b3ce87. Worklog-SHA-256 vor Edits 6539d456aab10115533c19fe5a7c39ac8c91b23b84f2f07cb6180bc88e6abdb3. Foto-SHA-256 5dddf1bb5cb05c9339bae3cfa2d262bf6897206fe906812da7c9e66705ad78ea erneut abgeglichen.
+- **Private lokale Vorschau**, Englisch, docs/village-research/hamrun-preview.html. Die Hochstraße, beide Pfarreien, Mile End, Klinik, Spielort und die drei belegten MTA-Adressen sind enthalten. Die einzige verwendete Aufnahme zeigt San Gejtanu und ist mit Datum und CC0 verlinkt.
+- Chrome bei 360, 390, 430 und 1440 px bestanden. Foto und sichtbarer Credit, kein horizontaler Überlauf oder Seitenfehler. Kein OSM-Abruf vor dem Kartenklick. Danach 2D-Kacheln mit beschriftetem Kirchenmarker. Nachbarlinks nach Santa Venera und Pietà liefern HTTP 200. Browserbelege unter artifacts/20261116-hamrun-preview und Ergebnisse in docs/village-research/hamrun-preview-verification.json.
+- Geplante öffentliche URL https://www.2906.estate/link-marketplace/areas/hamrun.html. Als Nächstes Canonical, Sitemap, Marktplatz und Rücklink auf dem aktuellen produktiven Snapshot vorbereiten. Kein Aliaswechsel.
