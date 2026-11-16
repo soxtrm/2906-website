@@ -1934,3 +1934,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 
 - Separater Worktree 20261116/hamrun-research ab origin/main ca51c76, Live-Reisestand und Journal bis ee6d4a7 übernommen. Worklog-SHA-256 vor Edits 3fbb2475a2d56ba78dabe1dfe91305e022edb95e39f99859be07bd8701a0df86.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/hamrun.html (HTTP 404). Hochstraße, zwei getrennte Pfarreien, Vereinsstadion, beide Mile-End-Haltestellen, Gesundheitsversorgung und drei MTA-Adressen belegt. OSM-Kirchenobjekt 139435691 samt Geometrie bestätigt. Drei Commons-Bildkandidaten in docs/village-research/hamrun-research.md mit Lizenz und Originalhash dokumentiert. Nächster Schritt ist die Prüfung der Bildoriginale. Kein Aliaswechsel.
+
+## 16.11 — Il-Ħamrun Ortsfotografie für Vorschau geprüft
+
+- Isolierter Worktree 20261116/hamrun-asset ab origin/main ca51c76 mit Recherche 972d810. Worklog-SHA-256 vor Edits 049af54ead69911102f8f2c83ebed1b8501b3d131e56b59c900ad1bb26042a47.
+- Zwei Commons-Originale gegen ihre SHA-1-Werte geprüft und visuell beurteilt. Qasinkas Innenaufnahme von San Gejtanu (CC0, 2025) als 1080 × 1440 WebP mit 258.280 Bytes geprüft. Die Straßenaufnahme bleibt wegen lesbarer Kfz-Kennzeichen privat. Ein alternatives Kirchenfoto lieferte HTTP 429. Credits und Dateihash in docs/village-research/hamrun-image-credits.md. Quelle und Prüfdaten unter artifacts/20261116-hamrun-originals.
+- **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/hamrun.html. Als Nächstes folgt die lokale responsive Vorschau. Kein Aliaswechsel.
