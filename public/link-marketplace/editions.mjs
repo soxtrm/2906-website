@@ -35,6 +35,7 @@ export const editions = [
   {"slug":"mellieha","name":"Mellieħa","island":"Malta","key":"malta:mellieha","center":[14.362,35.9555],"aliases":["Mellieha"]},
   {"slug":"mgarr","name":"Mġarr","island":"Malta","key":"malta:mgarr","center":[14.3675,35.921],"aliases":["Mgarr"]},
   {"slug":"mosta","name":"Mosta","island":"Malta","key":"malta:mosta","center":[14.426,35.9095],"aliases":["Mosta"]},
+  {"slug":"mqabba","name":"L-Imqabba","island":"Malta","key":"malta:mqabba","center":[14.46715,35.84548],"aliases":["Mqabba","Imqabba"]},
   {"slug":"msida","name":"Msida","island":"Malta","key":"malta:msida","center":[14.4865,35.898],"aliases":["Msida"]},
   {"slug":"naxxar","name":"Naxxar","island":"Malta","key":"malta:naxxar","center":[14.4445,35.914],"aliases":["Naxxar"]},
   {"slug":"paola","name":"Paola (Raħal Ġdid)","island":"Malta","key":"malta:paola","center":[14.4985,35.8725],"aliases":["Paola","Rahal Gdid"]},

@@ -1887,3 +1887,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/mqabba-preview.html. Pfarrplatz, benachbarte Kapellen, Kalksteingeschichte, Catacombs mit Voranmeldung, Bus und Gesundheitsversorgung sowie drei Lizenzadressen sind mit Quellen eingebaut. Il-Qrendi und Ħal Kirkop liefern HTTP 200. Vorgesehene öffentliche URL https://www.2906.estate/link-marketplace/areas/mqabba.html.
 - Chrome bei 360, 390, 430 und 1440 px. Beide Fotos und Credits sichtbar, kein Überlauf oder Seitenfehler. Das externe OSM-Embed erreichte die Marker-Prüfung nicht. Die Vorschau nutzt deshalb den vorhandenen lokalen Leaflet-Loader mit OSM-Kacheln. Vor Kartenklick kein OSM-Abruf, danach Kacheln und Kirchenmarker sichtbar. Der direkte OSM-Link bleibt ohne JavaScript verfügbar.
 - Prüfdaten docs/village-research/mqabba-preview-verification.json; Bilder unter artifacts/20261116-mqabba-preview. Nächster Schritt ist der öffentliche Kandidat mit Canonical, Sitemap, neuem Marktplatzregister und Rücklink nach Prüfung der Live-Pointer. Kein Aliaswechsel.
+
+## 16.11 — L-Imqabba als Releasekandidat
+
+- Isolierter Worktree 20261116/mqabba-release ab origin/main ca51c76 mit Vorschau 4521865. Produktiver Marktplatz eacfea70 ist Vorfahr. Worklog-SHA-256 vor Edits 6b73fdda1dab5335ca54412c71f62cd8d0f6cc74eac619d3dd78f771007b7ea3.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/mqabba.html. Self-Canonical, Social-Vorschau, Breadcrumbs, Sitemap, Marktplatzverzeichnis, Ortsregister und Rücklink aus Il-Qrendi. Drei Verträge für SEO aller 69 Editionen, Routensegmente und Fährendarstellung bestanden.
+- Produktiver www-Alias dpl_8DgSJHqMNssLQWZs5qy6k6Hhx52h bleibt der Rücksprungpunkt. Nexus ONE v116, Brain, CRM, Projektalias und Apex-Weiterleitung wurden vor dem Kandidatenbau geprüft.
