@@ -1834,3 +1834,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Separater Worktree `20261116/qrendi-research` aus `origin/main` `ca51c76175e7d292afebf1017d8a42ba51ffa70c`; bisheriges Live-Reisejournal bis `d05224f` per Fast-forward übernommen. Worklog-SHA-256 vor Edits `cd7e1a1adbbb9a30da93f9a9adc5e71967a36a3a4e927f3caa7916bba9828770`. Aktuelle Reise-Refs und Historie geprüft.
 - **Unveröffentlichter Rechercheentwurf**, Englisch, Ziel https://www.2906.estate/link-marketplace/areas/qrendi.html. Dorf, Schutzgebiet Il-Maqluba, UNESCO-Tempelpark und wetterabhängiger Blue-Grotto-Bootsausflug getrennt dokumentiert. Kein Wasserabschnitt als Gehroute. Zwei Busfahrpläne, Gesundheitsbezirk, drei MTA-Einträge und OSM-Kirchenobjekt belegt.
 - Drei Commons-Bildkandidaten mit Urheber, Lizenz und Originalhash erfasst. Quellen und offene Fragen in `docs/village-research/qrendi-research.md`. Nächster Schritt: Originalprüfung, Bildauswahl und optimierter Export. Kein Aliaswechsel.
+
+## 16.11 — Il-Qrendi Ortsfotografie für Vorschau geprüft
+
+- Isolierter Worktree `20261116/qrendi-asset` aus `origin/main` `ca51c76` mit Recherche `cd92f5a`. Worklog-SHA-256 vor Edits `bf9c539b9a6be9fb5448d23673a325f09204505ee25bb3c301c6bc8916509b7e`.
+- Sieben Commons-Originale mit SHA-1 geprüft und visuell verglichen. Gewählt wurden die Pfarrkirche und St Matthew von Pygar1954 sowie Ħaġar Qim von Diego Delso. Drei CC-BY-SA-4.0-WebPs zu 95.776, 128.678 und 134.260 Bytes. Dekodierung, Abmessungen, Metadaten, Bildinhalt und Ausgabehash geprüft. Innenaufnahmen und Aufnahmen mit deutlicheren Fahrzeugen verbleiben privat.
+- **Unveröffentlicht**, geplante englische Ausgabe https://www.2906.estate/link-marketplace/areas/qrendi.html. Credits und Hashes in `docs/village-research/qrendi-image-credits.md`, Originale und Nachweise unter `artifacts/20261116-qrendi-originals`. Nächster Schritt ist die private Vorschau mit bedarfsgeladener 2D-Karte.
