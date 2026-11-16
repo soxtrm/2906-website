@@ -1,0 +1,155 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "directLinkWithoutJavaScript": true,
+  "results": [
+    {
+      "width": 360,
+      "initial": {
+        "lang": "en",
+        "viewport": 360,
+        "content": 360,
+        "robots": "noindex,nofollow",
+        "image": [
+          1280,
+          960
+        ],
+        "ratio": 1.3333333333333333,
+        "caption": "Parish Church of the Assumption, 2 May 2024. Pygar1954 / Wikimedia Commons · CC BY-SA 4.0. Resized and converted to WebP.",
+        "heritageLoading": [
+          "lazy",
+          "lazy"
+        ],
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "additional": [
+        [
+          1120,
+          840
+        ],
+        [
+          1200,
+          800
+        ]
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 390,
+      "initial": {
+        "lang": "en",
+        "viewport": 390,
+        "content": 390,
+        "robots": "noindex,nofollow",
+        "image": [
+          1280,
+          960
+        ],
+        "ratio": 1.3333333333333333,
+        "caption": "Parish Church of the Assumption, 2 May 2024. Pygar1954 / Wikimedia Commons · CC BY-SA 4.0. Resized and converted to WebP.",
+        "heritageLoading": [
+          "lazy",
+          "lazy"
+        ],
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "additional": [
+        [
+          1120,
+          840
+        ],
+        [
+          1200,
+          800
+        ]
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 430,
+      "initial": {
+        "lang": "en",
+        "viewport": 430,
+        "content": 430,
+        "robots": "noindex,nofollow",
+        "image": [
+          1280,
+          960
+        ],
+        "ratio": 1.3333333333333333,
+        "caption": "Parish Church of the Assumption, 2 May 2024. Pygar1954 / Wikimedia Commons · CC BY-SA 4.0. Resized and converted to WebP.",
+        "heritageLoading": [
+          "lazy",
+          "lazy"
+        ],
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "additional": [
+        [
+          1120,
+          840
+        ],
+        [
+          1200,
+          800
+        ]
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "initial": {
+        "lang": "en",
+        "viewport": 1440,
+        "content": 1440,
+        "robots": "noindex,nofollow",
+        "image": [
+          1280,
+          960
+        ],
+        "ratio": 1.3333333333333333,
+        "caption": "Parish Church of the Assumption, 2 May 2024. Pygar1954 / Wikimedia Commons · CC BY-SA 4.0. Resized and converted to WebP.",
+        "heritageLoading": [
+          "lazy",
+          "lazy"
+        ],
+        "iframes": 0,
+        "mapButton": 49
+      },
+      "additional": [
+        [
+          1120,
+          840
+        ],
+        [
+          1200,
+          800
+        ]
+      ],
+      "map": {
+        "canvas": true,
+        "markers": 1,
+        "attribution": "© OpenStreetMap Mitwirkende ♥️ Spenden. Website und API-Bedingungen"
+      },
+      "errors": []
+    }
+  ]
+}
