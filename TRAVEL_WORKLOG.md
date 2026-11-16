@@ -1904,3 +1904,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 
 - Separater Worktree 20261116/santa-lucija-research ab origin/main ca51c76, Live-Reisestand und Journal bis 200080e übernommen. Worklog-SHA-256 vor Edits 396e59618ca107f40d578e4ca9cb8770be4930b52ea13b7d590795871ef9898f.
 - **Privater Rechercheentwurf**, Englisch, https://www.2906.estate/link-marketplace/areas/santa-lucija.html (HTTP 404). Malta und gleichnamiger Ortsteil auf Gozo getrennt. Pfarrplatz, Garden of Serenity, Ġnien l-Iskultura, Fußballverein, Haltestellen, Versorgung und ein MTA-Nachbareintrag in Paola mit genauen Quellen in docs/village-research/santa-lucija-research.md dokumentiert. OSM-Gartengeometrie und vier Commons-Bildmetadatensätze bestätigt. Nächster Schritt sind Originalprüfung und Bildauswahl. Kein Aliaswechsel.
+
+## 16.11 — Santa Luċija Ortsfotografie für Vorschau geprüft
+
+- Isolierter Worktree 20261116/santa-lucija-asset ab origin/main ca51c76 mit Recherche 93f9948. Worklog-SHA-256 vor Edits aa61ab76e6e2be5ebc8c85d95917a79f432be2ac7f4cc2106fb6c1356d677de2.
+- Zwei Commons-Originale für den Garden of Serenity anhand ihrer SHA-1-Werte geprüft und visuell verglichen. Weite Ansicht von Lance Anthony (CC BY-SA 4.0, 218.730 Bytes) und Pavillondetail von William Shewring (Public Domain, 111.842 Bytes) als vollständige WebPs verifiziert. Beide historischen Aufnahmen zeigen den Garden of Serenity. Eine Alternative gab HTTP 429. Credits, Dateihashes und sichtbare Zuschreibung in docs/village-research/santa-lucija-image-credits.md.
+- **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/santa-lucija.html. Als Nächstes folgt die private responsive Vorschau. Kein Aliaswechsel.
