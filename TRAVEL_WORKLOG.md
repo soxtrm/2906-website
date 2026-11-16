@@ -1923,3 +1923,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261116/santa-lucija-release ab origin/main ca51c76 mit Vorschau 92c34bf. Produktiver www-Quellcommit 955511e ist Vorfahr. Worklog-SHA-256 vor Edits 1915eed4e61068451328ea7c5d4ecb4122ef4f3ed5876d4e882f4075d02d1027. Asset-Hashes unverändert geprüft.
 - **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/santa-lucija.html. Self-Canonical, Social-Vorschau, Breadcrumbs, Sitemap, Marktplatzverzeichnis, Malta-Ortsschlüssel und Rücklink aus Ħal Tarxien. Drei Tests für alle 70 Ortseditionen, Routensegmente und Fährendarstellung bestanden.
 - Öffentlicher www-Alias dpl_HtQRHqVD3nVn2o78cQQHjw6uivaC als Rücksprungpunkt geprüft. Apex-Redirect, der getrennte CRM- und Projektalias, Nexus ONE v116, Caddy und Brain geprüft.
+
+## 16.11 — Santa Luċija (Malta) öffentlich veröffentlicht
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/santa-lucija.html. Quellcommit 150102150467c2f9d41a5f1902c0fc7afa986dd7. www-Einzelalias dpl_FRZRczwfXY253M5C3VtLRK7cHTAi um 12:09 UTC. Tatsächlich verdrängter Alias und Rollback dpl_HtQRHqVD3nVn2o78cQQHjw6uivaC. Apex, CRM, Projektalias, Nexus ONE v116, Caddy und separates Brain-Deployment geprüft.
+- Live-Chrome bei 360, 390, 430 und 1440 px bestanden. Beide Fotos und Credits, Gartenmarker, Gastrofilter, Suche im Marktplatz und die getrennte Zuordnung für Malta und Gozo geprüft. Zum Prüfzeitpunkt keine veröffentlichten Ortsinserate. Die MTA-Referenz TKY-02395 erneut mit Ortsangabe Paola bestätigt.
+- Neun öffentliche Release-Dateien im Kandidaten und auf www bytegleich per SHA-256. Sitemap und Marktplatz führen 70 Ortseditionen. Belege und Rollback-Guard unter artifacts/20261116-santa-lucija-release. Rücksprung aus sauberem Worktree am deployten Commit. Nächster Git-Release muss das Delta bis 1501021 enthalten.
