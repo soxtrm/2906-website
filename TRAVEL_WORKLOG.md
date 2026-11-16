@@ -1880,3 +1880,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261116/mqabba-asset ab origin/main ca51c76 mit Recherche f57b809. Worklog-SHA-256 vor Edits a93739a83a5b89cf7383bb822756d5e3eb5d712c1a4e06d551b5d04382d715a4.
 - Zwei Commons-Originale mit SHA-1 geprüft und visuell verglichen. Pfarrkirche und Kapellen von Continentaleurope, beide CC BY-SA 3.0, zu WebP mit 143.964 und 64.148 Bytes exportiert und dekodiert. Die nicht ausgewählte Alternative lieferte HTTP 429. Credits, Abmessungen und Hashes in docs/village-research/mqabba-image-credits.md. Originale und Prüfdaten unter artifacts/20261116-mqabba-originals.
 - **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/mqabba.html. Die private responsive Vorschau ist der nächste Schritt.
+
+## 16.11 — Englische L-Imqabba-Vorschau im Browser geprüft
+
+- Isolierter Worktree 20261116/mqabba-preview ab origin/main ca51c76 mit Bildstand accb5d9. Worklog-SHA-256 vor Edits 832b1d8ae633b2ba71df9882930960a9b0ab0ff0ceaadbb6362ae83c37a46724. Beide Bilddateien blieben bytegleich.
+- **Private lokale Vorschau**, Englisch, docs/village-research/mqabba-preview.html. Pfarrplatz, benachbarte Kapellen, Kalksteingeschichte, Catacombs mit Voranmeldung, Bus und Gesundheitsversorgung sowie drei Lizenzadressen sind mit Quellen eingebaut. Il-Qrendi und Ħal Kirkop liefern HTTP 200. Vorgesehene öffentliche URL https://www.2906.estate/link-marketplace/areas/mqabba.html.
+- Chrome bei 360, 390, 430 und 1440 px. Beide Fotos und Credits sichtbar, kein Überlauf oder Seitenfehler. Das externe OSM-Embed erreichte die Marker-Prüfung nicht. Die Vorschau nutzt deshalb den vorhandenen lokalen Leaflet-Loader mit OSM-Kacheln. Vor Kartenklick kein OSM-Abruf, danach Kacheln und Kirchenmarker sichtbar. Der direkte OSM-Link bleibt ohne JavaScript verfügbar.
+- Prüfdaten docs/village-research/mqabba-preview-verification.json; Bilder unter artifacts/20261116-mqabba-preview. Nächster Schritt ist der öffentliche Kandidat mit Canonical, Sitemap, neuem Marktplatzregister und Rücklink nach Prüfung der Live-Pointer. Kein Aliaswechsel.
