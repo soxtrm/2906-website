@@ -1953,3 +1953,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261116/hamrun-release aus origin/main ca51c76 mit Vorschau 765b31a. Aktueller produktiver www-Quellcommit 1501021 ist Vorfahr. Worklog-SHA-256 vor Edits b498ebafa541d71c5b9ee2d68192e6ccdd74cdd9a4c98b7534e4ee6200cf2a97. Bildhash gegen die geprüfte CC0-Datei abgeglichen.
 - **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/hamrun.html. Self-Canonical, Social-Vorschaubild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Santa Venera. SEO-Vertrag für 71 Editionen, Routensegmente und Fährendarstellung bestanden.
 - www-Ausgangsdeployment dpl_FRZRczwfXY253M5C3VtLRK7cHTAi, getrennte CRM-, Projekt- und Brain-Deployments sowie Nexus ONE v117 und Caddy geprüft.
+
+## 16.11 — Il-Ħamrun öffentlich veröffentlicht
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/hamrun.html. Quellcommit 47f047808c98ca74d95a686d018e134ed240b234. www-Einzelalias dpl_5pbBYcG4x4zNvyYoaNyYtQrM6QaK um 17:06 UTC. Tatsächlich verdrängtes Deployment und Rücksprungpunkt dpl_FRZRczwfXY253M5C3VtLRK7cHTAi.
+- Acht Ressourcen im geprüften Kandidaten und auf www bytegleich per SHA-256. Chrome live bei 360, 390, 430 und 1440 px ohne Seitenfehler. Foto und sichtbarer CC0-Credit, San-Gejtanu-Marker, Gastrofilter und Marktplatzsuche geprüft. Keine veröffentlichten Ortsinserate zum Prüfzeitpunkt. Sitemap und Verzeichnis führen 71 Ausgaben.
+- Apex-Redirect, CRM- und Projektalias, Nexus ONE v117, Caddy und Brain-Deployment bei der Freigabe geprüft. Artefakte und Alias-Rollback-Guard unter artifacts/20261116-hamrun-release. Für den Rücksprung sauberen Worktree auf Quellcommit 47f0478 verwenden. Der nächste Release muss das öffentliche Delta bis 47f0478 enthalten.
