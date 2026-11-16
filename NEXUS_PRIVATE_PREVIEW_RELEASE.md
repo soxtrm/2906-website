@@ -28,9 +28,9 @@ Kevin asked for this ("On 2906.estate", behind a path, not on the main page), so
 
 ## Important for the next 2906 release
 
-The travel releases deploy production from their own worktrees. **A release built without `9386d21` removes `/private-preview` again.** Cherry-pick `9386d21` onto the next release branch, or rebase the release on this branch.
+Resolve the live Vercel alias before building the next travel release. At the 16 November handoff, `www.2906.estate` resolved to `dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS` at source commit `9386d21`. Build on the verified live source and carry in the travel-only delta. Verify `/private-preview` and the spatial map on the candidate and again on www after assignment. Both should return the NEXUS page and its `X-Robots-Tag: noindex, nofollow, noarchive` header. A successful anonymous response and the robots header establish an unlisted link, not an authentication boundary.
 
 ## Roll back or remove
 
-- **Roll back:** run `npx vercel promote 2906-website-6zbi-q80ietiu2-kevinsony1-9794s-projects.vercel.app`, or deploy the next release without `9386d21`.
-- **Remove the preview:** revert `9386d21`.
+- **Roll back a travel-only release:** use its guarded www-only alias assignment and restore the deployment it actually displaced. Verify the other aliases before and after.
+- **Remove the preview deliberately:** revert `9386d21` on top of the current release and verify the intended alias scope before publishing.
