@@ -45,6 +45,7 @@ export const editions = [
   {"slug":"qala-gozo","name":"Il-Qala","island":"Gozo","key":"gozo:qala","center":[14.301,36.0295],"aliases":["Gozo - Qala"]},
   {"slug":"qawra","name":"Qawra","island":"Malta","key":"malta:qawra","center":[14.42,35.9545],"aliases":["Qawra"]},
   {"slug":"qrendi","name":"Il-Qrendi","island":"Malta","key":"malta:qrendi","center":[14.45775,35.8346],"aliases":["Qrendi"]},
+  {"slug":"qormi","name":"Ħal Qormi","island":"Malta","key":"malta:qormi","center":[14.46835,35.88223],"aliases":["Qormi","Hal Qormi","Citta Pinto"]},
   {"slug":"rabat","name":"Rabat","island":"Malta","key":"malta:rabat","center":[14.3975,35.8815],"aliases":["Rabat"]},
   {"slug":"safi","name":"Ħal Safi","island":"Malta","key":"malta:safi","center":[14.48675,35.83405],"aliases":["Safi"]},
   {"slug":"salina","name":"Salina","island":"Malta","key":"malta:salina","center":[14.4185,35.952],"aliases":["Salina"]},

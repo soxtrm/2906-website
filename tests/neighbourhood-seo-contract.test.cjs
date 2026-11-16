@@ -8,7 +8,7 @@ const hub = fs.readFileSync(path.join(root, 'public', 'link-marketplace', 'index
 const sitemap = fs.readFileSync(path.join(root, 'public', 'neighbourhood-sitemap.xml'), 'utf8')
 const files = fs.readdirSync(areasDir).filter(file => file.endsWith('.html')).sort()
 
-assert.equal(files.length, 71, 'expected the current 71 neighbourhood editions')
+assert.equal(files.length, 72, 'expected the current 72 neighbourhood editions')
 
 const titles = new Map()
 const descriptions = new Map()
@@ -190,4 +190,4 @@ for (const file of files) {
   assert.ok(inbound.length > 0, `${file}: needs an inbound contextual link from another distinct edition`)
 }
 
-console.log('Neighbourhood SEO, sitemap, hub, social image and deferred-map accessibility contract passed for all 71 editions')
+console.log('Neighbourhood SEO, sitemap, hub, social image and deferred-map accessibility contract passed for all 72 editions')

@@ -1984,3 +1984,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/qormi-preview.html. Zwei Pfarreien, Brottradition, Linien 63/64/409, Gesundheitszentrum und drei belegte MTA-Adressen. OSM-Geometrie 138462118 mit 13 Knoten erneut geprüft. Der Marker bei 14.46835 E, 35.88223 N bezeichnet den Kirchenumriss.
 - Chrome bei 360, 390, 430 und 1440 px bestanden. Foto und sichtbare Zuschreibung, kein horizontaler Überlauf oder Seitenfehler. Kein OSM-Abruf vor dem Kartenklick, danach Kacheln und beschrifteter Marker. Nachbarlinks nach Il-Ħamrun und Ħaż-Żebbuġ antworten mit HTTP 200. Browserbelege unter artifacts/20261116-qormi-preview und Ergebnisse in docs/village-research/qormi-preview-verification.json.
 - Geplante öffentliche URL https://www.2906.estate/link-marketplace/areas/qormi.html. Der nächste Schritt ist die öffentliche Ausgabe mit Canonical, Sitemap, Marktplatz und Rücklink auf der dann geprüften Live-Baseline samt NEXUS-Vorschau. Kein Aliaswechsel.
+
+## 16.11 — Ħal Qormi als Releasekandidat
+
+- Isolierter Worktree 20261116/qormi-release aus origin/main ca51c76 mit Vorschau e049f5f. Aktueller produktiver www-Quellcommit 9386d21 ist Vorfahr. Worklog-SHA-256 vor Edits c506bd248191603c5a6b60423a16879d9f0a03a01fd4ac0173ddf2ba7f4337e2. Foto-Hash gegen die geprüfte CC-BY-SA-4.0-Datei abgeglichen.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/qormi.html. Self-Canonical, Social-Vorschaubild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Il-Ħamrun. SEO-Vertrag für 72 Editionen, Routensegmente und Fährendarstellung bestanden.
+- www-Ausgangsdeployment dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS, Nexus ONE v117 und Caddy geprüft. Die bestehende NEXUS-Vorschau ist Teil des Kandidaten.
