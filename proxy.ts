@@ -70,5 +70,6 @@ export default function proxy(req: NextRequest) {
 
 export const config = {
   // Exclude /admin, /api, static files from locale routing (unchanged from original).
-  matcher: ['/((?!admin|api|_next|_vercel|uploads|.*\\..*).*)'],
+  // The NEXUS private preview paths are forwarded by next.config rewrites, not localised.
+  matcher: ['/((?!admin|api|_next|_vercel|uploads|private-preview|preview-f100547a49|NexusBooking|node_modules|.*\\..*).*)'],
 }
