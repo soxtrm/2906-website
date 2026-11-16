@@ -35,6 +35,7 @@ const makeProperty = (index, market = 'longlets') => ({
   ]
   let savedRequest = null
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+  try {
   const page = await browser.newPage()
   await page.setViewport({ width: 393, height: 852, deviceScaleFactor: 1 })
   await page.setRequestInterception(true)
@@ -54,6 +55,7 @@ const makeProperty = (index, market = 'longlets') => ({
 
   await page.goto(base, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.listing-card')
+  await page.waitForNetworkIdle()
   assert.equal(await page.title(), 'Nexus Marketplace — Homes & Neighbourhoods in Malta and Gozo')
   let state = await page.evaluate(() => ({
     cards: document.querySelectorAll('.listing-rail')[0]?.querySelectorAll('.listing-card').length,
@@ -192,6 +194,8 @@ const makeProperty = (index, market = 'longlets') => ({
   assert.match(await page.$eval('.schedule-status', node => node.textContent), /QR CONNECTION PENDING/)
 
   await page.screenshot({ path: 'marketplace-mobile-smoke.png', fullPage: true })
-  await browser.close()
   console.log('link marketplace mobile flow passed')
+  } finally {
+    await browser.close()
+  }
 })().catch(error => { console.error(error); process.exitCode = 1 })
