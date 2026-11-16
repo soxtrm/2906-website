@@ -38,6 +38,9 @@ export default function proxy(req: NextRequest) {
   // Running them through next-intl rewrites the token route to /[locale] and
   // turns otherwise valid owner links into a 404 on the public domains.
   if (pathname.startsWith('/owner-schedule/') || pathname.startsWith('/owner-upload/')) return NextResponse.next()
+  // ARGUS Owner Portal (session cookie) and the agent-facing property link
+  // (capability link). Same reasoning: never localised, never CRM-rewritten.
+  if (pathname === '/owner-portal' || pathname.startsWith('/owner-portal/') || pathname.startsWith('/property-link/')) return NextResponse.next()
 
   if (host.startsWith('crm.')) {
     if (pathname.startsWith('/crm')) return NextResponse.next()

@@ -7,6 +7,7 @@ import {
   DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, glowFor,
 } from '@/lib/crm/ui'
 import { OwnerNexusPanel } from '@/components/crm/owner-nexus-panel'
+import { OwnerPortalPanel } from '@/components/crm/owner-portal-panel'
 
 export default function OwnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -118,6 +119,7 @@ const TABS = [
   { key: 'documents', label: 'Documents' },
   { key: 'history', label: 'History' },
   { key: 'nexus', label: 'NEXUS' },
+  { key: 'portal', label: 'Owner portal' },
 ] as const
 type TabKey = typeof TABS[number]['key']
 
@@ -276,6 +278,7 @@ function OwnerDetail({ id }: { id: number }) {
           {tab === 'documents' && <DocumentsPanel ownerId={id} documents={d.documents || []} properties={props} onSaved={load} me={me} />}
           {tab === 'history' && <HistoryPanel history={d.history || []} />}
           {tab === 'nexus' && <OwnerNexusPanel ownerId={id} />}
+          {tab === 'portal' && <OwnerPortalPanel ownerId={Number(id)} />}
         </div>
       </div>
     </CrmShell>

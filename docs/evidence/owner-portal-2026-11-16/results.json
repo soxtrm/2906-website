@@ -1,0 +1,177 @@
+{
+  "at": "2026-11-16T23:27:04.638Z",
+  "passed": 34,
+  "failed": 0,
+  "results": [
+    {
+      "name": "invitation opens the portal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "token removed from the address bar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "session cookie is httpOnly (not visible to scripts)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "session cookie flags",
+      "ok": true,
+      "detail": "{\"httpOnly\":true,\"secure\":true,\"sameSite\":\"Strict\"}"
+    },
+    {
+      "name": "desk shows the confirmed viewing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "drag-and-drop opens the assignment check",
+      "ok": true,
+      "detail": "Free Sat 21 Nov · 10:00"
+    },
+    {
+      "name": "assignment shows Property",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "assignment shows Agent",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "assignment shows Requested",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "assignment shows Client",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "assignment shows Duration",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "assignment shows Conditions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "assignment shows client requirements",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "proposal recorded, not confirmed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "keyboard selects a request",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "keyboard assigns a slot",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "availability saves and publishes windows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "owner change goes to review",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "share link created and shown once",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "activity lists the changes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "agent page hides owner identity",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "agent page has no horizontal overflow at 390",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "agent receives a private request link",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "owner desk has no horizontal overflow at 390",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile sheet fits the screen",
+      "ok": true,
+      "detail": "{\"x\":0,\"y\":336.59375,\"width\":390,\"height\":507.40625}"
+    },
+    {
+      "name": "tap-to-assign proposes on mobile",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile dock leaves room for the content",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "agent sees the founder's proposal message",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "two-stage confirmation completes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Availability has no horizontal overflow at 360",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Properties has no horizontal overflow at 360",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Sharing has no horizontal overflow at 360",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "sign-out revokes the session",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no JavaScript or console errors",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

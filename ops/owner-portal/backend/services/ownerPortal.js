@@ -50,7 +50,7 @@ const str = (v, max, label, { required = false, min = 0 } = {}) => {
   return s
 }
 
-function createOwnerPortal({ db, now = () => new Date(), portalUrl = 'https://2906.estate/owner', shareUrl = 'https://2906.estate/property-link', inviteTtlDays = 14, sessionDays = 30 } = {}) {
+function createOwnerPortal({ db, now = () => new Date(), portalUrl = 'https://2906.estate/owner-portal', shareUrl = 'https://2906.estate/property-link', inviteTtlDays = 14, sessionDays = 30 } = {}) {
   if (!db) throw new Error('db is required')
   const q = (text, params) => db.query(text, params)
 
@@ -435,7 +435,7 @@ function createOwnerPortal({ db, now = () => new Date(), portalUrl = 'https://29
   // ── Viewing desk ─────────────────────────────────────────────────────────
   const CLIENT_KEYS = ['people', 'groupType', 'moveIn', 'pets', 'budgetNote', 'notes', 'clientRef']
   function shapeRequest(r, audience) {
-    const base = { id: r.id, propertyId: r.property_id, state: r.state, label: V.LABEL[r.state], durationMin: r.duration_min,
+    const base = { id: Number(r.id), propertyId: r.property_id, state: r.state, label: V.LABEL[r.state], durationMin: r.duration_min,
       preferred: r.preferred, proposedStart: r.proposed_start, proposedEnd: r.proposed_end, expiresAt: r.expires_at, createdAt: r.created_at, updatedAt: r.updated_at }
     if (audience === 'owner') return { ...base, agent: { name: r.requester_name, agency: r.requester_agency, kind: r.requester_kind }, client: pick(r.client || {}, CLIENT_KEYS), note: r.decision_note }
     return base // agents see their own request without anyone else's data
