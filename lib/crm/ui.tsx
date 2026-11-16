@@ -520,6 +520,31 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const roleLabel = me?.role === 'admin' ? 'Admin' : me?.role === 'board' ? 'Board' : me?.role === 'agent' ? 'Agent' : 'Viewer'
   const hasReveals = reveals.limit > 0
   useEffect(() => { document.documentElement.dataset.crmTheme = dark ? 'dark' : 'light' }, [dark])
+  // The shell has a fixed height and only #crm-content scrolls, so the wheel
+  // used to die over the header, the filter rail, the sidebar and the page
+  // margins. Forward it to the content unless something under the pointer can
+  // scroll itself (lists, dialogs, menus) or owns the wheel (map, form fields).
+  useEffect(() => {
+    const onWheel = (event: WheelEvent) => {
+      const content = contentRef.current
+      const target = event.target as Element | null
+      if (!content || !target || event.ctrlKey || event.defaultPrevented) return
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
+      if (content.contains(target)) return
+      if (target.closest('[role=dialog],[role=menu],[role=listbox],.crm-board-map-shell,.gm-style,.leaflet-container,[data-wheel-own],input,textarea,select')) return
+      const dy = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? content.clientHeight : 1)
+      for (let el: Element | null = target; el && el !== document.body; el = el.parentElement) {
+        const style = getComputedStyle(el)
+        if (/(auto|scroll|overlay)/.test(style.overflowY) && el.scrollHeight > el.clientHeight + 1) {
+          const canMove = dy > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0
+          if (canMove) return
+        }
+      }
+      content.scrollBy({ top: dy, left: 0 })
+    }
+    document.addEventListener('wheel', onWheel, { passive: true })
+    return () => document.removeEventListener('wheel', onWheel)
+  }, [])
   useEffect(() => {
     setMoreOpen(false)
     setNavigationCompact(false)
