@@ -1917,3 +1917,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/santa-lucija-preview.html. Malta und Ta’ Kerċem auf Gozo ausdrücklich unterschieden, die drei Gartenanlagen separat beschrieben. Route 83, Klinik und Verein mit Quellen. Der verifizierte Gastroeintrag ist als Paola-Adresse gekennzeichnet. Verweise auf Paola und Ħal Tarxien liefern HTTP 200.
 - Chrome bei 360, 390, 430 und 1440 px. Zwei dekodierte Fotos und Credits, kein Überlauf und kein Seitenfehler. Vor Klick kein OSM-Abruf, danach 2D-Kacheln und ein als Gartenbereich beschrifteter Marker. Der direkte OSM-Link bleibt ohne JavaScript verfügbar. Belege in docs/village-research/santa-lucija-preview-verification.json und artifacts/20261116-santa-lucija-preview.
 - Nächster Schritt ist die öffentliche Ausgabe mit Canonical, Sitemap, Inseltrennung im Marktplatz und Rücklink aus einer Nachbarausgabe. Kein Aliaswechsel.
+
+## 16.11 — Santa Luċija (Malta) als Releasekandidat
+
+- Isolierter Worktree 20261116/santa-lucija-release ab origin/main ca51c76 mit Vorschau 92c34bf. Produktiver www-Quellcommit 955511e ist Vorfahr. Worklog-SHA-256 vor Edits 1915eed4e61068451328ea7c5d4ecb4122ef4f3ed5876d4e882f4075d02d1027. Asset-Hashes unverändert geprüft.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/santa-lucija.html. Self-Canonical, Social-Vorschau, Breadcrumbs, Sitemap, Marktplatzverzeichnis, Malta-Ortsschlüssel und Rücklink aus Ħal Tarxien. Drei Tests für alle 70 Ortseditionen, Routensegmente und Fährendarstellung bestanden.
+- Öffentlicher www-Alias dpl_HtQRHqVD3nVn2o78cQQHjw6uivaC als Rücksprungpunkt geprüft. Apex-Redirect, der getrennte CRM- und Projektalias, Nexus ONE v116, Caddy und Brain geprüft.
