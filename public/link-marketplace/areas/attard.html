@@ -31,7 +31,7 @@
     @media(max-width:940px){.attard-hero{grid-template-columns:1fr}.hero-image{min-height:590px}.contexts-intro,.viewing,.daily-head{grid-template-columns:1fr}.contexts{grid-template-columns:1fr}.contexts article{min-height:0}}
     @media(max-width:560px){.attard-hero{min-height:0}.hero-copy{padding:52px 24px 44px}.hero-copy h1{font-size:clamp(48px,14vw,65px);overflow-wrap:anywhere}.hero-image{min-height:480px}.hero-image img{object-position:center 50%}.hero-image figcaption{left:14px;right:14px;bottom:14px}.contexts-intro{padding:60px 24px 32px}.contexts{margin:0 16px 58px}.contexts article{padding:36px 24px}.viewing{padding:0 24px 62px}.check-grid,.daily-grid{grid-template-columns:1fr}.daily{margin:0 16px 56px;padding:36px 24px}.truth{margin:0 24px 50px}.map-shell{margin:0 16px 48px}}
   </style>
-</head>
+<link rel="stylesheet" href="/link-marketplace/discovery.css?v=1"></head>
 <body>
   <nav><a href="/link-marketplace/index.html">2906 / NEIGHBOURHOODS</a><small>ATTARD · SOURCED LOCAL EDITION</small></nav>
   <main>
@@ -71,6 +71,16 @@
     <section class="map-shell" aria-labelledby="map-title"><span>LIGHTWEIGHT 2D ORIENTATION</span><h2 id="map-title">Load the Attard overview only when you need it.</h2><p>The map provides broad orientation around Attard, Sant'Anton, Balzan, Lija and Ta' Qali. It deliberately draws no locality border, property route or journey time and loads from OpenStreetMap only after your click.</p><button class="map-open" id="load-map" type="button" aria-controls="area-map">Open the 2D map</button><div class="edition-map" id="area-map" role="region" aria-label="Interactive locality overview" hidden></div><p class="map-status" id="map-status" role="status"></p><p><a href="https://www.openstreetmap.org/#map=14/35.8920/14.4380">Open the larger OpenStreetMap ↗</a></p></section>
 
     <section class="sources"><b>Sources reviewed 16 October 2026</b><p><a href="https://hattardlc.gov.mt/en/">Attard Local Council</a> · <a href="https://hattardlc.gov.mt/en/homepage/geography-and-history/">Council geography and history</a> · <a href="https://hattardlc.gov.mt/en/churches-chapels/">Council churches and chapels</a> · <a href="https://primaryhealthcare.gov.mt/en/health-centers/rabat-health-center/">Rabat Health Centre</a> · <a href="https://my.mt/locations/">MyConvenience / MySupermarket locations</a> · <a href="https://www.foodcoop.mt/">The Food Coop</a> · <a href="https://www.thevillabolognarestaurant.com/">Villa Bologna Restaurant</a> · <a href="https://www.gov.mt/en/Government/DOI/Press%20Releases/Pages/2026/08/01/pr261291en.aspx">Government of Malta — San Anton works</a> · <a href="https://commons.wikimedia.org/wiki/File:Malta_-_Attard_-_San_Anton_Gardens_38_ies.jpg">Wikimedia Commons image record</a></p><p>No ranking, fixed opening hours, property-specific route, guaranteed outlook, parking claim, accessibility promise, locality-wide walkability or journey time is claimed.</p></section>
+
+    <section class="nx-local" id="local-market" data-local-market="attard" aria-labelledby="nx-local-title">
+      <p class="nx-eyebrow">Nexus Marketplace</p>
+      <h2 id="nx-local-title">Explore Attard</h2>
+      <p>See local homes and explore food, shops and everyday places around the neighbourhood.</p>
+      <div class="nx-local-homes"><h3>Homes in Attard</h3><div data-local-homes-list aria-live="polite"></div><a class="nx-inline-link" href="/link-marketplace/index.html?area=attard#homes">Browse local listings <span aria-hidden="true">↗</span></a></div>
+      <div class="nx-local-map"><h3>Places around Attard</h3><p>Mapped places within 2 km of the centre. This can include nearby neighbourhoods.</p><div class="nx-places-ui" data-place-ui><button class="nx-map-trigger" type="button" data-map-open>Open local map</button></div></div>
+      <a class="nx-inline-link nx-back-link" href="/link-marketplace/index.html#neighbourhoods">Explore other neighbourhood editions <span aria-hidden="true">↗</span></a>
+    </section>
+    <script type="module" src="/link-marketplace/discovery.mjs?v=1"></script>
   </main>
   <footer><span>2906 Estate · Local intelligence by Nexus Link</span><span>Attard · sources reviewed 16 October 2026</span></footer>
   <script>

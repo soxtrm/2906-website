@@ -42,7 +42,7 @@
     .map-actions{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
     @media(max-width:700px){.hero-layout{grid-template-columns:minmax(0,1fr)}}
   </style>
-</head>
+<link rel="stylesheet" href="/link-marketplace/discovery.css?v=1"></head>
 <body>
   <a class="skip" href="#main">Skip to the edition</a>
   <nav aria-label="Edition"><a href="/link-marketplace/index.html">2906 / LOCAL LIFE</a><small>ĦAL SAFI</small></nav>
@@ -119,6 +119,16 @@
       </ul>
       <div class="neighbours"><a href="/link-marketplace/areas/kirkop.html">Explore Ħal Kirkop ↗</a><a href="/link-marketplace/areas/zurrieq.html">Explore Żurrieq ↗</a><a href="/link-marketplace/areas/qrendi.html">Explore Il-Qrendi and its temple ridge ↗</a><a href="/link-marketplace/index.html">All neighbourhood editions ↗</a></div>
     </section>
+
+    <section class="nx-local" id="local-market" data-local-market="safi" aria-labelledby="nx-local-title">
+      <p class="nx-eyebrow">Nexus Marketplace</p>
+      <h2 id="nx-local-title">Explore Ħal Safi</h2>
+      <p>See local homes and explore food, shops and everyday places around the neighbourhood.</p>
+      <div class="nx-local-homes"><h3>Homes in Ħal Safi</h3><div data-local-homes-list aria-live="polite"></div><a class="nx-inline-link" href="/link-marketplace/index.html?area=safi#homes">Browse local listings <span aria-hidden="true">↗</span></a></div>
+      <div class="nx-local-map"><h3>Places around Ħal Safi</h3><p>Mapped places within 2 km of the centre. This can include nearby neighbourhoods.</p><div class="nx-places-ui" data-place-ui><button class="nx-map-trigger" type="button" data-map-open>Open local map</button></div></div>
+      <a class="nx-inline-link nx-back-link" href="/link-marketplace/index.html#neighbourhoods">Explore other neighbourhood editions <span aria-hidden="true">↗</span></a>
+    </section>
+    <script type="module" src="/link-marketplace/discovery.mjs?v=1"></script>
   </main>
   <footer><p><strong>2906 Estate</strong>Independent agency · neighbourhood editorial</p><p>Local intelligence by Nexus Link<br>Ħal Safi / English</p></footer>
   <script>

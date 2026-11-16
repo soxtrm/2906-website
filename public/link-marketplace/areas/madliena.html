@@ -38,7 +38,7 @@
     @media(max-width:900px){.madliena-hero{grid-template-columns:1fr}.hero-image{min-height:430px}.signals{grid-template-columns:repeat(2,1fr)}.terrain{grid-template-columns:1fr}.local-grid{grid-template-columns:1fr}}
     @media(max-width:540px){.madliena-hero{min-height:0}.hero-copy{padding:50px 24px}.hero-image{min-height:360px}.hero-image figcaption{left:12px;right:12px;bottom:12px}.hero-image:after{top:12px;right:12px}.signals{grid-template-columns:1fr;padding:1px}.signal{min-height:0}.terrain{padding:58px 24px}.local-grid{padding:0 24px 58px}.map-shell{margin:0 16px 48px}}
   </style>
-</head>
+<link rel="stylesheet" href="/link-marketplace/discovery.css?v=1"></head>
 <body>
   <nav><a href="/Link">2906 / NEIGHBOURHOODS</a><small>MADLIENA EDITION · MALTA</small></nav>
   <main>
@@ -72,6 +72,16 @@
     <section class="map-shell" aria-labelledby="map-title"><span>LIGHTWEIGHT 2D ORIENTATION</span><h2 id="map-title">Open the wider area only when you need it.</h2><p>This map is deliberately broad. It does not draw a Madliena boundary, a property entrance, a walking shortcut or a continuous Victoria Lines trail.</p><button class="map-open" id="load-map" type="button" aria-controls="area-map">Open the 2D map</button><div class="edition-map" id="area-map" role="region" aria-label="Interactive locality overview" hidden></div><p class="map-status" id="map-status" role="status"></p><p><a href="https://www.openstreetmap.org/#map=15/35.9320/14.4770">Open the larger OpenStreetMap ↗</a></p></section>
 
     <section class="sources"><b>Sources reviewed 4 October 2026</b><p><a href="https://swieqilc.gov.mt/en/homepage/geography-and-history/">Swieqi Local Council: geography</a> · <a href="https://swieqilc.gov.mt/en/historical-places/">Swieqi Local Council: historical places</a> · <a href="https://stjohn.mt/who-we-are/fort-madalena/">St John Ambulance &amp; Rescue</a> · <a href="https://www.gov.mt/en/Government/DOI/Press%20Releases/Pages/2025/05/12/PR250789en.aspx">Government trail works notice</a> · <a href="https://www.madlienalodge.com.mt/">Madliena Lodge</a></p><p>No ranking, opening hours, completed trail, public-fort access, property-specific route, accessibility promise or neighbourhood-wide journey time is claimed.</p></section>
+
+    <section class="nx-local" id="local-market" data-local-market="madliena" aria-labelledby="nx-local-title">
+      <p class="nx-eyebrow">Nexus Marketplace</p>
+      <h2 id="nx-local-title">Explore Madliena</h2>
+      <p>See local homes and explore food, shops and everyday places around the neighbourhood.</p>
+      <div class="nx-local-homes"><h3>Homes in Madliena</h3><div data-local-homes-list aria-live="polite"></div><a class="nx-inline-link" href="/link-marketplace/index.html?area=madliena#homes">Browse local listings <span aria-hidden="true">↗</span></a></div>
+      <div class="nx-local-map"><h3>Places around Madliena</h3><p>Mapped places within 2 km of the centre. This can include nearby neighbourhoods.</p><div class="nx-places-ui" data-place-ui><button class="nx-map-trigger" type="button" data-map-open>Open local map</button></div></div>
+      <a class="nx-inline-link nx-back-link" href="/link-marketplace/index.html#neighbourhoods">Explore other neighbourhood editions <span aria-hidden="true">↗</span></a>
+    </section>
+    <script type="module" src="/link-marketplace/discovery.mjs?v=1"></script>
   </main>
   <footer><span>2906 Estate · Local intelligence by Nexus Link</span><span><a href="swieqi.html">Swieqi edition ↗</a> · <a href="tal-ibrag.html">Tal-Ibraġ edition ↗</a> · <a href="pembroke.html">Pembroke edition ↗</a></span></footer>
   <script>

@@ -32,7 +32,7 @@
     @media(max-width:920px){.rabat-hero{grid-template-columns:1fr}.hero-image{min-height:620px}.read{grid-template-columns:1fr}.contexts{grid-template-columns:1fr}.context{min-height:0}.divide{grid-template-columns:1fr}}
     @media(max-width:540px){.rabat-hero{min-height:0}.hero-copy{padding:52px 24px}.hero-copy h1{font-size:clamp(48px,14vw,66px)}.hero-image{min-height:530px}.hero-image img{object-position:center 48%}.hero-image figcaption{left:12px;right:12px;bottom:12px}.read{padding:60px 24px}.divide{margin:0 16px 56px}.divide article{padding:36px 24px}.daily{padding:0 24px 60px}.daily-grid{grid-template-columns:1fr}.check-note,.route-note{margin:0 24px 54px}.map-shell{margin:0 16px 48px}}
   </style>
-</head>
+<link rel="stylesheet" href="/link-marketplace/discovery.css?v=1"></head>
 <body>
   <nav><a href="/link-marketplace/index.html">2906 / NEIGHBOURHOODS</a><small>RABAT · SOURCED LOCAL EDITION</small></nav>
   <main>
@@ -75,6 +75,16 @@
     <section class="map-shell" aria-labelledby="map-title"><span>LIGHTWEIGHT 2D ORIENTATION</span><h2 id="map-title">Load the Rabat overview only when you need it.</h2><p>The map provides broad orientation around Rabat, Mdina and nearby labels. It deliberately draws no locality border, property route or journey time and loads from OpenStreetMap only after your click. Places visible in one viewport remain separate property contexts.</p><button class="map-open" id="load-map" type="button" aria-controls="area-map">Open the 2D map</button><div class="edition-map" id="area-map" role="region" aria-label="Interactive locality overview" hidden></div><p class="map-status" id="map-status" role="status"></p><p><a href="https://www.openstreetmap.org/#map=14/35.8810/14.3985">Open the larger OpenStreetMap ↗</a></p></section>
 
     <section class="sources"><b>Sources reviewed 15 October 2026</b><p><a href="https://rabatmaltalc.gov.mt/en/homepage/geography-and-history/">Rabat Local Council geography and history</a> · <a href="https://address.gov.mt/locate-a-street-search/">Office of the Address Registrar</a> · <a href="https://primaryhealthcare.gov.mt/en/health-centers/rabat-health-center/">Rabat Health Centre</a> · <a href="https://heritagemalta.mt/mt/explore/domvs-romana/">Domvs Romana</a> · <a href="https://heritagemalta.mt/explore/st-pauls-catacombs/">St Paul’s Catacombs</a> · <a href="https://my.mt/locations/">MyConvenience locations</a> · <a href="https://mta.com.mt/licences/licences/?type=restaurants">MTA restaurant register</a> · <a href="https://commons.wikimedia.org/wiki/File:Rabat,_Malta_24._listopada_2025.jpg">Wikimedia Commons image record</a></p><p>No ranking, fixed opening hours, property-specific route, guaranteed outlook, parking claim, accessibility promise, locality-wide walkability or journey time is claimed.</p></section>
+
+    <section class="nx-local" id="local-market" data-local-market="rabat" aria-labelledby="nx-local-title">
+      <p class="nx-eyebrow">Nexus Marketplace</p>
+      <h2 id="nx-local-title">Explore Rabat</h2>
+      <p>See local homes and explore food, shops and everyday places around the neighbourhood.</p>
+      <div class="nx-local-homes"><h3>Homes in Rabat</h3><div data-local-homes-list aria-live="polite"></div><a class="nx-inline-link" href="/link-marketplace/index.html?area=rabat#homes">Browse local listings <span aria-hidden="true">↗</span></a></div>
+      <div class="nx-local-map"><h3>Places around Rabat</h3><p>Mapped places within 2 km of the centre. This can include nearby neighbourhoods.</p><div class="nx-places-ui" data-place-ui><button class="nx-map-trigger" type="button" data-map-open>Open local map</button></div></div>
+      <a class="nx-inline-link nx-back-link" href="/link-marketplace/index.html#neighbourhoods">Explore other neighbourhood editions <span aria-hidden="true">↗</span></a>
+    </section>
+    <script type="module" src="/link-marketplace/discovery.mjs?v=1"></script>
   </main>
   <footer><span>2906 Estate · Local intelligence by Nexus Link</span><span>Rabat · sources reviewed 15 October 2026</span></footer>
   <script>

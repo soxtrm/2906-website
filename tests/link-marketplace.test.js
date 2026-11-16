@@ -29,7 +29,7 @@ const makeProperty = (index, market = 'longlets') => ({
   const base = process.env.MARKET_BASE || 'http://127.0.0.1:4174/link-marketplace/'
   const inventory = [...Array.from({ length: 12 }, (_, index) => makeProperty(index + 1)), makeProperty(90, 'sales')]
   const places = [
-    { id:'nexus-place:1', name: 'Daily Market', kind: 'grocery', coordinates: [14.501, 35.912] },
+    { id:'nexus-place:1', name: 'Daily Market', kind: 'grocery', mapVisible: true, coordinates: [14.501, 35.912] },
     { id:'nexus-place:2', name: 'ATM', kind: 'atm', coordinates: [14.502, 35.913] },
     { id:'nexus-place:3', name: 'Sports Centre', kind: 'sport', coordinates: [14.503, 35.914] }
   ]
@@ -54,7 +54,7 @@ const makeProperty = (index, market = 'longlets') => ({
 
   await page.goto(base, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.listing-card')
-  assert.equal(await page.title(), 'Nexus Housing — Malta homes')
+  assert.equal(await page.title(), 'Nexus Marketplace — Homes & Neighbourhoods in Malta and Gozo')
   let state = await page.evaluate(() => ({
     cards: document.querySelectorAll('.listing-rail')[0]?.querySelectorAll('.listing-card').length,
     sales: [...document.querySelectorAll('.listing-card')].some(card => /420,000/.test(card.textContent)),
@@ -105,12 +105,14 @@ const makeProperty = (index, market = 'longlets') => ({
   assert.equal(await page.$eval('[data-selection-count]',n=>n.textContent),'1')
   await page.click('[data-card-photo="1"]')
   assert.equal(await page.$eval('[data-card-photo="1"]',n=>n.getAttribute('aria-pressed')),'true')
-  await page.click('.card-locality-link')
-  await page.waitForSelector('#village-drawer[open] .brochure-map .leaflet-pane')
-  assert.ok(await page.$('#village-drawer .brochure-stories'))
-  await page.screenshot({path:'brochure-mobile-smoke.png'})
-  await page.click('#village-drawer [data-close]')
-  assert.equal(await page.$eval('.matrix-banner',n=>n.getAttribute('href')),'/link-matrix')
+  await Promise.all([page.waitForNavigation(), page.click('.card-locality-link')])
+  assert.match(page.url(), /\/areas\/(sliema|st-julians)\.html$/)
+  await page.waitForSelector('#local-market')
+  await page.click('#local-market [data-map-open]')
+  await page.waitForSelector('#local-market .leaflet-pane')
+  await page.goBack({ waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('.listing-card')
+  assert.equal(await page.$eval('.nx-header-map',n=>n.getAttribute('href')),'/link-matrix')
   await page.type('#query', 'no listing can match this')
   assert.equal(await page.$eval('.listing-rail', rail => rail.querySelectorAll('.listing-card').length), 12, 'draft filter applied before Show homes')
   await page.click('#apply-filters')
@@ -118,9 +120,11 @@ const makeProperty = (index, market = 'longlets') => ({
   assert.match(await page.$eval('#filter-state span', node => node.textContent), /Showing applied/)
 
   await page.reload({ waitUntil: 'domcontentloaded' })
+  assert.equal(await page.$eval('#query', input => input.value), 'no listing can match this')
+  await page.click('#reset-filters')
   await page.waitForSelector('.listing-card')
   assert.equal(await page.$eval('#query', input => input.value), '')
-  assert.equal(await page.$eval('.listing-rail', rail => rail.querySelectorAll('.listing-card').length), 12, 'reload did not reset marketplace filters')
+  assert.equal(await page.$eval('.listing-rail', rail => rail.querySelectorAll('.listing-card').length), 12, 'reset should restore the initial rental feed')
 
   await page.click('[data-market="sales"]')
   await page.waitForFunction(() => document.querySelector('.listing-rail')?.querySelectorAll('.listing-card').length === 1)

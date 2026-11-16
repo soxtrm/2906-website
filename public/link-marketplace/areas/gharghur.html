@@ -42,7 +42,7 @@
     @media(max-width:920px){.gharghur-hero{grid-template-columns:1fr}.hero-image{min-height:450px}.village-read{grid-template-columns:1fr}.signals{grid-template-columns:1fr}.signal{min-height:0}.two-views{grid-template-columns:1fr}}
     @media(max-width:540px){.gharghur-hero{min-height:0}.hero-copy{padding:50px 24px}.hero-copy h1{font-size:clamp(48px,14.5vw,68px)}.hero-image{min-height:370px}.hero-image img{object-position:54% center}.hero-image figcaption{left:12px;right:12px;bottom:12px}.village-read{padding:58px 24px}.two-views{margin:0 16px 54px}.two-views article{padding:34px 24px}.daily{padding:0 24px 58px}.daily-grid{grid-template-columns:1fr}.care-note,.route-note{margin:0 24px 54px}.map-shell{margin:0 16px 48px}}
   </style>
-</head>
+<link rel="stylesheet" href="/link-marketplace/discovery.css?v=1"></head>
 <body>
   <nav><a href="/link-marketplace/index.html">2906 / NEIGHBOURHOODS</a><small>GĦARGĦUR EDITION · SOURCED GUIDE</small></nav>
   <main>
@@ -81,7 +81,17 @@
     <section class="map-shell" aria-labelledby="map-title"><span>LIGHTWEIGHT 2D ORIENTATION</span><h2 id="map-title">Load the village overview only when you need it.</h2><p>The map shows the village core, surrounding streets and nearby labels for orientation. It deliberately draws no locality border, route, coastal connection or journey time and loads from OpenStreetMap only after your click.</p><button class="map-open" id="load-map" type="button" aria-controls="area-map">Open the 2D map</button><div class="edition-map" id="area-map" role="region" aria-label="Interactive locality overview" hidden></div><p class="map-status" id="map-status" role="status"></p><p><a href="https://www.openstreetmap.org/#map=16/35.9238/14.4535">Open the larger OpenStreetMap ↗</a></p></section>
 
     <section class="sources"><b>Sources reviewed 11 October 2026</b><p><a href="https://gharghurlc.gov.mt/en/homepage/geography-and-history/">Għargħur Local Council geography</a> · <a href="https://gharghurlc.gov.mt/en/">Local Council history</a> · <a href="https://address.gov.mt/locate-a-street-search/">Office of the Address Registrar</a> · <a href="https://primaryhealthcare.gov.mt/en/health-centers/">Primary HealthCare</a> · <a href="https://my.mt/locations/">MyConvenience</a> · <a href="https://www.bertaboutiquecafe.com/">Berta Boutique Café</a> · <a href="https://mta.com.mt/licences/licences/?dir=asc&amp;page=2&amp;size=50&amp;sort=EstablishmentTown&amp;type=restaurants">Malta Tourism Authority register</a></p><p>The council's historical-places page currently contains no supporting content and is not used for monument claims. No ranking, fixed opening hours, property-specific route, accessibility promise, guaranteed outlook, parking claim or locality-wide journey time is claimed.</p></section>
-  <div class="nearby-editions" role="navigation" aria-label="Nearby neighbourhood editions" style="margin:48px 0 0;padding:22px 0;border-top:1px solid currentColor"><small>NEARBY CONTEXT · SEPARATE LOCALITIES</small><p>Continue with <a href="naxxar.html">In-Naxxar</a> and <a href="madliena.html">Madliena</a>. Each edition keeps its own sources and place identity.</p></div></main>
+  <div class="nearby-editions" role="navigation" aria-label="Nearby neighbourhood editions" style="margin:48px 0 0;padding:22px 0;border-top:1px solid currentColor"><small>NEARBY CONTEXT · SEPARATE LOCALITIES</small><p>Continue with <a href="naxxar.html">In-Naxxar</a> and <a href="madliena.html">Madliena</a>. Each edition keeps its own sources and place identity.</p></div>
+    <section class="nx-local" id="local-market" data-local-market="gharghur" aria-labelledby="nx-local-title">
+      <p class="nx-eyebrow">Nexus Marketplace</p>
+      <h2 id="nx-local-title">Explore Għargħur</h2>
+      <p>See local homes and explore food, shops and everyday places around the neighbourhood.</p>
+      <div class="nx-local-homes"><h3>Homes in Għargħur</h3><div data-local-homes-list aria-live="polite"></div><a class="nx-inline-link" href="/link-marketplace/index.html?area=gharghur#homes">Browse local listings <span aria-hidden="true">↗</span></a></div>
+      <div class="nx-local-map"><h3>Places around Għargħur</h3><p>Mapped places within 2 km of the centre. This can include nearby neighbourhoods.</p><div class="nx-places-ui" data-place-ui><button class="nx-map-trigger" type="button" data-map-open>Open local map</button></div></div>
+      <a class="nx-inline-link nx-back-link" href="/link-marketplace/index.html#neighbourhoods">Explore other neighbourhood editions <span aria-hidden="true">↗</span></a>
+    </section>
+    <script type="module" src="/link-marketplace/discovery.mjs?v=1"></script>
+  </main>
   <footer><span>2906 Estate · Local intelligence by Nexus Link</span><span>Għargħur edition · sourced 11 October 2026</span></footer>
   <script>
     document.getElementById('load-map').addEventListener('click',function(){
