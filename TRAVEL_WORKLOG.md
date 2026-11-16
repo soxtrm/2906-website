@@ -1971,3 +1971,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 
 - Separater Worktree 20261116/qormi-research aus origin/main ca51c76 mit Reiseübergabe 9b810ae. Worklog-SHA-256 vor Edits b05730c4dd7f409980f9fcba374e1b7ec13d5390d888d2826f1ee8a08f156d22.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/qormi.html (HTTP 404). Zwei getrennte Pfarreien, Brottradition und Einzelhandel, Buslinien 63/64/409, Gesundheitszentrum und drei MTA-Registeradressen in docs/village-research/qormi-research.md belegt. OSM-Objekt 138462118 und Metadaten von zwei Commons-Bildkandidaten geprüft. Als Nächstes folgen Originalprüfung und Bildauswahl. Kein Aliaswechsel.
+
+## 16.11 — Ħal Qormi Ortsfotografie für die Vorschau geprüft
+
+- Isolierter Worktree 20261116/qormi-asset aus origin/main ca51c76 mit Recherche a7a58be. Worklog-SHA-256 vor Edits 954e4641fd27c388b5edd8e7b0b6c155516b57be11fdcf1327ba7fe96dfd90b1.
+- Zwei Commons-Originale per SHA-1 und visuell geprüft. Die Innenaufnahme von San Ġorġ während der Fastenzeit von PaulAqui (16. April 2025, CC BY-SA 4.0) ist als proportional verkleinerte 1080 × 1440 WebP-Datei mit 214.556 Bytes dekodiert und geprüft. Die Fassadenaufnahme bleibt wegen eines lesbaren Kfz-Kennzeichens privat. Genaue Credits und Hash in docs/village-research/qormi-image-credits.md, Belege unter artifacts/20261116-qormi-originals.
+- **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/qormi.html. Als Nächstes folgt die lokale responsive Vorschau. Kein Aliaswechsel.
