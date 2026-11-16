@@ -1,0 +1,52 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "results": [
+    {
+      "width": 360,
+      "liveImages": 2,
+      "attributions": 2,
+      "openStreetMapBeforeClick": 0,
+      "markerAfterClick": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "liveImages": 2,
+      "attributions": 2,
+      "openStreetMapBeforeClick": 0,
+      "markerAfterClick": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 430,
+      "liveImages": 2,
+      "attributions": 2,
+      "openStreetMapBeforeClick": 0,
+      "markerAfterClick": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "liveImages": 2,
+      "attributions": 2,
+      "openStreetMapBeforeClick": 0,
+      "markerAfterClick": true,
+      "overflow": 0,
+      "pageErrors": 0
+    }
+  ],
+  "neighbours": [
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/paola.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/tarxien.html",
+      "status": 200
+    }
+  ]
+}

@@ -1910,3 +1910,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261116/santa-lucija-asset ab origin/main ca51c76 mit Recherche 93f9948. Worklog-SHA-256 vor Edits aa61ab76e6e2be5ebc8c85d95917a79f432be2ac7f4cc2106fb6c1356d677de2.
 - Zwei Commons-Originale für den Garden of Serenity anhand ihrer SHA-1-Werte geprüft und visuell verglichen. Weite Ansicht von Lance Anthony (CC BY-SA 4.0, 218.730 Bytes) und Pavillondetail von William Shewring (Public Domain, 111.842 Bytes) als vollständige WebPs verifiziert. Beide historischen Aufnahmen zeigen den Garden of Serenity. Eine Alternative gab HTTP 429. Credits, Dateihashes und sichtbare Zuschreibung in docs/village-research/santa-lucija-image-credits.md.
 - **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/santa-lucija.html. Als Nächstes folgt die private responsive Vorschau. Kein Aliaswechsel.
+
+## 16.11 — Englische Santa-Luċija-Vorschau im Browser geprüft
+
+- Isolierter Worktree 20261116/santa-lucija-preview ab origin/main ca51c76 mit Bildstand 1087c30. Worklog-SHA-256 vor Edits 85112bfc13234cc6bd2b8a2b65bb648751eaf1a46bbcc6474d9e9c856b91a01c. Beide Bilddateien entsprechen ihren geprüften Hashes.
+- **Private lokale Vorschau**, Englisch, docs/village-research/santa-lucija-preview.html. Malta und Ta’ Kerċem auf Gozo ausdrücklich unterschieden, die drei Gartenanlagen separat beschrieben. Route 83, Klinik und Verein mit Quellen. Der verifizierte Gastroeintrag ist als Paola-Adresse gekennzeichnet. Verweise auf Paola und Ħal Tarxien liefern HTTP 200.
+- Chrome bei 360, 390, 430 und 1440 px. Zwei dekodierte Fotos und Credits, kein Überlauf und kein Seitenfehler. Vor Klick kein OSM-Abruf, danach 2D-Kacheln und ein als Gartenbereich beschrifteter Marker. Der direkte OSM-Link bleibt ohne JavaScript verfügbar. Belege in docs/village-research/santa-lucija-preview-verification.json und artifacts/20261116-santa-lucija-preview.
+- Nächster Schritt ist die öffentliche Ausgabe mit Canonical, Sitemap, Inseltrennung im Marktplatz und Rücklink aus einer Nachbarausgabe. Kein Aliaswechsel.

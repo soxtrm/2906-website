@@ -28,13 +28,13 @@ export async function createPropertyMap(element,intelligence,{onSelect}={}){
  };
 }
 
-export async function createLocalityMap(element,center,places,{onSelect}={}){
+export async function createLocalityMap(element,center,places,{onSelect,centreLabel='Locality centre · 2 km radius'}={}){
  const L=await leaflet();if(!element.isConnected||!center)return null;
  element.classList.add('nexus-dark-map');
  const map=L.map(element,{scrollWheelZoom:false,zoomAnimation:false,preferCanvas:true}).setView(latlng(center),14);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
  const circle=L.circle(latlng(center),{radius:2000,color:'#dabc7f',weight:1,dashArray:'4 8',fillColor:'#dabc7f',fillOpacity:.035}).addTo(map);map.fitBounds(circle.getBounds());
- L.marker(latlng(center),{icon:L.divIcon({className:'locality-star',html:'✦',iconSize:[32,32],iconAnchor:[16,16]})}).addTo(map).bindTooltip('Locality centre · 2 km radius');
+ L.marker(latlng(center),{icon:L.divIcon({className:'locality-star',html:'✦',iconSize:[32,32],iconAnchor:[16,16]})}).addTo(map).bindTooltip(Object.assign(document.createElement('span'),{textContent:centreLabel}));
  const markers=new Map();
  for(const place of places){const colour=colours[place.connector]||'#f6c66b';const marker=L.circleMarker(latlng(place.coordinates),{radius:5,weight:1,color:colour,fillColor:colour,fillOpacity:.9}).addTo(map);const text=document.createElement('span');text.textContent=place.name;marker.bindTooltip(text);marker.on('click',()=>onSelect?.(place.id));markers.set(place.id,marker);}
  const resize=new ResizeObserver(()=>map.invalidateSize({pan:false}));resize.observe(element);
