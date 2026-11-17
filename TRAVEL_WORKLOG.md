@@ -2041,3 +2041,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/mdina-asset aus origin/main ca51c76 mit Recherche 3b6553f. Worklog-SHA-256 vor Edits 4a241087d6ac403378081d79106452fb534d6ed70dbc639968e65b730a9fa63e.
 - Die Commons-Dateiseiten bestätigen die Bildnutzung. Metadaten-API und direkter GET des verlinkten Originalfotos lieferten HTTP 429. Der vom Server angegebene Wartezeitraum von 120 Sekunden wurde eingehalten und ein weiterer Versuch ergab HTTP 429. Abruf und Lizenzbelege sind lokal dokumentiert. Original und Bilddatei bleiben ausstehend.
 - **Unveröffentlicht**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/mdina.html. Vor Einsatz Foto anhand des tatsächlichen Originals auf Inhalt, Breite und Hash prüfen.
+
+## 17.11 — L-Imdina Ortsfoto aus zweiter Quelle geprüft
+
+- Isolierter Worktree 20261117/mdina-photo aus origin/main ca51c76 mit Eintrag 9ac210f. Worklog-SHA-256 vor Edits 84910adf8f8cea5942cb90703756f23ffa90d15b084a9343ce89a6dda267a870.
+- Der Commons-Download lieferte erneut HTTP 429. Das verifizierte Torfoto von Eva Darron stammt vom offiziellen Unsplash-Download. Die Unsplash-Lizenz gestattet die vorgesehene Nutzung. Bild ohne erkennbare Personen oder Kennzeichen, als 1560 × 878 WebP mit 241.894 Bytes und ohne EXIF geprüft. Genaue Quelle und Hashes in docs/village-research/mdina-image-credits.md.
+- **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/mdina.html. Die responsive Vorschau kann jetzt Foto und verifizierten Museumspunkt zusammenführen.
