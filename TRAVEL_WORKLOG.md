@@ -2093,3 +2093,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/nadur-release aus origin/main ca51c76 mit Vorschau f298d8b. Worklog-SHA-256 vor Edits bc52dac26f966c12ddd6fbdc5e85f31137483957754d85208f4c6932462ea011. Verifizierter www-Quellcommit c5b0049 ist Vorfahr.
 - **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/nadur-gozo.html. Eigener Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Il-Qala. SEO-Vertrag für 75 Editionen sowie drei Routengeometrie- und Fährenprüfungen bestanden.
 - www-Ausgangsdeployment dpl_3DQx8dZwFJPnm7RpfR96jRgAsN4p, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.
+
+## 17.11 — In-Nadur öffentlich veröffentlicht
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/nadur-gozo.html. Quellcommit ac69f0f1de7909a6a8127c2be9c29ec79f1d713f. www-Einzelalias dpl_CDduo3vYWgNDwBcphiQr7FMweYB3 seit 11:12 UTC. Rücksprungpunkt dpl_3DQx8dZwFJPnm7RpfR96jRgAsN4p.
+- Acht öffentliche Dateien stimmen per SHA-256 mit dem geschützten Kandidaten überein. Chrome bei 360, 390, 430, 768 und 1440 px ohne Überlauf und Seitenfehler. Geprüft wurden Fotozuschreibung, nachgeladene 2D-Karte samt Kirchenmarker, Ortsfilter und Inseratbereich. Der Feed enthielt keine passenden listbaren, bebilderten In-Nadur-Angebote. Sitemap und Marktplatzverzeichnis führen 75 Editionen.
+- Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
+- Screenshots, Browserresultate, Hashes und Alias-Guard im Worktree unter artifacts/20261117-nadur-release. Der Guard setzt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias bei passendem aktuellem Stand wieder ein.
