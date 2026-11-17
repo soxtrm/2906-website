@@ -1,3 +1,4 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Bed, Bath, Ruler, MapPin, Check, MessageCircle, Mail, Waves, Car, DoorOpen, Download } from 'lucide-react'
@@ -10,7 +11,7 @@ import { getPropertyLifeOverview } from '@/lib/nexus-property-context'
 import { getPublicProperty } from '@/lib/public-property'
 import type { Property } from '@/lib/types'
 
-const VPS = 'http://178.104.162.193:3001'
+const VPS = ARGUS_ORIGIN
 const COMMERCIAL_TYPES = ['Office', 'Retail', 'Warehouse']
 
 function cleanPropertyTitle(property: Property) {

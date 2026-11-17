@@ -1,3 +1,4 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import type { MetadataRoute } from 'next'
 import { isPubliclyPlausibleProperty } from '@/lib/public-property-safety'
 
@@ -15,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })))
   let properties: MetadataRoute.Sitemap = []
   try {
-    const response = await fetch('http://178.104.162.193:3001/api/properties?status=available', { next: { revalidate: 3600 } })
+    const response = await fetch(`${ARGUS_ORIGIN}/api/properties?status=available`, { next: { revalidate: 3600 } })
     const inventory = response.ok ? await response.json() : []
     properties = Array.isArray(inventory) ? inventory.filter(isPubliclyPlausibleProperty).filter(property => property.slug).flatMap(property => locales.map(locale => ({
       url: `${base}/${locale}/property/${encodeURIComponent(property.slug)}`,

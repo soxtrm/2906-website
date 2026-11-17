@@ -1,6 +1,7 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextResponse } from 'next/server'
 
-const VPS = 'http://178.104.162.193:3001'
+const VPS = ARGUS_ORIGIN
 
 // Feature-tag / locality / rental-mode vocabulary the multi-select filters
 // render from (ARGUS property intelligence, 2026-09-23). Revalidates hourly

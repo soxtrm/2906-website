@@ -1,13 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { argusSessionFetch } from '@/lib/argus-session-proxy'
 
-const BACKEND = 'http://178.104.162.193:3001'
-
-export async function GET() {
-  try {
-    const res = await fetch(`${BACKEND}/api/agents`, { cache: 'no-store' })
-    const data = await res.json()
-    return NextResponse.json(data)
-  } catch {
-    return NextResponse.json({ agents: [] })
-  }
+// Agent list for the internal calendar. Signed-in CRM or Board users only.
+export async function GET(req: NextRequest) {
+  return argusSessionFetch(req, '/api/agents')
 }

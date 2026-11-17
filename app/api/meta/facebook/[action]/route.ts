@@ -1,3 +1,4 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextRequest, NextResponse } from 'next/server'
 
 // HTTPS endpoints Meta calls (configured in the Meta app dashboard):
@@ -5,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 //   POST https://crm.2906.estate/api/meta/facebook/deauthorize     (Deauthorize callback)
 //   GET  https://crm.2906.estate/api/meta/facebook/deletion-status?code=…  (status page data)
 // The backend verifies Meta's signed_request; this route only relays the body.
-const BACKEND = 'http://178.104.162.193:3001/api/facebook-pages-meta'
+const BACKEND = `${ARGUS_ORIGIN}/api/facebook-pages-meta`
 const ACTIONS = new Set(['data-deletion', 'deauthorize'])
 
 type Ctx = { params: Promise<{ action: string }> }

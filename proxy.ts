@@ -1,3 +1,4 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import createMiddleware from 'next-intl/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { routing } from './i18n/routing'
@@ -5,7 +6,7 @@ import { routing } from './i18n/routing'
 const intlMiddleware = createMiddleware(routing)
 
 // Same origin every app/api/*/route.ts proxies to.
-const BACKEND = 'http://178.104.162.193:3001'
+const BACKEND = ARGUS_ORIGIN
 
 // Agent Workspace short links (2906.estate/<slug>, e.g. "/493katya" — see
 // services/agentWorkspace.js:generateShortSlugCandidate on the backend).

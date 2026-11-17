@@ -19,6 +19,15 @@ const DnDCalendar = withDragAndDrop(Calendar as any)
 
 const API_BASE = ''
 
+// The calendar is internal: every call runs with the CRM session. Without one, go to the CRM sign-in.
+function needSession(r: Response): Response {
+  if (r.status === 401 && typeof window !== 'undefined') {
+    window.location.href = '/crm/login'
+    throw new Error('sign-in required')
+  }
+  return r
+}
+
 interface Agent {
   id: number
   username: string
@@ -129,8 +138,10 @@ function CalendarInternaInner() {
 
   useEffect(() => {
     fetch(`${API_BASE}/api/agents`)
+      .then(needSession)
       .then(r => r.json())
       .then((data: Agent[]) => {
+        if (!Array.isArray(data)) return
         // Sort: Olga first, Kev second, rest by id. Some agents (the board-only
         // accounts added 2026-08-28) have no display_name at all — a bare
         // .toLowerCase() on that crashed this whole handler, which is why the
@@ -157,7 +168,8 @@ function CalendarInternaInner() {
     const from = momentTZ(currentDate).tz('Europe/Berlin').startOf('isoWeek').toISOString()
     const to   = momentTZ(currentDate).tz('Europe/Berlin').endOf('isoWeek').toISOString()
     fetch(`${API_BASE}/api/calendar?agent_id=${selectedAgent.id}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
-      .then(r => r.json())
+      .then(needSession)
+      .then(r => (r.ok ? r.json() : []))
       .then((data: Omit<CalEvent, 'start' | 'end'>[]) => {
         setEvents(data.map(ev => ({
           ...ev,
@@ -173,7 +185,8 @@ function CalendarInternaInner() {
   useEffect(() => {
     const url = `${API_BASE}/api/clients?active=true${search ? `&search=${encodeURIComponent(search)}` : ''}`
     fetch(url)
-      .then(r => r.json())
+      .then(needSession)
+      .then(r => (r.ok ? r.json() : []))
       .then((data: Client[]) => setClients(Array.isArray(data) ? data : []))
       .catch(console.error)
   }, [search])

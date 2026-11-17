@@ -1,6 +1,7 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextRequest, NextResponse } from 'next/server'
 
-const VPS = 'http://178.104.162.193:3001/api/crm'
+const VPS = `${ARGUS_ORIGIN}/api/crm`
 
 // Board agents arrive here with a one-time token from their email. The backend
 // checks it and hands back a board-audience JWT; this route is what turns that

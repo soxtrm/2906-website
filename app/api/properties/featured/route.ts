@@ -1,7 +1,8 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextResponse } from 'next/server'
 import { isPubliclyPlausibleProperty } from '@/lib/public-property-safety'
 
-const VPS = 'http://178.104.162.193:3001'
+const VPS = ARGUS_ORIGIN
 
 export async function GET() {
   const res = await fetch(`${VPS}/api/properties/featured`, { next: { revalidate: 60 } })

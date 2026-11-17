@@ -6,10 +6,11 @@
 // routes/ownerUpload.js, not the CRM proxy (that proxy requires the CRM
 // session cookie, which an owner never has).
 // ============================================================================
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 
-const BACKEND = 'http://178.104.162.193:3001/api/owner-upload'
+const BACKEND = `${ARGUS_ORIGIN}/api/owner-upload`
 
 export default function OwnerUploadPage() {
   const params = useParams()

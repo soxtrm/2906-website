@@ -1,6 +1,7 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextRequest, NextResponse } from 'next/server'
 
-const VPS = 'http://178.104.162.193:3001/api/public/owner-booking'
+const VPS = `${ARGUS_ORIGIN}/api/public/owner-booking`
 type Ctx = { params: Promise<{ path: string[] }> }
 
 async function proxy(req: NextRequest, ctx: Ctx, method: string) {

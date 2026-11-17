@@ -1,33 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { argusSessionFetch } from '@/lib/argus-session-proxy'
 
-const BACKEND = 'http://178.104.162.193:3001'
-
+// Client list and manual "+ Add client" for the internal calendar. CRM staff only (the backend refuses
+// Board accounts). The public add-client form uses its own submission route, not this one.
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const qs = searchParams.toString()
-    const res = await fetch(`${BACKEND}/api/clients${qs ? `?${qs}` : ''}`, { cache: 'no-store' })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
-  } catch {
-    return NextResponse.json([], { status: 500 })
-  }
+  const qs = new URL(req.url).searchParams.toString()
+  return argusSessionFetch(req, `/api/clients${qs ? `?${qs}` : ''}`)
 }
 
-// Manual "+ Add client" from the calendar panel — proxies to the minimal
-// /api/clients/quick backend route (no WhatsApp/Sheets/email side effects,
-// unlike /api/clients/submit which the public add-client form uses).
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json()
-    const res = await fetch(`${BACKEND}/api/clients/quick`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
-  } catch {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
-  }
+  return argusSessionFetch(req, '/api/clients/quick', { method: 'POST', body: await req.text() })
 }

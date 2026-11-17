@@ -1,6 +1,7 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextRequest, NextResponse } from 'next/server'
 
-const VPS = 'http://178.104.162.193:3001/api/crm'
+const VPS = `${ARGUS_ORIGIN}/api/crm`
 
 // Generic authenticated proxy: reads the HTTP-only session cookie and forwards
 // it to the backend as a Bearer token (server-to-server, so no CORS/credentials

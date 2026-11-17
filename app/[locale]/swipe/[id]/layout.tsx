@@ -1,6 +1,7 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import type { Metadata } from 'next'
 
-const BACKEND = 'http://178.104.162.193:3001'
+const BACKEND = ARGUS_ORIGIN
 
 type PreviewProperty = {
   ref?: string

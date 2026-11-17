@@ -1,4 +1,5 @@
 'use client'
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminApi, AdminProperty, SubmittedProperty } from '@/lib/admin-api'
 
@@ -19,7 +20,7 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-const BACKEND = 'http://178.104.162.193:3001'
+const BACKEND = ARGUS_ORIGIN
 function imgSrc(img: string) { return img.startsWith('/') ? `${BACKEND}${img}` : img }
 
 // Small kanban card for owner_properties

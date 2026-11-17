@@ -1,3 +1,4 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import anchors from '../ops/property-routing/anchors.json'
 import placeBindings from '../public/Link/argus-export/place-bindings.json'
 export type SmartPriority = 'weekly-shop' | 'swimming' | 'health' | 'gym'
@@ -54,7 +55,7 @@ let memoryContext: NexusContext | null = null
 let memoryContextExpires = 0
 let pendingContext: Promise<NexusContext> | null = null
 
-const NEXUS_ORIGIN = process.env.NEXUS_UPSTREAM_URL || 'http://178.104.162.193:3001'
+const NEXUS_ORIGIN = process.env.NEXUS_UPSTREAM_URL || ARGUS_ORIGIN
 const LARGE_GROCER = /\b(lidl|welbee|greens|pavi|pama|smart supermarket|tower supermarket|scotts|spar|arkadia|queen'?s?|quick)\b/i
 // Education coverage is supplemented from named OpenStreetMap features around
 // St Julian's. These public coordinates identify institutions, never homes.

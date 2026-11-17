@@ -1,3 +1,4 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import 'server-only'
 import { isPubliclyPlausibleProperty } from './public-property-safety'
 import type { Property } from './types'
@@ -16,7 +17,7 @@ export async function getPublicProperty(slug: string, { fresh = false } = {}): P
 
   try {
     const response = await fetch(
-      `http://178.104.162.193:3001/api/properties/${encodeURIComponent(slug)}`,
+      `${ARGUS_ORIGIN}/api/properties/${encodeURIComponent(slug)}`,
       fresh ? { cache: 'no-store', signal: AbortSignal.timeout(5000) } : { next: { revalidate: 60 } },
     )
     if (!response.ok) return null

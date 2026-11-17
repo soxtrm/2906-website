@@ -1,3 +1,4 @@
+import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextRequest, NextResponse } from 'next/server'
 
 const PUBLIC_ROUTES = new Set(['inventory', 'taxonomy', 'places', 'workplaces/search'])
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
   const path = (await ctx.params).path.join('/')
   if (!PUBLIC_ROUTES.has(path)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   try {
-    const upstream = new URL(`http://178.104.162.193:3001/api/nexus/${path}`)
+    const upstream = new URL(`${ARGUS_ORIGIN}/api/nexus/${path}`)
     if (path === 'workplaces/search') upstream.searchParams.set('q', req.nextUrl.searchParams.get('q') || '')
     const response = await fetch(upstream, { cache: 'no-store', signal: AbortSignal.timeout(15000) })
     if (!response.ok) return NextResponse.json({ error: 'Nexus inventory unavailable' }, { status: 503 })
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ path: stri
   const path = (await ctx.params).path.join('/')
   if (path !== 'interest') return NextResponse.json({ error: 'Not found' }, { status: 404 })
   try {
-    const response = await fetch('http://178.104.162.193:3001/api/nexus/interest', {
+    const response = await fetch(`${ARGUS_ORIGIN}/api/nexus/interest`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(await req.json()),
