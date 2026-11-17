@@ -2132,3 +2132,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Acht öffentliche Dateien stimmen per SHA-256 mit dem Kandidaten überein. Chrome bei 360, 390, 430, 768 und 1440 px ohne Überlauf und Seitenfehler. Fotozuschreibung, verzögert geladene 2D-Karte mit Rotunda-Marker, Marktplatzsuche und Inseratbereich live geprüft. Ein Kandidatenlauf erreichte das 8-Sekunden-Testlimit des Umfeldkartenfilters. Die laufende API antwortete danach HTTP 200 und fünf Kandidaten- sowie fünf Live-Läufe bestanden beim erneuten Test. Der Feed enthielt keine passenden bebilderten Ortsinserate. Sitemap und Marktplatzverzeichnis führen 76 Editionen.
 - Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
 - Screenshots, Browserresultate, Hashes und Alias-Guard im Release-Worktree unter artifacts/20261117-xewkija-release. Der Guard stellt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias bei passendem aktuellem Stand wieder her.
+
+## 17.11 — San Lawrenz, Gozo quellengeprüfter Entwurf
+
+- Isolierter Worktree 20261117/san-lawrenz-research aus origin/main ca51c76 und Reiseübergabe b9a9a6b. Worklog-SHA-256 vor Edits 544d9c5520191f93064793cca80a4f87f49697bac79bb3447dee1a5caa5c328d.
+- **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html (HTTP 404). Dorfplatz, Werkstätten, Dwejra, Gastronomie und Bus mit Quellen. Die belegte Bootsfahrt auf dem Inland Sea ist als eigener Modus erfasst. Quellen in docs/village-research/san-lawrenz-gozo-research.md.
+- OSM-HTTP 200 bestätigte elf Knoten des Kirchenumrisses (Way 139268419) und den Kartenpunkt 36.0554759 N, 14.2035276 E. Zwei Commons-Dateiseiten und Lizenzen geprüft. Bildbytes, Hash und Sichtkontrolle stehen aus. Kein Aliaswechsel.
