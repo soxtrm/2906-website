@@ -2047,3 +2047,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/mdina-photo aus origin/main ca51c76 mit Eintrag 9ac210f. Worklog-SHA-256 vor Edits 84910adf8f8cea5942cb90703756f23ffa90d15b084a9343ce89a6dda267a870.
 - Der Commons-Download lieferte erneut HTTP 429. Das verifizierte Torfoto von Eva Darron stammt vom offiziellen Unsplash-Download. Die Unsplash-Lizenz gestattet die vorgesehene Nutzung. Bild ohne erkennbare Personen oder Kennzeichen, als 1560 × 878 WebP mit 241.894 Bytes und ohne EXIF geprüft. Genaue Quelle und Hashes in docs/village-research/mdina-image-credits.md.
 - **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/mdina.html. Die responsive Vorschau kann jetzt Foto und verifizierten Museumspunkt zusammenführen.
+
+## 17.11 — Englische L-Imdina-Vorschau im Browser geprüft
+
+- Isolierter Worktree 20261117/mdina-preview aus origin/main ca51c76 mit Bildstand fe9fcd3. Worklog-SHA-256 vor Edits 5a54fc37a45855a080fa4a7e105db0ad80ae0da4a1d23807211f731060f48c57. Foto-SHA-256 6eda2b14e34fe0be370ae76cfcddf2fdc9c8286cc90b0a85f800b14d94b585f9 bestätigt.
+- **Private lokale Vorschau**, Englisch, docs/village-research/mdina-preview.html. Tor, Palast, Museen, Gastronomie und Anreise mit Quellen verlinkt. Der Marker bei 14.4038738 E, 35.8848166 N bezeichnet den Museumspunkt.
+- Chrome bei 360, 390, 430, 768 und 1440 px bestanden. Foto und sichtbare Zuschreibung, Titel vollständig sichtbar, kein horizontaler Überlauf und keine Seitenfehler. Vor Klick keine OSM-Anfragen. Danach echte Kacheln und Museumspunkt per Touch und Maus verifiziert. Rabat und L-Imtarfa HTTP 200. Belege unter artifacts/20261117-mdina-preview und Ergebnisse in docs/village-research/mdina-preview-verification.json.
+- Geplant für https://www.2906.estate/link-marketplace/areas/mdina.html. Als Nächstes folgen Canonical, Sitemap, Marktplatz und Nachbarverlinkung auf der dann erneut verifizierten produktiven Basis. Kein Aliaswechsel.
