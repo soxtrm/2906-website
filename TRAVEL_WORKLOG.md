@@ -2087,3 +2087,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/nadur-gozo-preview.html. Quellen und Fotocredit sichtbar. Kirchenplatz, Ta’ Kenuna und Küste räumlich unterschieden. Busfahrt und belegte Mġarr–Ċirkewwa-Fähre als getrennte Abschnitte beschrieben, mit Betreiberlinks.
 - Chrome bei 360, 390, 430, 768 und 1440 px bestanden. Foto ohne Vergrößerung über 560 px, kein horizontaler Überlauf und keine Seitenfehler. Vor Klick keine OSM-Anfragen. Danach echte Kacheln und Kirchenmarker per Touch und Maus verifiziert. Nachbarlinks Il-Qala und Għajnsielem HTTP 200. Belege unter artifacts/20261117-nadur-preview und Ergebnisse in docs/village-research/nadur-gozo-preview-verification.json.
 - Geplant für https://www.2906.estate/link-marketplace/areas/nadur-gozo.html. Als Nächstes folgen Canonical, Sitemap, Marktplatz und Nachbarverlinkung auf der erneut verifizierten produktiven Basis. Kein Aliaswechsel.
+
+## 17.11 — In-Nadur als Releasekandidat
+
+- Isolierter Worktree 20261117/nadur-release aus origin/main ca51c76 mit Vorschau f298d8b. Worklog-SHA-256 vor Edits bc52dac26f966c12ddd6fbdc5e85f31137483957754d85208f4c6932462ea011. Verifizierter www-Quellcommit c5b0049 ist Vorfahr.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/nadur-gozo.html. Eigener Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Il-Qala. SEO-Vertrag für 75 Editionen sowie drei Routengeometrie- und Fährenprüfungen bestanden.
+- www-Ausgangsdeployment dpl_3DQx8dZwFJPnm7RpfR96jRgAsN4p, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.
