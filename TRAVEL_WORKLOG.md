@@ -2067,3 +2067,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Acht produktive Dateien und Kandidat bytegleich per SHA-256. Chrome bei 360, 390, 430, 768 und 1440 px live ohne Überlauf und Seitenfehler. Geprüft wurden das lizenzierte Torfoto, die verzögerte 2D-Karte samt Museumspunkt, die Marktplatzsuche und das Laden des Inseratbereichs. Der Feed enthielt bei der Prüfung keine verfügbaren bebilderten L-Imdina-Inserate. Sitemap und Verzeichnis führen 74 Editionen.
 - Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
 - Screenshots, Browserresultate, Hashes und Alias-Guard im Worktree unter artifacts/20261117-mdina-release. Der Guard stellt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias nur bei passendem aktuellem Stand wieder her.
+
+## 17.11 — In-Nadur, Gozo quellengeprüfter Entwurf
+
+- Isolierter Worktree 20261117/nadur-research aus origin/main ca51c76 und bestätigter Reiseübergabe aa55856. Worklog-SHA-256 vor Edits 70599295a645afd7d2237f33249622eb77d96ba185e25fa59bdfd359c389fbfc.
+- **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/nadur-gozo.html (HTTP 404). Kirchenplatz, Ta’ Kenuna, Küstenkontext, zwei Bäckereien, ein Restaurant, Bus und Versorgung belegt. Landabschnitt zum Hafen und belegte Mġarr–Ċirkewwa-Fähre getrennt. Quellen in docs/village-research/nadur-gozo-research.md.
+- OSM-HTTP 200 bestätigte acht Kirchenknoten von Way 140038096 und den Kartenpunkt 36.0376895 N, 14.2942943 E. Zwei Commons-Lizenzen geprüft. Originaldownload, Hash und Bildkontrolle ausstehend.
+- Öffentlicher Nexus-Inventarfeed lieferte einmal HTTP 503 und bei den beiden Folgeabfragen HTTP 200. Der erfolgreiche Abgleich ordnete 237 listbare bebilderte Angebote bestehenden Editionen zu. Nadur ergänzt die eigenständige Ortsabdeckung auf Gozo. Kein Aliaswechsel.
