@@ -2060,3 +2060,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/mdina-release aus origin/main ca51c76 mit Vorschau 560905f. Worklog-SHA-256 vor Edits e71e0550b02648929a63062709a9c107a549bd729deaa63371bf22ff4684a9bf. Verifizierter www-Quellcommit e2da60b ist Vorfahr.
 - **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/mdina.html. Self-Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Rabat. SEO-Vertrag für 74 Editionen sowie drei Routengeometrie- und Fährenprüfungen bestanden.
 - www-Ausgangsdeployment dpl_ihkwPJ2RXtwtEhjnn4N2Vszgsdaw, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.
+
+## 17.11 — L-Imdina öffentlich veröffentlicht
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/mdina.html. Quellcommit c5b0049b63ae8debc694111280b378a10866b61d. www-Einzelalias dpl_3DQx8dZwFJPnm7RpfR96jRgAsN4p seit 07:04 UTC. Rücksprungpunkt dpl_ihkwPJ2RXtwtEhjnn4N2Vszgsdaw.
+- Acht produktive Dateien und Kandidat bytegleich per SHA-256. Chrome bei 360, 390, 430, 768 und 1440 px live ohne Überlauf und Seitenfehler. Geprüft wurden das lizenzierte Torfoto, die verzögerte 2D-Karte samt Museumspunkt, die Marktplatzsuche und das Laden des Inseratbereichs. Der Feed enthielt bei der Prüfung keine verfügbaren bebilderten L-Imdina-Inserate. Sitemap und Verzeichnis führen 74 Editionen.
+- Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
+- Screenshots, Browserresultate, Hashes und Alias-Guard im Worktree unter artifacts/20261117-mdina-release. Der Guard stellt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias nur bei passendem aktuellem Stand wieder her.
