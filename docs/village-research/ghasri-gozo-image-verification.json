@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-11-17T22:05:30.0119700Z",
+  "status": "private-draft-asset",
+  "language": "en",
+  "plannedUrl": "https://www.2906.estate/link-marketplace/areas/ghasri-gozo.html",
+  "author": "Michael Newman",
+  "takenOn": "2008-07-15",
+  "sourcePage": "https://commons.wikimedia.org/wiki/File:Gozo_-_Ta%27_Gurdan_Lighthouse_(View_through_Our_Lady_of_Ta%27_Pinu_Church)_-_panoramio.jpg",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+  "retrievedRendition": "https://merhbamalta.com/images/cards/coast-gurdan.webp",
+  "creditPage": "https://merhbamalta.com/about#photo-coast-gurdan",
+  "asset": "docs/village-research/assets/ghasri-gurdan-michael-newman.webp",
+  "bytes": 34276,
+  "dimensions": [
+    560,
+    392
+  ],
+  "sha256": "5bf12c1b34f97380c203d05e16fd65b0aca216615669af5638d772ea312d2316",
+  "transformation": "None; byte-identical to the credited WebP rendition. Original JPEG was not retrieved.",
+  "visualReview": "Ta Gurdan lighthouse visible on hill through stone openings at Ta Pinu. Historical landscape, not the Ghasri village square.",
+  "usageLimit": "Supporting photograph, maximum native 560px CSS width; do not upscale as a full-width hero. Caption must identify vantage and historical date.",
+  "excludedDownloads": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/07/Sudika_Ta_Gurdan_Ghasri.jpg",
+      "httpStatus": 429,
+      "attempts": 1
+    },
+    {
+      "url": "https://merhbamalta.com/images/coast-gurdan.jpg",
+      "httpStatus": 404,
+      "attempts": 1
+    }
+  ]
+}

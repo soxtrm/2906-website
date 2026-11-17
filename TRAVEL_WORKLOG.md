@@ -2170,3 +2170,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/ghasri-research aus origin/main ca51c76 und Reiseübergabe 0acbc59. Worklog-SHA-256 vor Edits c7bdd811256da3f909e12c286beb73da7661a2e978b0f403d2c1c846bfe30562.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/ghasri-gozo.html (HTTP 404). Kirche, Leuchtturm, Tal, Supermarkt, Council und Linie 308 belegt. Restaurantoptionen in Nachbarorten mit jeweiliger Ortszuordnung. Quellen in docs/village-research/ghasri-gozo-research.md.
 - OSM-HTTP 200 bestätigte zehn Knoten des Kirchenumrisses (Way 140038111) und den Kartenpunkt 36.0588548 N, 14.2262271 E. Zwei Commons-Dateiseiten und Lizenzen geprüft. Bildbytes, Hash und Sichtkontrolle stehen aus. Kein Aliaswechsel.
+
+## 17.11 — L-Għasri lizenziertes Entwurfsbild
+
+- Sauberer isolierter Worktree 20261117/ghasri-asset aus origin/main ca51c76, danach FF auf Recherchecommit 22c8e1c. Worklog-SHA-256 vor Edits 99417656ca24d024501847d22c3b71f2ee6b6dfb5daa6301c19369a7c14701d6. Keine zusätzlichen AGENTS.md unter docs.
+- **Privater Entwurf, Englisch:** Historisches Foto von Ta’ Ġurdan durch Ta’ Pinu (Michael Newman, 15.07.2008, CC BY 3.0), als exakt übernommene und visuell geprüfte Merħba-WebP-Rendition gespeichert. 560 × 392 px, 34.276 Bytes; Quellen, Lizenz, SHA-256 und Bildkontrolle in docs/village-research/ghasri-gozo-image-credits.md und -image-verification.json. Nur als Nebenbild bis nativer Breite verwenden; kein hochskaliertes Hero.
+- Sudika-Original lieferte einmal HTTP 429; vermutete größere JPEG-Rendition HTTP 404. Keine erneuten Downloadschleifen. Bild in docs/village-research/assets; keine öffentliche Datei verändert. Vorschauseite und Browserprüfung stehen noch aus. Kein Deploy oder Aliaswechsel.
