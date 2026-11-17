@@ -2016,3 +2016,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/mtarfa-preview.html. Uhrturm, ehemaliges Militärhospital und Town Centre, Tokki, Angelo Store sowie Bus und Gesundheitszentrum mit Quellenlinks. Der Punkt bei 14.4002277 E, 35.8930146 N bezeichnet den Turmumriss.
 - Chrome bei 360, 390, 430 und 1440 px bestanden. Foto mit sichtbarer Lizenz, kein horizontaler Überlauf oder Seitenfehler. Vor dem Klick keine OSM-Anfragen. Danach echte Kacheln und beschrifteter Marker per Touch bzw. Maus geprüft. Rabat-Link HTTP 200. Browserbelege unter artifacts/20261117-mtarfa-preview, Ergebnisse in docs/village-research/mtarfa-preview-verification.json.
 - Geplante öffentliche URL https://www.2906.estate/link-marketplace/areas/mtarfa.html. Als Nächstes folgt die veröffentlichte Ausgabe mit Canonical, Sitemap und Marktplatzverweisen auf der aktuell verifizierten Live-Baseline samt NEXUS-Vorschau.
+
+## 17.11 — L-Imtarfa als Releasekandidat
+
+- Isolierter Worktree 20261117/mtarfa-release aus origin/main ca51c76 mit Vorschau 46fad07. Worklog-SHA-256 vor Edits a08daaac53531e3091a76fa442f9e2bf91e5d003dfd5c181cf2d25eae1d719cc. Verifizierter www-Quellcommit 6575cb4 ist Vorfahr.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/mtarfa.html. Eigener Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Rabat. SEO-Vertrag für 73 Editionen sowie Tests zu Routensegmenten und Fährendarstellung bestanden.
+- Ausgangsdeployment www dpl_22h86JjnGHSu5tr6whDcu69CxWG3. Nexus ONE zeigt auf releases/20261116-special-reserve-v117, NEXUS-Vorschau auf releases/20261117-cinematic-0225. Caddy aktiv, /rating zeigt die separate Anmeldeseite.
