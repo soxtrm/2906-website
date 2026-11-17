@@ -2002,3 +2002,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Sauberer Worktree 20261117/mtarfa-research aus origin/main ca51c76 mit Reiseübergabe ac8cb91. Worklog-SHA-256 vor Edits 055185898191a0eb245177b7e275306f9ff528099f5eb16126d308e6aface28e.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/mtarfa.html (HTTP 404). Council, Government Gazette, Malta Public Transport, Primary HealthCare und Betreiberseiten belegen Uhrturm, ehemaliges Hospital, Town Centre, Linien 51 und 182, Gesundheitsversorgung, einen Laden und ein Restaurant. Quellen in docs/village-research/mtarfa-research.md.
 - Zwei Commons-Lizenzen und Originalhashes geprüft. OSM 1344827143 im Kartenausschnitt bestätigt, vollständige Koordinatenabfrage lieferte HTTP 429. Als Nächstes folgen Originalprüfung, Bildauswahl und Koordinatenprüfung. Kein Aliaswechsel.
+
+## 17.11 — L-Imtarfa Ortsfoto und Kartenpunkt geprüft
+
+- Isolierter Worktree 20261117/mtarfa-asset aus origin/main ca51c76 mit Recherche 32b9a05. Worklog-SHA-256 vor Edits ef91fb43dbf2db010957d2712e9550747ac2046c23c7cd2eaf8bcff8f98c6236.
+- Beide Commons-Originale gegen SHA-1 und visuell geprüft. Das Foto von JosephAmodio zeigt den Uhrturm mit Mond am 12. Mai 2025, CC BY-SA 4.0. Das proportionale WebP dekodiert bei 1440 × 1439 und wiegt 77.880 Bytes. Die Alternative bleibt wegen sichtbarer Kennzeichen in den lokalen Belegen. Quellen, Credits und Hashes in docs/village-research/mtarfa-image-credits.md.
+- OSM-HTTP 200 bestätigte die vier Koordinaten von Way 1344827143. Der Marker bei 35.8930146 N und 14.4002277 E bezeichnet den Turmumriss.
+- **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/mtarfa.html. Als Nächstes folgt die responsive Vorschau mit Fotozuschreibung und verzögert geladener 2D-Karte.
