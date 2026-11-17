@@ -33,6 +33,7 @@ export const editions = [
   {"slug":"marsalforn-gozo","name":"Marsalforn","island":"Gozo","key":"gozo:marsalforn","center":[14.258,36.064],"aliases":["Gozo - Marsalforn"]},
   {"slug":"marsaskala","name":"Marsaskala","island":"Malta","key":"malta:marsaskala","center":[14.56,35.8605],"aliases":["Marsaskala"]},
   {"slug":"marsaxlokk","name":"Marsaxlokk","island":"Malta","key":"malta:marsaxlokk","center":[14.542,35.84],"aliases":["Marsaxlokk"]},
+  {"slug":"mdina","name":"L-Imdina","island":"Malta","key":"malta:mdina","center":[14.4038738,35.8848166],"aliases":["Mdina","Imdina","L-Imdina","Città Notabile"]},
   {"slug":"mellieha","name":"Mellieħa","island":"Malta","key":"malta:mellieha","center":[14.362,35.9555],"aliases":["Mellieha"]},
   {"slug":"mgarr","name":"Mġarr","island":"Malta","key":"malta:mgarr","center":[14.3675,35.921],"aliases":["Mgarr"]},
   {"slug":"mosta","name":"Mosta","island":"Malta","key":"malta:mosta","center":[14.426,35.9095],"aliases":["Mosta"]},

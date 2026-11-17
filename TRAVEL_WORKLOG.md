@@ -2054,3 +2054,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/mdina-preview.html. Tor, Palast, Museen, Gastronomie und Anreise mit Quellen verlinkt. Der Marker bei 14.4038738 E, 35.8848166 N bezeichnet den Museumspunkt.
 - Chrome bei 360, 390, 430, 768 und 1440 px bestanden. Foto und sichtbare Zuschreibung, Titel vollständig sichtbar, kein horizontaler Überlauf und keine Seitenfehler. Vor Klick keine OSM-Anfragen. Danach echte Kacheln und Museumspunkt per Touch und Maus verifiziert. Rabat und L-Imtarfa HTTP 200. Belege unter artifacts/20261117-mdina-preview und Ergebnisse in docs/village-research/mdina-preview-verification.json.
 - Geplant für https://www.2906.estate/link-marketplace/areas/mdina.html. Als Nächstes folgen Canonical, Sitemap, Marktplatz und Nachbarverlinkung auf der dann erneut verifizierten produktiven Basis. Kein Aliaswechsel.
+
+## 17.11 — L-Imdina als Releasekandidat
+
+- Isolierter Worktree 20261117/mdina-release aus origin/main ca51c76 mit Vorschau 560905f. Worklog-SHA-256 vor Edits e71e0550b02648929a63062709a9c107a549bd729deaa63371bf22ff4684a9bf. Verifizierter www-Quellcommit e2da60b ist Vorfahr.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/mdina.html. Self-Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Rabat. SEO-Vertrag für 74 Editionen sowie drei Routengeometrie- und Fährenprüfungen bestanden.
+- www-Ausgangsdeployment dpl_ihkwPJ2RXtwtEhjnn4N2Vszgsdaw, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.
