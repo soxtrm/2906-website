@@ -2125,3 +2125,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/xewkija-release aus origin/main ca51c76 mit Vorschau 966268c. Worklog-SHA-256 vor Edits b181071573db69d90be4d1d4ff9da4414c2ee9404ce07da9d442b814f3ae8e3b. Verifizierter www-Quellcommit ac69f0f ist Vorfahr.
 - **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html. Eigener Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Għajnsielem. SEO-Vertrag für 76 Editionen und drei Routengeometrie- und Fährenprüfungen bestanden.
 - www-Ausgangsdeployment dpl_CDduo3vYWgNDwBcphiQr7FMweYB3, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.
+
+## 17.11 — Ix-Xewkija öffentlich veröffentlicht
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html. Quellcommit d860d071064e9547421a9d099445c73f3f91741e. www-Einzelalias dpl_EqsU8ziwd7KJq5E84bc3Eq2bNvTR seit 15:12 UTC. Rücksprungpunkt dpl_CDduo3vYWgNDwBcphiQr7FMweYB3.
+- Acht öffentliche Dateien stimmen per SHA-256 mit dem Kandidaten überein. Chrome bei 360, 390, 430, 768 und 1440 px ohne Überlauf und Seitenfehler. Fotozuschreibung, verzögert geladene 2D-Karte mit Rotunda-Marker, Marktplatzsuche und Inseratbereich live geprüft. Ein Kandidatenlauf erreichte das 8-Sekunden-Testlimit des Umfeldkartenfilters. Die laufende API antwortete danach HTTP 200 und fünf Kandidaten- sowie fünf Live-Läufe bestanden beim erneuten Test. Der Feed enthielt keine passenden bebilderten Ortsinserate. Sitemap und Marktplatzverzeichnis führen 76 Editionen.
+- Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
+- Screenshots, Browserresultate, Hashes und Alias-Guard im Release-Worktree unter artifacts/20261117-xewkija-release. Der Guard stellt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias bei passendem aktuellem Stand wieder her.
