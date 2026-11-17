@@ -2112,3 +2112,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/xewkija-asset aus origin/main ca51c76 und Recherche 5b30a4a. Worklog-SHA-256 vor Edits ecff955af7051f1b80cdc1a54fdbfc6c829f3c14fd942a01c89f0ff16842307c.
 - Bei HTTP 429 für das Commons-Außenfoto wurde ein separat lizenziertes Innenfoto von Lauma Augstkalne über die offizielle Pexels-Downloadfunktion abgerufen. Kuppel, Fenster und Säulen sind sichtbar. Das WebP ist proportional, 1081 × 1440, 169.268 Bytes, ohne EXIF und visuell geprüft. Quellen, Credits und Hashes in docs/village-research/xewkija-gozo-image-credits.md.
 - **Unveröffentlicht**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html. Als Nächstes folgt die responsive Vorschau mit sichtbarem Fotocredit und Rotunda-Kartenpunkt.
+
+## 17.11 — Englische Ix-Xewkija-Vorschau im Browser geprüft
+
+- Isolierter Worktree 20261117/xewkija-preview aus origin/main ca51c76 mit Bildstand bfcf3da. Worklog-SHA-256 vor Edits c4581677011b2dcaf71438b9a1456193bef4df71dc213e287cf476be8edd3b87. Foto-SHA-256 f474c83459561855264d2d92963e10ec6e24618c3daa3e22033e9a2e461ac6ab bestätigt.
+- **Private lokale Vorschau**, Englisch, docs/village-research/xewkija-gozo-preview.html. Rotunda, Windmühle, Essen und Alltag mit Quellen. Landfahrt zum Hafen und belegte Mġarr–Ċirkewwa-Fähre separat beschrieben. Der Marker bei 14.2610087 E, 36.0317516 N bezeichnet den Kirchenumriss.
+- Chrome bei 360, 390, 430, 768 und 1440 px bestanden. Foto und sichtbarer Credit, kein horizontaler Überlauf und keine Seitenfehler. Keine OSM-Anfragen vor Klick. Danach echte Kacheln und Rotunda-Marker per Touch bzw. Maus. Nachbarlinks Għajnsielem und Victoria HTTP 200. Belege unter artifacts/20261117-xewkija-preview und Ergebnisse in docs/village-research/xewkija-gozo-preview-verification.json.
+- Geplant für https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html. Als Nächstes folgen Canonical, Sitemap, Marktplatz und Nachbarverlinkung auf der erneut verifizierten produktiven Basis. Kein Aliaswechsel.
