@@ -1,0 +1,83 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "browser": "Chrome/157.0.8103.52",
+  "results": [
+    {
+      "width": 360,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 430,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 768,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    }
+  ],
+  "neighbours": [
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/gharb-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/victoria-gozo.html",
+      "status": 200
+    }
+  ],
+  "sourceBaseline": "e44cf27",
+  "draftSha256": "f8260e2869870e4852f2b9c13714e12ec20f0b34c786f1daa4879366601f3d7f",
+  "evidenceDirectory": "artifacts/20261117-ghasri-preview",
+  "routeRegression": {
+    "passed": 3,
+    "failed": 0
+  },
+  "existingPublishedEditionContract": {
+    "editions": 77,
+    "result": "PASS"
+  },
+  "visualReview": "390px and 1440px full-page screenshots inspected; image is not upscaled; location and date credit visible."
+}
