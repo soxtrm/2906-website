@@ -2074,3 +2074,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/nadur-gozo.html (HTTP 404). Kirchenplatz, Ta’ Kenuna, Küstenkontext, zwei Bäckereien, ein Restaurant, Bus und Versorgung belegt. Landabschnitt zum Hafen und belegte Mġarr–Ċirkewwa-Fähre getrennt. Quellen in docs/village-research/nadur-gozo-research.md.
 - OSM-HTTP 200 bestätigte acht Kirchenknoten von Way 140038096 und den Kartenpunkt 36.0376895 N, 14.2942943 E. Zwei Commons-Lizenzen geprüft. Originaldownload, Hash und Bildkontrolle ausstehend.
 - Öffentlicher Nexus-Inventarfeed lieferte einmal HTTP 503 und bei den beiden Folgeabfragen HTTP 200. Der erfolgreiche Abgleich ordnete 237 listbare bebilderte Angebote bestehenden Editionen zu. Nadur ergänzt die eigenständige Ortsabdeckung auf Gozo. Kein Aliaswechsel.
+
+## 17.11 — In-Nadur lizenziertes Ortsfoto geprüft
+
+- Isolierter Worktree 20261117/nadur-asset aus origin/main ca51c76 und Recherche f317a4f. Worklog-SHA-256 vor Edits 26df6b891a3848709ba6081c641db1375ede0731d8b6fd1556f2bad92ba07c42.
+- Das Ortsfoto zeigt Ta’ Kenuna von Clifford Farrugia (BigRiz), 2008, CC BY 3.0. Der Commons-Abruf war mit HTTP 429 begrenzt. Die gekennzeichnete Merħba-WebP-Fassung wurde als 560 × 806 und 72.524 Bytes unverändert übernommen. Der visuelle Check bestätigte das Motiv ohne erkennbare Personen und Kennzeichen. Quellen, Bildhash und Credit in docs/village-research/nadur-gozo-image-credits.md.
+- Ein Flickr-Kandidat mit abweichendem Motiv bleibt ausgeschlossen. **Unveröffentlicht**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/nadur-gozo.html. Die Vorschau soll das Foto in nativer Breite und den belegten Kirchenmarker zeigen.
