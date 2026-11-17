@@ -2164,3 +2164,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Acht öffentliche Dateien stimmen per SHA-256 mit dem Kandidaten überein. Chrome bei 360, 390, 430, 768 und 1440 px ohne Überlauf und Seitenfehler. Fotozuschreibung, verzögert geladene 2D-Karte mit Kirchenmarker, Umfeldfilter, Ortsverzeichnis und Inseratbereich live geprüft. Der Feed enthielt keine passenden bebilderten Ortsinserate. Sitemap und Verzeichnis führen 77 Editionen.
 - Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
 - Screenshots, Browserresultate, Hashes und Alias-Guard im Release-Worktree unter artifacts/20261117-san-lawrenz-release. Der Guard stellt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias bei passendem aktuellem Stand wieder her.
+
+## 17.11 — L-Għasri, Gozo quellengeprüfter Entwurf
+
+- Isolierter Worktree 20261117/ghasri-research aus origin/main ca51c76 und Reiseübergabe 0acbc59. Worklog-SHA-256 vor Edits c7bdd811256da3f909e12c286beb73da7661a2e978b0f403d2c1c846bfe30562.
+- **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/ghasri-gozo.html (HTTP 404). Kirche, Leuchtturm, Tal, Supermarkt, Council und Linie 308 belegt. Restaurantoptionen in Nachbarorten mit jeweiliger Ortszuordnung. Quellen in docs/village-research/ghasri-gozo-research.md.
+- OSM-HTTP 200 bestätigte zehn Knoten des Kirchenumrisses (Way 140038111) und den Kartenpunkt 36.0588548 N, 14.2262271 E. Zwei Commons-Dateiseiten und Lizenzen geprüft. Bildbytes, Hash und Sichtkontrolle stehen aus. Kein Aliaswechsel.
