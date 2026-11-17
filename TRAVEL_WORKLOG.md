@@ -2035,3 +2035,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/mdina-research aus origin/main ca51c76 und bestätigter Reiseübergabe 04ed40e. Worklog-SHA-256 vor Edits 18d5c15786d4b3ae71ecf05124703004b8d71a0e1b0ce7bc9512552b8c15109b.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/mdina.html (HTTP 404). Eigenständige Ausgabe mit Stadttor, Vilhena-Palast, zwei Museen, Stadteinfahrt, Bus und zwei direkt belegten Gastro-Adressen. Rabat, Domvs Romana und L-Imtarfa sind räumlich zugeordnet. Quellen in docs/village-research/mdina-research.md.
 - OSM-HTTP 200 bestätigte den Museumspunkt 301379326 bei 35.8848166 N und 14.4038738 E sowie getrennt Palast und Stadttor. Zwei Commons-Dateiseiten und Lizenzen geprüft. Original-Hashes und Sichtkontrolle ausstehend, Commons-API lieferte 429. Kein Aliaswechsel.
+
+## 17.11 — L-Imdina Originalabruf vorübergehend begrenzt
+
+- Isolierter Worktree 20261117/mdina-asset aus origin/main ca51c76 mit Recherche 3b6553f. Worklog-SHA-256 vor Edits 4a241087d6ac403378081d79106452fb534d6ed70dbc639968e65b730a9fa63e.
+- Die Commons-Dateiseiten bestätigen die Bildnutzung. Metadaten-API und direkter GET des verlinkten Originalfotos lieferten HTTP 429. Der vom Server angegebene Wartezeitraum von 120 Sekunden wurde eingehalten und ein weiterer Versuch ergab HTTP 429. Abruf und Lizenzbelege sind lokal dokumentiert. Original und Bilddatei bleiben ausstehend.
+- **Unveröffentlicht**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/mdina.html. Vor Einsatz Foto anhand des tatsächlichen Originals auf Inhalt, Breite und Hash prüfen.
