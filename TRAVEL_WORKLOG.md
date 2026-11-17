@@ -2138,3 +2138,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/san-lawrenz-research aus origin/main ca51c76 und Reiseübergabe b9a9a6b. Worklog-SHA-256 vor Edits 544d9c5520191f93064793cca80a4f87f49697bac79bb3447dee1a5caa5c328d.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html (HTTP 404). Dorfplatz, Werkstätten, Dwejra, Gastronomie und Bus mit Quellen. Die belegte Bootsfahrt auf dem Inland Sea ist als eigener Modus erfasst. Quellen in docs/village-research/san-lawrenz-gozo-research.md.
 - OSM-HTTP 200 bestätigte elf Knoten des Kirchenumrisses (Way 139268419) und den Kartenpunkt 36.0554759 N, 14.2035276 E. Zwei Commons-Dateiseiten und Lizenzen geprüft. Bildbytes, Hash und Sichtkontrolle stehen aus. Kein Aliaswechsel.
+
+## 17.11 — San Lawrenz lizenziertes Dwejra-Foto geprüft
+
+- Isolierter Worktree 20261117/san-lawrenz-asset aus origin/main ca51c76 und Recherche 5310a7c. Worklog-SHA-256 vor Edits 3423b4cceaa06997f222c65e241e0f1965741544b2581d10430c84520dd41b66.
+- Das Ortsfoto zeigt das Inland Sea in Dwejra am 16. Dezember 2007. Koichi Shibata, CC BY-SA 3.0, entsprechend gekennzeichnete Merħba-Fassung bezogen. Das WebP ist 1280 × 960, 317.338 Bytes, ohne EXIF. Genaue Herkunft, Lizenz, Zuschreibung und Hashes in docs/village-research/san-lawrenz-gozo-image-credits.md.
+- Das Kirchenfoto lieferte HTTP 429. Andere Bildkandidaten wegen lesbarer Bootsregistrierung oder unbestätigtem Motiv ausgeschlossen. **Unveröffentlicht**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html. Als Nächstes folgt die responsive Vorschau.
