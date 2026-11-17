@@ -2119,3 +2119,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/xewkija-gozo-preview.html. Rotunda, Windmühle, Essen und Alltag mit Quellen. Landfahrt zum Hafen und belegte Mġarr–Ċirkewwa-Fähre separat beschrieben. Der Marker bei 14.2610087 E, 36.0317516 N bezeichnet den Kirchenumriss.
 - Chrome bei 360, 390, 430, 768 und 1440 px bestanden. Foto und sichtbarer Credit, kein horizontaler Überlauf und keine Seitenfehler. Keine OSM-Anfragen vor Klick. Danach echte Kacheln und Rotunda-Marker per Touch bzw. Maus. Nachbarlinks Għajnsielem und Victoria HTTP 200. Belege unter artifacts/20261117-xewkija-preview und Ergebnisse in docs/village-research/xewkija-gozo-preview-verification.json.
 - Geplant für https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html. Als Nächstes folgen Canonical, Sitemap, Marktplatz und Nachbarverlinkung auf der erneut verifizierten produktiven Basis. Kein Aliaswechsel.
+
+## 17.11 — Ix-Xewkija als Releasekandidat
+
+- Isolierter Worktree 20261117/xewkija-release aus origin/main ca51c76 mit Vorschau 966268c. Worklog-SHA-256 vor Edits b181071573db69d90be4d1d4ff9da4414c2ee9404ce07da9d442b814f3ae8e3b. Verifizierter www-Quellcommit ac69f0f ist Vorfahr.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html. Eigener Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Għajnsielem. SEO-Vertrag für 76 Editionen und drei Routengeometrie- und Fährenprüfungen bestanden.
+- www-Ausgangsdeployment dpl_CDduo3vYWgNDwBcphiQr7FMweYB3, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.

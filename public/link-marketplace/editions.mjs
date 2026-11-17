@@ -70,6 +70,7 @@ export const editions = [
   {"slug":"victoria-gozo","name":"Victoria (Ir-Rabat)","island":"Gozo","key":"gozo:victoria","center":[14.2405,36.0445],"aliases":["Gozo - Victoria","Gozo - Rabat (Victoria)"]},
   {"slug":"xaghra-gozo","name":"Ix-Xagħra","island":"Gozo","key":"gozo:xaghra","center":[14.265,36.0515],"aliases":["Gozo - Xaghra"]},
   {"slug":"xemxija","name":"Ix-Xemxija","island":"Malta","key":"malta:xemxija","center":[14.384,35.9495],"aliases":["Xemxija"]},
+  {"slug":"xewkija-gozo","name":"Ix-Xewkija","island":"Gozo","key":"gozo:xewkija","center":[14.2610087,36.0317516],"aliases":["Xewkija","Ix-Xewkija","Gozo - Xewkija"]},
   {"slug":"xghajra","name":"Ix-Xgħajra","island":"Malta","key":"malta:xghajra","center":[14.545,35.8855],"aliases":["Xghajra"]},
   {"slug":"zabbar","name":"Ħaż-Żabbar","island":"Malta","key":"malta:zabbar","center":[14.536,35.8765],"aliases":["Zabbar"]},
   {"slug":"zebbug-gozo","name":"Iż-Żebbuġ","island":"Gozo","key":"gozo:zebbug","center":[14.246,36.066],"aliases":["Gozo - Zebbug"]},
