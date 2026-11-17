@@ -2106,3 +2106,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/xewkija-research aus origin/main ca51c76 und bestätigter Reiseübergabe cb598a6. Worklog-SHA-256 vor Edits 8c8dc12f6b83d74dda09f279456b6a6eadabf4f93678f020013a5b17e3553025.
 - **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html (HTTP 404). Rotunda, Windmühle, Council, Bäckerei, Restaurant und Linie 323 mit Quellen belegt. Landfahrt und Mġarr–Ċirkewwa-Fähre separat. Quellen in docs/village-research/xewkija-gozo-research.md.
 - OSM-HTTP 200 bestätigte neun Knoten der Rotunda (Way 23983409) und den Kartenpunkt 36.0317516 N, 14.2610087 E. Zwei Commons-Dateiseiten und Lizenzen sind geprüft. Als Nächstes folgen Bildabruf, Hash und Sichtkontrolle. Kein Aliaswechsel.
+
+## 17.11 — Ix-Xewkija lizenziertes Ortsfoto geprüft
+
+- Isolierter Worktree 20261117/xewkija-asset aus origin/main ca51c76 und Recherche 5b30a4a. Worklog-SHA-256 vor Edits ecff955af7051f1b80cdc1a54fdbfc6c829f3c14fd942a01c89f0ff16842307c.
+- Bei HTTP 429 für das Commons-Außenfoto wurde ein separat lizenziertes Innenfoto von Lauma Augstkalne über die offizielle Pexels-Downloadfunktion abgerufen. Kuppel, Fenster und Säulen sind sichtbar. Das WebP ist proportional, 1081 × 1440, 169.268 Bytes, ohne EXIF und visuell geprüft. Quellen, Credits und Hashes in docs/village-research/xewkija-gozo-image-credits.md.
+- **Unveröffentlicht**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html. Als Nächstes folgt die responsive Vorschau mit sichtbarem Fotocredit und Rotunda-Kartenpunkt.
