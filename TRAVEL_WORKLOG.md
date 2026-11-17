@@ -2100,3 +2100,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Acht öffentliche Dateien stimmen per SHA-256 mit dem geschützten Kandidaten überein. Chrome bei 360, 390, 430, 768 und 1440 px ohne Überlauf und Seitenfehler. Geprüft wurden Fotozuschreibung, nachgeladene 2D-Karte samt Kirchenmarker, Ortsfilter und Inseratbereich. Der Feed enthielt keine passenden listbaren, bebilderten In-Nadur-Angebote. Sitemap und Marktplatzverzeichnis führen 75 Editionen.
 - Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
 - Screenshots, Browserresultate, Hashes und Alias-Guard im Worktree unter artifacts/20261117-nadur-release. Der Guard setzt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias bei passendem aktuellem Stand wieder ein.
+
+## 17.11 — Ix-Xewkija, Gozo quellengeprüfter Entwurf
+
+- Isolierter Worktree 20261117/xewkija-research aus origin/main ca51c76 und bestätigter Reiseübergabe cb598a6. Worklog-SHA-256 vor Edits 8c8dc12f6b83d74dda09f279456b6a6eadabf4f93678f020013a5b17e3553025.
+- **Privater Rechercheentwurf**, Englisch, geplante URL https://www.2906.estate/link-marketplace/areas/xewkija-gozo.html (HTTP 404). Rotunda, Windmühle, Council, Bäckerei, Restaurant und Linie 323 mit Quellen belegt. Landfahrt und Mġarr–Ċirkewwa-Fähre separat. Quellen in docs/village-research/xewkija-gozo-research.md.
+- OSM-HTTP 200 bestätigte neun Knoten der Rotunda (Way 23983409) und den Kartenpunkt 36.0317516 N, 14.2610087 E. Zwei Commons-Dateiseiten und Lizenzen sind geprüft. Als Nächstes folgen Bildabruf, Hash und Sichtkontrolle. Kein Aliaswechsel.
