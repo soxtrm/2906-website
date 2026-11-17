@@ -2009,3 +2009,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Beide Commons-Originale gegen SHA-1 und visuell geprüft. Das Foto von JosephAmodio zeigt den Uhrturm mit Mond am 12. Mai 2025, CC BY-SA 4.0. Das proportionale WebP dekodiert bei 1440 × 1439 und wiegt 77.880 Bytes. Die Alternative bleibt wegen sichtbarer Kennzeichen in den lokalen Belegen. Quellen, Credits und Hashes in docs/village-research/mtarfa-image-credits.md.
 - OSM-HTTP 200 bestätigte die vier Koordinaten von Way 1344827143. Der Marker bei 35.8930146 N und 14.4002277 E bezeichnet den Turmumriss.
 - **Unveröffentlicht**, Englisch, geplant für https://www.2906.estate/link-marketplace/areas/mtarfa.html. Als Nächstes folgt die responsive Vorschau mit Fotozuschreibung und verzögert geladener 2D-Karte.
+
+## 17.11 — Englische L-Imtarfa-Vorschau im Browser geprüft
+
+- Isolierter Worktree 20261117/mtarfa-preview aus origin/main ca51c76 mit geprüftem Bildstand 52b739b. Worklog-SHA-256 vor Edits ee3ac78cbfa6e60249dd5cdae9ab2d00994a1cd99d13236e2bfb0800d3f6421b. Foto-SHA-256 4aa083823e7ca694d882b3ffa8c0cb938e6df8027fdea46dbcf2dc7c7b8357a6 bestätigt.
+- **Private lokale Vorschau**, Englisch, docs/village-research/mtarfa-preview.html. Uhrturm, ehemaliges Militärhospital und Town Centre, Tokki, Angelo Store sowie Bus und Gesundheitszentrum mit Quellenlinks. Der Punkt bei 14.4002277 E, 35.8930146 N bezeichnet den Turmumriss.
+- Chrome bei 360, 390, 430 und 1440 px bestanden. Foto mit sichtbarer Lizenz, kein horizontaler Überlauf oder Seitenfehler. Vor dem Klick keine OSM-Anfragen. Danach echte Kacheln und beschrifteter Marker per Touch bzw. Maus geprüft. Rabat-Link HTTP 200. Browserbelege unter artifacts/20261117-mtarfa-preview, Ergebnisse in docs/village-research/mtarfa-preview-verification.json.
+- Geplante öffentliche URL https://www.2906.estate/link-marketplace/areas/mtarfa.html. Als Nächstes folgt die veröffentlichte Ausgabe mit Canonical, Sitemap und Marktplatzverweisen auf der aktuell verifizierten Live-Baseline samt NEXUS-Vorschau.
