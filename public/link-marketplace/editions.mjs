@@ -53,6 +53,7 @@ export const editions = [
   {"slug":"safi","name":"Ħal Safi","island":"Malta","key":"malta:safi","center":[14.48675,35.83405],"aliases":["Safi"]},
   {"slug":"salina","name":"Salina","island":"Malta","key":"malta:salina","center":[14.4185,35.952],"aliases":["Salina"]},
   {"slug":"san-gwann","name":"San Ġwann","island":"Malta","key":"malta:san-gwann","center":[14.475,35.912],"aliases":["San Gwann"]},
+  {"slug":"san-lawrenz-gozo","name":"San Lawrenz","island":"Gozo","key":"gozo:san-lawrenz","center":[14.2035276,36.0554759],"aliases":["San Lawrenz","St Lawrence","Gozo - San Lawrenz"]},
   {"slug":"sannat-gozo","name":"Ta’ Sannat","island":"Gozo","key":"gozo:sannat","center":[14.244,36.0135],"aliases":["Gozo - Sannat"]},
   {"slug":"santa-lucija","name":"Santa Luċija","island":"Malta","key":"malta:santa-lucija","center":[14.50444,35.8625],"aliases":["Santa Lucija","Santa Lucia","Sta Lucia","Sta Lucija","Saint Lucia"]},
   {"slug":"santa-venera","name":"Santa Venera","island":"Malta","key":"malta:santa-venera","center":[14.4755,35.8885],"aliases":["Santa Venera"]},

@@ -2151,3 +2151,9 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - **Private lokale Vorschau**, Englisch, docs/village-research/san-lawrenz-gozo-preview.html. Dorfplatz, Werkstätten, Gastronomie und Dwejra-Küste mit Quellen. Landanreise und separates Bootsangebot sind beschrieben. Der Marker bei 14.2035276 E, 36.0554759 N bezeichnet den Kirchenumriss im Dorf.
 - Chrome bei 360, 390, 430, 768 und 1440 px bestanden. Foto und sichtbare Zuschreibung, kein horizontaler Überlauf und keine Seitenfehler. Vor Klick keine OSM-Anfragen. Danach echte Kacheln und Kirchenmarker per Touch bzw. Maus. Bootsquellenlink geprüft. Nachbarlinks Għarb und Victoria HTTP 200. Belege unter artifacts/20261117-san-lawrenz-preview und Ergebnisse in docs/village-research/san-lawrenz-gozo-preview-verification.json.
 - Geplant für https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html. Als Nächstes folgen Canonical, Sitemap, Marktplatz und Nachbarverlinkung auf der erneut verifizierten produktiven Basis. Kein Aliaswechsel.
+
+## 17.11 — San Lawrenz als Releasekandidat
+
+- Isolierter Worktree 20261117/san-lawrenz-release aus origin/main ca51c76 mit Vorschau 97a6b4a. Worklog-SHA-256 vor Edits d2cb2b1aa50f3236dfd97bd7ef1daab3df1fa9b24446a53f488311d8389202b0. Verifizierter www-Quellcommit d860d07 ist Vorfahr.
+- **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html. Eigener Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Għarb. SEO-Vertrag für 77 Editionen und drei Routing- und Fährenprüfungen bestanden.
+- www-Ausgangsdeployment dpl_EqsU8ziwd7KJq5E84bc3Eq2bNvTR, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.
