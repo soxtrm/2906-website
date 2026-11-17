@@ -2157,3 +2157,10 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - Isolierter Worktree 20261117/san-lawrenz-release aus origin/main ca51c76 mit Vorschau 97a6b4a. Worklog-SHA-256 vor Edits d2cb2b1aa50f3236dfd97bd7ef1daab3df1fa9b24446a53f488311d8389202b0. Verifizierter www-Quellcommit d860d07 ist Vorfahr.
 - **Kandidat**, Englisch, https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html. Eigener Canonical, Social-Bild, Sitemap, Ortsregister, Marktplatzverzeichnis und Rücklink aus Għarb. SEO-Vertrag für 77 Editionen und drei Routing- und Fährenprüfungen bestanden.
 - www-Ausgangsdeployment dpl_EqsU8ziwd7KJq5E84bc3Eq2bNvTR, NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy und separate /rating-Route geprüft.
+
+## 17.11 — San Lawrenz öffentlich veröffentlicht
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html. Quellcommit 09d82151236c3dd0f3d84d9a9c6cd70cbd998e5e. www-Einzelalias dpl_Huddj7RnxMZarbpLDtGbkewpSj6q seit 19:04 UTC. Rücksprungpunkt dpl_EqsU8ziwd7KJq5E84bc3Eq2bNvTR.
+- Acht öffentliche Dateien stimmen per SHA-256 mit dem Kandidaten überein. Chrome bei 360, 390, 430, 768 und 1440 px ohne Überlauf und Seitenfehler. Fotozuschreibung, verzögert geladene 2D-Karte mit Kirchenmarker, Umfeldfilter, Ortsverzeichnis und Inseratbereich live geprüft. Der Feed enthielt keine passenden bebilderten Ortsinserate. Sitemap und Verzeichnis führen 77 Editionen.
+- Beide NEXUS-Vorschaupfade liefern HTTP 200 mit noindex, nofollow, noarchive. NEXUS ONE v117, Vorschau releases/20261117-cinematic-0225, Caddy, /rating-Passwortmaske sowie Apex-, CRM- und Projektalias verifiziert.
+- Screenshots, Browserresultate, Hashes und Alias-Guard im Release-Worktree unter artifacts/20261117-san-lawrenz-release. Der Guard stellt mit alias-guard.ps1 -Mode Rollback den tatsächlich verdrängten www-Alias bei passendem aktuellem Stand wieder her.
