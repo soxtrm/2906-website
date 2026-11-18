@@ -25,6 +25,7 @@ export const editions = [
   {"slug":"iklin","name":"Iklin","island":"Malta","key":"malta:iklin","center":[14.455,35.909],"aliases":["Iklin"]},
   {"slug":"kalkara","name":"Il-Kalkara","island":"Malta","key":"malta:kalkara","center":[14.532,35.889],"aliases":["Kalkara"]},
   {"slug":"kappara","name":"Kappara","island":"Malta","key":"malta:kappara","center":[14.4745,35.9015],"aliases":["Kappara"]},
+  {"slug":"kercem-gozo","name":"Ta’ Kerċem","island":"Gozo","key":"gozo:kercem","center":[14.227285632,36.041869689],"aliases":["Kercem","Kerċem","Ta Kercem","Ta’ Kerċem","Gozo - Kercem"]},
   {"slug":"kirkop","name":"Ħal Kirkop","island":"Malta","key":"malta:kirkop","center":[14.486,35.8425],"aliases":["Kirkop"]},
   {"slug":"lija","name":"Ħal Lija","island":"Malta","key":"malta:lija","center":[14.4455,35.901],"aliases":["Lija"]},
   {"slug":"luqa","name":"Ħal Luqa","island":"Malta","key":"malta:luqa","center":[14.491,35.857],"aliases":["Luqa"]},
