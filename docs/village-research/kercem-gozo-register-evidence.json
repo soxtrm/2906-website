@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-11-18T09:09:02.917098+00:00",
+  "sourceUrl": "https://www.mta.com.mt/licences/licences/?type=restaurants&town=KERCEM&size=250",
+  "httpStatus": 200,
+  "sourceSha256": "c5f3ff14f776bb90f76fbae735c734c3d550b7362265253df6725ff97c49f6cb",
+  "registerUpdatedMalta": "2026-11-18 04:25",
+  "record": {
+    "reference": "RST-32480",
+    "sector": "RESTAURANT",
+    "name": "Green Sports Bar & Grill",
+    "street": "TRIQ WENZU MINTOFF",
+    "town": "KERCEM"
+  },
+  "interpretation": "Licence-register evidence only; current trading status, opening hours, menu and ratings unverified."
+}
