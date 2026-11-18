@@ -1,0 +1,455 @@
+{
+  "browser": "Chrome/157.0.8103.80",
+  "results": [
+    {
+      "width": 390,
+      "checkedAt": "2026-11-18T13:09:34.265Z",
+      "immediate": {
+        "tiles": [
+          {
+            "complete": false,
+            "width": 0,
+            "opacity": "1",
+            "display": "block",
+            "visibility": "hidden"
+          },
+          {
+            "complete": false,
+            "width": 0,
+            "opacity": "1",
+            "display": "block",
+            "visibility": "hidden"
+          },
+          {
+            "complete": false,
+            "width": 0,
+            "opacity": "1",
+            "display": "block",
+            "visibility": "hidden"
+          },
+          {
+            "complete": false,
+            "width": 0,
+            "opacity": "1",
+            "display": "block",
+            "visibility": "hidden"
+          }
+        ],
+        "rect": {
+          "width": 292,
+          "height": 265
+        },
+        "markers": 0
+      },
+      "after": {
+        "tiles": [
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.11",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.015",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.165",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.11",
+            "display": "block",
+            "visibility": "visible"
+          }
+        ],
+        "rect": {
+          "width": 292,
+          "height": 265
+        },
+        "markers": 0
+      },
+      "settleMs": 115,
+      "tiles": [
+        {
+          "url": "https://tile.openstreetmap.org/12/2209/1608.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/12/2210/1608.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/12/2210/1607.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/12/2209/1607.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4419/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4419/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4420/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4420/3215.png",
+          "status": 200
+        }
+      ],
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "checkedAt": "2026-11-18T13:09:37.161Z",
+      "immediate": {
+        "tiles": [
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.01",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.01",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.005",
+            "display": "block",
+            "visibility": "visible"
+          }
+        ],
+        "rect": {
+          "width": 940,
+          "height": 420
+        },
+        "markers": 0
+      },
+      "after": {
+        "tiles": [
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.025",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.025",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          },
+          {
+            "complete": true,
+            "width": 256,
+            "opacity": "0.02",
+            "display": "block",
+            "visibility": "visible"
+          }
+        ],
+        "rect": {
+          "width": 940,
+          "height": 420
+        },
+        "markers": 0
+      },
+      "settleMs": 81,
+      "tiles": [
+        {
+          "url": "https://tile.openstreetmap.org/13/4420/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4419/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4419/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4418/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4418/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4419/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4418/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4417/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4421/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4420/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4420/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4417/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4421/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4417/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4421/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4421/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4418/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4420/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4417/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4420/3214.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4417/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4421/3215.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4417/3216.png",
+          "status": 200
+        },
+        {
+          "url": "https://tile.openstreetmap.org/13/4421/3216.png",
+          "status": 200
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "status": "verified live; no product defect reproduced",
+  "url": "https://www.2906.estate/link-marketplace/areas/kercem-gozo.html",
+  "sourceBaseline": "aae55a4",
+  "finding": "Earlier release screenshots captured places filter readiness before raster tiles finished loading. Wait for .nx-place-map tile image completion before recording map evidence."
+}
