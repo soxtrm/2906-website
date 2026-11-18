@@ -16,6 +16,7 @@ export const editions = [
   {"slug":"ghajnsielem","name":"Għajnsielem","island":"Gozo","key":"gozo:ghajnsielem","center":[14.2915,36.027],"aliases":["Gozo - Ghajnsielem"]},
   {"slug":"gharb-gozo","name":"L-Għarb","island":"Gozo","key":"gozo:gharb","center":[14.2115,36.0615],"aliases":["Gozo - Gharb"]},
   {"slug":"gharghur","name":"Għargħur","island":"Malta","key":"malta:gharghur","center":[14.4535,35.924],"aliases":["Gharghur"]},
+  {"slug":"ghasri-gozo","name":"L-Għasri","island":"Gozo","key":"gozo:ghasri","center":[14.2262271,36.0588548],"aliases":["Ghasri","Għasri","L-Għasri","Gozo - Ghasri","Gozo - Għasri"]},
   {"slug":"ghaxaq","name":"Ħal Għaxaq","island":"Malta","key":"malta:ghaxaq","center":[14.516,35.849],"aliases":["Ghaxaq"]},
   {"slug":"gudja","name":"Il-Gudja","island":"Malta","key":"malta:gudja","center":[14.503269,35.848938],"aliases":["Gudja"]},
   {"slug":"gzira","name":"Gżira","island":"Malta","key":"malta:gzira","center":[14.4935,35.905],"aliases":["Gzira"]},
