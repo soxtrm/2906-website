@@ -1,0 +1,166 @@
+{
+  "mode": "Publish",
+  "timeUtc": "2026-11-18T08:13:32.1084165Z",
+  "alias": "www.2906.estate",
+  "previous": "dpl_BN1vFunvvt7SakS9W9u3RVGtPRFR",
+  "target": "dpl_HX8S7he46q4WLeUYFHTRvpXSWJkd",
+  "otherAliasesBefore": {
+    "2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "crm.2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "2906-website-6zbi.vercel.app": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt"
+  },
+  "otherAliasesAfter": {
+    "2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "crm.2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "2906-website-6zbi.vercel.app": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt"
+  },
+  "nexus": [
+    "/opt/nexusbooking/releases/20261118-place-claims-v119",
+    "/opt/nexus-web-preview/releases/20261118-places-claims-2308",
+    "active",
+    "b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5"
+  ],
+  "sourceCommit": "ea475d5ec7342740642918968e0bcac879ef3108",
+  "status": "LIVE",
+  "language": "en",
+  "url": "https://www.2906.estate/link-marketplace/areas/munxar-gozo.html",
+  "browser": {
+    "browser": "Chrome/157.0.8103.80",
+    "results": [
+      {
+        "width": 360,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 390,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 430,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 768,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 1440,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      }
+    ]
+  },
+  "http": {
+    "results": [
+      {
+        "route": "/link-marketplace/areas/munxar-gozo.html",
+        "status": 200,
+        "sha256": "ca0a9ed5c64485813b0eec9934dc321e62c9bce7a88b5e47680380900e82c3a0"
+      },
+      {
+        "route": "/link-marketplace/areas/fontana-gozo.html",
+        "status": 200,
+        "sha256": "adcfa41fa09d59d2a92251a3d5a6853bc92c7dc74933cea3c0633bed804d3e85"
+      },
+      {
+        "route": "/link-marketplace/areas/xewkija-gozo.html",
+        "status": 200,
+        "sha256": "07933b641d0e8bc2078df2ab5704957e0fdab3ea6e29eac1f8da63329505aeff"
+      },
+      {
+        "route": "/link-marketplace/assets/munxar-sanap-plutoworld.webp",
+        "status": 200,
+        "sha256": "732c555c4b285a0e4f347dc87a3eab5e5db4ca615c4d87635a46a48b5ba5a8e3"
+      },
+      {
+        "route": "/link-marketplace/editions.mjs",
+        "status": 200,
+        "sha256": "5478eca85cc32a58693a811a7766c6a179a8cc6cfe7bbc0fb46c29f95cf294bd"
+      },
+      {
+        "route": "/link-marketplace/index.html",
+        "status": 200,
+        "sha256": "ee3c1468d49f385be6d15958ee65946cf586e91105513e91336b0fb3f90ca755"
+      },
+      {
+        "route": "/neighbourhood-sitemap.xml",
+        "status": 200,
+        "sha256": "21291f4696d0d0629330455e5711ce93fb8b386814ae983e046fdfb238132582"
+      },
+      {
+        "route": "/link-marketplace/areas/edition-map.mjs",
+        "status": 200,
+        "sha256": "b37ffd4eb22515466bd095975aa5ba6bb7fe5e572efbf690ea15d8a0f3d7012d"
+      },
+      {
+        "route": "/private-preview",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      },
+      {
+        "route": "/preview-f100547a49/lab/spatial/map",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      },
+      {
+        "route": "/api/properties/featured",
+        "status": 200,
+        "publicFeed": true
+      }
+    ],
+    "apex": {
+      "status": 307,
+      "destination": "https://www.2906.estate/"
+    },
+    "rating": {
+      "status": 200,
+      "passwordGate": true
+    }
+  },
+  "checks": {
+    "neighbourhoodEditions": 80,
+    "routeRegressionPassed": 3,
+    "routeRegressionFailed": 0
+  },
+  "evidenceDirectory": "artifacts/20261118-munxar-release",
+  "rollback": "Run alias-guard.ps1 -Mode Rollback from this worktree after rechecking live pointers; target is the preceding HTTPS-safe Xlendi deployment."
+}
