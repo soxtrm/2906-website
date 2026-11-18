@@ -28,6 +28,7 @@ const BoardIntelligenceMap = dynamic(() => import('@/components/crm/nexus-place-
 
 const NexusCheckWorkbench = dynamic(() => import('@/components/crm/nexus-check-workbench').then(m => m.NexusCheckWorkbench), { ssr: false })
 import { type Booking, bookingLine } from '@/lib/crm/booking'
+import { QuickFacebookButton } from '@/components/crm/facebook/quick-publish'
 import { SwipeLinkCreatedModal, SwipeModeChoiceModal, SwipeMultiLinksModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
@@ -1708,28 +1709,6 @@ function Board() {
     }
   }
 
-  // ── Facebook queue (admin only) ───────────────────────────────────────────
-  // Thin toggle over the existing per-property campaign in
-  // services/facebookCampaign.js — this button starts/pauses it, it does not
-  // reimplement it.
-  const [fbBusyRef, setFbBusyRef] = useState<string | null>(null)
-  async function toggleFbQueue(r: Listing) {
-    if (fbBusyRef) return
-    const action = r.facebookQueueStatus === 'queued' ? 'pause' : 'enqueue'
-    setFbBusyRef(r.ref)
-    try {
-      const d = await crmJson(
-        `schedule-board/listings/${encodeURIComponent(r.ref)}/facebook-queue`, 'POST', { action })
-      setRows(rs => rs.map(x => x.ref === r.ref ? { ...x, facebookQueueStatus: d.status } : x))
-      showToast('ok', d.status === 'queued'
-        ? `#${r.ref} queued for Facebook.` : `#${r.ref} paused from the Facebook queue.`)
-    } catch (e: any) {
-      const d = e?.data || {}
-      showToast('err', d.error || d.message || e?.message || 'Could not change the Facebook queue.')
-    } finally {
-      setFbBusyRef(null)
-    }
-  }
 
   // Kev, 2026-09-02: backend already existed (services/crmScheduleBoard.js
   // POST /listings/:ref/images, "dashboard uploader", 2026-08-29) but no
@@ -2305,8 +2284,6 @@ function Board() {
               onStar={() => toggleStar(r)}
               onUnfavourite={view === 'favourites' ? () => toggleFavourite(r, false) : undefined}
               onReport={() => reportListing(r)}
-              onFbQueue={() => toggleFbQueue(r)}
-              fbQueueBusy={fbBusyRef === r.ref}
               onMatch={() => setMatchRef(r.ref)}
               onAvDate={() => setAvDateEditing(r)}
               onAddPhotos={(files) => addPhotos(r, files)}
@@ -3604,7 +3581,7 @@ function FeedAction({ label, onClick, icon, accent = false, disabled = false }: 
 }
 
 function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, onAsk, onAskPortfolio, onChat, onCreateGroup, onCheckIn, onStatus, onOptOut, busy,
-                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onFbQueue, fbQueueBusy, onMatch, onAvDate,
+                selected, onSelect, onTag, tagging, onStar, onUnfavourite, onReport, onMatch, onAvDate,
                 onAddPhotos, photoUploadBusy, onDelete, onChanged }: {
   r: Listing
   mobile: boolean
@@ -3640,10 +3617,6 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
   onUnfavourite?: () => void
   // Report a problem — any board user, see Board():reportListing.
   onReport: () => void
-  // Facebook posting-queue toggle. Admin-only: the card hides the button
-  // itself for everyone else, and the backend route re-checks the role.
-  onFbQueue: () => void
-  fbQueueBusy: boolean
   // AV-date correction dialog (Kev, 2026-08-31). Opens in the parent, which
   // owns the dialog state, same reason onBook/onAsk/onChat are props too.
   onAvDate: () => void
@@ -4414,6 +4387,9 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
             <Euro size={14} />
           </button>
+          {/* Kev, 2026-11-18: one click posts this listing on the agent's own Facebook Page
+              (the Page connected under Integrations). Replaces the old admin-only queue toggle. */}
+          <QuickFacebookButton propertyId={r.id} refLabel={r.ref} size={15} />
           {isAdmin && (
             <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
               <CalendarClock size={14} />
@@ -4842,15 +4818,6 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
                   <button onClick={() => ownerContactAction(c.ownerPauseUntil ? 'clear_pause' : 'pause')} disabled={contactBusy || !!c.ownerBlocked} style={menuGridBtn(dark)}>
                     <Clock3 size={13} /> {c.ownerPauseUntil ? 'Clear pause' : 'Pause 24h'}
                   </button>
-                </div>
-                <div style={menuSection(dark)}>Tools</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 9px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <button onClick={onFbQueue} disabled={fbQueueBusy} title={r.facebookQueueStatus === 'queued' ? 'In the Facebook posting queue — click to pause' : 'Not in the Facebook posting queue — click to enqueue'}
-                      style={{ ...iconRowBtn(dark), color: r.facebookQueueStatus === 'queued' ? '#4E9EF5' : (dark ? DTEXT_FAINT : LTEXT_FAINT), cursor: fbQueueBusy ? 'wait' : 'pointer' }}>
-                      <FacebookGlyph size={14} />
-                    </button>
-                  </span>
                 </div>
               </>
             )}
