@@ -126,10 +126,25 @@ test('not connected yet: nothing is posted, the agent is sent to connect a Page'
   } finally { await browser.close() }
 })
 
-test('several Pages and no default: asked once, the choice is remembered, then it posts', async () => {
+test('several Pages switched on as destinations: one click posts on each of them, default first', async () => {
   const browser = await launch()
   try {
-    const fb = fbFixtures({ pages: [pageRow(11, 'Harbour Homes Malta'), pageRow(12, 'Gozo Lettings')] })
+    const fb = fbFixtures({ pages: [pageRow(11, 'Harbour Homes Malta'), pageRow(12, 'Gozo Lettings', { isDefault: true }), pageRow(13, 'Old Page', { enabled: false })] })
+    const page = await openPage(browser, { width: 1440, height: 900, fixtures: board(fb) })
+    await page.waitForSelector(FIRST)
+    await page.click(FIRST)
+    await notice(page, 'ok')
+    const sent = posts(page)
+    assert.deepEqual(sent.map(b => b.pageRowId), [12, 11], 'every switched-on Page, the default first, never the switched-off one')
+    assert.notEqual(sent[0].idempotencyKey, sent[1].idempotencyKey, 'one request per Page')
+    assert.match(await noticeText(page), /live on Gozo Lettings and Harbour Homes Malta/)
+  } finally { await browser.close() }
+})
+
+test('several Pages, none switched on and no default: asked once, the choice is remembered, then it posts', async () => {
+  const browser = await launch()
+  try {
+    const fb = fbFixtures({ pages: [pageRow(11, 'Harbour Homes Malta', { enabled: false }), pageRow(12, 'Gozo Lettings', { enabled: false })] })
     const page = await openPage(browser, { width: 1440, height: 900, fixtures: board(fb) })
     await page.waitForSelector(FIRST)
     await page.click(FIRST)
@@ -152,7 +167,7 @@ test('already on that Page: asks before posting again', async () => {
     await page.waitForSelector(FIRST)
     await page.click(FIRST)
     await notice(page, 'duplicate')
-    assert.match(await noticeText(page), /already published on Harbour Homes Malta/)
+    assert.match(await noticeText(page), /already on Harbour Homes Malta/)
     assert.equal(fb.state.pubs.length, 0)
     await settle(); await page.screenshot({ path: path.join(OUT, 'board-5-duplicate.png') })
     await clickIn(page, 'Post again')

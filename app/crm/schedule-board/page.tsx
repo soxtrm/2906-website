@@ -4387,14 +4387,15 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
           <button onClick={handlePriceEdit} title="Update the price" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
             <Euro size={14} />
           </button>
-          {/* Kev, 2026-11-18: one click posts this listing on the agent's own Facebook Page
-              (the Page connected under Integrations). Replaces the old admin-only queue toggle. */}
-          <QuickFacebookButton propertyId={r.id} refLabel={r.ref} size={15} />
           {isAdmin && (
             <button onClick={onAvDate} title="Correct the available / viewing dates" style={{ ...iconRowBtn(dark), color: (dark ? DTEXT_DIM : LTEXT_DIM) }}>
               <CalendarClock size={14} />
             </button>
           )}
+          {/* Kev, 2026-11-18: one click posts this listing on every Facebook Page the agent switched on
+              under Integrations. Replaces the old admin-only queue toggle; bigger than the grey tools
+              next to it on purpose ("kann ruhig ein bisschen praesenter werden"). */}
+          <QuickFacebookButton propertyId={r.id} refLabel={r.ref} size={19} style={{ width: 36, height: 36, padding: 5 }} />
           {rowMsg && <span style={{ fontSize: 10.5, color: 'var(--crm-accent)', marginLeft: 2 }}>{rowMsg}</span>}
           <div
             title={latestTouch ? `${latestTouch.kind} ${new Date(latestTouch.at).toLocaleString('en-GB')}` : `Reference ${r.ref}`}
