@@ -41,6 +41,7 @@ export const editions = [
   {"slug":"mqabba","name":"L-Imqabba","island":"Malta","key":"malta:mqabba","center":[14.46715,35.84548],"aliases":["Mqabba","Imqabba"]},
   {"slug":"msida","name":"Msida","island":"Malta","key":"malta:msida","center":[14.4865,35.898],"aliases":["Msida"]},
   {"slug":"mtarfa","name":"L-Imtarfa","island":"Malta","key":"malta:mtarfa","center":[14.4002277,35.8930146],"aliases":["Mtarfa","Imtarfa","L-Imtarfa"]},
+  {"slug":"munxar-gozo","name":"Il-Munxar","island":"Gozo","key":"gozo:munxar","center":[14.234583133,36.030814725],"aliases":["Munxar","Il-Munxar","Gozo - Munxar"]},
   {"slug":"nadur-gozo","name":"In-Nadur","island":"Gozo","key":"gozo:nadur","center":[14.2942943,36.0376895],"aliases":["Nadur","In-Nadur","Gozo - Nadur"]},
   {"slug":"naxxar","name":"Naxxar","island":"Malta","key":"malta:naxxar","center":[14.4445,35.914],"aliases":["Naxxar"]},
   {"slug":"paola","name":"Paola (Raħal Ġdid)","island":"Malta","key":"malta:paola","center":[14.4985,35.8725],"aliases":["Paola","Rahal Gdid"]},
