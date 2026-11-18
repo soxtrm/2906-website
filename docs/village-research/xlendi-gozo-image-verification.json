@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-11-18T02:08:58.915420+00:00",
+  "status": "private-draft-asset",
+  "language": "en",
+  "plannedUrl": "https://www.2906.estate/link-marketplace/areas/xlendi-gozo.html",
+  "author": "Wusel007",
+  "takenOn": "2012-10-05",
+  "sourcePage": "https://commons.wikimedia.org/wiki/File:Xlendi_Bucht_Panorama.jpg",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "creditPage": "https://merhbamalta.com/about",
+  "retrievedRendition": "https://merhbamalta.com/images/xlendi.jpg",
+  "asset": "docs/village-research/assets/xlendi-bay-wusel007.jpg",
+  "bytes": 151768,
+  "dimensions": [
+    1280,
+    342
+  ],
+  "sha256": "25b13dfaaf7cefa0cca5f404e93862bfafd99604c633f7c3701f92c39edb34a0",
+  "transformation": "None in this step; exact copy of the credited resized JPEG rendition. Original JPEG not retrieved.",
+  "visualReview": "Panorama of the inner Xlendi bay, beach, waterfront buildings and limestone shore. Keep the historic date visible; this is not current construction, trading or access evidence.",
+  "usage": "Keep panoramic composition and natural proportions. No enlargement beyond native width. No private contact details apparent.",
+  "originalDownload": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Xlendi_Bucht_Panorama.jpg",
+    "httpStatus": 429,
+    "attempts": 1
+  }
+}
