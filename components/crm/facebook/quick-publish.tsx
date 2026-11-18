@@ -33,15 +33,21 @@ type Notice =
   | { kind: 'err'; text: string }
   | { kind: 'connect'; text: string }
   | { kind: 'choose'; pages: FbPage[] }
-  | { kind: 'duplicate'; text: string; page: FbPage }
+  | { kind: 'duplicate'; text: string; pages: FbPage[] }
 
-function pickPage(s: FbStatus): { page: FbPage | null; choose: FbPage[] } {
-  const usable = s.pages.filter(p => p.canPublish && p.enabled !== false)
+// Kev, 2026-11-18: every Page switched on as a destination gets the post ("ich kann ja sogar mehr
+// Destinations machen"), the default Page first. Only when none is switched on and several could be used
+// does the agent pick one.
+export function pickPages(s: FbStatus): { pages: FbPage[]; choose: FbPage[] } {
+  const usable = s.pages.filter(p => p.canPublish && p.status === 'active')
+  const on = usable.filter(p => p.enabled).sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
+  if (on.length) return { pages: on, choose: [] }
   const def = usable.find(p => p.isDefault)
-  if (def) return { page: def, choose: [] }
-  if (usable.length === 1) return { page: usable[0], choose: [] }
-  return { page: null, choose: usable }
+  if (def) return { pages: [def], choose: [] }
+  if (usable.length === 1) return { pages: [usable[0]], choose: [] }
+  return { pages: [], choose: usable }
 }
+const names = (ps: FbPage[]) => ps.length <= 1 ? (ps[0]?.name || '') : `${ps.slice(0, -1).map(p => p.name).join(', ')} and ${ps[ps.length - 1].name}`
 
 export function QuickFacebookButton({
   propertyId, refLabel, noFb, variant = 'icon', size = 14, style, className, onDone,
@@ -54,7 +60,7 @@ export function QuickFacebookButton({
   const [notice, setNotice] = useState<Notice | null>(null)
   const [busy, setBusy] = useState(false)
   const alive = useRef(true)
-  const requestId = useRef('')
+  const requestIds = useRef<Record<number, string>>({})
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false; if (timer.current) clearTimeout(timer.current) } }, [])
 
@@ -66,30 +72,19 @@ export function QuickFacebookButton({
     if (n && autoHideMs) timer.current = setTimeout(() => { if (alive.current) setNotice(cur => (cur === n ? null : cur)) }, autoHideMs)
   }, [])
 
-  const watch = useCallback(async (first: FbPublication, page: FbPage) => {
+  const settle = useCallback(async (first: FbPublication) => {
     let pub = first
     for (let i = 0; i < 40 && alive.current && !FINAL.includes(pub.state); i++) {
       await new Promise(r => setTimeout(r, i < 5 ? 1500 : 3000))
       try { pub = (await fb.publication(pub.id)).publication } catch { /* keep waiting */ }
     }
-    if (!alive.current) return
-    if (pub.state === 'published') {
-      show({ kind: 'ok', text: `${label} is live on ${page.name}.`, href: pub.permalinkUrl }, 12000)
-      onDone?.(pub)
-    } else if (FINAL.includes(pub.state)) {
-      if (pub.state === 'reconnect_required') forgetFacebookStatus()
-      show({ kind: pub.state === 'reconnect_required' ? 'connect' : 'err', text: pub.error?.message || `Facebook did not accept the post for ${label} (${pub.stateLabel || pub.state}).` })
-    } else {
-      show({ kind: 'ok', text: `${label} is queued for ${page.name}. It will appear on the Page shortly.` }, 9000)
-      onDone?.(pub)
-    }
-  }, [label, onDone, show])
+    return pub
+  }, [])
 
-  const publish = useCallback(async (opts: { page?: FbPage; confirmDuplicate?: boolean } = {}) => {
+  const publish = useCallback(async (opts: { pages?: FbPage[]; confirmDuplicate?: boolean } = {}) => {
     if (busy) return
     setBusy(true)
     show({ kind: 'busy', text: `Preparing ${label} for Facebook…` })
-    let used: FbPage | null = opts.page || null
     try {
       const s = await loadStatus()
       if (!s.configured) { show({ kind: 'err', text: 'Facebook publishing is not set up on this system yet.' }, 8000); return }
@@ -97,43 +92,72 @@ export function QuickFacebookButton({
         show({ kind: 'connect', text: s.connection.state === 'reconnect_required' ? 'Your Facebook connection needs to be renewed before you can post.' : 'Connect your Facebook Page once, then every listing posts with one click.' })
         return
       }
-      let page = opts.page || null
-      if (!page) {
-        const picked = pickPage(s)
-        if (!picked.page && !picked.choose.length) { show({ kind: 'connect', text: 'None of your Facebook Pages can be posted to yet. Open the Facebook settings to check the Page permissions.' }); return }
-        if (!picked.page) { show({ kind: 'choose', pages: picked.choose }); return }
-        page = picked.page
+      let targets: FbPage[] = opts.pages || []
+      if (!targets.length) {
+        const picked = pickPages(s)
+        if (!picked.pages.length && !picked.choose.length) { show({ kind: 'connect', text: 'None of your Facebook Pages can be posted to yet. Open the Facebook settings to check the Page permissions.' }); return }
+        if (!picked.pages.length) { show({ kind: 'choose', pages: picked.choose }); return }
+        targets = picked.pages
       }
-      used = page
       const d = await fb.draft(propertyId)
       if (d.blockers.length) { show({ kind: 'err', text: d.blockers[0].message }, 9000); return }
-      if (!requestId.current) requestId.current = newRequestId()
-      show({ kind: 'busy', text: `Posting ${label} to ${page.name}…` })
-      const r = await fb.publish({
-        propertyId, pageRowId: page.id, message: d.message,
-        images: d.imagesAllowed ? d.images.slice(0, d.maxImages).map(i => i.url) : [],
-        includeLink: d.includeLink, idempotencyKey: requestId.current, confirmDuplicate: opts.confirmDuplicate === true,
-        language: d.language, templateId: d.templateId,
-      })
-      requestId.current = ''
-      await watch(r.publication, page)
+      show({ kind: 'busy', text: `Posting ${label} to ${names(targets)}…` })
+      const started: { page: FbPage; pub: FbPublication }[] = []
+      const already: FbPage[] = []
+      const failed: string[] = []
+      let reconnect = false
+      for (const page of targets) {
+        if (!requestIds.current[page.id]) requestIds.current[page.id] = newRequestId()
+        try {
+          const r = await fb.publish({
+            propertyId, pageRowId: page.id, message: d.message,
+            images: d.imagesAllowed ? d.images.slice(0, d.maxImages).map(i => i.url) : [],
+            includeLink: d.includeLink, idempotencyKey: requestIds.current[page.id], confirmDuplicate: opts.confirmDuplicate === true,
+            language: d.language, templateId: d.templateId,
+          })
+          started.push({ page, pub: r.publication })
+          delete requestIds.current[page.id]
+        } catch (e) {
+          const kind = (e as FbError)?.data?.kind
+          // a confirmed repost is a new request, so the key of the refused one is dropped
+          if (kind === 'duplicate') { already.push(page); delete requestIds.current[page.id]; continue }
+          if (kind === 'auth' || kind === 'permission' || kind === 'not_entitled') forgetFacebookStatus()
+          if (kind === 'auth') reconnect = true
+          else delete requestIds.current[page.id]
+          failed.push(`${page.name}: ${errorMessage(e, 'not accepted')}`)
+        }
+      }
+      const done = await Promise.all(started.map(async x => ({ page: x.page, pub: await settle(x.pub) })))
+      if (!alive.current) return
+      const live = done.filter(x => x.pub.state === 'published')
+      const queued = done.filter(x => !FINAL.includes(x.pub.state))
+      for (const x of done.filter(x => FINAL.includes(x.pub.state) && x.pub.state !== 'published')) {
+        if (x.pub.state === 'reconnect_required') { forgetFacebookStatus(); reconnect = true }
+        failed.push(`${x.page.name}: ${x.pub.error?.message || x.pub.stateLabel || x.pub.state}`)
+      }
+      for (const x of [...live, ...queued]) onDone?.(x.pub)
+      if (already.length && !done.length && !failed.length) { show({ kind: 'duplicate', text: `${label} is already on ${names(already)}. Post it again?`, pages: already }); return }
+      const parts: string[] = []
+      if (live.length) parts.push(`${label} is live on ${names(live.map(x => x.page))}.`)
+      if (queued.length) parts.push(`Queued for ${names(queued.map(x => x.page))}, it will appear shortly.`)
+      if (already.length) parts.push(`Already on ${names(already)}, not posted again.`)
+      if (failed.length) parts.push(`Not posted on ${failed.join('; ')}`)
+      const ok = live.length + queued.length > 0
+      if (!ok && reconnect) { show({ kind: 'connect', text: parts.join(' ') }); return }
+      show(ok ? { kind: 'ok', text: parts.join(' '), href: live[0]?.pub.permalinkUrl } : { kind: 'err', text: parts.join(' ') || `Could not post ${label} to Facebook.` }, ok && !failed.length ? 12000 : 0)
     } catch (e) {
-      const err = e as FbError
-      const kind = err?.data?.kind
-      // already on this Page: ask once, keep the same request id out of it so the confirmed post is a new request
-      if (kind === 'duplicate' && used) { requestId.current = ''; show({ kind: 'duplicate', text: errorMessage(e), page: used }); return }
+      const kind = (e as FbError)?.data?.kind
       if (kind === 'auth' || kind === 'permission' || kind === 'not_entitled') forgetFacebookStatus()
       if (kind === 'auth') { show({ kind: 'connect', text: errorMessage(e) }); return }
-      requestId.current = ''
       show({ kind: 'err', text: errorMessage(e, `Could not post ${label} to Facebook.`) }, 10000)
     } finally {
       if (alive.current) setBusy(false)
     }
-  }, [busy, label, propertyId, show, watch])
+  }, [busy, label, onDone, propertyId, settle, show])
 
   async function choose(page: FbPage, remember: boolean) {
     if (remember) { try { const s = await fb.updatePage(page.id, { isDefault: true }); cached = { at: Date.now(), value: s } } catch { /* the post still goes out */ } }
-    publish({ page })
+    publish({ pages: [page] })
   }
 
   const title = noFb
@@ -156,7 +180,7 @@ export function QuickFacebookButton({
         <QuickNotice notice={notice} label={label} settingsHref={settingsHref}
           onClose={() => show(null)}
           onChoose={choose}
-          onConfirmDuplicate={page => publish({ page, confirmDuplicate: true })} />,
+          onConfirmDuplicate={pages => publish({ pages, confirmDuplicate: true })} />,
         document.body)}
     </>
   )
@@ -164,7 +188,7 @@ export function QuickFacebookButton({
 
 function QuickNotice({ notice, label, settingsHref, onClose, onChoose, onConfirmDuplicate }: {
   notice: Notice; label: string; settingsHref: string; onClose: () => void
-  onChoose: (p: FbPage, remember: boolean) => void; onConfirmDuplicate: (p: FbPage) => void
+  onChoose: (p: FbPage, remember: boolean) => void; onConfirmDuplicate: (p: FbPage[]) => void
 }) {
   const [remember, setRemember] = useState(true)
   const tone = notice.kind === 'ok' ? '#0E7A45' : notice.kind === 'err' ? '#B3261E' : '#1C2333'
@@ -204,7 +228,7 @@ function QuickNotice({ notice, label, settingsHref, onClose, onChoose, onConfirm
           <div style={{ display: 'flex', gap: 8, marginTop: notice.kind === 'busy' ? 0 : 10, flexWrap: 'wrap' }}>
             {notice.kind === 'ok' && notice.href && <a href={notice.href} target="_blank" rel="noopener noreferrer" style={btn(true)}>View the post</a>}
             {notice.kind === 'connect' && <a href={settingsHref} target="_blank" rel="noopener" style={btn(true)} onClick={() => { forgetFacebookStatus(); onClose() }}>Open Facebook settings</a>}
-            {notice.kind === 'duplicate' && <button type="button" style={btn(true)} onClick={() => onConfirmDuplicate(notice.page)}>Post again</button>}
+            {notice.kind === 'duplicate' && <button type="button" style={btn(true)} onClick={() => onConfirmDuplicate(notice.pages)}>Post again</button>}
             {notice.kind !== 'busy' && <button type="button" style={btn(false)} onClick={onClose}>{notice.kind === 'duplicate' || notice.kind === 'choose' ? 'Cancel' : 'Close'}</button>}
           </div>
         </div>
