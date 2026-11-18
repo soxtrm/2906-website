@@ -1,0 +1,159 @@
+{
+  "mode": "Publish",
+  "timeUtc": "2026-11-18T00:10:35.1014566Z",
+  "alias": "www.2906.estate",
+  "previous": "dpl_Huddj7RnxMZarbpLDtGbkewpSj6q",
+  "target": "dpl_4ZERLiCJ6sRNzhAL1bz6ac5m3ZFP",
+  "otherAliasesBefore": {
+    "2906.estate": "dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS",
+    "crm.2906.estate": "dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS",
+    "2906-website-6zbi.vercel.app": "dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS"
+  },
+  "otherAliasesAfter": {
+    "2906.estate": "dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS",
+    "crm.2906.estate": "dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS",
+    "2906-website-6zbi.vercel.app": "dpl_DWAWZbpxfJYydLR5y2mMMjXyTQpS"
+  },
+  "nexus": [
+    "/opt/nexusbooking/releases/20261118-place-claims-v119",
+    "/opt/nexus-web-preview/releases/20261118-places-claims-2308",
+    "active",
+    "a7305f9f7addfcb0ddf1c125a829bebb7c7e0a14616791d0801fae6266e8a425"
+  ],
+  "sourceCommit": "a373056d3a7c93bdc70018fe3d28f337efdb9ba3",
+  "url": "https://www.2906.estate/link-marketplace/areas/ghasri-gozo.html",
+  "language": "en",
+  "status": "LIVE",
+  "browser": {
+    "browser": "Chrome/157.0.8103.52",
+    "results": [
+      {
+        "width": 360,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 390,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 430,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 768,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 1440,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      }
+    ]
+  },
+  "http": {
+    "results": [
+      {
+        "route": "/link-marketplace/areas/ghasri-gozo.html",
+        "status": 200,
+        "sha256": "870ccfbaaec3cdf51d08e1b109221fd49b950e33661b6bca355451b4c2c3b4e0"
+      },
+      {
+        "route": "/link-marketplace/areas/gharb-gozo.html",
+        "status": 200,
+        "sha256": "1fb5c8929badea6f285acfd90f161eb28dea0bf6c92899b750c98a65bd43679c"
+      },
+      {
+        "route": "/link-marketplace/areas/xewkija-gozo.html",
+        "status": 200,
+        "sha256": "07933b641d0e8bc2078df2ab5704957e0fdab3ea6e29eac1f8da63329505aeff"
+      },
+      {
+        "route": "/link-marketplace/assets/ghasri-gurdan-michael-newman.webp",
+        "status": 200,
+        "sha256": "5bf12c1b34f97380c203d05e16fd65b0aca216615669af5638d772ea312d2316"
+      },
+      {
+        "route": "/link-marketplace/editions.mjs",
+        "status": 200,
+        "sha256": "da6d4bbc490091b06efb762cbcee6e0855bc4e87d636c4e79d818fa71834cbca"
+      },
+      {
+        "route": "/link-marketplace/index.html",
+        "status": 200,
+        "sha256": "4908444b3f8ff4716ddd13186b00f89c5aa6eeefca07a024e004d1880ab88c15"
+      },
+      {
+        "route": "/neighbourhood-sitemap.xml",
+        "status": 200,
+        "sha256": "4d1d33f9e883e7a2ea4551d85626579f174ada2546a35e5b75d8a046e11b8821"
+      },
+      {
+        "route": "/link-marketplace/areas/edition-map.mjs",
+        "status": 200,
+        "sha256": "b37ffd4eb22515466bd095975aa5ba6bb7fe5e572efbf690ea15d8a0f3d7012d"
+      },
+      {
+        "route": "/private-preview",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      },
+      {
+        "route": "/preview-f100547a49/lab/spatial/map",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      }
+    ],
+    "apex": {
+      "status": 307,
+      "destination": "https://www.2906.estate/"
+    },
+    "rating": {
+      "status": 200,
+      "passwordGate": true
+    }
+  },
+  "checks": {
+    "neighbourhoodEditions": 78,
+    "routeRegressionPassed": 3,
+    "routeRegressionFailed": 0
+  }
+}
