@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-11-18T06:05:53.679872+00:00",
+  "status": "private-draft-asset",
+  "language": "en",
+  "plannedUrl": "https://www.2906.estate/link-marketplace/areas/munxar-gozo.html",
+  "author": "Plutoworld",
+  "takenOn": "2017-04-14",
+  "sourcePage": "https://commons.wikimedia.org/wiki/File:Sanap_Cliffs_-_Gozo_Malta_1.jpg",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "creditPage": "https://merhbamalta.com/about#photo-coast-sanap",
+  "retrievedRendition": "https://merhbamalta.com/images/cards/coast-sanap.webp",
+  "asset": "docs/village-research/assets/munxar-sanap-plutoworld.webp",
+  "bytes": 35852,
+  "dimensions": [
+    560,
+    315
+  ],
+  "sha256": "732c555c4b285a0e4f347dc87a3eab5e5db4ca615c4d87635a46a48b5ba5a8e3",
+  "transformation": "None in this step; exact copy of the credited resized WebP rendition. Original JPEG not retrieved.",
+  "visualReview": "Coastal limestone ledges, vegetation and sea; consistent with the Sanap landscape source. Shows the coast, not the inland village square. No people or readable contact information apparent.",
+  "usageLimit": "Supporting photograph at up to its native 560px CSS width, maintaining natural proportions. Label location and historical date. Do not upscale as a full-width hero.",
+  "excludedDownloads": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Munxar_Parish_church.jpg",
+      "httpStatus": 429,
+      "attempts": 1
+    },
+    {
+      "url": "https://merhbamalta.com/images/coast-sanap.jpg",
+      "httpStatus": 404,
+      "attempts": 1
+    }
+  ]
+}
