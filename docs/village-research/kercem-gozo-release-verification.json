@@ -1,0 +1,166 @@
+{
+  "mode": "Publish",
+  "timeUtc": "2026-11-18T12:12:02.8828336Z",
+  "alias": "www.2906.estate",
+  "previous": "dpl_HX8S7he46q4WLeUYFHTRvpXSWJkd",
+  "target": "dpl_X1zTXKuTdsJBS4xrwa3md72Y4VaU",
+  "otherAliasesBefore": {
+    "2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "crm.2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "2906-website-6zbi.vercel.app": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt"
+  },
+  "otherAliasesAfter": {
+    "2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "crm.2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "2906-website-6zbi.vercel.app": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt"
+  },
+  "nexus": [
+    "/opt/nexusbooking/releases/20261118-place-claims-v119",
+    "/opt/nexus-web-preview/releases/20261118-places-claims-2308",
+    "active",
+    "b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5"
+  ],
+  "sourceCommit": "019eefccc6e0d58463a6cf8305dba35db0d0e163",
+  "status": "LIVE",
+  "language": "en",
+  "url": "https://www.2906.estate/link-marketplace/areas/kercem-gozo.html",
+  "browser": {
+    "browser": "Chrome/157.0.8103.80",
+    "results": [
+      {
+        "width": 360,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 390,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 430,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 768,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 1440,
+        "photoWidth": 560,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      }
+    ]
+  },
+  "http": {
+    "results": [
+      {
+        "route": "/link-marketplace/areas/kercem-gozo.html",
+        "status": 200,
+        "sha256": "d443d01776678b35a76d9fc9e2e345c7a06b2214e2ace68d81a51c9439c1f4dc"
+      },
+      {
+        "route": "/link-marketplace/areas/fontana-gozo.html",
+        "status": 200,
+        "sha256": "2aaab3e908b9d46f99b903c9040385c5007a1403d2ad5f1ef9199cc540663e1d"
+      },
+      {
+        "route": "/link-marketplace/areas/xewkija-gozo.html",
+        "status": 200,
+        "sha256": "07933b641d0e8bc2078df2ab5704957e0fdab3ea6e29eac1f8da63329505aeff"
+      },
+      {
+        "route": "/link-marketplace/assets/kercem-lunzjata-josephmercieca98.webp",
+        "status": 200,
+        "sha256": "b1c465d45ab1e497cc7f353647754a596cee7c184e0507f846ddc82e01161b4a"
+      },
+      {
+        "route": "/link-marketplace/editions.mjs",
+        "status": 200,
+        "sha256": "5d95d526969528f4dcad7bf0873d040dd8217316f9b25962a81382f0beaf66f8"
+      },
+      {
+        "route": "/link-marketplace/index.html",
+        "status": 200,
+        "sha256": "e7934c51daaddc7a4963b694c60a4eb3ee7e5b180b1d821384243c2ab0c85935"
+      },
+      {
+        "route": "/neighbourhood-sitemap.xml",
+        "status": 200,
+        "sha256": "58190acd65b7f1d3c6a7e8b4feda53ed752c959663cc206cd9b982e3c58c2899"
+      },
+      {
+        "route": "/link-marketplace/areas/edition-map.mjs",
+        "status": 200,
+        "sha256": "b37ffd4eb22515466bd095975aa5ba6bb7fe5e572efbf690ea15d8a0f3d7012d"
+      },
+      {
+        "route": "/private-preview",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      },
+      {
+        "route": "/preview-f100547a49/lab/spatial/map",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      },
+      {
+        "route": "/api/properties/featured",
+        "status": 200,
+        "publicFeed": true
+      }
+    ],
+    "apex": {
+      "status": 307,
+      "destination": "https://www.2906.estate/"
+    },
+    "rating": {
+      "status": 200,
+      "passwordGate": true
+    }
+  },
+  "checks": {
+    "neighbourhoodEditions": 81,
+    "routeRegressionPassed": 3,
+    "routeRegressionFailed": 0
+  },
+  "evidenceDirectory": "artifacts/20261118-kercem-release",
+  "rollback": "Run alias-guard.ps1 -Mode Rollback from this worktree after checking live pointers; target is the preceding HTTPS-safe Munxar deployment."
+}

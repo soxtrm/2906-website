@@ -2207,3 +2207,143 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - The server proxy file `/etc/caddy/Caddyfile` gained a block for `api.2906.estate`; its hash changed.
 - Verified: candidate tested behind deployment protection, then 48 logged-in and public checks through the live hostnames, all backend calls arriving through the HTTPS proxy, port 3001 closed from outside, NEXUS inventory calls on the server unaffected.
 - Rollback (only together): reopen the port on the server (`/root/security-hotfix-20261117/server/api-https.sh open-3001`), then set the aliases back to the ids above.
+## 18.11 — Ix-Xlendi quellengeprüfter Rechercheentwurf
+
+- Neuer sauberer Worktree 20261118/xlendi-research aus aktuellem origin/main ca51c76, danach FF auf letzte Reiseübergabe 3f75849. Root-AGENTS gelesen; keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits f9afebdbbad931c60cc29891d399b857ebab6778290f730f57b562eaeab05206. Bestehende 78 Editionen und jüngste Prüfungen nicht wiederholt.
+- **Privater Entwurf, Englisch:** geplante URL https://www.2906.estate/link-marketplace/areas/xlendi-gozo.html (HTTP 404, ebenso xlendi.html). Quellen zu Bucht, Turm, Munxar-Zuständigkeit, Ta’ Karolina, Tauchbetrieb und MPT 306/330 in docs/village-research/xlendi-gozo-research.md. Keine Rankings, aktuellen Öffnungszeiten oder Bade-/Zugangsversprechen.
+- OSM HTTP 200 bestätigt Bussteig 1827 als Node 324401663 bei 36.0306763 N, 14.2184355 E; separaten Fahrbahn-Stopppunkt unterschieden. Commons-Bildkandidat von Wusel007 (05.10.2012, CC BY-SA 3.0) dokumentiert. Bilddownload, Hash und Sichtprüfung noch ausstehend. Keine öffentliche Datei und kein Alias geändert.
+
+## 18.11 — Ix-Xlendi Bild und neue sichere Releasebasis
+
+- Neuer isolierter Worktree 20261118/xlendi-asset aus origin/main ca51c76. Neuere Reise-/Security-Übergabe 127e7e8 zuerst per FF übernommen, danach 7796283 gemergt. Den reinen Worklog-Anhangskonflikt durch Erhalt beider vollständiger Einträge gelöst; Mergecommit 55c5c0c. Keine Anwendungsdateien verändert. Worklog-Hash vor Konfliktauflösung d76ced27e2ea4e79281ac07d327ab1df90b3a04313e5e56580389a0520a569be, danach 580aafd6a90f1c65e8e4866f17382a3f5702253e5a16731f55ea87b51b8ffbc7.
+- **Unveröffentlichter englischer Entwurfsasset:** Wusel007s Xlendi-Panorama vom 05.10.2012, CC BY-SA 3.0. Exakt übernommene lizenzierte Merħba-JPEG-Rendition mit 1280 × 342 px / 151.768 Bytes gespeichert, dekodiert und visuell geprüft. Hash, Herkunft, Lizenz und sichtbarer Bildcredit in xlendi-gozo-image-credits.md und -image-verification.json. Original einmal HTTP 429, keine Wiederholungsschleife. Vorschauseite/Browserprüfung noch ausstehend.
+- **Für die nächste Veröffentlichung verbindlich:** neue ARGUS-HTTPS-Releasebasis aus 127e7e8 erhalten; alte Backend-IP nicht wieder einführen. Aktueller dokumentierter Aliasstand dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt auf allen vier Hostnamen. Vor zukünftigem Deploy unabhängig neu prüfen und www-only Guard anpassen. Kein Deploy, keine Alias-/Outreach-/Scheduleränderung in diesem Schritt.
+
+## 18.11 — Ix-Xlendi Broschürenvorschau geprüft
+
+- Sauberer Worktree 20261118/xlendi-preview aus aktuellem origin/main ca51c76, danach FF auf c04d952 einschließlich neuer HTTPS-Releasebasis. Root-AGENTS gelesen, keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits 7ac511271351b9d5527c8c82813011f9a1f8ce640027b046a0fca268d3eb4336. Recherche und Bildbeschaffung nicht wiederholt.
+- **Unveröffentlichte englische Vorschau:** docs/village-research/xlendi-gozo-preview.html mit vollständigem datiertem Panorama und sichtbarer Lizenz, eigenem Küsten-/Alltagsinhalt, Restaurant- und Tauchoperatorlinks. Xlendi-Bucht und inland Munxar sauber getrennt. Verifizierter Bussteig 1827 als Orientierung, keine erfundene Route zum Turm oder über Wasser.
+- Chrome 360/390/430/768/1440 px: kein Überlauf und keine Seitenfehler; korrekte Bildbreite/Attribution. Vor Kartenklick null OSM-Requests, danach echte Kacheln und Bussteiglabel per Touch/Hover geprüft. Drei Nachbareditionen HTTP 200. Screenshots 390/1440 visuell kontrolliert. Hash/Browserbefunde in xlendi-gozo-preview-verification.json, Screenshots und Prüfskript unter artifacts/20261118-xlendi-preview.
+- Bestehender SEO-/Sitemap-/Kartenvertrag für 78 veröffentlichte Editionen und drei Fähren-/Routen-Regressionsdateien bestanden. Keine öffentliche Datei geändert. Veröffentlichung, SEO-Einbindung und Liveprüfung stehen aus; kein Deploy oder Aliaswechsel.
+
+## 18.11 — Ix-Xlendi Veröffentlichungskandidat auf HTTPS-Basis
+
+- Neuer sauberer Worktree 20261118/xlendi-release aus origin/main ca51c76, danach FF auf 1c9e73b mit ARGUS-HTTPS-Releasebasis 127e7e8. Worklog-SHA-256 vor Edits 99c62c1b6c2a5b4585662284336ed1971faa321652c5d27129d3f40a39ac9c23. Anwendbare AGENTS gelesen. Gegen 127e7e8 nur Entwurfs-/Dokumentationsdifferenz vor dem Reise-Edit.
+- Tatsächliches www unabhängig als dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt bestätigt. NEXUS ONE weiterhin v119, Vorschau places-claims-2308 und Caddy aktiv, neuer Caddy-Hash b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5. Keine Änderung an diesen Diensten.
+- **Englischer Veröffentlichungskandidat:** /link-marketplace/areas/xlendi-gozo.html, Panorama mit Lizenz, verzögerte 2D-Karte, bewährtes Inserat-/Umfeldmodul, kanonische URL, Social-Metadaten, Fontana-Nachbarlink, Verzeichnis und Sitemap auf 79 Editionen erweitert. Alte Backend-IP nicht wieder eingeführt.
+- Lokaler Browser 360/390/430/768/1440 px: kein Überlauf/Seitenfehler, Karte/Touchlabel, echte Kacheln, Inseratantwort, Umfeldfilter und Verzeichnissuche bestanden. Drei Fähren-/Routentests bestanden; SEO-Vertrag für alle 79 Editionen nach Normalisierung der neuen Meta-Attributreihenfolge bestanden. Keine Testanforderung abgeschwächt. Kandidatendeploy und Liveprüfung stehen aus.
+
+## 18.11 — Ix-Xlendi live geprüft
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/xlendi-gozo.html. Quellcommit 2624204d1d50f11b6874fe06159dda3b1df161e4, www-Einzelalias dpl_BN1vFunvvt7SakS9W9u3RVGtPRFR seit 04:14:20 UTC. Davor HTTP 404. Rücksprungpunkt ist das neue HTTPS-Deployment dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt, nicht der alte Vor-HTTPS-Stand.
+- Acht öffentliche Dateien stimmen per SHA-256 mit dem Kandidaten überein. Öffentlicher Featured-Feed zusätzlich vor Veröffentlichung auf HTTP 200 und JSON-Datenstruktur geprüft, danach HTTP 200 live. Chrome 360/390/430/768/1440 px ohne Überlauf und Seitenfehler: Panorama/Attribution, verzögerte Kartenkacheln, Bussteig-Touchlabel, Inseratmodul, Umfeldfilter und Verzeichnissuche bestanden. 79 Editionen im SEO-/Sitemap-Vertrag; drei Routen-/Fährentests bestanden.
+- HTTPS-Backend-Releasebasis erhalten; Apex-, CRM- und Projektalias vor/nach www-Wechsel unverändert. NEXUS ONE v119, Vorschau places-claims-2308 und Caddy-Hash b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5 unverändert. Beide Vorschaupfade HTTP 200 mit Robots-Sperre, /rating weiterhin Passwortmaske. Keine Nachrichten, Scheduler- oder Outreachänderungen.
+- Releasebeleg docs/village-research/xlendi-gozo-release-verification.json. Browser-/HTTP-Belege, Screenshots und bedingter www-only Rollback im Worktree unter artifacts/20261118-xlendi-release.
+
+## 18.11 — Il-Munxar quellengeprüfter Rechercheentwurf
+
+- Neuer sauberer Worktree 20261118/munxar-research aus origin/main ca51c76 und per FF auf letzte Reiseübergabe 75de712 einschließlich ARGUS-HTTPS-Releasebasis. Root-AGENTS gelesen, keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits c4d069666124e007de465139de0b438eeef94d037ae37cca30c6c8edbc8c0fa8. Veröffentlichte Xlendi-Arbeit nicht wiederholt.
+- **Privater englischer Entwurf:** geplante URL https://www.2906.estate/link-marketplace/areas/munxar-gozo.html (HTTP 404). Kirchenplatz und Inlandslage von Xlendi getrennt; Kirche, Schutzräume als historische Information, Sanap-Landschaft, Council und MySupermarket belegt. Abweichende Festa-Terminangaben offizieller Quellen dokumentiert, kein aktuelles Datum behauptet. Quellen in docs/village-research/munxar-gozo-research.md.
+- OSM HTTP 200 bestätigte Kirchenway 221511238 und zwölf verschiedene Umrissknoten; Mittelpunkt 36.030814725 N / 14.234583133 E. Commons-Fotokandidat Matthew2007 vom 09.09.2017, CC BY-SA 4.0, vermerkt. Bildbytes und Sichtprüfung stehen aus. Keine öffentliche Datei, Nachricht oder Aliasänderung.
+
+## 18.11 — Munxar lizenziertes Küstenbild
+
+- Sauberer isolierter Worktree 20261118/munxar-asset aus aktuellem origin/main ca51c76, danach FF auf 6460a01 mit neuer HTTPS-Basis. Root-AGENTS gelesen; keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits 9608c7ed5ebee26678784678a57077fb57e9586b709ecfe8d420a6e740fc3d35.
+- **Privater englischer Entwurfsasset:** Plutoworlds Sanap-Klippenfoto vom 14.04.2017, CC BY-SA 4.0, als exakt kopierte Merħba-WebP-Rendition gespeichert. 560 × 315 px, 35.852 Bytes, dekodiert und visuell geprüft. Quellen, SHA-256 und Bildcredit in munxar-gozo-image-credits.md und -image-verification.json. Nur bis nativer Breite verwenden; ausdrücklich Küstenansicht, nicht Kirchenplatz oder Wegnachweis.
+- Kirchenoriginal einmal HTTP 429, vermutetes größeres Sanap-JPEG HTTP 404. Keine Wiederholungsschleife. Das lizenzierte Nebenbild ist brauchbar; Vorschauseite und Browserprüfung stehen aus. Keine öffentliche Datei, Nachricht oder Aliasänderung.
+
+## 18.11 — Il-Munxar Broschürenvorschau geprüft
+
+- Neuer sauberer Worktree 20261118/munxar-preview aus origin/main ca51c76, danach FF auf 33dfcb6 einschließlich ARGUS-HTTPS-Basis. Root-AGENTS gelesen, keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits 49c541e39480ed782c60351fb2b8aed564393adbd6b1480f87620d1d1075a41d. Bereits verifizierte Recherche/Bildbeschaffung nicht wiederholt.
+- **Unveröffentlichter englischer Entwurf:** docs/village-research/munxar-gozo-preview.html mit eigenem Inland-/Kirchenplatzinhalt, MySupermarket, Council, Linie 306, getrennten Xlendi-Restaurantoptionen und Sanap-Küstenbild mit historischem Datum und Lizenz. Festa-Datum bleibt offen bis zu datierter Quelle. OSM-Kirchenumriss als Orientierung, keine erfundene Route.
+- Chrome bei 360/390/430/768/1440 px: kein Überlauf oder Seitenfehler, Nebenbild ohne Hochskalierung, sichtbare Credits. Vor Kartenklick null OSM-Requests; danach echte Kacheln und Kirchenlabel per Touch/Hover geprüft. Drei Nachbareditionen HTTP 200. Screenshots 390/1440 visuell kontrolliert. Hash/Ergebnisse in munxar-gozo-preview-verification.json, Belege unter artifacts/20261118-munxar-preview.
+- Bestehender SEO-/Sitemap-/Kartenvertrag für 79 veröffentlichte Editionen und drei Fähren-/Routen-Regressionsdateien bestanden. Keine öffentliche Datei oder Aliasänderung; SEO-Einbindung, Veröffentlichung und Liveprüfung stehen aus.
+
+## 18.11 — Il-Munxar Veröffentlichungskandidat
+
+- Neuer sauberer Worktree 20261118/munxar-release aus origin/main ca51c76, danach FF auf 13a8612 mit ARGUS-HTTPS-Basis. Worklog-SHA-256 vor Edits cd249bb9679350e2c36cb0f00f629a3b5b692c9d1b93c4b2a42fedf6f913d6a7. Anwendbare AGENTS gelesen. Gegen den tatsächlichen Xlendi-Livequellstand 2624204 nur Entwurfs-/Dokumentationsunterschiede vor Reise-Edit.
+- Live-www unabhängig als dpl_BN1vFunvvt7SakS9W9u3RVGtPRFR bestätigt; NEXUS ONE v119, Vorschau places-claims-2308 und Caddy aktiv/Hash b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5. Keine Änderung dieser Dienste.
+- **Englischer Kandidat:** /link-marketplace/areas/munxar-gozo.html mit Bildlizenz, verzögerter Kirchenkarte, Inserat-/Umfeldmodulen, Canonical/Social-Metadaten, Nachbarlink aus Fontana, Verzeichnis und Sitemap auf 80 Editionen erweitert. Zunächst versehentlich auf alte Vorschau gerichteten Generatorsource vor Veröffentlichung korrigiert; Bild-/OG-Vertrag danach bestanden.
+- Browser lokal bei 360/390/430/768/1440 px: kein Überlauf/Seitenfehler, keine Bildhochskalierung, echte Kartenkacheln und Touchlabel, Inseratantwort, Umfeldfilter und Verzeichnissuche bestanden. SEO-Vertrag für 80 Editionen und drei Routen-/Fähren-Regressionsdateien bestanden. Veröffentlichung/Kandidaten-HTTP-Prüfung/Liveprüfung stehen aus.
+
+## 18.11 — Il-Munxar live geprüft
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/munxar-gozo.html. Quellcommit ea475d5ec7342740642918968e0bcac879ef3108, www-Einzelalias dpl_HX8S7he46q4WLeUYFHTRvpXSWJkd seit 08:13:32 UTC. Davor HTTP 404. Rücksprungpunkt dpl_BN1vFunvvt7SakS9W9u3RVGtPRFR (HTTPS-sicherer Xlendi-Stand).
+- Acht öffentliche Dateien per SHA-256 kandidatenidentisch; öffentlicher Featured-Feed Kandidat/live HTTP 200, Kandidaten-JSON-Struktur geprüft. Chrome live bei 360/390/430/768/1440 px ohne Überlauf oder Seitenfehler: Bild ohne Hochskalierung samt Credit, verzögerte echte Kartenkacheln und Kirchen-Touchlabel, Inseratmodul, Umfeldfilter und Verzeichnissuche bestanden. 80 Editionen im SEO-/Sitemap-Vertrag; drei Fähren-/Routentests bestanden.
+- NEXUS ONE v119, Vorschau places-claims-2308, Caddy-Hash b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5 sowie Apex-, CRM- und Projektalias vor/nach www-only Wechsel unverändert. Beide Vorschaupfade HTTP 200 mit Robots-Sperre und /rating weiterhin Passwortmaske. Keine Nachrichten, Scheduler- oder Outreachänderung.
+- Releasebeleg docs/village-research/munxar-gozo-release-verification.json; Screenshots, Browser-/HTTP-Belege und bedingter Rückweg unter artifacts/20261118-munxar-release im erhaltenen Worktree.
+
+## 18.11 — Ta’ Kerċem quellengeprüfter Rechercheentwurf
+
+- Neuer sauberer Worktree 20261118/kercem-research aus origin/main ca51c76, danach FF auf letzte Reiseübergabe 4985964 mit ARGUS-HTTPS-Basis. Root-AGENTS gelesen; keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits 68fc5c74869dbe4ea08589394d60334da70986dee6e268e84185534c7554e229.
+- **Privater englischer Entwurf:** geplante URL https://www.2906.estate/link-marketplace/areas/kercem-gozo.html (HTTP 404). Pfarre, Lunzjata, Council und Linie 313 belegt; Gozo-Santa-Luċija von Malta getrennt. Widersprüchliche Richtungsangabe des Tourismustextes markiert, Council-/OSM-Lage maßgeblich. MTA HTTP 200: RST-32480 Green Sports Bar & Grill / Triq Wenzu Mintoff, Registerstand 18.11 04:25 Malta; kein Öffnungs-/Qualitätsversprechen. Quellen und separater Registerbeleg in docs/village-research/kercem-gozo-*.
+- OSM HTTP 200 bestätigte Kirchenway 337003395 mit 19 Umrissknoten und Mittelpunkt 36.041869689 N / 14.227285632 E. Geschätzte OSM-Höhe nicht als verifiziert übernommen. Commons-Kirchenfoto NickGeorge1993 vom 17.09.2016 / CC BY-SA 4.0 als Kandidat; Bildbytes/Sichtprüfung ausstehend. Keine öffentlichen Dateien, Nachrichten oder Aliasänderungen.
+
+## 18.11 — Kerċem lizenziertes Lunzjata-Bild
+
+- Sauberer isolierter Worktree 20261118/kercem-asset aus origin/main ca51c76, danach FF auf f84007e einschließlich HTTPS-Basis. Root-AGENTS gelesen, keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits 08348ebacec95449d64f5d2121b5a39d67dcb35c29ca51dfe01d97e8e3b93e1e.
+- **Privater englischer Entwurfsasset:** Josephmercieca98s Lunzjata-Eingangsfoto vom 30.06.2018, CC BY-SA 4.0. Exakt übernommene Merħba-WebP-Rendition: 560 × 373 px / 34.430 Bytes, dekodiert und visuell geprüft. Quelle, Hash und sichtbarer Credit in kercem-gozo-image-credits.md und -image-verification.json. Nebenbild bis nativer Breite, ausdrücklich Taleingang im weiteren Umfeld und nicht Pfarrkirche, Ortsgrenze oder Zugänglichkeitsbeleg.
+- Kirchenoriginal einmal HTTP 429; keine Wiederholungsschleife und kein Originalhash behauptet. Bereits geprüfte Recherche nicht wiederholt. Broschürenvorschau und Browserprüfung stehen aus. Keine öffentliche Datei, Nachricht oder Aliasänderung.
+
+## 18.11 — Ta’ Kerċem Broschürenvorschau geprüft
+
+- Neuer sauberer Worktree 20261118/kercem-preview aus origin/main ca51c76, danach FF auf 6d99e44 mit ARGUS-HTTPS-Basis. Root-AGENTS gelesen, keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits ef32cbf2b69ec070ba0377982c208ce9d5965d8d89917cfcaea9c76615ae2d81. Recherche/Bildbeschaffung nicht wiederholt.
+- **Unveröffentlichter englischer Entwurf:** docs/village-research/kercem-gozo-preview.html mit eigenem Pfarrei-/Talinhalt, Council, MTA-Green-Sports-Bar-Lizenz mit Grenzen der Aussage, Linie 313 und Gozo-/Malta-Santa-Luċija-Abgrenzung. Historisches Tal-Eingangsfoto samt Lizenz; Kirchenmarker aus verifiziertem OSM-Umriss, keine erfundene Route.
+- Chrome bei 360/390/430/768/1440 px ohne Überlauf oder Seitenfehler; Bild nicht hochskaliert und Credits sichtbar. Vor Kartenklick null OSM-Requests, danach echte Kacheln und Kirchenlabel per Touch/Hover geprüft. Drei Nachbareditionen HTTP 200. Screenshots 390/1440 visuell kontrolliert. Hash/Browserbefunde in kercem-gozo-preview-verification.json, Belege unter artifacts/20261118-kercem-preview.
+- Bestehender SEO-/Sitemap-/Kartenvertrag für 80 öffentliche Editionen und drei Fähren-/Routen-Regressionsdateien bestanden. Keine öffentliche Datei geändert. SEO-Einbindung, Veröffentlichung und Liveprüfung stehen aus; kein Deploy oder Aliaswechsel.
+
+## 18.11 — Ta’ Kerċem Veröffentlichungskandidat
+
+- Neuer sauberer Worktree 20261118/kercem-release aus origin/main ca51c76, danach FF auf 10b6419 mit ARGUS-HTTPS-Basis. Worklog-SHA-256 vor Edits e049c5fec813074e71848b4cd41e4725bc35986518f33455924eecafdb76c715. Anwendbare AGENTS gelesen. Gegen tatsächlichen Munxar-Livequellstand ea475d5 nur Entwurfs-/Dokumentationsunterschiede vor Reise-Edit.
+- Live-www unabhängig auf dpl_HX8S7he46q4WLeUYFHTRvpXSWJkd bestätigt; NEXUS ONE v119, Vorschau places-claims-2308, Caddy aktiv/Hash b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5. Diese Dienste unverändert.
+- **Englischer Kandidat:** /link-marketplace/areas/kercem-gozo.html mit Bildlizenz, verzögerter Kirchenkarte, bewährtem Inserat-/Umfeldmodul, Canonical/Social-Metadaten, Nachbarlink aus Fontana, Verzeichnis und Sitemap auf 81 Editionen erweitert. Backend-/Outreachcode unverändert.
+- Browser lokal bei 360/390/430/768/1440 px ohne Überlauf und Seitenfehler: keine Bildhochskalierung, echte Kartenkacheln und Kirchen-Touchlabel, Inseratantwort, Umfeldfilter und Verzeichnissuche bestanden. SEO-/Sitemap-Vertrag für alle 81 Editionen und drei Routen-/Fähren-Regressionsdateien bestanden. Kandidatendeploy und Liveprüfung stehen aus.
+
+## 18.11 — Ta’ Kerċem live geprüft
+
+- **LIVE, Englisch:** https://www.2906.estate/link-marketplace/areas/kercem-gozo.html. Quellcommit 019eefccc6e0d58463a6cf8305dba35db0d0e163, www-Einzelalias dpl_X1zTXKuTdsJBS4xrwa3md72Y4VaU seit 12:12:02 UTC. Davor HTTP 404. Rücksprungpunkt dpl_HX8S7he46q4WLeUYFHTRvpXSWJkd (HTTPS-sicherer Munxar-Stand).
+- Acht öffentliche Dateien per SHA-256 kandidatenidentisch, öffentlicher Featured-Feed Kandidat/live HTTP 200 und Kandidaten-JSON-Struktur geprüft. Chrome live bei 360/390/430/768/1440 px ohne Überlauf oder Seitenfehler: Bild ohne Hochskalierung samt Credit, verzögerte echte Kartenkacheln und Kirchen-Touchlabel, Inseratmodul, Umfeldfilter und Verzeichnissuche bestanden. 81 Editionen im SEO-/Sitemap-Vertrag, drei Fähren-/Routentests bestanden.
+- HTTPS-Backend-Basis, NEXUS ONE v119, Vorschau places-claims-2308, Caddy-Hash b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5 und Apex-/CRM-/Projektalias vor/nach www-Wechsel erhalten. Beide Vorschaupfade HTTP 200 mit Robots-Sperre, /rating weiterhin Passwortmaske. Keine Nachrichten, Scheduler- oder Outreachänderungen.
+- Releasebeleg docs/village-research/kercem-gozo-release-verification.json; Screenshots, Browser-/HTTP-Belege und bedingter Rückweg im erhaltenen Worktree unter artifacts/20261118-kercem-release.
+
+## 18.11 — Umfeldkarte: graue Screenshot-Fläche untersucht
+
+- Neuer sauberer Worktree 20261118/map-loading-audit aus origin/main ca51c76, danach FF auf aae55a4. Root-AGENTS gelesen; keine zusätzlichen einschlägigen AGENTS. Worklog-SHA-256 vor Edits 3e56fc82db36d364944e998730f554ad1a7a0c2b615b7178daff798afefecac8. Keine erledigte Ortsrecherche wiederholt; neuer Prüfpunkt war das tatsächliche Rasterladen der zweiten Karte.
+- **Read-only live:** Kerċem bei 390/1440 px. Frühere Release-Screenshots waren unmittelbar nach Anzeige der Filter entstanden, bevor Rasterkacheln fertig waren. Mobil zunächst 0/4 Kacheln geladen, danach 4/4; Desktop bereits 15/15. Alle beobachteten Kachelantworten HTTP 200, keine Seitenfehler. Fertige Kartenbilder visuell geprüft. Kein Produktfehler reproduziert, keine Änderung funktionierender Kartenlogik.
+- Befund und strukturierte Belege in docs/village-research/places-map-loading-audit.md und -verification.json; Screenshots/Prüfskript unter artifacts/20261118-map-loading-audit. Für künftige Release-Belege zusätzlich auf vollständig geladene Rasterbilder innerhalb .nx-place-map warten, bevor die zweite Karte aufgenommen wird. Keine öffentliche Datei, Nachricht oder Aliasänderung.
+
+## 18.11 — Alle 81 Editionen tatsächlich live abgeglichen
+
+- Neuer sauberer Worktree 20261118/edition-live-audit aus origin/main ca51c76, danach FF auf 92dafed mit HTTPS-Basis. Root-AGENTS gelesen; keine zusätzlichen einschlägigen AGENTS. Worklog-SHA-256 vor Edits 3c71b9738d6b5824fd26ecb7c2106fa93d1c0fe20250f84de3e9f321561625db. Kein erneuter lokaler Vertragstest oder Ortsresearch: neuer Prüfpunkt war die komplette öffentliche Auslieferung statt der Teilmenge des letzten Releases.
+- **Read-only live, 81/81 bestanden:** sitemap HTTP 200, 81 eindeutige URLs und kandidatenidentische Bytes. Alle Seiten HTTP 200 ohne Redirect, SHA-256 lokal/live identisch, Titel vorhanden, exakter eigener www-Canonical, keine noindex/none-Sperre im Meta-/HTTP-Robotswert. Robots HTTP 200 führt die Orts-Sitemap und blockiert die öffentlichen Ortspfade nicht. Drei gleichzeitige öffentliche Requests, keine externen Venue-/Owner-Aufrufe.
+- www-Pointer vor und nach Crawl unverändert auf dpl_X1zTXKuTdsJBS4xrwa3md72Y4VaU. Ergebnisse/URLs/Hashes unter docs/village-research/all-editions-live-verification.json; Befund in all-editions-live-audit.md. Suchindex, Rankings und Traffic daraus ausdrücklich nicht abgeleitet. Kein Produktfehler, keine öffentliche Datei und kein Alias geändert.
+
+## 18.11 — Externe Verzeichnisse: Regeln und unveröffentlichter Entwurf
+
+- Sauberer isolierter Worktree 20261118/backlink-rules aus origin/main ca51c76, FF auf b72d021. Fetch bestätigt unverändertes origin/main; neuere travel/*-Stände geprüft. Root-AGENTS gelesen, keine zusätzlichen einschlägigen AGENTS. Worklog-SHA-256 vor Edits 515be6d188fbc60b74f7967162671501aa373c8a462b7856f7b43ce0cf44e99f. Bereits geprüfte 81 Editionen nicht erneut gecrawlt.
+- Offizielle Expat-FAQ und Malta-Verzeichnis, Tripadvisor-Forumregeln und Wikivoyage-Linkregeln geprüft. Expat Business Directory grundsätzlich passender Kanal; echter Formularzugang, Dublettenfreiheit, Basis-Websitefeld und öffentliche Geschäftsidentität noch zu prüfen. Add-business-HTTP-Aufruf führte auf allgemeines Verzeichnis, kein Login-/Formularerfolg behauptet. Tripadvisor/Wikivoyage für diese Werbe-/Guidebacklinks ausgeschlossen; keine Moderationsumgehung.
+- Englischer, ausdrücklich unveröffentlichter 2906-Verzeichnisentwurf mit Zugehörigkeit, exakten URLs und Prüfgrenzen in docs/village-research/backlink-rules-20261118.md. Keine privaten Kontakte, erfundenen Adressen oder Öffnungszeiten. Null Einreichungen und null neue belegte Backlinks. Keine Accountanlage, Nachricht, Zahlung, Produktänderung oder Veröffentlichung. Diff-Whitespace-Prüfung bestanden; keine Produkt-Regressionswiederholung für reine Dokumentation.
+
+## 18.11 — Fährquellen nach Winterfahrplanwechsel geprüft
+
+- Neuer sauberer Worktree 20261118/ferry-evidence aus aktuellem origin/main ca51c76, FF auf ff1a0c5. AGENTS gelesen; keine zusätzlichen Regeln unter docs/ops. Worklog-SHA-256 vor Edits ca9ac2d87e2665c6619f6ee2a0b77e6798e47429655ceb77c05e37f15f6279dc. Neue Prüfung ist die Winterquellenlage nach dem bisherigen 26.10.-Beleg, keine Wiederholung der Geometrie- oder Browsertests.
+- Transport Malta und Betreiberfahrplan bestätigen die benannten Hafenverbindungen; Betreiber trennt Richtung und Winter-/Sonntagszeiten. Unterschiedliche veröffentlichte Tarife und Sommer-Endzeiten dokumentiert statt vereinheitlicht. Kein Preis-/Abfahrtsversprechen übernommen. Betreiber-HTML samt Hash erhalten; Authority per Recherchetool lesbar, direkter Abruf HTTP 403, kein eigener Snapshot behauptet.
+- Befund in docs/village-research/ferry-evidence-20261118.md. Bestehende unbekannte Wartezeit, LIVE_CHECK_REQUIRED und ROUTED_ONLY für nicht belegte Namen bleiben erhalten. Kein Produktdefekt belegt, kein öffentlicher Code/Runtime-Verifikationsdatum geändert. Diff-Prüfung bestanden; keine Nachricht, Scheduler-, Alias- oder Produktionsänderung.
+
+## 18.11 — Interne Ortslinks und Saved-homes-Einstieg geprüft
+
+- Sauberer isolierter Worktree 20261118/link-integrity aus frisch gefetchtem origin/main ca51c76, FF auf 0ac0c41 einschließlich jüngster Fährquellenprüfung. Root-AGENTS gelesen, keine zusätzlichen docs/public-Regeln. Worklog-SHA-256 vor Edits 907fc653c6917450efaf75d8708878edf2f11f9746cc3bc35cc7158f93539f2d. Neue Prüfung: lokale Link-/Fragmentintegrität, keine Wiederholung des 81-Seiten-Livecrawls.
+- 82 Dokumente / 1.056 statische Marketplace-Referenzen / 263 Fragmentreferenzen untersucht. Ein zunächst fehlend erscheinendes #saved-Ziel ist bestehende JS-Aktion, kein kaputter Anker: Live-Chrome bei 390 Touch/1440 Desktop bestätigt Favourites aria-pressed=true, keinen Hashwechsel, keinen Überlauf und keine Seitenfehler. Kein Produktpatch aufgrund statischer Fehlklassifikation.
+- Befund und JSON unter docs/village-research/internal-link-integrity-20261118*, separater Livebeleg saved-homes-live-20261118.json; Skripte/Screenshots im erhaltenen Worktree artifacts/20261118-link-integrity. Dynamische Fremdpfade/externe Ziele/API-Logik ausdrücklich nicht mitgeprüft. Keine öffentliche Datei, Nachricht, Produktions- oder Aliasänderung. Diff-Prüfung bestanden.
+
+## 18.11 — Verzögerte Karte: Dependency-Retry korrigiert
+
+- Neuer sauberer Worktree 20261118/map-retry aus origin/main ca51c76, FF auf f9f6a6c. AGENTS gelesen, keine zusätzlichen public/docs-Regeln. Worklog-SHA-256 vor Edits 21f1730cbc7f191a12fff6d5223c3d87f3281cfe4e0ecaf78170293388b825fd; property-map.mjs vorher 09bf91208c477bf0fe2aa919498c68b1f6405b59d38a296f4e83276aa236ff7f.
+- Kontrollierter Browserfehler: erster CSS-Abruf blockiert, Script lädt; zweiter Kartenaufruf meldet Erfolg, bleibt aber ungestylt. Vorher 390/1440 reproduziert. Loader verlangt nun gemeinsame CSS-/Script-Bereitschaft, räumt fehlgeschlagenen Versuch auf und erlaubt späteren Nutzeraufruf. Kein Dauerretry oder Scheduler.
+- Nachher CSS-/JS-Ausfall getrennt bei 390/1440: 4/4 Wiederherstellungen bestanden. Normalbrowser 360/390/430/768/1440, 81-Editionen-SEO-Vertrag und drei Routen-/Fährentests bestanden. Kleine öffentliche Änderung nur property-map.mjs; Befund/JSON in docs/village-research/map-retry*. Livebasis www weiterhin dpl_X1zTXKuTdsJBS4xrwa3md72Y4VaU, NEXUS v119 und Caddy unverändert unabhängig geprüft. Veröffentlichungsprüfung folgt; Vercel-Deployments-Skill für Releaseprüfung gelesen, bestehendes www-only Verfahren bleibt maßgeblich.
+
+## 18.11 — Karten-Retry live veröffentlicht und geprüft
+
+- **LIVE:** www-only Deployment dpl_8uFAedKQ4GW2iGnSntdQC6QrfruV seit 19:16:03 UTC, Quellcommit 7251fd9. Vorheriger Stand dpl_X1zTXKuTdsJBS4xrwa3md72Y4VaU als bedingter Rollback erhalten. Keine globale Promotion. Tatsächliche vorherige Livebasis vor Edit/Deploy bestätigt; app/components/lib/proxy/Next-Konfiguration gegenüber ihrem Quellcommit unverändert.
+- Kandidat READY, neun statische Dateien per Hash geprüft; zwei Previewpfade und Featured-Feed HTTP 200. Danach identische Live-Hashes, Preview-Robots und separate Rating-Passwortmaske bestätigt. Live-Browser 360/390/430/768/1440 bestanden; zusätzlich vier kontrollierte CSS-/Script-Ausfälle gegen das Live-Modul mit erfolgreicher späterer Wiederherstellung. Kein Überlauf/Seitenfehler im normalen Browserablauf. Build bestanden, bestehender Typecheck-Skip ausdrücklich nicht als Typprüfung gewertet.
+- CAS-Guard bestätigt Apex/CRM/Projektalias, NEXUS ONE v119, NEXUS-Vorschau und Caddy vor/nach unverändert. Releasebeleg docs/village-research/map-retry-release-20261118.json, Screenshots/Skripte/Rückweg in artifacts/20261118-map-retry. Keine Nachrichten, Outreach- oder Scheduleränderung. Keine vollständige Backend-Logprüfung behauptet.

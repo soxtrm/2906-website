@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-11-18T10:11:51.825765+00:00",
+  "status": "private-draft-asset",
+  "language": "en",
+  "plannedUrl": "https://www.2906.estate/link-marketplace/areas/kercem-gozo.html",
+  "author": "Josephmercieca98",
+  "takenOn": "2018-06-30",
+  "sourcePage": "https://commons.wikimedia.org/wiki/File:L-entratura_(the_opening_of_the_Lunzjata_Valley).jpg",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "retrievedRendition": "https://merhbamalta.com/images/cards/coast-lunzjata.webp",
+  "creditPage": "https://merhbamalta.com/about#photo-coast-lunzjata",
+  "asset": "docs/village-research/assets/kercem-lunzjata-josephmercieca98.webp",
+  "bytes": 34430,
+  "dimensions": [
+    560,
+    373
+  ],
+  "sha256": "b1c465d45ab1e497cc7f353647754a596cee7c184e0507f846ddc82e01161b4a",
+  "transformation": "None in this step; exact copy of credited resized WebP rendition. Original JPEG not retrieved.",
+  "visualReview": "Stone arched gate with steps at one side and a view toward vegetation in Lunzjata. No people or readable private contact details apparent. The gate is not the Kercem parish church.",
+  "usageLimit": "Supporting image at up to its native 560px CSS width; preserve natural proportions and historic date. Label Lunzjata valley entrance in the wider valley setting. Do not infer a council boundary, step-free access or a route from the village.",
+  "excludedDownload": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Kercem_parish_church.jpg",
+    "httpStatus": 429,
+    "attempts": 1
+  }
+}

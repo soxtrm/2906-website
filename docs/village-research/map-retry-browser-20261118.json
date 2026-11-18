@@ -1,0 +1,38 @@
+[
+  {
+    "width": 390,
+    "failedAsset": "leaflet.css",
+    "cssRequests": 2,
+    "firstFailed": true,
+    "secondSucceeded": true,
+    "styled": true,
+    "error": null
+  },
+  {
+    "width": 390,
+    "failedAsset": "leaflet.js",
+    "cssRequests": 2,
+    "firstFailed": true,
+    "secondSucceeded": true,
+    "styled": true,
+    "error": null
+  },
+  {
+    "width": 1440,
+    "failedAsset": "leaflet.css",
+    "cssRequests": 2,
+    "firstFailed": true,
+    "secondSucceeded": true,
+    "styled": true,
+    "error": null
+  },
+  {
+    "width": 1440,
+    "failedAsset": "leaflet.js",
+    "cssRequests": 2,
+    "firstFailed": true,
+    "secondSucceeded": true,
+    "styled": true,
+    "error": null
+  }
+]

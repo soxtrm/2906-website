@@ -1,0 +1,84 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "browser": "Chrome/157.0.8103.80",
+  "results": [
+    {
+      "width": 360,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 430,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 768,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    }
+  ],
+  "neighbours": [
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/fontana-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/san-lawrenz-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/victoria-gozo.html",
+      "status": 200
+    }
+  ],
+  "checkedAt": "2026-11-18T11:07:16.109677+00:00",
+  "sourceBaseline": "6d99e44",
+  "draftSha256": "f92134eaf6c5b0dad70578126dce92eeebbaab1041adad06edd16570fbe25b08",
+  "evidenceDirectory": "artifacts/20261118-kercem-preview",
+  "visualReview": "390px and 1440px full-page screenshots inspected; valley-gate photograph within native width with historical date, location and licence visible.",
+  "existingPublishedEditionContract": {
+    "editions": 80,
+    "result": "PASS"
+  },
+  "routeRegression": {
+    "passed": 3,
+    "failed": 0
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "browser": "Chrome/157.0.8103.80",
+  "results": [
+    {
+      "width": 360,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 430,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 768,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "photoWidth": 560,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    }
+  ],
+  "neighbours": [
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/xlendi-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/fontana-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/victoria-gozo.html",
+      "status": 200
+    }
+  ],
+  "checkedAt": "2026-11-18T07:14:57.463118+00:00",
+  "sourceBaseline": "33dfcb6",
+  "draftSha256": "2d4b5bcac2c5713ff9a2140032aa50d01a7d88eb57b60606d8c4413c79a75ccd",
+  "evidenceDirectory": "artifacts/20261118-munxar-preview",
+  "visualReview": "390px and 1440px full-page screenshots inspected; supporting coastal photograph remains within native width; location, historical date and licence visible.",
+  "existingPublishedEditionContract": {
+    "editions": 79,
+    "result": "PASS"
+  },
+  "routeRegression": {
+    "passed": 3,
+    "failed": 0
+  }
+}

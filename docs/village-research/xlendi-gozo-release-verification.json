@@ -1,0 +1,166 @@
+{
+  "mode": "Publish",
+  "timeUtc": "2026-11-18T04:14:20.1081779Z",
+  "alias": "www.2906.estate",
+  "previous": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+  "target": "dpl_BN1vFunvvt7SakS9W9u3RVGtPRFR",
+  "otherAliasesBefore": {
+    "2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "crm.2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "2906-website-6zbi.vercel.app": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt"
+  },
+  "otherAliasesAfter": {
+    "2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "crm.2906.estate": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt",
+    "2906-website-6zbi.vercel.app": "dpl_2NkFZtNgjp7j9xMmXZRLPEZufhNt"
+  },
+  "nexus": [
+    "/opt/nexusbooking/releases/20261118-place-claims-v119",
+    "/opt/nexus-web-preview/releases/20261118-places-claims-2308",
+    "active",
+    "b8a04917e99ef95b45c1ec9405cc024082674b8271e164b25cb2b44e7b5964a5"
+  ],
+  "sourceCommit": "2624204d1d50f11b6874fe06159dda3b1df161e4",
+  "status": "LIVE",
+  "language": "en",
+  "url": "https://www.2906.estate/link-marketplace/areas/xlendi-gozo.html",
+  "browser": {
+    "browser": "Chrome/157.0.8103.80",
+    "results": [
+      {
+        "width": 360,
+        "photoWidth": 1280,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 390,
+        "photoWidth": 1280,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 430,
+        "photoWidth": 1280,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 768,
+        "photoWidth": 1280,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      },
+      {
+        "width": 1440,
+        "photoWidth": 1280,
+        "photoCredit": true,
+        "mapRequestsBeforeClick": 0,
+        "realTileLoaded": true,
+        "labelVerified": true,
+        "overflow": 0,
+        "pageErrors": 0,
+        "marketplaceSearch": true,
+        "liveListingsRendered": true
+      }
+    ]
+  },
+  "http": {
+    "results": [
+      {
+        "route": "/link-marketplace/areas/xlendi-gozo.html",
+        "status": 200,
+        "sha256": "8f2c7517b298b9dfb37791c25caf7f315e372b2141775e41936af870ec3fe3f8"
+      },
+      {
+        "route": "/link-marketplace/areas/fontana-gozo.html",
+        "status": 200,
+        "sha256": "44df2a5e8f85df145cbcae5885e8eeb9e80dfb92706986fc701676a8d864f971"
+      },
+      {
+        "route": "/link-marketplace/areas/xewkija-gozo.html",
+        "status": 200,
+        "sha256": "07933b641d0e8bc2078df2ab5704957e0fdab3ea6e29eac1f8da63329505aeff"
+      },
+      {
+        "route": "/link-marketplace/assets/xlendi-bay-wusel007.jpg",
+        "status": 200,
+        "sha256": "25b13dfaaf7cefa0cca5f404e93862bfafd99604c633f7c3701f92c39edb34a0"
+      },
+      {
+        "route": "/link-marketplace/editions.mjs",
+        "status": 200,
+        "sha256": "c08613d8e85dee7fb8598340d81f90a039d1024b6f3f26aa5d6ed36e91bc6b66"
+      },
+      {
+        "route": "/link-marketplace/index.html",
+        "status": 200,
+        "sha256": "973f848e53044716c1b57eca634402650c597f4dab1ae1c0f18396b47df5e751"
+      },
+      {
+        "route": "/neighbourhood-sitemap.xml",
+        "status": 200,
+        "sha256": "dd1c7aff8eccd2c9b86ad1d3582a571c9dd801ea9040c9df8d967d439af05a07"
+      },
+      {
+        "route": "/link-marketplace/areas/edition-map.mjs",
+        "status": 200,
+        "sha256": "b37ffd4eb22515466bd095975aa5ba6bb7fe5e572efbf690ea15d8a0f3d7012d"
+      },
+      {
+        "route": "/private-preview",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      },
+      {
+        "route": "/preview-f100547a49/lab/spatial/map",
+        "status": 200,
+        "robots": "noindex, nofollow, noarchive"
+      },
+      {
+        "route": "/api/properties/featured",
+        "status": 200,
+        "publicFeed": true
+      }
+    ],
+    "apex": {
+      "status": 307,
+      "destination": "https://www.2906.estate/"
+    },
+    "rating": {
+      "status": 200,
+      "passwordGate": true
+    }
+  },
+  "checks": {
+    "neighbourhoodEditions": 79,
+    "routeRegressionPassed": 3,
+    "routeRegressionFailed": 0
+  },
+  "evidenceDirectory": "artifacts/20261118-xlendi-release",
+  "rollback": "Run alias-guard.ps1 -Mode Rollback in the evidence directory from this worktree, after verifying it still matches the live pointers. Restores the HTTPS deployment, not the superseded pre-HTTPS release."
+}
