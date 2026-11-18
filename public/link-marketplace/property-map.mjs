@@ -1,7 +1,13 @@
 let leafletLoading;
 async function leaflet(){
- if(window.L)return window.L;
- if(!leafletLoading)leafletLoading=Promise.all([new Promise((resolve,reject)=>{const css=document.createElement('link');css.rel='stylesheet';css.href='/link-marketplace/vendor/leaflet.css';css.onload=resolve;css.onerror=reject;document.head.append(css);}),new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/link-marketplace/vendor/leaflet.js';script.onload=resolve;script.onerror=reject;document.head.append(script);})]).then(()=>window.L);
+ if(!leafletLoading){
+  const css=document.createElement('link');
+  let script;
+  leafletLoading=Promise.all([
+   new Promise((resolve,reject)=>{css.rel='stylesheet';css.href='/link-marketplace/vendor/leaflet.css';css.onload=resolve;css.onerror=reject;document.head.append(css);}),
+   window.L?Promise.resolve():new Promise((resolve,reject)=>{script=document.createElement('script');script.src='/link-marketplace/vendor/leaflet.js';script.onload=resolve;script.onerror=reject;document.head.append(script);})
+  ]).then(()=>window.L).catch(error=>{css.remove();script?.remove();leafletLoading=undefined;throw error;});
+ }
  return leafletLoading;
 }
 const colours={swimming:'#21e1ef',daily:'#f6c66b',social:'#ff788f',wellbeing:'#7fe8a6',mobility:'#a797ff'};
