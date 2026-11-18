@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-11-18T18:06:11.889Z",
+  "pages": 82,
+  "staticReferences": 1056,
+  "fragments": 263,
+  "failures": [],
+  "dynamicFragments": [
+    {
+      "page": "index.html",
+      "raw": "#saved",
+      "requires": "Browser verification of existing marketplace.js click handler"
+    }
+  ],
+  "dynamicPathsNotValidated": [
+    "/",
+    "/Link",
+    "/Link/assets/favicon.svg",
+    "/Link/fonts.css",
+    "/link-matrix"
+  ],
+  "scope": "Local static targets and HTML fragments only; external destinations, runtime module imports and dynamic APIs are not validated."
+}
