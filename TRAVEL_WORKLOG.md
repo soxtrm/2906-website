@@ -2207,3 +2207,8 @@ Visuelle Bildpruefung: Foto zeigt dunklen Fort-Innenraum, als Swieqi-Hero ungeei
 - The server proxy file `/etc/caddy/Caddyfile` gained a block for `api.2906.estate`; its hash changed.
 - Verified: candidate tested behind deployment protection, then 48 logged-in and public checks through the live hostnames, all backend calls arriving through the HTTPS proxy, port 3001 closed from outside, NEXUS inventory calls on the server unaffected.
 - Rollback (only together): reopen the port on the server (`/root/security-hotfix-20261117/server/api-https.sh open-3001`), then set the aliases back to the ids above.
+## 18.11 — Ix-Xlendi quellengeprüfter Rechercheentwurf
+
+- Neuer sauberer Worktree 20261118/xlendi-research aus aktuellem origin/main ca51c76, danach FF auf letzte Reiseübergabe 3f75849. Root-AGENTS gelesen; keine zusätzlichen anwendbaren AGENTS. Worklog-SHA-256 vor Edits f9afebdbbad931c60cc29891d399b857ebab6778290f730f57b562eaeab05206. Bestehende 78 Editionen und jüngste Prüfungen nicht wiederholt.
+- **Privater Entwurf, Englisch:** geplante URL https://www.2906.estate/link-marketplace/areas/xlendi-gozo.html (HTTP 404, ebenso xlendi.html). Quellen zu Bucht, Turm, Munxar-Zuständigkeit, Ta’ Karolina, Tauchbetrieb und MPT 306/330 in docs/village-research/xlendi-gozo-research.md. Keine Rankings, aktuellen Öffnungszeiten oder Bade-/Zugangsversprechen.
+- OSM HTTP 200 bestätigt Bussteig 1827 als Node 324401663 bei 36.0306763 N, 14.2184355 E; separaten Fahrbahn-Stopppunkt unterschieden. Commons-Bildkandidat von Wusel007 (05.10.2012, CC BY-SA 3.0) dokumentiert. Bilddownload, Hash und Sichtprüfung noch ausstehend. Keine öffentliche Datei und kein Alias geändert.
