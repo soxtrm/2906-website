@@ -80,16 +80,13 @@ const posts = page => page.crmCalls.filter(c => c.method === 'POST' && c.path ==
 const settle = () => new Promise(r => setTimeout(r, 450))   // let the dialog's open animation finish before a screenshot
 const clickText = (page, sel, text) => page.evaluate((s, t) => { const el = [...document.querySelectorAll(s)].find(e => e.textContent.trim().includes(t) && !e.disabled); if (!el) throw new Error('no ' + t); el.click() }, sel, text)
 
-test('desktop: Inventory → Publish to Facebook → Page → Photos → Review → Publish, confirmed by Meta', async () => {
+test('desktop: listing page → Customise post → Page → Photos → Review → Publish, confirmed by Meta', async () => {
   const browser = await launch()
   try {
     const fb = fbFixtures()
-    const page = await openPage(browser, { path: '/crm/inventory', width: 1440, height: 900, fixtures: fixturesWith(fb) })
-    await page.waitForSelector('button[aria-label="Publish to Facebook"]')
-    const buttons = await page.$$eval('button[aria-label^="Publish to Facebook"], button[aria-label^="Marked"]', b => b.map(x => ({ label: x.getAttribute('aria-label'), disabled: x.disabled })))
-    assert.equal(buttons.filter(b => b.label === 'Publish to Facebook').length, 1, 'only the agent\'s own listing gets the button')
-    assert.ok(buttons.some(b => b.label.startsWith('Marked') && b.disabled), '"no Facebook" listings are disabled with an explanation')
-    await page.click('button[aria-label="Publish to Facebook"]')
+    const page = await openPage(browser, { path: '/crm/property/41', width: 1440, height: 900, fixtures: fixturesWith(fb) })
+    await page.waitForSelector('button[aria-label="Choose the Page, photos and text before posting"]')
+    await page.click('button[aria-label="Choose the Page, photos and text before posting"]')
     await page.waitForSelector('.fbp-dialog [role="radiogroup"]')
     const accent = await page.$eval('.fbp-dialog', el => getComputedStyle(el).getPropertyValue('--fbp-accent').trim())
     assert.equal(accent, '#c2410c', 'the agent\'s own colour is the accent')
@@ -144,7 +141,7 @@ test('mobile: property page panel, full-screen dialog, duplicate needs explicit 
     fb.state.duplicateOnce = true
     const page = await openPage(browser, { path: '/crm/property/41', width: 390, height: 844, fixtures: fixturesWith(fb) })
     await page.waitForSelector('section[aria-label="Facebook posts for this listing"]')
-    await page.click('button[aria-label="Publish to Facebook"]')
+    await page.$eval('button[aria-label="Choose the Page, photos and text before posting"]', el => el.click())   // the panel below is still loading and can shift the layout under a pointer click
     await page.waitForSelector('.fbp-dialog [role="radiogroup"]')
     const box = await page.$eval('.fbp-dialog', el => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), x: Math.round(r.x) } })
     assert.deepEqual(box, { w: 390, h: 844, x: 0 }, 'full screen on a phone')
@@ -196,6 +193,20 @@ test('setup pending: no publish buttons until the server is configured', async (
     const page = await openPage(browser, { path: '/crm/inventory', width: 1440, height: 900, fixtures: fixturesWith(fbFixtures({ configured: false })) })
     await page.waitForSelector('.inventory-desktop-row, tr')
     await new Promise(r => setTimeout(r, 800))
-    assert.equal(await page.$$eval('button[aria-label="Publish to Facebook"]', b => b.length), 0)
+    assert.equal(await page.$$eval('[data-fb-quick-publish], button[aria-label="Choose the Page, photos and text before posting"], button[aria-label="Publish to Facebook"]', b => b.length), 0)
+  } finally { await browser.close() }
+})
+
+test('inventory: every listing has the one-click button, also for listings of other agents; "no Facebook" listings are disabled', async () => {
+  const browser = await launch()
+  try {
+    const page = await openPage(browser, { path: '/crm/inventory', width: 1440, height: 900, fixtures: fixturesWith(fbFixtures()) })
+    await page.waitForSelector('[data-fb-quick-publish]')
+    const buttons = await page.$$eval('[data-fb-quick-publish]', b => b.map(x => ({ ref: x.getAttribute('data-fb-quick-publish'), disabled: x.disabled, label: x.getAttribute('aria-label') })))
+    const byRef = Object.fromEntries(buttons.map(b => [b.ref, b]))
+    assert.equal(byRef['2906-9541'].disabled, false, 'own listing')
+    assert.equal(byRef['2906-9543'].disabled, false, 'a listing of another agent can be posted too')
+    assert.equal(byRef['2906-9542'].disabled, true, 'owner said no Facebook')
+    assert.match(byRef['2906-9542'].label, /no Facebook/)
   } finally { await browser.close() }
 })
