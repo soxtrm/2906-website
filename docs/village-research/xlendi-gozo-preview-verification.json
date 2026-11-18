@@ -1,0 +1,84 @@
+{
+  "status": "private preview",
+  "language": "en",
+  "browser": "Chrome/157.0.8103.80",
+  "results": [
+    {
+      "width": 360,
+      "photoWidth": 1280,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "photoWidth": 1280,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 430,
+      "photoWidth": 1280,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 768,
+      "photoWidth": 1280,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "photoWidth": 1280,
+      "photoCredit": true,
+      "mapRequestsBeforeClick": 0,
+      "realTileLoaded": true,
+      "labelVerified": true,
+      "overflow": 0,
+      "pageErrors": 0
+    }
+  ],
+  "neighbours": [
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/fontana-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/sannat-gozo.html",
+      "status": 200
+    },
+    {
+      "url": "https://www.2906.estate/link-marketplace/areas/victoria-gozo.html",
+      "status": 200
+    }
+  ],
+  "checkedAt": "2026-11-18T03:11:17.374440+00:00",
+  "sourceBaseline": "c04d952",
+  "draftSha256": "82a7ba4b80a8ba5452c10cca5ebe8bd11a3b5188cfa8e35c320984286e4a709e",
+  "evidenceDirectory": "artifacts/20261118-xlendi-preview",
+  "visualReview": "390px and 1440px full-page screenshots inspected; uncropped panoramic composition and historical photo credit visible.",
+  "existingPublishedEditionContract": {
+    "editions": 78,
+    "result": "PASS"
+  },
+  "routeRegression": {
+    "passed": 3,
+    "failed": 0
+  }
+}
