@@ -1,0 +1,92 @@
+[
+  {
+    "name": "overview says what needs the owner",
+    "ok": true,
+    "extra": "3 viewing requests are waiting for your answer."
+  },
+  {
+    "name": "nav badge shows waiting requests",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "requests: three waiting",
+    "ok": true,
+    "extra": "3"
+  },
+  {
+    "name": "competing requests linked, not merged",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "compare view shows both requests for the same slot",
+    "ok": true,
+    "extra": "2"
+  },
+  {
+    "name": "second accept for the same time is refused (no double booking)",
+    "ok": true,
+    "extra": "Viewing confirmed. The requester has been told. | You already have a confirmed viewing at 17:30 for this property."
+  },
+  {
+    "name": "calendar draws viewing hours as shutters",
+    "ok": true,
+    "extra": "3"
+  },
+  {
+    "name": "dragging on a day opens \"save viewing hours\"",
+    "ok": true,
+    "extra": "Thursday, 10:00 to 12:00 at Tower Road shared flat"
+  },
+  {
+    "name": "weekly rule saved",
+    "ok": true,
+    "extra": "Tower Road shared flatEvery Monday16:00–19:00Remove / Tower Road shared flatEvery Wednesday10:00–13:00Remove / Tower Road shared flatEvery Thursday10:00–12:00Remove / Tower Road shared flatEvery Friday15:00–18:00Remove / Seafront apartmentEvery Tuesday17:00–19:30Remove / Seafront apartmentEvery Saturday10:00–12:00Remove / Rotunda townhouseEvery Thursday16:30–18:30Remove"
+  },
+  {
+    "name": "room plan renders one zone per room",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "switching a shared flat with a tenant to long let is blocked",
+    "ok": true,
+    "extra": "1 room is occupied (Room 1). The whole flat can only be offered once they are free."
+  },
+  {
+    "name": "exclusive deal visible with end date and release",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "revoking a channel starts delisting and shows it",
+    "ok": true,
+    "extra": "NEXUS DirectBeing removed"
+  },
+  {
+    "name": "ARGUS Main thread with structured buttons",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "mobile: no sideways scroll",
+    "ok": true,
+    "extra": "0"
+  },
+  {
+    "name": "mobile: bottom tab bar",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "mobile: buttons are thumb-sized",
+    "ok": true,
+    "extra": "46"
+  },
+  {
+    "name": "no page errors and no backend calls",
+    "ok": true,
+    "extra": ""
+  }
+]

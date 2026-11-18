@@ -40,6 +40,19 @@ export default function proxy(req: NextRequest) {
   // turns otherwise valid owner links into a 404 on the public domains.
   if (pathname.startsWith('/owner-schedule/') || pathname.startsWith('/owner-upload/')) return NextResponse.next()
 
+  // Owner Workspace (2026-11-18): owner.2906.estate → /owner/*, no i18n.
+  // Preview only: hidden on the public domains until owner sign-in exists.
+  if (host.startsWith('owner.')) {
+    if (/^\/owner(\/|$)/.test(pathname)) return NextResponse.next()
+    const url = req.nextUrl.clone()
+    url.pathname = pathname === '/' ? '/owner' : `/owner${pathname}`
+    return NextResponse.rewrite(url)
+  }
+  if (/^\/owner(\/|$)/.test(pathname)) {
+    if (['2906.estate', 'www.2906.estate'].includes(host)) return new NextResponse('Not found', { status: 404 })
+    return NextResponse.next()
+  }
+
   if (host.startsWith('crm.')) {
     if (pathname.startsWith('/crm')) return NextResponse.next()
     const url = req.nextUrl.clone()
