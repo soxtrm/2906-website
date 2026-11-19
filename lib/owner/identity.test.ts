@@ -48,3 +48,18 @@ test('owner details fill only empty ARGUS fields; differences are flagged, not o
   assert.deepEqual(r.fill, { address: '12 Tower Road', companyNumber: 'C 12345' })
   assert.deepEqual(r.conflicts, [{ field: 'legalName', argus: 'Maria Grech', owner: 'Maria Borg' }])
 })
+
+import { acceptWaVerify, parseWaVerify, waLink, waToken } from './identity.ts'
+
+test('WhatsApp verification: the sender of the prepared message is the confirmed number', () => {
+  const t = waToken(() => 0.5)
+  assert.match(t, /^[A-Z2-9]{6}$/)
+  assert.equal(parseWaVerify(`sync verify ${t.toLowerCase()}`), t)
+  assert.equal(parseWaVerify('hello'), null)
+  assert.equal(waLink('+356 2000 0000', t), `https://wa.me/35620000000?text=SYNC%20verify%20${t}`)
+  const p = { token: t, createdAt: 1000, accountEmail: 'm@example.com' }
+  assert.deepEqual(acceptWaVerify(p, '+356 7900 1234', `SYNC verify ${t}`, 2000), { ok: true, phone: '35679001234' })
+  assert.deepEqual(acceptWaVerify(p, '+356 7900 1234', 'SYNC verify ZZZZZZ', 2000), { ok: false, reason: 'mismatch' })
+  assert.deepEqual(acceptWaVerify(p, '+356 7900 1234', `SYNC verify ${t}`, 1000 + 16 * 60_000), { ok: false, reason: 'expired' })
+  assert.deepEqual(acceptWaVerify(null, '+356 7900 1234', `SYNC verify ${t}`, 2000), { ok: false, reason: 'no_token' })
+})

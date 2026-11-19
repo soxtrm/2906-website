@@ -115,3 +115,40 @@ export function detailsProgress(d: OwnerDetails, company: boolean) {
   const done = need.filter(k => (d[k] || '').toString().trim()).length
   return { done, total: need.length }
 }
+
+// ── verification by WhatsApp message (Kev, 19 Nov 2026) ──────────────────────
+// The owner taps "Verify with WhatsApp": WhatsApp opens with a prepared message
+// to ARGUS Main ("SYNC verify K7P2QX"). When ARGUS Main receives it, the sender
+// number is the confirmed number: nobody can send from a phone that is not
+// theirs, and the owner does not even type the number. The token is one-time,
+// valid 15 minutes, tied to the account that asked for it.
+const TOKEN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no 0/O/1/I
+export const WA_TOKEN_TTL_MS = 15 * 60_000
+
+export function waToken(rand: () => number = Math.random) {
+  return Array.from({ length: 6 }, () => TOKEN_ALPHABET[Math.floor(rand() * TOKEN_ALPHABET.length)]).join('')
+}
+export const waVerifyText = (token: string) => `SYNC verify ${token}`
+
+/** reads the token out of an incoming WhatsApp text, forgiving spacing and case */
+export function parseWaVerify(text: string): string | null {
+  const m = (text || '').toUpperCase().match(/SYNC\s*(?:VERIFY)?\s*[:#-]?\s*([A-Z2-9]{6})\b/)
+  return m ? m[1] : null
+}
+
+/** wa.me link that opens WhatsApp with the message ready to send */
+export function waLink(mainNumber: string, token: string) {
+  const n = normalizePhone(mainNumber)
+  return n ? `https://wa.me/${n}?text=${encodeURIComponent(waVerifyText(token))}` : null
+}
+
+export type WaPending = { token: string; createdAt: number; accountEmail: string }
+/** what the ARGUS Main webhook does with an incoming message */
+export function acceptWaVerify(p: WaPending | null, fromPhone: string, text: string, now: number): { ok: true; phone: string } | { ok: false; reason: 'no_token' | 'expired' | 'mismatch' | 'bad_number' } {
+  if (!p) return { ok: false, reason: 'no_token' }
+  if (now - p.createdAt > WA_TOKEN_TTL_MS) return { ok: false, reason: 'expired' }
+  if (parseWaVerify(text) !== p.token) return { ok: false, reason: 'mismatch' }
+  const phone = normalizePhone(fromPhone)
+  if (!phone) return { ok: false, reason: 'bad_number' }
+  return { ok: true, phone }
+}

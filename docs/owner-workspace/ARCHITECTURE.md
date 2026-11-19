@@ -202,3 +202,9 @@ Kev: anyone may register with email and password. After sign-up the owner adds a
 **Agency directory.** `lib/owner/agency-directory.ts` lists real Malta agencies from public sources, biggest first, then freelance agents, then all other approved agencies. Listing an agency here does not mean it is connected. Agencies register themselves and upload their own logo; until then a monogram is shown.
 
 **Not before the security gate.** This needs the hardened auth from the gate (`crm.js:148`), a real SMS/WhatsApp OTP sender on an operator session, and rate limits.
+
+### Verification by WhatsApp message, channel choice (19 Nov 2026)
+
+- **Default is WhatsApp the other way round.** The owner taps "Verify with WhatsApp", and `wa.me/<ARGUS Main>?text=SYNC verify K7P2QX` opens. They press send. The ARGUS Main webhook, which already only accepts the WAHA container through `middleware/internalOnly.js`, runs `acceptWaVerify()`: the token must match, be at most 15 minutes old, and be used once. The **sender number** is then the confirmed number. No code is sent out and no number is typed. ARGUS Main's number comes from `NEXT_PUBLIC_ARGUS_MAIN_WA`.
+- **Without WhatsApp:** the owner gets a 6-digit code by SMS (`checkCode`, 10 minutes, 5 tries).
+- **Channel afterwards:** WhatsApp, SMS, email or "only in SYNC" (`profile.notify.channel`). The ARGUS Main conversation is the same on every channel, and replies come back into the same chat.

@@ -78,7 +78,7 @@ export function ArgusChat({ className = '' }: { className?: string }) {
         </span>
         <div className="ow-wa-title">
           <b key={headName} className="ow-wa-name">{headName}</b>
-          <span>{headSub}{writer && writer.kind !== 'system' ? '' : ' · synced with your WhatsApp'}</span>
+          <span>{headSub}{writer && writer.kind !== 'system' ? '' : ` · ${({ whatsapp: 'synced with your WhatsApp', sms: 'also by SMS', email: 'also by email', app: 'here in SYNC' } as const)[s.profile.notify.channel || 'whatsapp']}`}</span>
         </div>
         <button type="button" className="ow-wa-icon" aria-label="Search the chat" aria-pressed={find !== null} onClick={() => setFind(f => (f === null ? '' : null))}><Search size={19} /></button>
       </header>

@@ -277,7 +277,7 @@ export interface OwnerProfile {
   name: string
   defaults: Distribution
   hidePriceFor: Audience[]
-  notify: { whatsapp: boolean; email: boolean; quietFrom: string; quietTo: string }
+  notify: { whatsapp: boolean; email: boolean; quietFrom: string; quietTo: string; channel?: Channel }
   /** people linked to this owner account (partner, family, property manager). They
    *  share one conversation with ARGUS, so nobody is contacted twice. */
   delegates: Person[]
@@ -288,6 +288,10 @@ export interface OwnerProfile {
   /** who ARGUS writes to for this account: 'me' or a delegate's name */
   mainContact?: string
 }
+
+/** how ARGUS Main reaches the owner; the chat in SYNC works the same on every channel */
+export type Channel = 'whatsapp' | 'sms' | 'email' | 'app'
+export const CHANNEL_LABEL: Record<Channel, string> = { whatsapp: 'WhatsApp', sms: 'SMS', email: 'Email', app: 'Only here in SYNC' }
 
 export interface Person {
   name: string

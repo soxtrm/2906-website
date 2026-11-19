@@ -7,7 +7,7 @@ import { act, modeSwitchCheck, revokedBy, effectiveDistribution, recipients, typ
 import { buildDemo, type Demo } from './fixtures'
 import { MODE_LABEL, MODE_PERIOD, type DocumentItem, type OwnerProfile, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
 import { extractWishes, mergeWishes, type Wish } from './wishes'
-import { backfill, checkCode, matchOwner, normalizePhone, type CodeState, type OwnerDetails } from './identity'
+import { acceptWaVerify, backfill, checkCode, matchOwner, normalizePhone, waToken, type CodeState, type OwnerDetails, type WaPending } from './identity'
 
 async function sha256(s: string) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
@@ -55,6 +55,9 @@ interface Store extends Demo {
   signOut: () => void
   sendCode: (phone: string) => string | null
   confirmCode: (code: string) => { ok: boolean; reason?: string; homes?: number }
+  startWaVerify: () => string
+  receiveWa: (fromPhone: string, text: string) => { ok: boolean; reason?: string; homes?: number }
+  waPending: WaPending | null
   setDetails: (d: Partial<OwnerDetails>) => void
   pickAgency: (id: string, on: boolean, name: string) => void
   pickMany: (ids: string[]) => void
@@ -78,6 +81,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   // the code lives only in memory: in the real system it is sent to the phone and kept as a hash on the server
   const [code, setCode] = useState<CodeState | null>(null)
+  const [wa, setWa] = useState<WaPending | null>(null)
   const loaded = useRef(false)
 
   useEffect(() => {
@@ -99,7 +103,27 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     setData(d => ({ ...d, properties: d.properties.map(p => (p.id === id ? { ...fn(p), updatedAt: `${d.today}T${new Date().toTimeString().slice(0, 5)}` } : p)) }))
 
   const store: Store = useMemo(() => ({
-    ...data, toasts, say, codeSentTo: code?.phone || null,
+    ...data, toasts, say, codeSentTo: code?.phone || null, waPending: wa,
+    startWaVerify() {
+      const token = waToken()
+      setWa({ token, createdAt: Date.now(), accountEmail: data.account?.email || '' })
+      return token
+    },
+    receiveWa(fromPhone, text) {
+      // live: this runs in the ARGUS Main WhatsApp webhook, not in the browser
+      const r = acceptWaVerify(wa, fromPhone, text, Date.now())
+      if (!r.ok) {
+        const why = { no_token: 'Tap "Verify with WhatsApp" first.', expired: 'That took too long. Tap the button again.', mismatch: 'The message did not match. Send it exactly as prepared.', bad_number: 'That number cannot be read.' }[r.reason]
+        say(why, 'err'); return { ok: false, reason: why }
+      }
+      const found = matchOwner(data.argusOwners, r.phone, true)
+      const homes = [...new Set(found.flatMap(f => f.propertyIds))]
+      setData(d => ({ ...d, account: d.account ? { ...d.account, phone: r.phone, phoneConfirmed: true, linked: homes } : d.account,
+        profile: { ...d.profile, phone: `+${r.phone}`, name: d.profile.name || found[0]?.name || '' } }))
+      setWa(null)
+      say(homes.length ? `WhatsApp confirmed. ${homes.length} home${homes.length === 1 ? '' : 's'} found and linked to you.` : 'WhatsApp confirmed. No homes at ARGUS under this number yet; add your first one.')
+      return { ok: true, homes: homes.length }
+    },
     async signUp(email, password) {
       const e = email.trim().toLowerCase()
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { say('Please check the email address.', 'err'); return false }
@@ -328,7 +352,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     },
     readThread(threadId) { setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })) },
     reset() { try { localStorage.removeItem(KEY) } catch { /* */ } setData(buildDemo()); say('Demo data reset.') },
-  }), [data, toasts, say, code]) // eslint-disable-line react-hooks/exhaustive-deps
+  }), [data, toasts, say, code, wa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>
 }

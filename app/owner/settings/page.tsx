@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useOwner } from '@/lib/owner/store'
+import { ChannelPicker } from '@/components/owner/channel-picker'
 
 const HOURS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`)
 
@@ -15,11 +16,9 @@ export default function Settings() {
       </div></div>
       <div className="ow-grid-2">
         <section className="ow-panel">
-          <h2>Messages</h2>
-          <div className="ow-switch"><div><b>WhatsApp</b><p>New requests arrive on WhatsApp with the same buttons as here.</p></div>
-            <button role="switch" aria-checked={n.whatsapp} aria-label="WhatsApp" className="ow-toggle" onClick={() => s.setNotify({ whatsapp: !n.whatsapp })} /></div>
-          <div className="ow-switch"><div><b>Email</b><p>A short daily summary instead of single messages.</p></div>
-            <button role="switch" aria-checked={n.email} aria-label="Email" className="ow-toggle" onClick={() => s.setNotify({ email: !n.email })} /></div>
+          <h2>How ARGUS reaches you</h2>
+          <p className="ow-faint" style={{ margin: '4px 0 12px' }}>Whatever you choose, the chat here stays the same and your answers land in it.</p>
+          <ChannelPicker />
           <div className="ow-switch"><div><b>Quiet hours</b><p>Nothing reaches you in between; it waits until morning.</p></div>
             <span className="ow-inline-form">
               <select aria-label="Quiet from" value={n.quietFrom} onChange={e => s.setNotify({ quietFrom: e.target.value })}>{HOURS.map(h => <option key={h}>{h}</option>)}</select>

@@ -120,9 +120,19 @@
     "extra": ""
   },
   {
-    "name": "sign up: confirmed number finds the 3 homes of the owner",
+    "name": "sign up: WhatsApp verification waits for the prepared message",
+    "ok": true,
+    "extra": "Waiting for your message SYNC verify LGSD3K"
+  },
+  {
+    "name": "sign up: the WhatsApp sender number finds the 3 homes of the owner",
     "ok": true,
     "extra": "Welcome, we found 3 homes"
+  },
+  {
+    "name": "sign up: owners without WhatsApp choose another channel",
+    "ok": true,
+    "extra": ""
   },
   {
     "name": "agencies: the biggest come first",
