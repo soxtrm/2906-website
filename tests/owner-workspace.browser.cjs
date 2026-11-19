@@ -16,7 +16,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   const open = async (vp) => {
     const pg = await browser.newPage(); await pg.setViewport(vp)
     pg.on('pageerror', e => errors.push(e.message))
-    pg.on('response', r => { if (r.url().includes('/api/')) errors.push(`unexpected API call ${r.url()}`) })
+    // the real (non-demo) workspace asks its own SYNC server who is signed in; nothing else may call a backend
+    pg.on('response', r => { if (r.url().includes('/api/') && !/\/api\/sync\/(me|messages)$/.test(new URL(r.url()).pathname)) errors.push(`unexpected API call ${r.url()}`) })
     return pg
   }
   const go = async (pg, p) => { await pg.goto(BASE + p, { waitUntil: 'networkidle2', timeout: 180000 }); await wait(500) }

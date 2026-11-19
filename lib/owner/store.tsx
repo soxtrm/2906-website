@@ -8,6 +8,29 @@ import { buildDemo, buildEmpty, type Demo } from './fixtures'
 import { MODE_LABEL, MODE_PERIOD, type Room, type DocumentItem, type OwnerProfile, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
 import { extractWishes, mergeWishes, type Wish } from './wishes'
 import { acceptWaVerify, backfill, checkCode, matchOwner, normalizePhone, waToken, type CodeState, type OwnerDetails, type WaPending } from './identity'
+import { sync, liveProperties, type LiveAccount, type LiveListing, type LiveMessage, type LiveOwner } from './live'
+
+// A home ARGUS confirmed for this owner, in the workspace's own shape. ARGUS stays
+// the source; changes go back as owner events for an agent to approve.
+function fromArgus(l: LiveListing, today: string, defaults: Property['distribution']['override']): Property {
+  const f = l.facts
+  const sale = !f.rent && !!f.sale
+  const mode: OperatingMode = sale ? 'sale' : 'long_let'
+  const price = (sale ? f.sale : f.rent) || 0
+  return {
+    id: l.sourcePropertyId, ref: l.ref, name: `${f.type || 'Home'} in ${f.locality || 'Malta'}`, address: f.locality || '', town: f.locality || '',
+    photos: f.photos.length ? f.photos : ['/link-marketplace/assets/valletta-old-bakery-street.webp'],
+    mode, modeHistory: [{ mode, from: today }], bedrooms: f.bedrooms ?? 0, bathrooms: f.bathrooms ?? 0,
+    listing: 'live', offers: [{ id: `o${l.sourcePropertyId}`, mode, price, period: MODE_PERIOD[mode], active: true, hidePriceFor: [] }],
+    rooms: [], availableFrom: f.availableFrom || undefined, lastConfirmedAt: today, updatedAt: `${today}T00:00`,
+    distribution: { inherit: true, override: defaults }, channels: [], propertyType: f.type || undefined, features: f.amenities,
+    argus: { externalId: l.externalId, ref: l.ref },
+  }
+}
+const liveMsg = (m: LiveMessage) => ({
+  id: `L${m.id}`, from: (m.from === 'owner' ? 'owner' : 'argus') as 'owner' | 'argus', at: String(m.at).slice(0, 16), text: m.text, propertyId: m.propertyId ?? undefined,
+  sender: m.from === 'owner' ? undefined : { kind: (m.sender.kind === 'agent' ? 'agent' : 'system') as 'agent' | 'system', name: m.sender.name || undefined, agency: m.sender.org || undefined },
+})
 
 async function sha256(s: string) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
@@ -25,6 +48,9 @@ type Toast = { id: number; text: string; tone: 'ok' | 'warn' | 'err' }
 interface Store extends Demo {
   /** true only for the demo with Maria (link with ?demo=1); real owners start empty */
   demo: boolean
+  /** the real SYNC account and what ARGUS shares with it (empty in the demo) */
+  live: { account: LiveAccount | null; owner: LiveOwner | null; ready: boolean }
+  refreshLive: () => Promise<LiveAccount | null>
   setDemo: (on: boolean) => void
   toasts: Toast[]
   say: (text: string, tone?: Toast['tone']) => void
@@ -52,7 +78,7 @@ interface Store extends Demo {
   sendDocument: (docId: string) => void
   setNotify: (n: Partial<OwnerProfile['notify']>) => void
   removeDelegate: (name: string) => void
-  signUp: (email: string, password: string) => Promise<boolean>
+  signUp: (email: string, password: string, name?: string) => Promise<boolean>
   signIn: (email: string, password: string) => Promise<boolean>
   signUpWith: (provider: 'facebook' | 'google' | 'apple') => boolean
   signOut: () => void
@@ -96,6 +122,30 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const [code, setCode] = useState<CodeState | null>(null)
   const [wa, setWa] = useState<WaPending | null>(null)
   const loaded = useRef(false)
+  const [live, setLive] = useState<Store['live']>({ account: null, owner: null, ready: false })
+  const lastMsg = useRef(0)
+
+  const refreshLive = useCallback(async () => {
+    const r = await sync<{ account: LiveAccount; owner: LiveOwner }>('me')
+    if (!r.ok) {
+      setLive({ account: null, owner: null, ready: true })
+      if (r.status === 401) setData(d => ({ ...d, account: null }))
+      return null
+    }
+    const a = r.account
+    setLive({ account: a, owner: r.owner, ready: true })
+    setData(d => {
+      const known = new Set(d.properties.map(p => p.id))
+      const fresh = liveProperties(r.owner).filter(l => !known.has(l.sourcePropertyId)).map(l => fromArgus(l, d.today, d.profile.defaults))
+      return {
+        ...d,
+        account: { email: a.email || a.name || 'SYNC account', pwHash: '', provider: a.email ? 'email' : 'facebook', phone: a.phone?.e164.replace(/^\+/, ''), phoneConfirmed: !!a.phone?.verified, signedIn: true, linked: liveProperties(r.owner).map(l => l.sourcePropertyId) },
+        profile: { ...d.profile, name: d.profile.name || a.name, phone: d.profile.phone || a.phone?.e164, email: d.profile.email || a.email || undefined },
+        properties: [...d.properties, ...fresh],
+      }
+    })
+    return a
+  }, [])
 
   useEffect(() => {
     let isDemo = false
@@ -114,6 +164,29 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     loaded.current = true
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (loaded.current) try { localStorage.setItem(demo ? KEY : KEY_REAL, JSON.stringify(data)) } catch { /* private mode */ } }, [data, demo])
+  useEffect(() => { if (!demo) refreshLive() }, [demo, refreshLive])
+  // ARGUS Main chat: new messages from agents and ARGUS arrive here
+  useEffect(() => {
+    if (demo || !live.account) return
+    let stop = false
+    const pull = async () => {
+      const r = await sync<{ messages: LiveMessage[] }>('messages', { after: lastMsg.current })
+      if (stop || !r.ok || !r.messages.length) return
+      lastMsg.current = Math.max(lastMsg.current, ...r.messages.map(m => m.id))
+      setData(d => {
+        const t1 = d.threads.find(t => t.id === 't1')
+        if (!t1) return d
+        const have = new Set(t1.messages.map(m => m.id))
+        const add = r.messages.filter(m => !have.has(`L${m.id}`)).map(liveMsg)
+        if (!add.length) return d
+        const unread = add.filter(m => m.from !== 'owner').length
+        return { ...d, threads: d.threads.map(t => (t.id === 't1' ? { ...t, unread: t.unread + unread, messages: [...t.messages, ...add] } : t)) }
+      })
+    }
+    pull()
+    const iv = setInterval(pull, 6000)
+    return () => { stop = true; clearInterval(iv) }
+  }, [demo, live.account])
 
   const say = useCallback((text: string, tone: Toast['tone'] = 'ok') => {
     const id = Date.now() + Math.random()
@@ -125,7 +198,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     setData(d => ({ ...d, properties: d.properties.map(p => (p.id === id ? { ...fn(p), updatedAt: `${d.today}T${new Date().toTimeString().slice(0, 5)}` } : p)) }))
 
   const store: Store = useMemo(() => ({
-    ...data, demo, toasts, say,
+    ...data, demo, toasts, say, live, refreshLive,
     setDemo(on) {
       try { if (on) localStorage.setItem('ow_mode', 'demo'); else localStorage.removeItem('ow_mode') } catch { /* */ }
       setDemoState(on); setData(on ? buildDemo() : buildEmpty())
@@ -151,7 +224,13 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       say(homes.length ? `WhatsApp confirmed. ${homes.length} home${homes.length === 1 ? '' : 's'} found and linked to you.` : 'WhatsApp confirmed. No homes at ARGUS under this number yet; add your first one.')
       return { ok: true, homes: homes.length }
     },
-    async signUp(email, password) {
+    async signUp(email, password, name?: string) {
+      if (!demo) {
+        const r = await sync('signup', { email, password, name: name || '' })
+        if (!r.ok) { say(r.message, 'err'); return false }
+        await refreshLive(); say('Account created. One more step: your mobile number.')
+        return true
+      }
       const e = email.trim().toLowerCase()
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { say('Please check the email address.', 'err'); return false }
       if (data.account && data.account.email === e) { say('This email already has an account. Sign in instead.', 'warn'); return false }
@@ -162,19 +241,32 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     },
     signUpWith(provider) {
       const name = { facebook: 'Facebook', google: 'Google', apple: 'Apple' }[provider]
+      if (!demo) {
+        if (provider === 'facebook') { window.location.href = '/api/auth/facebook/start'; return false }
+        say(`${name} sign-in is coming soon. Please use e-mail or Facebook for now.`, 'warn'); return false
+      }
       // preview: no provider is contacted; live: OAuth, then the same mobile + code step
       setData(d => ({ ...d, account: d.account?.provider === provider ? { ...d.account, signedIn: true } : { email: `${d.profile.name.toLowerCase()} via ${name}`, pwHash: '', provider, signedIn: true } }))
       say(data.account?.provider === provider && data.account.phoneConfirmed ? `Welcome back, ${data.profile.name}.` : `Signed in with ${name}. One more step: your mobile number.`)
       return true
     },
     async signIn(email, password) {
+      if (!demo) {
+        const r = await sync('login', { email, password })
+        if (!r.ok) { say(r.message, 'err'); return false }
+        const a = await refreshLive(); say(`Welcome back${a?.name ? `, ${a.name}` : ''}.`)
+        return true
+      }
       const e = email.trim().toLowerCase()
       if (!data.account || data.account.email !== e || data.account.pwHash !== await sha256(`${e}:${password}`)) { say('Email or password is not right.', 'err'); return false }
       setData(d => ({ ...d, account: { ...d.account!, signedIn: true } }))
       say(`Welcome back, ${data.profile.name}.`)
       return true
     },
-    signOut() { setData(d => ({ ...d, account: d.account ? { ...d.account, signedIn: false } : null })); say('Signed out.') },
+    signOut() {
+      if (!demo) { sync('logout'); setLive({ account: null, owner: null, ready: true }); lastMsg.current = 0; setData(buildEmpty()); say('Signed out.'); return }
+      setData(d => ({ ...d, account: d.account ? { ...d.account, signedIn: false } : null })); say('Signed out.')
+    },
     sendCode(phone) {
       const n = normalizePhone(phone)
       if (!n) { say('Please check the number, with country code if it is not Maltese.', 'err'); return null }
@@ -300,6 +392,17 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       if (fresh.length) parts.push(`Noted for ${place}: ${fresh.map(w => `${w.polarity === 'plus' ? '+' : '−'} ${w.label}`).join(', ')}.`)
       if (found.protectedRemark) parts.push('One part I cannot keep: nationality, origin or religion may not be used to choose tenants, so ARGUS does not record or filter by it. Everything else is saved.')
       const reply = parts.join(' ') || 'Got it. If this changes a viewing, use the buttons on the request so everyone gets the same update.'
+      if (!demo && live.account && threadId === 't1') {
+        setData(d => ({ ...d, wishes: mergeWishes(d.wishes, fresh) }))
+        sync<{ message: LiveMessage }>('messages/send', { text, propertyId: scope ?? undefined }).then(r => {
+          if (!r.ok) { say(r.message, 'err'); return }
+          lastMsg.current = Math.max(lastMsg.current, r.message.id)
+          setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, messages: [...t.messages.filter(m => m.id !== `L${r.message.id}`), liveMsg(r.message),
+            ...(fresh.length || found.protectedRemark ? [{ id: `m${Date.now() + 1}`, from: 'argus' as const, sender: { kind: 'system' as const }, propertyId: scope ?? undefined, at, text: reply }] : []),
+          ] } : t)) }))
+        })
+        return
+      }
       setData(d => ({
         ...d,
         wishes: mergeWishes(d.wishes, fresh),
@@ -349,7 +452,11 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
         { id: `m${Date.now() + 1}`, from: 'argus', sender: { kind: 'system' }, propertyId: doc.propertyId, at, text: `Got "${doc.title}". It stays private until you share it with an agency (Documents → Share).` },
       ] } : th)) }))
     },
-    setNotify(n) { setData(d => ({ ...d, profile: { ...d.profile, notify: { ...d.profile.notify, ...n } } })); say('Saved.') },
+    setNotify(n) {
+      setData(d => ({ ...d, profile: { ...d.profile, notify: { ...d.profile.notify, ...n } } })); say('Saved.')
+      const ch = (n as { channel?: string }).channel
+      if (!demo && live.account && ch && ['whatsapp', 'sms', 'email', 'app'].includes(ch)) sync('account/update', { notifyChannel: ch })
+    },
     setProfile(p) { setData(d => ({ ...d, profile: { ...d.profile, ...p } })); say('Profile saved.') },
     updateDelegate(name, p) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.map(x => (x.name === name ? { ...x, ...p } : x)) } })); say('Saved.') },
     removeDelegate(name) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.filter(x => x.name !== name) } })); say(`${name} no longer has access.`) },
@@ -406,7 +513,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     },
     readThread(threadId) { setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })) },
     reset() { try { localStorage.removeItem(demo ? KEY : KEY_REAL) } catch { /* */ } setData(demo ? buildDemo() : buildEmpty()); say(demo ? 'Demo data reset.' : 'Cleared.') },
-  }), [data, demo, toasts, say, code, wa]) // eslint-disable-line react-hooks/exhaustive-deps
+  }), [data, demo, toasts, say, code, wa, live, refreshLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>
 }

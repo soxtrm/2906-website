@@ -20,8 +20,9 @@ export function SocialSignIn({ onDone }: { onDone: () => void }) {
   return (
     <div className="ow-social">
       <button type="button" className="ow-social-btn fb" onClick={() => go('facebook')}><Glyph p="facebook" />Continue with Facebook</button>
-      <button type="button" className="ow-social-btn" onClick={() => go('google')}><Glyph p="google" />Continue with Google</button>
-      <button type="button" className="ow-social-btn" onClick={() => go('apple')}><Glyph p="apple" />Continue with Apple</button>
+      {/* Google and Apple come once their apps are registered; the real site offers Facebook only */}
+      {s.demo && <button type="button" className="ow-social-btn" onClick={() => go('google')}><Glyph p="google" />Continue with Google</button>}
+      {s.demo && <button type="button" className="ow-social-btn" onClick={() => go('apple')}><Glyph p="apple" />Continue with Apple</button>}
       <p className="ow-or"><span>or with email</span></p>
     </div>
   )

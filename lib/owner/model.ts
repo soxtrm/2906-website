@@ -159,6 +159,8 @@ export interface Property {
   furnished?: 'Furnished' | 'Part' | 'Unfurnished'
   /** optional: which room a whole-property photo shows (photo url → room id) */
   photoRooms?: Record<string, string>
+  /** set when the home comes from ARGUS (verified owner link); changes go back as owner events */
+  argus?: { externalId: string; ref: string }
 }
 
 export interface Agency {

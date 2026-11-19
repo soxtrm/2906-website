@@ -447,3 +447,11 @@
 .ow-room-nophoto, .ow-hero-nophoto { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 8px; background: repeating-linear-gradient(135deg, #eef0f6 0 10px, #f6f7fb 10px 20px); color: var(--ow-ink-3); font-weight: 700; font-size: 14px; }
 .ow-hero-nophoto { border: 2px dashed rgba(7, 20, 73, .2); min-height: 240px; aspect-ratio: auto; border-radius: var(--ow-r-lg); font-size: 18px; cursor: pointer; }
 .ow-empty-big { display: grid; gap: 12px; justify-items: start; padding: 28px; }
+
+/* SYNC sign-up: homes ARGUS found for the confirmed number */
+.ow-claims { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 10px; text-align: left; }
+.ow-claims li { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--ow-line, #e3e7f2); border-radius: 14px; background: var(--ow-card, #fff); }
+.ow-claims li > svg { color: var(--ow-accent, #4f6bff); }
+.ow-claims li > span:nth-of-type(1) { display: grid; gap: 2px; }
+.ow-claims small { color: var(--ow-muted, #5b6478); }
+.ow-claims .ow-seg { grid-column: 1 / -1; justify-self: start; }

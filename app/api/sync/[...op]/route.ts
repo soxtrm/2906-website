@@ -1,0 +1,46 @@
+// SYNC owner API for the nexussync.one frontend. Keeps the session in an
+// httpOnly cookie and forwards to the signed ARGUS SYNC account service.
+import { NextRequest, NextResponse } from 'next/server'
+import { argus, clientIp, cookieOptions, sameOrigin, SESSION_COOKIE } from '@/lib/sync/server'
+
+export const dynamic = 'force-dynamic'
+
+// op → ARGUS path; `session` ops get the cookie's session, `issue` ops set it
+const OPS: Record<string, { path: string; session?: boolean; issue?: boolean; end?: boolean }> = {
+  signup: { path: '/signup', issue: true },
+  login: { path: '/login', issue: true },
+  logout: { path: '/logout', session: true, end: true },
+  me: { path: '/me', session: true },
+  'account/update': { path: '/account/update', session: true },
+  'email/start': { path: '/email/start', session: true },
+  'email/confirm': { path: '/email/confirm', session: true },
+  'phone/start': { path: '/phone/start', session: true },
+  'phone/status': { path: '/phone/status', session: true },
+  'claims/decide': { path: '/claims/decide', session: true },
+  'owner/event': { path: '/owner/event', session: true },
+  messages: { path: '/messages', session: true },
+  'messages/send': { path: '/messages/send', session: true },
+}
+
+export async function POST(req: NextRequest, ctx: { params: Promise<{ op: string[] }> }) {
+  const op = (await ctx.params).op.join('/')
+  const spec = OPS[op]
+  if (!spec) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 })
+  if (!sameOrigin(req.headers)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 })
+  const input = await req.json().catch(() => ({})) as Record<string, unknown>
+  delete input.session
+  const token = req.cookies.get(SESSION_COOKIE)?.value
+  if (spec.session && !token) {
+    if (spec.end) { const r = NextResponse.json({ ok: true }); r.cookies.delete(SESSION_COOKIE); return r }
+    return NextResponse.json({ ok: false, error: 'SESSION_INVALID', message: 'Please sign in.' }, { status: 401 })
+  }
+  const body: Record<string, unknown> = { ...input, userAgent: (req.headers.get('user-agent') || '').slice(0, 200) }
+  if (spec.session) body.session = token
+  const { status, body: out } = await argus(spec.path, body, clientIp(req.headers))
+  const session = (out as { session?: { token?: string; maxAgeSeconds?: number } }).session
+  delete (out as { session?: unknown }).session
+  const res = NextResponse.json(out, { status, headers: { 'Cache-Control': 'no-store' } })
+  if (spec.issue && session?.token) res.cookies.set(SESSION_COOKIE, session.token, cookieOptions(session.maxAgeSeconds || 30 * 86400))
+  if (spec.end || status === 401) res.cookies.delete(SESSION_COOKIE)
+  return res
+}

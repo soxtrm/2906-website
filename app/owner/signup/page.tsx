@@ -14,8 +14,15 @@ const ARGUS_MAIN_WA = process.env.NEXT_PUBLIC_ARGUS_MAIN_WA || ''
 import { StarPlay } from '@/components/owner/brand'
 import { SocialSignIn } from '@/components/owner/social-signin'
 import { ChannelPicker } from '@/components/owner/channel-picker'
+import { RealSignUp } from '@/components/owner/real-signup'
 
+// nexussync.one: the real sign-up. ?demo=1: the preview with simulated messages.
 export default function SignUp() {
+  const s = useOwner()
+  return s.demo ? <DemoSignUp /> : <RealSignUp />
+}
+
+function DemoSignUp() {
   const s = useOwner()
   const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3 | 4>(s.account?.signedIn ? (s.account.phoneConfirmed ? 4 : 2) : 1)
