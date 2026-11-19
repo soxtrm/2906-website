@@ -7,6 +7,12 @@ import { act, modeSwitchCheck, revokedBy, effectiveDistribution, recipients, typ
 import { buildDemo, type Demo } from './fixtures'
 import { MODE_LABEL, MODE_PERIOD, type DocumentItem, type OwnerProfile, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
 import { extractWishes, mergeWishes, type Wish } from './wishes'
+import { backfill, checkCode, matchOwner, normalizePhone, type CodeState, type OwnerDetails } from './identity'
+
+async function sha256(s: string) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('')
+}
 
 export interface NewProperty {
   propertyType: string; town: string; address: string; bedrooms: number; bathrooms: number; sizeSqm?: number
@@ -43,6 +49,16 @@ interface Store extends Demo {
   sendDocument: (docId: string) => void
   setNotify: (n: Partial<OwnerProfile['notify']>) => void
   removeDelegate: (name: string) => void
+  signUp: (email: string, password: string) => Promise<boolean>
+  signIn: (email: string, password: string) => Promise<boolean>
+  signOut: () => void
+  sendCode: (phone: string) => string | null
+  confirmCode: (code: string) => { ok: boolean; reason?: string; homes?: number }
+  setDetails: (d: Partial<OwnerDetails>) => void
+  pickAgency: (id: string, on: boolean, name: string) => void
+  pickMany: (ids: string[]) => void
+  setOpenGroups: (g: Partial<{ freelancers: boolean; others: boolean }>) => void
+  codeSentTo: string | null
   setProfile: (p: Partial<Pick<OwnerProfile, 'name' | 'photo' | 'phone' | 'email' | 'languages' | 'mainContact'>>) => void
   updateDelegate: (name: string, p: Partial<OwnerProfile['delegates'][number]>) => void
   addDelegate: (d: OwnerProfile['delegates'][number]) => void
@@ -54,11 +70,13 @@ interface Store extends Demo {
 }
 
 const Ctx = createContext<Store | null>(null)
-const KEY = 'argus_owner_preview_v4'
+const KEY = 'argus_owner_preview_v6'
 
 export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Demo>(() => buildDemo())
   const [toasts, setToasts] = useState<Toast[]>([])
+  // the code lives only in memory: in the real system it is sent to the phone and kept as a hash on the server
+  const [code, setCode] = useState<CodeState | null>(null)
   const loaded = useRef(false)
 
   useEffect(() => {
@@ -80,7 +98,63 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     setData(d => ({ ...d, properties: d.properties.map(p => (p.id === id ? { ...fn(p), updatedAt: `${d.today}T${new Date().toTimeString().slice(0, 5)}` } : p)) }))
 
   const store: Store = useMemo(() => ({
-    ...data, toasts, say,
+    ...data, toasts, say, codeSentTo: code?.phone || null,
+    async signUp(email, password) {
+      const e = email.trim().toLowerCase()
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { say('Please check the email address.', 'err'); return false }
+      if (data.account && data.account.email === e) { say('This email already has an account. Sign in instead.', 'warn'); return false }
+      const pwHash = await sha256(`${e}:${password}`)
+      setData(d => ({ ...d, account: { email: e, pwHash, signedIn: true } }))
+      say('Account created. One more step: your mobile number.')
+      return true
+    },
+    async signIn(email, password) {
+      const e = email.trim().toLowerCase()
+      if (!data.account || data.account.email !== e || data.account.pwHash !== await sha256(`${e}:${password}`)) { say('Email or password is not right.', 'err'); return false }
+      setData(d => ({ ...d, account: { ...d.account!, signedIn: true } }))
+      say(`Welcome back, ${data.profile.name}.`)
+      return true
+    },
+    signOut() { setData(d => ({ ...d, account: d.account ? { ...d.account, signedIn: false } : null })); say('Signed out.') },
+    sendCode(phone) {
+      const n = normalizePhone(phone)
+      if (!n) { say('Please check the number, with country code if it is not Maltese.', 'err'); return null }
+      const c = String(Math.floor(100000 + Math.random() * 900000))
+      setCode({ phone: n, code: c, sentAt: Date.now(), tries: 0 })
+      // preview: shown on screen; live: sent by WhatsApp from ARGUS Main, SMS as fallback
+      return c
+    },
+    confirmCode(entered) {
+      const r = checkCode(code, entered, Date.now())
+      if (r !== 'ok') {
+        if (code && r === 'wrong') setCode({ ...code, tries: code.tries + 1 })
+        const why = { wrong: 'That code is not right.', expired: 'The code has expired. Send a new one.', locked: 'Too many tries. Send a new code.', none: 'Send a code first.' }[r]
+        say(why, 'err'); return { ok: false, reason: why }
+      }
+      const found = matchOwner(data.argusOwners, code!.phone, true)
+      const homes = [...new Set(found.flatMap(f => f.propertyIds))]
+      setData(d => ({ ...d, account: d.account ? { ...d.account, phone: code!.phone, phoneConfirmed: true, linked: homes } : d.account,
+        profile: { ...d.profile, phone: `+${code!.phone}`, name: d.profile.name || found[0]?.name || '' } }))
+      setCode(null)
+      say(homes.length ? `Number confirmed. ${homes.length} home${homes.length === 1 ? '' : 's'} found and linked to you.` : 'Number confirmed. No homes at ARGUS under this number yet; add your first one.')
+      return { ok: true, homes: homes.length }
+    },
+    pickAgency(id, on, name) {
+      setData(d => ({ ...d, agencyPicks: { ...d.agencyPicks, ids: on ? [...new Set([...d.agencyPicks.ids, id])] : d.agencyPicks.ids.filter(x => x !== id) } }))
+      say(on ? `${name} added. If they are not on ARGUS yet, ARGUS invites them; your homes reach them once they join.` : `${name} removed.`)
+    },
+    pickMany(ids) {
+      setData(d => ({ ...d, agencyPicks: { ...d.agencyPicks, ids: [...new Set([...d.agencyPicks.ids, ...ids])] } }))
+      say(`${ids.length} agencies added.`)
+    },
+    setOpenGroups(g) { setData(d => ({ ...d, agencyPicks: { ...d.agencyPicks, ...g } })); say('Saved.') },
+    setDetails(next) {
+      const merged = { ...data.details, ...next }
+      // only empty ARGUS fields are filled from the owner side; differences go to an agent
+      const { fill, conflicts } = backfill(data.argusDetails, merged)
+      setData(d => ({ ...d, details: merged, argusDetails: { ...d.argusDetails, ...fill } }))
+      say(conflicts.length ? `Saved. ARGUS will check ${conflicts.length} detail${conflicts.length === 1 ? '' : 's'} that differ from its records.` : 'Saved. ARGUS uses these for your contracts.')
+    },
     decide(requestId, a, actor = 'owner') {
       const r = data.requests.find(x => x.id === requestId)
       if (!r) return false
@@ -246,7 +320,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     },
     readThread(threadId) { setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })) },
     reset() { try { localStorage.removeItem(KEY) } catch { /* */ } setData(buildDemo()); say('Demo data reset.') },
-  }), [data, toasts, say]) // eslint-disable-line react-hooks/exhaustive-deps
+  }), [data, toasts, say, code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>
 }

@@ -42,8 +42,10 @@ export function Brand({ small = false }: { small?: boolean }) {
         <img className="ow-logo-star" src="/owner/sync-star-navy.png" alt="" width={499} height={494} />
         <span className="ow-logo-mini"><NexusStar size={12} color="#071449" /></span>
       </span>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="ow-logo-word" src="/owner/sync-word-navy.png" alt="" width={1164} height={379} />
+      <span className="ow-logo-wordbox">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="ow-logo-word" src="/owner/sync-word-navy.png" alt="" width={1164} height={379} />
+      </span>
     </Link>
   )
 }

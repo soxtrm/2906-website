@@ -4,6 +4,7 @@ import type {
   Agency, AvailabilityException, AvailabilityRule, DocumentItem, OwnerProfile, Property, Thread, ViewingRequest,
 } from './model'
 import type { Wish } from './wishes'
+import type { ArgusOwnerRecord, OwnerDetails } from './identity'
 import { addDays, startOfWeek } from './engine'
 
 const IMG = (f: string) => `/link-marketplace/assets/${f}`
@@ -200,7 +201,18 @@ export function buildDemo(today = maltaToday()) {
     9003: [{ agencyId: 'ag-harbour', at: at(-1, '11:00') }],
   }
 
-  return { today, now, profile, agencies, properties, rules, exceptions, requests, threads, documents, wishes, agencySync }
+  // What ARGUS already knows (synthetic). The owner never sees the internal fields.
+  const argusOwners: ArgusOwnerRecord[] = [
+    { contactId: 501, phone: '+356 0000 0000', name: 'Maria', propertyIds: [9001, 9002], internalNotes: 'Prefers WhatsApp after 10:00', rating: 'B' },
+    { contactId: 502, phone: '0035600000000', name: 'Maria G.', propertyIds: [9003] },
+  ]
+  const argusDetails: Partial<OwnerDetails> = { legalName: 'Maria Grech', locality: 'Sliema' }
+  const details: OwnerDetails = { idVerified: 'none' }
+  // which agencies from the Malta directory the owner wants (ids), plus the two open groups
+  const agencyPicks = { ids: [] as string[], freelancers: false, others: false }
+  const account = null as null | { email: string; pwHash: string; phone?: string; phoneConfirmed?: boolean; signedIn: boolean; linked?: number[] }
+
+  return { today, now, profile, agencies, properties, rules, exceptions, requests, threads, documents, wishes, agencySync, argusOwners, argusDetails, details, account, agencyPicks }
 }
 
 export type Demo = ReturnType<typeof buildDemo>

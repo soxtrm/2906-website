@@ -123,6 +123,27 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   check('profile: linked person becomes the one main contact', await pg.$$eval('.ow-people li[data-main="true"]', els => els.length === 1 && /Anna/.test(els[0].textContent)))
   await pg.screenshot({ path: path.join(OUT, '13-profile.png'), fullPage: true })
 
+  // sign up: email + password, mobile, WhatsApp code; a known number brings the homes in
+  await go(pg, '/owner/signup')
+  await pg.type('#se', 'maria.demo@example.com'); await pg.type('#sp', 'Sliema2024flat')
+  await clickText(pg, 'button', 'Continue'); await wait(400)
+  await pg.type('#sph', '+356 0000 0000'); await clickText(pg, 'button', 'Send code'); await wait(300)
+  const code = await pg.$eval('.ow-hint b', e => e.textContent)
+  await pg.type('.ow-code', '000000'); await clickText(pg, 'button', 'Confirm'); await wait(300)
+  check('sign up: a wrong code links nothing', !!(await pg.$('.ow-code')))
+  await pg.$eval('.ow-code', e => { e.value = '' }); await pg.click('.ow-code', { clickCount: 3 }); await pg.keyboard.press('Backspace')
+  await pg.type('.ow-code', code); await clickText(pg, 'button', 'Confirm'); await wait(400)
+  const done = await pg.$eval('.ow-auth-done h1', e => e.textContent).catch(() => '')
+  check('sign up: confirmed number finds the 3 homes of the owner', /found 3 homes/.test(done), done)
+
+  // agencies: the big Malta agencies first, tick one
+  await go(pg, '/owner/sharing')
+  const firstAg = await pg.$eval('.ow-ag-grid .ow-ag b', e => e.textContent)
+  check('agencies: the biggest come first', /Frank Salt|RE\/MAX|Dhalia|QuickLets/.test(firstAg), firstAg)
+  await pg.click('.ow-ag-grid .ow-ag'); await wait(300)
+  check('agencies: ticking adds it', await pg.$eval('.ow-ag-grid .ow-ag', e => e.getAttribute('aria-pressed')) === 'true')
+  await pg.screenshot({ path: path.join(OUT, '15-agencies.png'), fullPage: true })
+
   // calendar: tap a band to change its hours
   await go(pg, '/owner/calendar')
   await clickText(pg, '.ow-cal .ow-pills button', 'Tower Road'); await wait(300)

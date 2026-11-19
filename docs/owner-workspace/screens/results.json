@@ -115,6 +115,26 @@
     "extra": ""
   },
   {
+    "name": "sign up: a wrong code links nothing",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "sign up: confirmed number finds the 3 homes of the owner",
+    "ok": true,
+    "extra": "Welcome, we found 3 homes"
+  },
+  {
+    "name": "agencies: the biggest come first",
+    "ok": true,
+    "extra": "Frank Salt"
+  },
+  {
+    "name": "agencies: ticking adds it",
+    "ok": true,
+    "extra": ""
+  },
+  {
     "name": "calendar: tapping viewing hours opens an editor",
     "ok": true,
     "extra": ""
@@ -132,7 +152,7 @@
   {
     "name": "add: new property opens, marked as being checked",
     "ok": true,
-    "extra": "/owner/properties/9004 Skip to contentAdd property Overview "
+    "extra": "/owner/properties/9004 SYNC.Skip to contentAdd property Over"
   },
   {
     "name": "mobile: no sideways scroll",

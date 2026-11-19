@@ -182,3 +182,23 @@ Kev: "walkie-talkie against walkie-talkie" — an owner sends a home straight in
 - **Send to my agencies.** The planned endpoint is `POST /api/owner/properties/:id/sync`, authenticated by the owner session. It reads the effective distribution (`engine.recipients`) and writes or refreshes `nexus_distribution_routes` for each allowed agency. It then queues `distribution.released` in `nexus_sync_outbox`, which reaches the agency's ARGUS or, for an agency without ARGUS, its walkie-talkie line. Delivery state is read back from the outbox: "synced", "pending" or "being removed".
 - **Agent link.** `GET /w/:token` uses a random token per property and does not contain the ref. It opens the listing for a **signed-in agent of an allowed agency** only. Anyone else sees a sign-in page or "not shared with your agency". The link never grants owner rights and never shows the owner's phone. Revoking a channel invalidates the link for that agency at once. The host follows the NEXUS Sync domain.
 - **Inbound.** Agents answer through the same link or their ARGUS. Their messages arrive in the owner's ARGUS Main chat with the sender named ("Tim · Benestates").
+
+## Owner sign-up and linking to ARGUS (added 19 Nov 2026)
+
+Kev: anyone may register with email and password. After sign-up the owner adds a mobile number, and if that number is already known to ARGUS, their homes appear automatically.
+
+**Flow.** The preview implements it in `app/owner/signup`, with the rules in `lib/owner/identity.ts` (6 unit tests).
+1. `POST /api/owner/signup {email, password}` creates `owner_accounts` with status `active_unlinked`. The password is stored as argon2id or bcrypt and is never logged. It needs at least 10 characters with letters and a digit. The email is confirmed by a link.
+2. `POST /api/owner/phone {phone}` normalises the number (`normalizePhone`) and sends a 6-digit code from ARGUS Main on WhatsApp, with SMS as fallback. Only a hash of the code is stored. It expires after 10 minutes and allows 5 tries. Sending is rate-limited per account, number and IP.
+3. `POST /api/owner/phone/confirm {code}` only links a **confirmed** number to `owner_contacts.phone_normalized`. Typing someone else's number links nothing, because that person's phone receives the code. All matching contacts for the number are linked through `owner_account_members`, granted by `phone_verification:<id>`. The workspace then shows the homes of those contacts.
+4. No match: the account stays empty, and the owner can add a home (draft, verified by ARGUS).
+
+**Prefill without exposure.** Kev asked for every phone number ARGUS already has to get a profile. In practice no account is pre-created: an account appears when the owner confirms a number that matches. The effect is the same, and no data sits in accounts nobody controls. The owner sees only `ownerView`: name and homes. Internal notes, ratings, call history, do-not-contact flags and anything agents wrote stay in ARGUS. An owner on the do-not-contact list may still sign in, but ARGUS does not message them because of it.
+
+**Details for contracts.** These are optional: legal name, ID or passport number, company name, company number, VAT number, address and locality. They live in `owner_profile_details`, which is encrypted at rest for the ID number. `backfill()` writes into ARGUS only the fields that are still empty there. A value that differs from ARGUS is never overwritten; it goes to an agent as a conflict. ID verification is an upload into Documents (kind `id`, private), and an agent then marks the account `verified`.
+
+**Linked people.** Partner, family and property manager each get their own sign-in, joined through `owner_account_members`. `mainContact` decides who ARGUS writes to, so a household is contacted once, not once per person.
+
+**Agency directory.** `lib/owner/agency-directory.ts` lists real Malta agencies from public sources, biggest first, then freelance agents, then all other approved agencies. Listing an agency here does not mean it is connected. Agencies register themselves and upload their own logo; until then a monogram is shown.
+
+**Not before the security gate.** This needs the hardened auth from the gate (`crm.js:148`), a real SMS/WhatsApp OTP sender on an operator session, and rate limits.

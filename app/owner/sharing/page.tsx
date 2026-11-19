@@ -6,6 +6,7 @@ import { addDays, effectiveDistribution, exclusiveActive, recipients } from '@/l
 import type { Distribution, Property } from '@/lib/owner/model'
 import { niceDate } from '@/components/owner/format'
 import { AgentSync } from '@/components/owner/agent-sync'
+import { AgencyPicker } from '@/components/owner/agency-picker'
 
 function Toggle({ on, label, onChange, disabled }: { on: boolean; label: string; onChange: (v: boolean) => void; disabled?: boolean }) {
   return <button role="switch" aria-checked={on} aria-label={label} className="ow-toggle" disabled={disabled} onClick={() => onChange(!on)} />
@@ -93,14 +94,16 @@ function SharingInner() {
         <h1>Agencies &amp; sharing</h1>
         <p className="ow-muted">Decide who may show your properties. Removing a channel asks it to take the listing down, and you can watch until it is gone.</p>
       </div></div>
-      <div className="ow-grid-2">
+      <AgencyPicker />
+      <div className="ow-grid-2 ow-section">
         <section className="ow-panel" aria-labelledby="defaults">
           <h2 id="defaults">My defaults</h2>
           <p className="ow-faint" style={{ marginTop: 4 }}>New properties and every property set to &ldquo;use my defaults&rdquo; follow these.</p>
           <Channels d={s.profile.defaults} onChange={d => s.setDefaults(d)} />
         </section>
         <section className="ow-panel" aria-labelledby="agencies">
-          <h2 id="agencies">Agencies you work with</h2>
+          <h2 id="agencies">Already working with you</h2>
+          <p className="ow-faint" style={{ marginTop: 4 }}>Demo partners in this preview.</p>
           <ul className="ow-channels" style={{ marginTop: 12 }}>
             {s.agencies.map(a => <li key={a.id}><span>{a.name}<br /><span className="ow-faint">{a.agents.map(x => x.name).join(', ')}</span></span><span className={`ow-chip ${a.approved ? '' : 'honey'}`}>{a.approved ? 'Approved' : 'Asked to work with you'}</span></li>)}
           </ul>

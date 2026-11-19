@@ -8,6 +8,7 @@ import { Camera, MessageCircle, Trash2, UserPlus } from 'lucide-react'
 import type { Person } from '@/lib/owner/model'
 import { useOwner } from '@/lib/owner/store'
 import { initials } from '@/components/owner/format'
+import { ContractDetails } from '@/components/owner/contract-details'
 
 const RELATION: Record<NonNullable<Person['relation']>, string> = { partner: 'Partner', family: 'Family', property_manager: 'Property manager', helper: 'Helper' }
 
@@ -123,6 +124,7 @@ export default function Profile() {
           )}
         </section>
       </div>
+      <ContractDetails />
     </>
   )
 }

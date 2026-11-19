@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, FileText, Home, Inbox, LayoutGrid, MessageCircle, MoreHorizontal, Settings, UserRound, Share2 } from 'lucide-react'
+import { CalendarDays, FileText, Home, Inbox, LayoutGrid, MessageCircle, MoreHorizontal, RefreshCw, Settings, UserRound, Share2 } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
 import { Brand, StarButton, StarPlay } from './brand'
 
@@ -21,7 +21,7 @@ const TABS = [NAV[0], NAV[3], NAV[1]]
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/owner'
-  const { requests, threads, toasts, profile, reset } = useOwner()
+  const { requests, threads, toasts, profile, reset, account, signOut } = useOwner()
   const [more, setMore] = useState(false)
   // SYNC moment on every page: the star turns into the north star and a thin line
   // runs across the top. The first visit of a session also gets the logo splash.
@@ -41,9 +41,27 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   }
   const isActive = (href: string) => (href === '/owner' ? path === '/owner' : path.startsWith(href))
 
+  if (path.startsWith('/owner/signup') || path.startsWith('/owner/login')) {
+    return (
+      <div className="ow-authwrap">
+        <div className="ow-auth-top"><Brand small /></div>
+        {children}
+        <div className="ow-toasts" role="status" aria-live="polite">{toasts.map(t => <div key={t.id} className="ow-toast" data-tone={t.tone}>{t.text}</div>)}</div>
+      </div>
+    )
+  }
+
   return (
     <div className="ow-shell">
       <div key={syncing} className="ow-syncline" aria-hidden="true" />
+      {syncing > 1 && !splash && (
+        <div key={`t${syncing}`} className="ow-trans" aria-hidden="true">
+          <span className="ow-trans-card">
+            <span className="ow-trans-arrows"><RefreshCw size={30} strokeWidth={2.4} /></span>
+            <span className="ow-trans-word">SYNC.</span>
+          </span>
+        </div>
+      )}
       {splash && (
         <div className="ow-splash" aria-hidden="true">
           <span className="ow-splash-mark"><StarPlay size={64} color="#fff" /></span>
@@ -75,6 +93,9 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           <span className="ow-topbar-logo"><Brand small /></span>
           <div className="ow-topbar-right">
             <span key={syncing} className="ow-top-sync" aria-hidden="true"><StarPlay size={15} /><em>Synced</em></span>
+            {account?.signedIn
+              ? <button type="button" className="ow-btn small quiet" onClick={signOut}>Sign out</button>
+              : <Link href="/owner/signup" className="ow-btn small primary">Create account</Link>}
             <Link href="/owner/settings" className="ow-top-icon" aria-label="Settings" title="Settings"><Settings size={20} /></Link>
             <Link href="/owner/profile" className="ow-top-me" aria-label={`Your profile, ${profile.name}`} title="Your profile">
               {/* eslint-disable-next-line @next/next/no-img-element */}

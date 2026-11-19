@@ -53,6 +53,12 @@ export function ArgusChat({ className = '' }: { className?: string }) {
   }, [t?.messages.length])
   if (!t) return null
 
+  // the header names whoever wrote last (like a WhatsApp group), ARGUS Main underneath
+  const lastIn = [...t.messages].reverse().find(m => m.from !== 'owner')
+  const writer = lastIn ? who(lastIn) : null
+  const headName = !writer || writer.kind === 'system' ? 'ARGUS Main' : writer.name
+  const headSub = !writer || writer.kind === 'system' ? 'online' : `${writer.sub} · via ARGUS Main`
+
   const shown = find ? t.messages.filter(m => m.text.toLowerCase().includes(find.toLowerCase())) : t.messages
 
   async function upload(list: FileList | null) {
@@ -66,10 +72,13 @@ export function ArgusChat({ className = '' }: { className?: string }) {
   return (
     <section className={`ow-chat ow-wa ${className}`} aria-label="Chat with ARGUS Main">
       <header className="ow-wa-head">
-        <span className="ow-wa-avatar"><NexusStar size={18} color="#fff" /></span>
+        <span className="ow-wa-avatar" style={writer && writer.kind !== 'system' ? { background: colorFor(writer.key) } : undefined}>
+          {writer && writer.kind !== 'system' ? <b>{initials(writer.name)}</b> : <NexusStar size={18} color="#fff" />}
+          <i className="ow-wa-badge"><NexusStar size={9} color="#fff" /></i>
+        </span>
         <div className="ow-wa-title">
-          <b>ARGUS Main</b>
-          <span>online · synced with your WhatsApp</span>
+          <b key={headName} className="ow-wa-name">{headName}</b>
+          <span>{headSub}{writer && writer.kind !== 'system' ? '' : ' · synced with your WhatsApp'}</span>
         </div>
         <button type="button" className="ow-wa-icon" aria-label="Search the chat" aria-pressed={find !== null} onClick={() => setFind(f => (f === null ? '' : null))}><Search size={19} /></button>
       </header>
