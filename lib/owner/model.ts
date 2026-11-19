@@ -77,6 +77,8 @@ export interface Room {
   id: string            // stable room id, e.g. "29793-R2" (property id + room number)
   label: string
   photo: string
+  /** all photos of the room; `photo` is the first (cover) */
+  photos?: string[]
   price: number
   status: RoomStatus
   sizeSqm?: number
@@ -151,6 +153,12 @@ export interface Property {
   channels: ChannelStatus[]
   /** an active tenancy blocks switching mode / whole-property bookings */
   tenancyUntil?: string
+  propertyType?: string
+  description?: string
+  features?: string[]
+  furnished?: 'Furnished' | 'Part' | 'Unfurnished'
+  /** optional: which room a whole-property photo shows (photo url → room id) */
+  photoRooms?: Record<string, string>
 }
 
 export interface Agency {

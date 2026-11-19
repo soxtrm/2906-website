@@ -59,7 +59,7 @@ export function ContractDetails() {
             <button className="ow-btn small" onClick={() => idFile.current?.click()}><Upload size={15} />{s.details.idVerified === 'pending' ? 'Upload again' : 'Upload ID'}</button>
             <input ref={idFile} type="file" accept="image/*,application/pdf" hidden onChange={async e => {
               const f = e.target.files?.[0]; if (!f) return
-              s.addDocument({ title: 'ID for verification', kind: 'id', propertyId: s.properties[0].id, dataUrl: f.size < 3_000_000 ? await read(f) : undefined, fileName: f.name })
+              s.addDocument({ title: 'ID for verification', kind: 'id', propertyId: s.properties[0]?.id ?? 0, dataUrl: f.size < 3_000_000 ? await read(f) : undefined, fileName: f.name })
               s.setDetails({ idVerified: 'pending' }); e.target.value = ''
             }} />
           </>

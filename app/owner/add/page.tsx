@@ -8,6 +8,7 @@ import { useRef, useState } from 'react'
 import { ImagePlus, Star, X } from 'lucide-react'
 import { MODE_LABEL, MODE_PERIOD, termsLine, type OfferTerms, type OperatingMode } from '@/lib/owner/model'
 import { useOwner } from '@/lib/owner/store'
+import { sendToArgus } from '@/lib/owner/argus-sync'
 
 const TYPE_GROUPS = [
   { label: 'Residential', types: ['Apartment', 'Penthouse', 'Duplex Penthouse', 'Maisonette', 'Townhouse', 'Terraced House', 'House of Character', 'Detached Villa', 'Semi-detached Villa', 'Farmhouse', 'Studio'] },
@@ -124,20 +125,38 @@ export default function AddProperty() {
     setOffers(o => { const n = { ...o }; if (m in n) delete n[m]; else n[m] = ''; return n })
   }
 
-  function submit(e: React.FormEvent) {
+  const [cName, setCName] = useState(s.profile.name || '')
+  const [cPhone, setCPhone] = useState(s.profile.phone || (s.account?.phone ? `+${s.account.phone}` : ''))
+  const [cEmail, setCEmail] = useState(s.profile.email || (s.account?.email?.includes('@') ? s.account.email : ''))
+  const [sending, setSending] = useState(false)
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (sending) return
     const errs: string[] = []
     if (!type) errs.push('Choose the type of property.')
     if (!chosen.length) errs.push('Choose at least one way to offer it.')
     for (const m of chosen) if (!(Number(offers[m]) > 0)) errs.push(`Add a price for ${MODE_LABEL[m]}.`)
     if (!town) errs.push('Add the town.')
+    if (!s.demo && !cName.trim()) errs.push('Add your name, so ARGUS knows who the home belongs to.')
+    if (!s.demo && cPhone.replace(/\D/g, '').length < 8) errs.push('Add your mobile number, so ARGUS can reach you about it.')
     setErrors(errs)
     if (errs.length) { window.scrollTo({ top: 0, behavior: 'smooth' }); return }
-    const id = s.addProperty({
+    const input = {
       propertyType: type, town, address, bedrooms: commercial ? 0 : beds, bathrooms: commercial ? 0 : baths,
       sizeSqm: Number(size) || undefined, offers: chosen.map(m => ({ mode: m, price: Number(offers[m]), terms: terms[m] })),
       availableFrom: from || undefined, furnished, features, description: desc, photos,
-    })
+    }
+    // real owners: straight into ARGUS (checked by an agent before it goes anywhere); the demo stays in the browser
+    if (!s.demo) {
+      setSending(true)
+      const r = await sendToArgus({ ...input, owner: { name: cName, phone: cPhone, email: cEmail } })
+      setSending(false)
+      if (!r.ok) { setErrors([r.error]); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
+      if (!s.profile.name) s.setProfile({ name: cName.trim(), phone: cPhone.trim(), email: cEmail.trim() || undefined })
+      s.say(`Sent to ARGUS${r.ref ? ` (#${r.ref})` : ''}. An agent checks it, then it goes out on your channels.`)
+    }
+    const id = s.addProperty(input)
     router.push(`/owner/properties/${id}`)
   }
 
@@ -248,9 +267,20 @@ export default function AddProperty() {
         </div>
       </section>
 
+      {!s.demo && (
+        <section className="ow-panel ow-add-step">
+          <h2><span className="ow-step-no">5</span>How ARGUS reaches you about it</h2>
+          <div className="ow-form-grid">
+            <div className="ow-field"><label htmlFor="cn">Your name</label><input id="cn" autoComplete="name" value={cName} onChange={e => setCName(e.target.value)} /></div>
+            <div className="ow-field"><label htmlFor="cp">Mobile (WhatsApp)</label><input id="cp" type="tel" autoComplete="tel" inputMode="tel" placeholder="+356 7900 1234" value={cPhone} onChange={e => setCPhone(e.target.value)} /></div>
+            <div className="ow-field"><label htmlFor="ce">Email (optional)</label><input id="ce" type="email" autoComplete="email" value={cEmail} onChange={e => setCEmail(e.target.value)} /></div>
+          </div>
+        </section>
+      )}
+
       <div className="ow-add-submit">
         <p className="ow-faint">{chosen.length ? chosen.map(m => `${MODE_LABEL[m]}${termsLine(m, terms[m]) ? ` (${termsLine(m, terms[m])})` : ''}`).join(' + ') : 'No offer chosen yet'} · {photos.length} photo{photos.length === 1 ? '' : 's'}</p>
-        <button className="ow-btn primary big" type="submit">Send to ARGUS</button>
+        <button className="ow-btn primary big" type="submit" disabled={sending}>{sending ? 'Sending to ARGUS…' : 'Send to ARGUS'}</button>
       </div>
     </form>
   )

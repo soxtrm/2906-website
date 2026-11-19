@@ -1,8 +1,9 @@
 'use client'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { useParams, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { ArrowLeft, Pencil } from 'lucide-react'
+import { PropertyEditor } from '@/components/owner/property-editor'
 import { useOwner } from '@/lib/owner/store'
 import { MODE_LABEL, type OperatingMode, type Room } from '@/lib/owner/model'
 import { modeSwitchCheck, effectiveDistribution, recipients } from '@/lib/owner/engine'
@@ -13,14 +14,15 @@ import { availabilityLine } from '@/components/owner/property-card'
 
 const ROOM_STATUS: Record<Room['status'], string> = { available: 'Free', occupied: 'Let', reserved: 'Reserved', inactive: 'Not offered' }
 
-export default function PropertyDetail() {
+function PropertyDetailInner() {
   const { id } = useParams<{ id: string }>()
   const s = useOwner()
   const p = s.properties.find(x => String(x.id) === id)
-  const [tab, setTab] = useState<'overview' | 'rooms' | 'offer' | 'requests' | 'history'>('overview')
+  const q = useSearchParams()
+  const [tab, setTab] = useState<'overview' | 'edit' | 'rooms' | 'offer' | 'requests' | 'history'>(q.get('edit') ? 'edit' : 'overview')
   const [sel, setSel] = useState<string | undefined>(p?.rooms[0]?.id)
   const [modeMsg, setModeMsg] = useState<string[]>([])
-  const [price, setPrice] = useState(String(activeOffer(p!)?.price ?? ''))
+  const [price, setPrice] = useState(String((p && activeOffer(p)?.price) ?? ''))
   const [over, setOver] = useState<string | null>(null)
   if (!p) return <div className="ow-panel ow-empty">This property is not in your account.</div>
 
@@ -28,7 +30,7 @@ export default function PropertyDetail() {
   const dist = effectiveDistribution(s.profile, p)
   const reach = recipients(dist, s.agencies, s.today)
   const reqs = s.requests.filter(r => r.propertyId === p.id).sort((a, b) => b.start.localeCompare(a.start))
-  const tabs = [['overview', 'Overview'], ...(p.rooms.length || p.mode === 'rooms' ? [['rooms', 'Rooms']] : []), ['offer', 'Offer & price'], ['requests', `Requests (${reqs.length})`], ['history', 'History']] as [typeof tab, string][]
+  const tabs = [['overview', 'Overview'], ['edit', 'Edit listing'], ...(p.rooms.length || p.mode === 'rooms' ? [['rooms', 'Rooms']] : []), ['offer', 'Offer & price'], ['requests', `Requests (${reqs.length})`], ['history', 'History']] as [typeof tab, string][]
 
   const switchMode = (m: OperatingMode) => {
     const res = s.setMode(p.id, m)
@@ -40,7 +42,7 @@ export default function PropertyDetail() {
       <Link href="/owner/properties" className="ow-back"><ArrowLeft size={18} /> My properties</Link>
       <div className="ow-hero">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={p.photos[0]} alt={`${p.name}, ${p.town}`} />
+        {p.photos[0] ? <img src={p.photos[0]} alt={`${p.name}, ${p.town}`} /> : <button className="ow-hero-nophoto" onClick={() => setTab('edit')}>Add photos</button>}
         <div className="ow-panel" style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
           <span className="ow-chip" style={{ justifySelf: 'start' }}>{MODE_LABEL[p.mode]}</span>
           <h1>{p.name}</h1>
@@ -57,6 +59,7 @@ export default function PropertyDetail() {
             {p.listing === 'live'
               ? <button className="ow-btn" onClick={() => s.setListing(p.id, 'paused')}>Pause listing</button>
               : <button className="ow-btn primary" onClick={() => s.setListing(p.id, 'live')}>Make live</button>}
+            <button className="ow-btn primary" onClick={() => { setTab('edit'); setTimeout(() => document.querySelector('.ow-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}><Pencil size={16} />Edit listing</button>
             <Link className="ow-btn quiet" href={`/owner/sharing?p=${p.id}`}>Change where it is shown</Link>
           </div>
         </div>
@@ -86,6 +89,8 @@ export default function PropertyDetail() {
         </div>
       )}
 
+      {tab === 'edit' && <PropertyEditor p={p} />}
+
       {tab === 'rooms' && (
         <div className="ow-grid-2">
           <div className="ow-panel">
@@ -97,7 +102,7 @@ export default function PropertyDetail() {
             {p.rooms.map(r => (
               <div key={r.id} className="ow-room" data-sel={sel === r.id} onClick={() => setSel(r.id)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={r.photo} alt={`${r.label}`} />
+                {r.photo ? <img src={r.photo} alt={`${r.label}`} /> : <div className="ow-room-nophoto">No photo yet</div>}
                 <div className="ow-prop-title"><h3>{r.label}</h3><span className={`ow-chip ${r.status === 'available' ? '' : r.status === 'inactive' ? 'plain' : 'honey'}`}>{ROOM_STATUS[r.status]}</span></div>
                 <p className="ow-faint">{euro(r.price)} / month{r.sizeSqm ? ` · ${r.sizeSqm} m²` : ''}{r.ensuite ? ' · own bathroom' : ''}</p>
                 <p className="ow-faint">{r.status === 'occupied' && r.occupiedUntil ? `Let until ${niceDate(r.occupiedUntil, false)}` : r.availableFrom ? `Free from ${niceDate(r.availableFrom, false)}` : ''}</p>
@@ -157,4 +162,8 @@ export default function PropertyDetail() {
       )}
     </>
   )
+}
+
+export default function PropertyDetail() {
+  return <Suspense fallback={null}><PropertyDetailInner /></Suspense>
 }

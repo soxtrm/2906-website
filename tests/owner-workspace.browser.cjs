@@ -25,7 +25,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   // desktop
   let pg = await open({ width: 1440, height: 1000 })
   await go(pg, '/owner')
-  await pg.evaluate(() => localStorage.clear()); await go(pg, '/owner')
+  await pg.evaluate(() => localStorage.clear()); await go(pg, '/owner?demo=1')
   const h1 = await pg.$eval('.ow-banner h1', e => e.textContent)
   check('overview says what needs the owner', /3 people want to view your homes/.test(h1), h1)
   check('dashboard: chat names the real sender', await pg.$$eval('.ow-wa-who b', els => els.some(e => /Daniel · Harbour Homes/.test(e.textContent))))
@@ -181,9 +181,33 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   const after = await pg.evaluate(() => location.pathname + ' ' + document.body.textContent)
   check('add: new property opens, marked as being checked', /\/owner\/properties\/9004/.test(after) && /Penthouse in Swieqi/.test(after), after.slice(0, 60))
 
+  // edit a listing: rename, add a room, give the room a photo
+  await go(pg, '/owner/properties/9001?edit=1')
+  await pg.$eval('#e-name', e => { e.select && e.select() }); await pg.click('#e-name', { clickCount: 3 }); await pg.type('#e-name', 'Tower Road rooms')
+  await clickText(pg, '.ow-editor-save button', 'Save changes'); await wait(300)
+  check('edit: listing renamed', /Tower Road rooms/.test(await pg.$eval('h1', e => e.textContent)))
+  const before = await pg.$$eval('.ow-room-edit', els => els.length)
+  await clickText(pg, '.ow-editor button', 'Add room'); await wait(300)
+  check('edit: a room can be added', await pg.$$eval('.ow-room-edit', els => els.length) === before + 1)
+  await pg.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 300; c.height = 200; c.getContext('2d').fillRect(0, 0, 300, 200)
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'))
+    const dt = new DataTransfer(); dt.items.add(new File([blob], 'room.png', { type: 'image/png' }))
+    const zones = document.querySelectorAll('.ow-room-edit .ow-dropzone'); zones[zones.length - 1].dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }))
+  }); await wait(800)
+  check('edit: the new room got its own photo', await pg.$$eval('.ow-room-edit', els => els[els.length - 1].querySelectorAll('.ow-thumbs li').length) === 1)
+  await pg.screenshot({ path: path.join(OUT, '16-edit-listing.png'), fullPage: true })
+
+  // a real visitor (no demo link) never sees Maria or her homes
+  const ctx = await browser.createBrowserContext(); const fresh = await ctx.newPage(); await fresh.setViewport({ width: 1280, height: 900 })
+  await fresh.goto(BASE + '/owner', { waitUntil: 'networkidle2' }); await wait(600)
+  const txt = await fresh.evaluate(() => document.body.textContent)
+  check('real visitors start empty: no demo owner, no demo homes', !/Maria|Tower Road|Seafront apartment/.test(txt), txt.slice(0, 80))
+  await ctx.close()
+
   // mobile
   pg = await open({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 })
-  await go(pg, '/owner'); await pg.evaluate(() => localStorage.clear()); await go(pg, '/owner')
+  await go(pg, '/owner'); await pg.evaluate(() => localStorage.clear()); await go(pg, '/owner?demo=1')
   const overflow = await pg.evaluate(() => document.documentElement.scrollWidth - innerWidth)
   check('mobile: no sideways scroll', overflow <= 1, String(overflow))
   check('mobile: bottom tab bar with the add button', await pg.$eval('.ow-tabbar', e => getComputedStyle(e).display) === 'grid' && !!(await pg.$('.ow-tab-add')))

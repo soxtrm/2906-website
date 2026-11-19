@@ -64,7 +64,7 @@ export function ArgusChat({ className = '' }: { className?: string }) {
   async function upload(list: FileList | null) {
     const f = list?.[0]; if (!f) return
     const dataUrl = f.size < 3_000_000 ? await readFile(f) : undefined
-    const id = s.addDocument({ title: f.name.replace(/\.[^.]+$/, ''), kind: 'other', propertyId: about ?? s.properties[0].id, dataUrl, fileName: f.name })
+    const id = s.addDocument({ title: f.name.replace(/\.[^.]+$/, ''), kind: 'other', propertyId: about ?? s.properties[0]?.id ?? 0, dataUrl, fileName: f.name })
     setTimeout(() => s.sendDocument(id), 0)
     setAttach(false)
   }

@@ -422,3 +422,28 @@
 .ow-channel-pick button small { grid-column: 2; font-size: 12.5px; color: var(--ow-ink-3); }
 .ow-channel-pick button[aria-checked='true'] { border-color: var(--ow-brand); background: var(--ow-brand-soft); color: var(--ow-brand); box-shadow: inset 0 0 0 1px var(--ow-brand); }
 .ow-channel-pick button[data-ch='whatsapp'][aria-checked='true'] { border-color: #25d366; background: #e7f8ee; color: #0b6b3a; box-shadow: inset 0 0 0 1px #25d366; }
+
+/* editing listings */
+.ow-prop-wrap { display: grid; gap: 8px; }
+.ow-prop-actions { display: flex; gap: 6px; }
+.ow-prop-actions .ow-btn { flex: 1; }
+.ow-editor { display: grid; gap: 16px; }
+.ow-editor .ow-panel + .ow-panel { margin-top: 0; }
+.ow-editor-save { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 14px 0 4px; background: linear-gradient(transparent, #fff 30%); }
+@media (max-width: 860px) { .ow-editor-save { bottom: 66px; } }
+.ow-photodrop.compact .ow-dropzone { padding: 14px; gap: 2px; }
+.ow-photodrop.compact .ow-dropzone b { font-size: 15px; }
+.ow-photodrop.compact .ow-thumbs { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.ow-thumb-move { position: absolute; right: 6px; bottom: 6px; display: flex; gap: 3px; }
+.ow-thumb-move button { width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .9); color: var(--ow-ink); display: grid; place-items: center; }
+.ow-thumb-move button:disabled { opacity: .3; }
+.ow-thumb-room { position: absolute; left: 6px; right: 62px; bottom: 6px; min-height: 26px; border-radius: 8px; border: 0; background: rgba(7, 20, 73, .78); color: #fff; font: inherit; font-size: 11.5px; font-weight: 700; padding: 0 4px; }
+.ow-thumbs li[data-cover='true'] .ow-thumb-room { left: 64px; }
+.ow-room-edit-list { display: grid; gap: 12px; }
+.ow-room-edit { display: grid; gap: 10px; padding: 14px; border-radius: 16px; border: 1px solid var(--ow-line); background: var(--ow-surface); }
+.ow-room-edit-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ow-check { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.ow-check input { width: 20px; height: 20px; }
+.ow-room-nophoto, .ow-hero-nophoto { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 8px; background: repeating-linear-gradient(135deg, #eef0f6 0 10px, #f6f7fb 10px 20px); color: var(--ow-ink-3); font-weight: 700; font-size: 14px; }
+.ow-hero-nophoto { border: 2px dashed rgba(7, 20, 73, .2); min-height: 240px; aspect-ratio: auto; border-radius: var(--ow-r-lg); font-size: 18px; cursor: pointer; }
+.ow-empty-big { display: grid; gap: 12px; justify-items: start; padding: 28px; }

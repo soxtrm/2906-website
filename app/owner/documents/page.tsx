@@ -24,6 +24,7 @@ export default function Documents() {
   const [shareFor, setShareFor] = useState<string | null>(null)
 
   async function add(list: FileList | null) {
+    if (!pid) { s.say('Add a home first, then its documents.', 'warn'); return }
     for (const f of [...(list || [])].slice(0, 5)) {
       const dataUrl = f.size < 3_000_000 ? await read(f) : undefined
       s.addDocument({ title: f.name.replace(/\.[^.]+$/, ''), kind, propertyId: pid, dataUrl, fileName: f.name })

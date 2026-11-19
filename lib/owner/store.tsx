@@ -4,8 +4,8 @@
 // the pages keep working: they only use this hook.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { act, modeSwitchCheck, revokedBy, effectiveDistribution, recipients, type Action } from './engine'
-import { buildDemo, type Demo } from './fixtures'
-import { MODE_LABEL, MODE_PERIOD, type DocumentItem, type OwnerProfile, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
+import { buildDemo, buildEmpty, type Demo } from './fixtures'
+import { MODE_LABEL, MODE_PERIOD, type Room, type DocumentItem, type OwnerProfile, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
 import { extractWishes, mergeWishes, type Wish } from './wishes'
 import { acceptWaVerify, backfill, checkCode, matchOwner, normalizePhone, waToken, type CodeState, type OwnerDetails, type WaPending } from './identity'
 
@@ -23,6 +23,9 @@ export interface NewProperty {
 type Toast = { id: number; text: string; tone: 'ok' | 'warn' | 'err' }
 
 interface Store extends Demo {
+  /** true only for the demo with Maria (link with ?demo=1); real owners start empty */
+  demo: boolean
+  setDemo: (on: boolean) => void
   toasts: Toast[]
   say: (text: string, tone?: Toast['tone']) => void
   decide: (requestId: string, a: Action, actor?: 'owner' | 'agent' | 'tenant') => boolean
@@ -67,6 +70,13 @@ interface Store extends Demo {
   updateDelegate: (name: string, p: Partial<OwnerProfile['delegates'][number]>) => void
   addDelegate: (d: OwnerProfile['delegates'][number]) => void
   updateRule: (id: string, start: string, end: string) => void
+  updateProperty: (id: number, patch: Partial<Pick<Property, 'name' | 'address' | 'town' | 'bedrooms' | 'bathrooms' | 'sizeSqm' | 'availableFrom' | 'description' | 'features' | 'furnished' | 'propertyType'>>) => void
+  setPhotos: (id: number, photos: string[]) => void
+  tagPhoto: (id: number, url: string, roomId: string | null) => void
+  updateRoom: (id: number, roomId: string, patch: Partial<Room>) => void
+  setRoomPhotos: (id: number, roomId: string, photos: string[]) => void
+  addRoom: (id: number) => void
+  removeRoom: (id: number, roomId: string) => boolean
   updateExtra: (id: string, start: string, end: string) => void
   addProperty: (p: NewProperty) => number
   readThread: (threadId: string) => void
@@ -74,10 +84,13 @@ interface Store extends Demo {
 }
 
 const Ctx = createContext<Store | null>(null)
-const KEY = 'argus_owner_preview_v6'
+const KEY = 'argus_owner_preview_v7'
+const KEY_REAL = 'sync_owner_v1'
 
 export function OwnerProvider({ children }: { children: React.ReactNode }) {
-  const [data, setData] = useState<Demo>(() => buildDemo())
+  // demo only when asked for (?demo=1, remembered); everyone else starts with an empty workspace
+  const [demo, setDemoState] = useState(false)
+  const [data, setData] = useState<Demo>(() => buildEmpty())
   const [toasts, setToasts] = useState<Toast[]>([])
   // the code lives only in memory: in the real system it is sent to the phone and kept as a hash on the server
   const [code, setCode] = useState<CodeState | null>(null)
@@ -85,13 +98,22 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const loaded = useRef(false)
 
   useEffect(() => {
+    let isDemo = false
     try {
-      const raw = localStorage.getItem(KEY)
-      if (raw) { const saved = JSON.parse(raw) as Demo; if (saved.today === data.today) setData(saved) }
-    } catch { /* fresh demo */ }
+      const q = new URLSearchParams(location.search).get('demo')
+      if (q === '1') localStorage.setItem('ow_mode', 'demo')
+      if (q === '0') localStorage.removeItem('ow_mode')
+      isDemo = localStorage.getItem('ow_mode') === 'demo'
+    } catch { /* private mode */ }
+    setDemoState(isDemo)
+    try {
+      const raw = localStorage.getItem(isDemo ? KEY : KEY_REAL)
+      if (raw) { const saved = JSON.parse(raw) as Demo; if (!isDemo || saved.today === data.today) { setData(saved); loaded.current = true; return } }
+    } catch { /* fresh */ }
+    setData(isDemo ? buildDemo() : buildEmpty())
     loaded.current = true
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (loaded.current) try { localStorage.setItem(KEY, JSON.stringify(data)) } catch { /* private mode */ } }, [data])
+  useEffect(() => { if (loaded.current) try { localStorage.setItem(demo ? KEY : KEY_REAL, JSON.stringify(data)) } catch { /* private mode */ } }, [data, demo])
 
   const say = useCallback((text: string, tone: Toast['tone'] = 'ok') => {
     const id = Date.now() + Math.random()
@@ -103,7 +125,12 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     setData(d => ({ ...d, properties: d.properties.map(p => (p.id === id ? { ...fn(p), updatedAt: `${d.today}T${new Date().toTimeString().slice(0, 5)}` } : p)) }))
 
   const store: Store = useMemo(() => ({
-    ...data, toasts, say, codeSentTo: code?.phone || null, waPending: wa,
+    ...data, demo, toasts, say,
+    setDemo(on) {
+      try { if (on) localStorage.setItem('ow_mode', 'demo'); else localStorage.removeItem('ow_mode') } catch { /* */ }
+      setDemoState(on); setData(on ? buildDemo() : buildEmpty())
+    },
+    codeSentTo: code?.phone || null, waPending: wa,
     startWaVerify() {
       const token = waToken()
       setWa({ token, createdAt: Date.now(), accountEmail: data.account?.email || '' })
@@ -327,6 +354,33 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     updateDelegate(name, p) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.map(x => (x.name === name ? { ...x, ...p } : x)) } })); say('Saved.') },
     removeDelegate(name) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.filter(x => x.name !== name) } })); say(`${name} no longer has access.`) },
     addDelegate(x) { setData(d => ({ ...d, profile: { ...d.profile, delegates: [...d.profile.delegates, x] } })); say(`${x.name} gets an invitation to sign in.`) },
+    updateProperty(id, patch) { patchProp(id, p => ({ ...p, ...patch })); say('Saved. Every channel that shows this home gets the update.') },
+    setPhotos(id, photos) {
+      patchProp(id, p => ({ ...p, photos, photoRooms: Object.fromEntries(Object.entries(p.photoRooms || {}).filter(([u]) => photos.includes(u))) }))
+    },
+    tagPhoto(id, url, roomId) {
+      patchProp(id, p => { const m = { ...(p.photoRooms || {}) }; if (roomId) m[url] = roomId; else delete m[url]; return { ...p, photoRooms: m } })
+    },
+    updateRoom(id, roomId, patch) { patchProp(id, p => ({ ...p, rooms: p.rooms.map(r => (r.id === roomId ? { ...r, ...patch } : r)) })) },
+    setRoomPhotos(id, roomId, photos) {
+      patchProp(id, p => ({ ...p, rooms: p.rooms.map(r => (r.id === roomId ? { ...r, photos, photo: photos[0] || '' } : r)) }))
+    },
+    addRoom(id) {
+      patchProp(id, p => {
+        const n = p.rooms.reduce((m, r) => Math.max(m, Number(r.id.split('-R')[1]) || 0), 0) + 1
+        return { ...p, rooms: [...p.rooms, { id: `${p.id}-R${n}`, label: `Room ${n}`, photo: '', photos: [], price: p.rooms[0]?.price || 0, status: 'available' }] }
+      })
+      say('Room added. Give it photos and a price.')
+    },
+    removeRoom(id, roomId) {
+      const p = data.properties.find(x => x.id === id)!
+      const r = p.rooms.find(x => x.id === roomId)
+      if (r?.status === 'occupied') { say('This room is let. Remove it once the tenant has moved out.', 'err'); return false }
+      if (data.requests.some(q => q.roomId === roomId && (q.status === 'confirmed' || q.status === 'awaiting_owner'))) { say('This room has open viewings. Answer or cancel them first.', 'err'); return false }
+      patchProp(id, x => ({ ...x, rooms: x.rooms.filter(y => y.id !== roomId) }))
+      say('Room removed.')
+      return true
+    },
     updateRule(id, start, end) { setData(d => ({ ...d, rules: d.rules.map(r => (r.id === id ? { ...r, start, end } : r)) })); say('Viewing hours changed.') },
     updateExtra(id, start, end) { setData(d => ({ ...d, exceptions: d.exceptions.map(e => (e.id === id ? { ...e, start, end } : e)) })); say('Viewing hours changed for that day.') },
     removeWish(key, propertyId) {
@@ -334,7 +388,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       say('Removed from the list.')
     },
     addProperty(n) {
-      const id = Math.max(...data.properties.map(p => p.id)) + 1
+      const id = Math.max(9000, ...data.properties.map(p => p.id)) + 1
       const first = n.offers[0]
       const mode: OperatingMode = first?.mode || 'long_let'
       const prop: Property = {
@@ -351,8 +405,8 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       return id
     },
     readThread(threadId) { setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })) },
-    reset() { try { localStorage.removeItem(KEY) } catch { /* */ } setData(buildDemo()); say('Demo data reset.') },
-  }), [data, toasts, say, code, wa]) // eslint-disable-line react-hooks/exhaustive-deps
+    reset() { try { localStorage.removeItem(demo ? KEY : KEY_REAL) } catch { /* */ } setData(demo ? buildDemo() : buildEmpty()); say(demo ? 'Demo data reset.' : 'Cleared.') },
+  }), [data, demo, toasts, say, code, wa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>
 }

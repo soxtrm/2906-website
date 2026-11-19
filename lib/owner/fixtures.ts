@@ -216,3 +216,20 @@ export function buildDemo(today = maltaToday()) {
 }
 
 export type Demo = ReturnType<typeof buildDemo>
+
+// What a real owner sees on first visit: nothing of Maria's demo, only a
+// welcome from ARGUS Main. Their homes come in when they confirm their mobile
+// (live after the backend step) or when they add one.
+export function buildEmpty(today = maltaToday()): Demo {
+  const d = buildDemo(today)
+  return {
+    ...d,
+    profile: { ...d.profile, name: '', defaults: d.profile.defaults, delegates: [], phone: undefined, email: undefined, languages: ['English'], mainContact: 'me', photo: undefined },
+    agencies: [], properties: [], rules: [], exceptions: [], requests: [], documents: [], wishes: [], agencySync: {},
+    argusOwners: [], argusDetails: {}, details: { idVerified: 'none' }, account: null,
+    agencyPicks: { ids: [], freelancers: false, others: false },
+    threads: [{ id: 't1', title: 'ARGUS Main', with: 'ARGUS Main', unread: 1, messages: [
+      { id: 'w1', from: 'argus', sender: { kind: 'system' }, at: `${today}T09:00`, text: 'Welcome to SYNC. Add your first home, or confirm your mobile number so the homes ARGUS already knows appear here. Questions from agents and clients will arrive in this chat, with the name of who is asking.' },
+    ] }],
+  }
+}

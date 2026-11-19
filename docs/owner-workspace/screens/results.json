@@ -122,7 +122,7 @@
   {
     "name": "sign up: WhatsApp verification waits for the prepared message",
     "ok": true,
-    "extra": "Waiting for your message SYNC verify LGSD3K"
+    "extra": "Waiting for your message SYNC verify KHUDZJ"
   },
   {
     "name": "sign up: the WhatsApp sender number finds the 3 homes of the owner",
@@ -163,6 +163,26 @@
     "name": "add: new property opens, marked as being checked",
     "ok": true,
     "extra": "/owner/properties/9004 SYNC.Skip to contentAdd property Over"
+  },
+  {
+    "name": "edit: listing renamed",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "edit: a room can be added",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "edit: the new room got its own photo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "real visitors start empty: no demo owner, no demo homes",
+    "ok": true,
+    "extra": "Skip to contentAdd property Overview Chat1 Requests Calendar My properties Agenc"
   },
   {
     "name": "mobile: no sideways scroll",

@@ -21,7 +21,7 @@ const TABS = [NAV[0], NAV[3], NAV[1]]
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/owner'
-  const { requests, threads, toasts, profile, reset, account, signOut } = useOwner()
+  const { requests, threads, toasts, profile, reset, account, signOut, demo } = useOwner()
   const [more, setMore] = useState(false)
   // SYNC moment on every page: the star turns into the north star and a thin line
   // runs across the top. The first visit of a session also gets the logo splash.
@@ -104,7 +104,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
               <Link href="/owner/signup" className="ow-btn">Create account</Link>
             </div>
           )}
-          <button type="button" className="ow-preview-flag" style={{ marginTop: 10, border: 0 }} onClick={reset} title="Reset the demo">Preview with demo data</button>
+          {demo && <button type="button" className="ow-preview-flag" style={{ marginTop: 10, border: 0 }} onClick={reset} title="Reset the demo">Demo with sample data</button>}
         </div>
       </aside>
 
@@ -119,7 +119,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             <Link href="/owner/settings" className="ow-top-icon" aria-label="Settings" title="Settings"><Settings size={20} /></Link>
             <Link href="/owner/profile" className="ow-top-me" aria-label={`Your profile, ${profile.name}`} title="Your profile">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {profile.photo ? <img src={profile.photo} alt="" /> : <span>{profile.name.slice(0, 1).toUpperCase()}</span>}<b>{profile.name}</b>
+              {profile.photo ? <img src={profile.photo} alt="" /> : <span>{(profile.name || 'Y').slice(0, 1).toUpperCase()}</span>}<b>{profile.name || 'You'}</b>
             </Link>
           </div>
         </header>
