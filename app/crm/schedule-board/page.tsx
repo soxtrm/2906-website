@@ -586,6 +586,8 @@ function Board() {
   // (the ?avail= / ?avail_from= branches in crmScheduleBoard.js).
   const [avail, setAvail] = useState<string>(() => params.get('avail') || params.get('avail_from') || '')
   const [rows, setRows] = useState<Listing[]>([])
+  // Refs taken off market or archived from this board in this visit.
+  const takenOffRefs = useRef<Set<string>>(new Set())
   const [loadedQuery, setLoadedQuery] = useState('')
   const [backendTownOptions, setBackendTownOptions] = useState<{ key: string; label: string; n: number }[]>([])
   const [villageAreas, setVillageAreas] = useState<VillageArea[]>(() => {
@@ -937,7 +939,11 @@ function Board() {
         if (!alive) return
         // canonical localities from the backend FIRST, so the pin / filter-chip / label lookups
         // below (townKey, TOWNS[k], townLabel) resolve every listing the backend can resolve
-        const listings = exactRef ? (d ? [d] : []) : (d.listings || [])
+        // A search for one exact reference loads that listing in any status, so
+        // a card that was just taken off market or archived here would come
+        // straight back on the reload that follows. Keep it off this board.
+        const listings = (exactRef ? (d ? [d] : []) : (d.listings || []))
+          .filter((l: Listing) => !(exactRef && view !== 'rented' && takenOffRefs.current.has(l.ref)))
         registerCanonicalLocalities(listings)
         setRows(listings)
         setLoadedQuery(search.toLowerCase())
@@ -1743,8 +1749,11 @@ function Board() {
   // check-out/archive it is still in Inventory and its history; for
   // return-to-market (only reachable from the 'rented' tab) it is simply back
   // on the active board, just not in front of you right here.
-  function onStatusDone(msg: string, ref: string) {
+  function onStatusDone(msg: string, ref: string, action?: string) {
+    if (action === 'return-to-market') takenOffRefs.current.delete(ref)
+    else takenOffRefs.current.add(ref)
     setRows(rs => rs.filter(x => x.ref !== ref))
+    setFeedRows(rs => rs.filter(x => x.ref !== ref))
     showToast('ok', msg)
     // Refresh the Rented tab's badge count too.
     setRefreshTick(t => t + 1)
@@ -2434,7 +2443,7 @@ function Board() {
             town={statusing.r.town}
             action={statusing.action}
             onClose={() => setStatusing(null)}
-            onDone={onStatusDone}
+            onDone={(msg, ref) => onStatusDone(msg, ref, statusing.action)}
           />
         )}
         {avDateEditing && (
