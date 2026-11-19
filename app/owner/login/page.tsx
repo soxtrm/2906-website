@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useOwner } from '@/lib/owner/store'
 import { StarPlay } from '@/components/owner/brand'
+import { SocialSignIn } from '@/components/owner/social-signin'
 
 export default function Login() {
   const s = useOwner()
@@ -15,6 +16,7 @@ export default function Login() {
       <form className="ow-auth-card" onSubmit={async e => { e.preventDefault(); if (await s.signIn(email, pw)) router.push('/owner') }}>
         <div className="ow-auth-logo"><StarPlay size={34} color="#071449" /></div>
         <h1>Welcome back</h1>
+        <SocialSignIn onDone={() => router.push(s.account?.phoneConfirmed ? '/owner' : '/owner/signup')} />
         <div className="ow-field"><label htmlFor="le">Email</label><input id="le" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required /></div>
         <div className="ow-field"><label htmlFor="lp">Password</label><input id="lp" type="password" autoComplete="current-password" value={pw} onChange={e => setPw(e.target.value)} required /></div>
         <button className="ow-btn primary big" type="submit">Sign in</button>

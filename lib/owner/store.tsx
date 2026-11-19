@@ -51,6 +51,7 @@ interface Store extends Demo {
   removeDelegate: (name: string) => void
   signUp: (email: string, password: string) => Promise<boolean>
   signIn: (email: string, password: string) => Promise<boolean>
+  signUpWith: (provider: 'facebook' | 'google' | 'apple') => boolean
   signOut: () => void
   sendCode: (phone: string) => string | null
   confirmCode: (code: string) => { ok: boolean; reason?: string; homes?: number }
@@ -106,6 +107,13 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       const pwHash = await sha256(`${e}:${password}`)
       setData(d => ({ ...d, account: { email: e, pwHash, signedIn: true } }))
       say('Account created. One more step: your mobile number.')
+      return true
+    },
+    signUpWith(provider) {
+      const name = { facebook: 'Facebook', google: 'Google', apple: 'Apple' }[provider]
+      // preview: no provider is contacted; live: OAuth, then the same mobile + code step
+      setData(d => ({ ...d, account: d.account?.provider === provider ? { ...d.account, signedIn: true } : { email: `${d.profile.name.toLowerCase()} via ${name}`, pwHash: '', provider, signedIn: true } }))
+      say(data.account?.provider === provider && data.account.phoneConfirmed ? `Welcome back, ${data.profile.name}.` : `Signed in with ${name}. One more step: your mobile number.`)
       return true
     },
     async signIn(email, password) {

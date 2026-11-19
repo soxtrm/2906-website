@@ -210,7 +210,7 @@ export function buildDemo(today = maltaToday()) {
   const details: OwnerDetails = { idVerified: 'none' }
   // which agencies from the Malta directory the owner wants (ids), plus the two open groups
   const agencyPicks = { ids: [] as string[], freelancers: false, others: false }
-  const account = null as null | { email: string; pwHash: string; phone?: string; phoneConfirmed?: boolean; signedIn: boolean; linked?: number[] }
+  const account = null as null | { email: string; pwHash: string; provider?: 'email' | 'facebook' | 'google' | 'apple'; phone?: string; phoneConfirmed?: boolean; signedIn: boolean; linked?: number[] }
 
   return { today, now, profile, agencies, properties, rules, exceptions, requests, threads, documents, wishes, agencySync, argusOwners, argusDetails, details, account, agencyPicks }
 }

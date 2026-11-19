@@ -9,6 +9,7 @@ import { Check, Eye, EyeOff } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
 import { passwordProblems } from '@/lib/owner/identity'
 import { StarPlay } from '@/components/owner/brand'
+import { SocialSignIn } from '@/components/owner/social-signin'
 
 export default function SignUp() {
   const s = useOwner()
@@ -35,6 +36,7 @@ export default function SignUp() {
           <form onSubmit={async e => { e.preventDefault(); if (!probs.length && await s.signUp(email, pw)) setStep(2) }}>
             <h1>Create your account</h1>
             <p className="ow-muted">For owners of homes in Malta and Gozo. Free.</p>
+            <SocialSignIn onDone={() => setStep(s.account?.phoneConfirmed ? 4 : 2)} />
             <div className="ow-field"><label htmlFor="se">Email</label><input id="se" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required /></div>
             <div className="ow-field"><label htmlFor="sp">Password</label>
               <span className="ow-pw"><input id="sp" type={show ? 'text' : 'password'} autoComplete="new-password" value={pw} onChange={e => setPw(e.target.value)} required />
@@ -49,7 +51,7 @@ export default function SignUp() {
         {step === 2 && (
           <form onSubmit={e => { e.preventDefault(); const c = s.sendCode(phone); if (c) { setDemoCode(c); setStep(3) } }}>
             <h1>Your mobile number</h1>
-            <p className="ow-muted">We send a code on WhatsApp. If ARGUS already knows this number, your homes appear right away.</p>
+            <p className="ow-muted">{s.account?.provider && s.account.provider !== 'email' ? 'Whichever way you signed in, your mobile number links you to your homes. ' : ''}We send a code on WhatsApp. If ARGUS already knows this number, your homes appear right away.</p>
             <div className="ow-field"><label htmlFor="sph">Mobile</label><input id="sph" type="tel" autoComplete="tel" inputMode="tel" placeholder="+356 7900 1234" value={phone} onChange={e => setPhone(e.target.value)} required /></div>
             <button className="ow-btn primary big" type="submit" disabled={!phone.trim()}>Send code</button>
           </form>

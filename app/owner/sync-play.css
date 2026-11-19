@@ -366,3 +366,32 @@
 .ow-rrow:hover { background: #f6f4ff; }
 .ow-wish-list li { animation: ow-in .3s ease-out; transition: transform .2s cubic-bezier(.34, 1.56, .64, 1); }
 .ow-wish-list li:hover { transform: translateX(2px); }
+
+/* social sign-in and the account card at the bottom of the rail */
+.ow-social { display: grid; gap: 8px; }
+.ow-social-btn { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; border-radius: 14px; border: 1px solid var(--ow-line); background: #fff; font-weight: 700; font-size: 16px;
+  transition: transform .22s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s; }
+.ow-social-btn:hover { transform: scale(1.03); box-shadow: 0 10px 22px -14px rgba(7, 20, 73, .45); }
+.ow-social-btn:active { transform: scale(.96); }
+.ow-social-btn.fb { background: #1877F2; border-color: #1877F2; color: #fff; }
+.ow-social-btn.fb svg circle { fill: #fff; }
+.ow-social-btn.fb svg path { fill: #1877F2; }
+.ow-or { display: flex; align-items: center; gap: 10px; color: var(--ow-ink-3); font-size: 13px; margin: 6px 0 0; }
+.ow-or::before, .ow-or::after { content: ''; flex: 1; height: 1px; background: var(--ow-line); }
+.ow-rail-foot { padding: 10px 4px 4px; }
+.ow-account { display: grid; gap: 8px; padding: 14px; border-radius: 18px; background: var(--ow-brand-soft); }
+.ow-account .ow-btn { width: 100%; }
+.ow-account-title { font-family: var(--ow-display), sans-serif; font-weight: 640; font-size: 16px; color: var(--ow-ink); }
+.ow-account-me { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ow-ink); }
+.ow-account-me img, .ow-account-me > span { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; display: grid; place-items: center; background: var(--ow-brand); color: #fff; font-weight: 800; font-size: 18px; }
+.ow-account-me b { display: grid; font-size: 15px; min-width: 0; }
+.ow-account-me small { font-size: 12px; color: var(--ow-ink-3); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* sign-in pages: the logo big and centred above the card */
+.ow-auth-top { display: flex; justify-content: center; margin: 26px auto 26px; }
+.ow-auth-top .ow-logo { padding: 0; gap: 16px; }
+.ow-auth-top .ow-logo-star { height: 78px; }
+.ow-auth-top .ow-logo-word { height: 58px; }
+.ow-auth-top .ow-logo-mini svg { width: 18px; height: 18px; }
+.ow-auth-card .ow-auth-logo { display: none; }
+@media (max-width: 500px) { .ow-auth-top .ow-logo-star { height: 54px; } .ow-auth-top .ow-logo-word { height: 40px; } .ow-auth-top { margin: 10px auto 18px; } }

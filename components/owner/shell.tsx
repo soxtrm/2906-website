@@ -44,7 +44,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   if (path.startsWith('/owner/signup') || path.startsWith('/owner/login')) {
     return (
       <div className="ow-authwrap">
-        <div className="ow-auth-top"><Brand small /></div>
+        <div className="ow-auth-top"><Brand /></div>
         {children}
         <div className="ow-toasts" role="status" aria-live="polite">{toasts.map(t => <div key={t.id} className="ow-toast" data-tone={t.tone}>{t.text}</div>)}</div>
       </div>
@@ -85,7 +85,26 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             )
           })}
         </nav>
-        <div className="ow-rail-foot">Signed in as {profile.name}<br /><button type="button" className="ow-preview-flag" style={{ marginTop: 8, border: 0 }} onClick={reset} title="Reset the demo">Preview with demo data</button></div>
+        <div className="ow-rail-foot">
+          {account?.signedIn ? (
+            <div className="ow-account">
+              <Link href="/owner/profile" className="ow-account-me">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {profile.photo ? <img src={profile.photo} alt="" /> : <span>{profile.name.slice(0, 1).toUpperCase()}</span>}
+                <b>{profile.name}<small>{account.provider && account.provider !== 'email' ? `via ${account.provider[0].toUpperCase()}${account.provider.slice(1)}` : account.email}{account.phoneConfirmed ? ' · mobile linked' : ''}</small></b>
+              </Link>
+              {!account.phoneConfirmed && <Link href="/owner/signup" className="ow-btn small primary">Link my mobile</Link>}
+              <button type="button" className="ow-btn small" onClick={signOut}>Sign out</button>
+            </div>
+          ) : (
+            <div className="ow-account">
+              <b className="ow-account-title">Your homes, one place</b>
+              <Link href="/owner/login" className="ow-btn primary big">Sign in</Link>
+              <Link href="/owner/signup" className="ow-btn">Create account</Link>
+            </div>
+          )}
+          <button type="button" className="ow-preview-flag" style={{ marginTop: 10, border: 0 }} onClick={reset} title="Reset the demo">Preview with demo data</button>
+        </div>
       </aside>
 
       <main id="ow-main" className="ow-main">
