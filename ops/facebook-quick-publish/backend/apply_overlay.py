@@ -37,6 +37,11 @@ EDITS = {
         ("    if (!entitled) return res.status(403).json({ error: 'Facebook publishing is not enabled for your account yet.', kind: 'not_entitled' })\n",
          "    if (!entitled) return res.status(403).json({ error: 'Facebook publishing is switched off for your account.', kind: 'not_entitled' })\n"),
     ],
+    # Board accounts get the Profile screen (own profile, own WhatsApp link, own Facebook connection)
+    'routes/crmScheduleBoard.js': [
+        ("      nav: boardOnly ? ['board', 'bookings'] : ",
+         "      nav: boardOnly ? ['board', 'bookings', 'profile'] : "),
+    ],
     'services/facebookPages/property.js': [
         ("// Authorisation: an agent may publish the listings they list\n"
          "// (properties.listed_by_agent_id); an ARGUS administrator may publish any\n"

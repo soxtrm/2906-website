@@ -7,7 +7,7 @@ LIVE=/opt/2906-system/backend
 CT=2906_backend
 STAGE=/tmp/argus-fb-quick-stage
 BKROOT=/opt/2906-system/backups
-FILES="routes/crmFacebookPages.js services/facebookPages/property.js"
+FILES="routes/crmFacebookPages.js services/facebookPages/property.js routes/crmScheduleBoard.js"
 URL=http://127.0.0.1:3001
 code() { curl -s -o /dev/null -m 10 -w '%{http_code}' "$@" || echo 000; }
 wait_up() { for i in $(seq 1 45); do [ "$(code "$URL/api/properties")" = 200 ] && return 0; sleep 2; done; return 1; }

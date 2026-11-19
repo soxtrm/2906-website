@@ -106,3 +106,8 @@ test('the listing query still reads only public-safe columns', () => {
   assert.doesNotMatch(cols, /owner|street|apt\b|internal_notes|phone|email/i)
   assert.match(cols, /exclusive_now/)
 })
+
+test('Board accounts get the Profile screen in their menu; nothing else is added', () => {
+  const src = require('fs').readFileSync(R('routes/crmScheduleBoard.js'), 'utf8')
+  assert.ok(src.includes("nav: boardOnly ? ['board', 'bookings', 'profile'] : ['dashboard', 'inventory', 'board', 'bookings', 'owners'],"))
+})
