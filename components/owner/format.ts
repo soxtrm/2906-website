@@ -49,3 +49,12 @@ export function propColor(ids: number[], id: number | null | undefined) {
   return PROP_COLORS[(i < 0 ? 0 : i) % PROP_COLORS.length]
 }
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('')
+
+// "Couple", "Family of 4", "One person": who is coming, in plain words.
+// Only what the visit needs; never nationality or origin.
+export function party(a: { adults: number; children: number }) {
+  if (a.children) return `Family of ${a.adults + a.children}`
+  if (a.adults === 2) return 'Couple'
+  if (a.adults === 1) return 'One person'
+  return `${a.adults} adults`
+}

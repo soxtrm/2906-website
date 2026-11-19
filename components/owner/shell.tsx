@@ -1,10 +1,10 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
-import { CalendarDays, FileText, Home, Inbox, LayoutGrid, MessageCircle, MoreHorizontal, Settings, Share2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { CalendarDays, FileText, Home, Inbox, LayoutGrid, MessageCircle, MoreHorizontal, Settings, UserRound, Share2 } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
-import { Brand, NexusStar } from './brand'
+import { Brand, StarButton, StarPlay } from './brand'
 
 const NAV = [
   { href: '/owner', label: 'Overview', icon: LayoutGrid },
@@ -14,6 +14,7 @@ const NAV = [
   { href: '/owner/properties', label: 'My properties', icon: Home },
   { href: '/owner/sharing', label: 'Agencies & sharing', icon: Share2 },
   { href: '/owner/documents', label: 'Documents', icon: FileText },
+  { href: '/owner/profile', label: 'Profile', icon: UserRound },
   { href: '/owner/settings', label: 'Settings', icon: Settings },
 ]
 const TABS = [NAV[0], NAV[3], NAV[1]]
@@ -22,6 +23,18 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/owner'
   const { requests, threads, toasts, profile, reset } = useOwner()
   const [more, setMore] = useState(false)
+  // SYNC moment on every page: the star turns into the north star and a thin line
+  // runs across the top. The first visit of a session also gets the logo splash.
+  const [syncing, setSyncing] = useState(0)
+  const [splash, setSplash] = useState(false)
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) {
+      first.current = false
+      try { if (!sessionStorage.getItem('ow_splash')) { sessionStorage.setItem('ow_splash', '1'); setSplash(true); setTimeout(() => setSplash(false), 1500) } } catch { /* */ }
+    }
+    setSyncing(n => n + 1)
+  }, [path])
   const counts = {
     requests: requests.filter(r => r.status === 'awaiting_owner').length,
     messages: threads.reduce((n, t) => n + t.unread, 0),
@@ -30,10 +43,18 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="ow-shell">
+      <div key={syncing} className="ow-syncline" aria-hidden="true" />
+      {splash && (
+        <div className="ow-splash" aria-hidden="true">
+          <span className="ow-splash-mark"><StarPlay size={64} color="#fff" /></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/owner/sync-logo-white.png" alt="" width={1663} height={494} />
+        </div>
+      )}
       <a href="#ow-main" className="sr-only" style={{ position: 'absolute', left: -9999 }}>Skip to content</a>
       <aside className="ow-rail" aria-label="Main">
         <Brand />
-        <Link href="/owner/add" className="ow-btn primary ow-rail-add ow-star-btn"><span className="ow-star"><NexusStar size={16} /></span>Add property</Link>
+        <StarButton href="/owner/add" className="ow-rail-add">Add property</StarButton>
         <nav className="ow-nav">
           {NAV.map(n => {
             const Icon = n.icon
@@ -53,9 +74,11 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
         <header className="ow-topbar">
           <span className="ow-topbar-logo"><Brand small /></span>
           <div className="ow-topbar-right">
+            <span key={syncing} className="ow-top-sync" aria-hidden="true"><StarPlay size={15} /><em>Synced</em></span>
             <Link href="/owner/settings" className="ow-top-icon" aria-label="Settings" title="Settings"><Settings size={20} /></Link>
-            <Link href="/owner/settings" className="ow-top-me" aria-label={`Your profile, ${profile.name}`} title="Your profile">
-              <span>{profile.name.slice(0, 1).toUpperCase()}</span><b>{profile.name}</b>
+            <Link href="/owner/profile" className="ow-top-me" aria-label={`Your profile, ${profile.name}`} title="Your profile">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {profile.photo ? <img src={profile.photo} alt="" /> : <span>{profile.name.slice(0, 1).toUpperCase()}</span>}<b>{profile.name}</b>
             </Link>
           </div>
         </header>
@@ -73,7 +96,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             </Link>
           )
         })}
-        <Link href="/owner/add" className="ow-tab-add" aria-current={isActive('/owner/add') ? 'page' : undefined} aria-label="Add property"><span><i className="ow-star"><NexusStar size={22} /></i></span></Link>
+        <Link href="/owner/add" className="ow-tab-add" aria-current={isActive('/owner/add') ? 'page' : undefined} aria-label="Add property"><span><StarPlay size={22} /></span></Link>
         {TABS.slice(2).map(n => {
           const Icon = n.icon
           const c = n.count ? counts[n.count] : 0

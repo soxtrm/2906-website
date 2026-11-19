@@ -72,7 +72,7 @@
   {
     "name": "calendar can be trimmed to 16–20",
     "ok": true,
-    "extra": "16,17,18,19,20"
+    "extra": "16:00,17:00,18:00,19:00,20:00"
   },
   {
     "name": "tapping a day opens the day with who is coming",
@@ -98,6 +98,26 @@
     "name": "revoking a channel starts delisting and shows it",
     "ok": true,
     "extra": "NEXUS DirectBeing removed"
+  },
+  {
+    "name": "documents: shared with an agency",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "chat: the document arrived as a WhatsApp-style attachment",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "profile: linked person becomes the one main contact",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "calendar: tapping viewing hours opens an editor",
+    "ok": true,
+    "extra": ""
   },
   {
     "name": "add: every offer type is there",

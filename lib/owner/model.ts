@@ -241,6 +241,8 @@ export interface Message {
   sender?: Sender
   /** the property this message is about, when known */
   propertyId?: number
+  /** a document sent in the chat (from Documents or uploaded right there) */
+  attachment?: { docId: string; title: string; kind: DocumentItem['kind'] }
   text: string
   at: string
   /** structured actions rendered as buttons instead of more chat */
@@ -265,6 +267,9 @@ export interface DocumentItem {
   kind: 'contract' | 'inventory' | 'certificate' | 'id' | 'other'
   addedAt: string
   sharedWith: string[]
+  /** preview only: the file itself, so it can be opened */
+  dataUrl?: string
+  fileName?: string
 }
 
 export interface OwnerProfile {
@@ -273,5 +278,23 @@ export interface OwnerProfile {
   defaults: Distribution
   hidePriceFor: Audience[]
   notify: { whatsapp: boolean; email: boolean; quietFrom: string; quietTo: string }
-  delegates: { name: string; role: 'manager' | 'viewer'; properties: number[] | 'all' }[]
+  /** people linked to this owner account (partner, family, property manager). They
+   *  share one conversation with ARGUS, so nobody is contacted twice. */
+  delegates: Person[]
+  photo?: string
+  phone?: string
+  email?: string
+  languages?: string[]
+  /** who ARGUS writes to for this account: 'me' or a delegate's name */
+  mainContact?: string
+}
+
+export interface Person {
+  name: string
+  role: 'manager' | 'viewer'
+  properties: number[] | 'all'
+  relation?: 'partner' | 'family' | 'property_manager' | 'helper'
+  phone?: string
+  email?: string
+  photo?: string
 }

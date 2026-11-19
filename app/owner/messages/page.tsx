@@ -7,7 +7,7 @@ export default function Messages() {
     <>
       <div className="ow-head"><div>
         <h1>Chat</h1>
-        <p className="ow-muted">Everything agents and clients ask reaches you here through ARGUS Main, with the name of who is asking.</p>
+        <p className="ow-muted ow-chatpage-intro">Everything agents and clients ask reaches you here through ARGUS Main, with the name of who is asking.</p>
       </div></div>
       <div className="ow-dash">
         <ArgusChat className="ow-dash-chat tall" />

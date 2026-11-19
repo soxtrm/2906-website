@@ -35,7 +35,14 @@ export function buildDemo(today = maltaToday()) {
     defaults: { nexusDirect: true, argusB2B: true, allApprovedAgencies: true, agencyIds: [], agentIds: [], exclusive: null, private: false },
     hidePriceFor: [],
     notify: { whatsapp: true, email: false, quietFrom: '21:00', quietTo: '08:00' },
-    delegates: [{ name: 'Joseph (property manager)', role: 'manager', properties: [9001] }],
+    delegates: [
+      { name: 'Joseph', relation: 'property_manager', role: 'manager', properties: [9001], phone: '+356 0000 0001' },
+      { name: 'Paul', relation: 'partner', role: 'manager', properties: 'all', phone: '+356 0000 0002' },
+    ],
+    phone: '+356 0000 0000',
+    email: 'maria@example.com',
+    languages: ['English', 'Maltese'],
+    mainContact: 'me',
   }
 
   const properties: Property[] = [
@@ -137,6 +144,10 @@ export function buildDemo(today = maltaToday()) {
       requester: { kind: 'agent', agencyId: 'ag-north', agentName: 'Luca', clientRef: 'NC-0398' },
       applicant: { adults: 2, children: 0, moveIn: addDays(today, 5), months: 12 },
       history: [ev(-7, '09:00', 'argus', 'Received on WhatsApp and turned into a request'), ev(-6, '10:00', 'owner', 'Viewing confirmed'), ev(-4, '18:40', 'argus', 'Viewing took place')] },
+    { id: 'rq8', propertyId: 9002, start: next(6, '10:30'), minutes: 30, status: 'confirmed', source: 'argus_crm',
+      requester: { kind: 'agent', agencyId: 'ag-valletta', agentName: 'Sara', clientRef: 'VK-1120' },
+      applicant: { adults: 2, children: 0, moveIn: addDays(today, 21), months: 12, working: 'Both employed' },
+      history: [ev(-2, '09:00', 'agent', 'Requested via ARGUS'), ev(-2, '11:00', 'owner', 'Viewing confirmed')] },
     { id: 'rq7', propertyId: 9001, roomId: '9001-R2', start: next(5, '15:20'), minutes: 20, status: 'new_time_proposed', proposedStart: next(5, '16:00'), source: 'direct_listing',
       requester: { kind: 'tenant', clientRef: 'DL-0071' },
       applicant: { adults: 1, children: 0, moveIn: addDays(today, 15), months: 12, working: 'Nurse' },

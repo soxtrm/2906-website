@@ -5,7 +5,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { act, modeSwitchCheck, revokedBy, effectiveDistribution, recipients, type Action } from './engine'
 import { buildDemo, type Demo } from './fixtures'
-import { MODE_LABEL, MODE_PERIOD, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
+import { MODE_LABEL, MODE_PERIOD, type DocumentItem, type OwnerProfile, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
 import { extractWishes, mergeWishes, type Wish } from './wishes'
 
 export interface NewProperty {
@@ -37,13 +37,24 @@ interface Store extends Demo {
   sendMessage: (threadId: string, text: string, propertyId?: number | null) => void
   removeWish: (key: string, propertyId: number | null) => void
   syncAgencies: (propertyId: number) => void
+  addWish: (label: string, polarity: 'plus' | 'minus', propertyId: number | null) => void
+  addDocument: (d: { title: string; kind: DocumentItem['kind']; propertyId: number; dataUrl?: string; fileName?: string }) => string
+  shareDocument: (docId: string, agencies: string[]) => void
+  sendDocument: (docId: string) => void
+  setNotify: (n: Partial<OwnerProfile['notify']>) => void
+  removeDelegate: (name: string) => void
+  setProfile: (p: Partial<Pick<OwnerProfile, 'name' | 'photo' | 'phone' | 'email' | 'languages' | 'mainContact'>>) => void
+  updateDelegate: (name: string, p: Partial<OwnerProfile['delegates'][number]>) => void
+  addDelegate: (d: OwnerProfile['delegates'][number]) => void
+  updateRule: (id: string, start: string, end: string) => void
+  updateExtra: (id: string, start: string, end: string) => void
   addProperty: (p: NewProperty) => number
   readThread: (threadId: string) => void
   reset: () => void
 }
 
 const Ctx = createContext<Store | null>(null)
-const KEY = 'argus_owner_preview_v3'
+const KEY = 'argus_owner_preview_v4'
 
 export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Demo>(() => buildDemo())
@@ -174,6 +185,44 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       setData(d => ({ ...d, agencySync: { ...d.agencySync, [propertyId]: ids.map(agencyId => ({ agencyId, at })) } }))
       say(`Sent into ${ids.length} agenc${ids.length === 1 ? 'y' : 'ies'}: their ARGUS and walkie-talkie now have ${p.name}.`)
     },
+    addWish(label, polarity, propertyId) {
+      const clean = label.trim().replace(/\s+/g, ' ')
+      if (!clean) return
+      // the same check as for chat messages: protected characteristics are never stored
+      const probe = extractWishes(clean)
+      if (probe.protectedRemark) { say('Nationality, origin or religion cannot be used to choose tenants, so this is not saved.', 'warn'); return }
+      const key = probe.wishes[0]?.key || `own:${clean.toLowerCase()}`
+      const at = `${data.today}T${new Date().toTimeString().slice(0, 5)}`
+      setData(d => ({ ...d, wishes: mergeWishes(d.wishes, [{ id: `ws${Date.now()}`, key, polarity, label: clean, propertyId, quote: clean, at }]) }))
+      say(`Added: ${polarity === 'plus' ? '+' : '−'} ${clean}`)
+    },
+    addDocument(n) {
+      const id = `d${Date.now()}`
+      setData(d => ({ ...d, documents: [{ id, propertyId: n.propertyId, title: n.title, kind: n.kind, addedAt: d.today, sharedWith: [], dataUrl: n.dataUrl, fileName: n.fileName }, ...d.documents] }))
+      say('Document saved. Only you can see it until you share it.')
+      return id
+    },
+    shareDocument(docId, agencies) {
+      setData(d => ({ ...d, documents: d.documents.map(x => (x.id === docId ? { ...x, sharedWith: agencies } : x)) }))
+      say(agencies.length ? `Shared with ${agencies.join(', ')}. They see it in their ARGUS.` : 'No longer shared. Only you can see it.')
+    },
+    sendDocument(docId) {
+      const doc = data.documents.find(x => x.id === docId)
+      if (!doc) return
+      const t = data.threads.find(x => x.with === 'ARGUS Main') || data.threads[0]
+      const at = `${data.today}T${new Date().toTimeString().slice(0, 5)}`
+      setData(d => ({ ...d, threads: d.threads.map(th => (th.id === t.id ? { ...th, messages: [...th.messages,
+        { id: `m${Date.now()}`, from: 'owner', propertyId: doc.propertyId, at, text: doc.title, attachment: { docId, title: doc.title, kind: doc.kind } },
+        { id: `m${Date.now() + 1}`, from: 'argus', sender: { kind: 'system' }, propertyId: doc.propertyId, at, text: `Got "${doc.title}". It stays private until you share it with an agency (Documents → Share).` },
+      ] } : th)) }))
+    },
+    setNotify(n) { setData(d => ({ ...d, profile: { ...d.profile, notify: { ...d.profile.notify, ...n } } })); say('Saved.') },
+    setProfile(p) { setData(d => ({ ...d, profile: { ...d.profile, ...p } })); say('Profile saved.') },
+    updateDelegate(name, p) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.map(x => (x.name === name ? { ...x, ...p } : x)) } })); say('Saved.') },
+    removeDelegate(name) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.filter(x => x.name !== name) } })); say(`${name} no longer has access.`) },
+    addDelegate(x) { setData(d => ({ ...d, profile: { ...d.profile, delegates: [...d.profile.delegates, x] } })); say(`${x.name} gets an invitation to sign in.`) },
+    updateRule(id, start, end) { setData(d => ({ ...d, rules: d.rules.map(r => (r.id === id ? { ...r, start, end } : r)) })); say('Viewing hours changed.') },
+    updateExtra(id, start, end) { setData(d => ({ ...d, exceptions: d.exceptions.map(e => (e.id === id ? { ...e, start, end } : e)) })); say('Viewing hours changed for that day.') },
     removeWish(key, propertyId) {
       setData(d => ({ ...d, wishes: d.wishes.filter(w => !(w.key === key && (propertyId === null || w.propertyId === propertyId))) }))
       say('Removed from the list.')

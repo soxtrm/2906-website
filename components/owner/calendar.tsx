@@ -11,7 +11,7 @@ import { dayName, monthName, niceDate, occupants, propColor, shortDay } from './
 // and picks the grid: whole hours, half hours or quarter hours.
 type Range = { from: number; to: number; step: 15 | 30 | 60 }
 const RANGE_KEY = 'ow_cal_range_v1'
-const HOUR_H: Record<Range['step'], number> = { 60: 46, 30: 56, 15: 84 }
+const HOUR_H: Record<Range['step'], number> = { 60: 40, 30: 50, 15: 76 }
 function useRange(): [Range, (r: Range) => void] {
   const [r, setR] = useState<Range>({ from: 8, to: 21, step: 30 })
   useEffect(() => { try { const v = JSON.parse(localStorage.getItem(RANGE_KEY) || 'null'); if (v && v.to > v.from) setR(v) } catch { /* default */ } }, [])
@@ -21,6 +21,8 @@ const LIVE = new Set(['awaiting_owner', 'question', 'new_time_proposed', 'confir
 const ALL = 0
 
 type Draft = { date: string; a: number; b: number }
+type Edit = { pid: number; date: string; start: string; end: string; ruleId?: string; extraId?: string }
+const timesBetween = (from: number, to: number, step: number) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => toHHMM(from + i * step))
 
 function useNarrow() {
   const [n, setN] = useState(false)
@@ -41,6 +43,7 @@ export function WeekCalendar({ compact = false }: { compact?: boolean }) {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [open, setOpen] = useState<ViewingRequest | null>(null)
   const [range, setRange] = useRange()
+  const [edit, setEdit] = useState<Edit | null>(null)
   const START = range.from * 60, END = range.to * 60, H = HOUR_H[range.step]
   const y = (min: number) => ((Math.max(START, Math.min(END, min)) - START) / 60) * H
   const snap = (min: number) => Math.max(START, Math.min(END, Math.round(min / range.step) * range.step))
@@ -57,7 +60,7 @@ export function WeekCalendar({ compact = false }: { compact?: boolean }) {
 
   const minuteAt = (e: React.PointerEvent, top: number) => START + ((e.clientY - top) / H) * 60
   const down = (e: React.PointerEvent<HTMLDivElement>, date: string) => {
-    if ((e.target as HTMLElement).closest('button')) return
+    if ((e.target as HTMLElement).closest('button, .ow-band')) return
     if (compact || blocked(date)) return
     const top = e.currentTarget.getBoundingClientRect().top
     const a = snap(minuteAt(e, top))
@@ -131,7 +134,8 @@ export function WeekCalendar({ compact = false }: { compact?: boolean }) {
             </button>
           ))}
           <div className="ow-hours" style={{ height: y(END) }}>
-            {Array.from({ length: (END - START) / 60 + 1 }, (_, i) => <span key={i} className="ow-hour" style={{ top: i * H }}>{toHHMM(START + i * 60).slice(0, 2)}</span>)}
+            {Array.from({ length: (END - START) / 60 + 1 }, (_, i) => <span key={i} className="ow-hour" style={{ top: i * H }}>{toHHMM(START + i * 60)}</span>)}
+            {range.step <= 30 && Array.from({ length: (END - START) / 60 }, (_, i) => <span key={`h${i}`} className="ow-hour minor" style={{ top: i * H + H / 2 }}>{toHHMM(START + i * 60 + 30)}</span>)}
           </div>
           {days.map(d => { const act = activeOn(d); const n = Math.max(1, act.length); return (
             <div key={d} className="ow-day" data-blocked={blocked(d)} style={{ height: y(END) }} onPointerDown={e => down(e, d)} onPointerMove={move} onPointerUp={up}>
@@ -143,10 +147,14 @@ export function WeekCalendar({ compact = false }: { compact?: boolean }) {
                 return wins.filter(w => toMin(w.end) > START && toMin(w.start) < END).map(w => {
                   const rule = ruleFor(w.start, w.end); const extra = extraFor(w.start)
                   return (
-                    <div key={p.id + w.start} className="ow-band" data-extra={w.source === 'extra'} title={`${p.name}: viewing hours ${w.start}–${w.end}${w.source === 'extra' ? ' (this day only)' : ''}`}
+                    <div key={p.id + w.start} className="ow-band" data-extra={w.source === 'extra'} role={compact ? undefined : 'button'} tabIndex={compact ? undefined : 0}
+                      title={`${p.name}: viewing hours ${w.start}–${w.end}${w.source === 'extra' ? ' (this day only)' : ''}`}
+                      onClick={() => !compact && (rule || extra) && setEdit({ pid: p.id, date: d, start: w.start, end: w.end, ruleId: rule?.id, extraId: extra?.id })}
+                      onKeyDown={e => { if (!compact && e.key === 'Enter' && (rule || extra)) setEdit({ pid: p.id, date: d, start: w.start, end: w.end, ruleId: rule?.id, extraId: extra?.id }) }}
                       style={{ ...lane(li, n), top: y(toMin(w.start)), height: y(toMin(w.end)) - y(toMin(w.start)), ['--pc' as string]: color }}>
                       {n === 1 && <span>{w.start}–{w.end}</span>}
-                      {!compact && lanes === 1 && (rule || extra) && <button aria-label={`Remove ${w.start} to ${w.end}`} onClick={() => (rule ? s.removeRule(rule.id) : s.removeExtra(extra!.id))}>×</button>}
+                      {n === 1 && propId === ALL && <em>{p.name.split(' ').slice(0, 2).join(' ')}</em>}
+                      {w.source === 'extra' && n === 1 && <small>once</small>}
                     </div>
                   )
                 })
@@ -179,10 +187,20 @@ export function WeekCalendar({ compact = false }: { compact?: boolean }) {
 
       {!compact && view === 'week' && !draft && <p className="ow-faint" style={{ marginTop: 10 }}>Drag down a day to add viewing hours.</p>}
       {draft && (
-        <div className="ow-panel ow-draft" role="dialog" aria-label="Save viewing hours">
-          <h3>{dayName(draft.date)}, {toHHMM(draft.a)} to {toHHMM(draft.b)}</h3>
-          <DraftActions draft={draft} props={shown} onDone={() => setDraft(null)} />
-        </div>
+        <>
+          <button className="ow-scrim" aria-label="Cancel" onClick={() => setDraft(null)} />
+          <div className="ow-sheet" role="dialog" aria-label="Save viewing hours">
+            <h3>{dayName(draft.date)}, {toHHMM(draft.a)} to {toHHMM(draft.b)}</h3>
+            <p className="ow-faint">Visitors can ask for any time inside these hours.</p>
+            <DraftActions draft={draft} props={shown} onDone={() => setDraft(null)} />
+          </div>
+        </>
+      )}
+      {edit && (
+        <>
+          <button className="ow-scrim" aria-label="Close" onClick={() => setEdit(null)} />
+          <EditSheet e={edit} step={range.step} onDone={() => setEdit(null)} />
+        </>
       )}
       {open && (
         <div style={{ marginTop: 16 }}>
@@ -291,6 +309,35 @@ function Day({ date, shown, onOpen }: { date: string; shown: Property[]; onOpen:
             )
           })}
         </ul>
+      </div>
+    </div>
+  )
+}
+
+function EditSheet({ e, step, onDone }: { e: Edit; step: number; onDone: () => void }) {
+  const s = useOwner()
+  const p = s.properties.find(x => x.id === e.pid)!
+  const [start, setStart] = useState(e.start)
+  const [end, setEnd] = useState(e.end)
+  const opts = timesBetween(6 * 60, 23 * 60, Math.min(step, 30))
+  const save = () => {
+    if (toMin(end) <= toMin(start)) { s.say('The end has to be after the start.', 'err'); return }
+    if (e.ruleId) s.updateRule(e.ruleId, start, end); else if (e.extraId) s.updateExtra(e.extraId, start, end)
+    onDone()
+  }
+  const del = () => { if (e.ruleId) s.removeRule(e.ruleId); else if (e.extraId) s.removeExtra(e.extraId); onDone() }
+  return (
+    <div className="ow-sheet" role="dialog" aria-label="Change viewing hours">
+      <p className="ow-sheet-home"><i style={{ background: propColor(s.properties.map(x => x.id), p.id) }} />{p.name}</p>
+      <h3>{e.ruleId ? `Every ${dayName(e.date)}` : `Only ${niceDate(e.date)}`}</h3>
+      <div className="ow-sheet-times">
+        <label><span>From</span><select value={start} onChange={x => setStart(x.target.value)}>{opts.map(t => <option key={t}>{t}</option>)}</select></label>
+        <label><span>To</span><select value={end} onChange={x => setEnd(x.target.value)}>{opts.map(t => <option key={t}>{t}</option>)}</select></label>
+      </div>
+      <div className="ow-req-actions" style={{ marginTop: 14 }}>
+        <button className="ow-btn primary" onClick={save}>Save</button>
+        <button className="ow-btn quiet danger" onClick={del}>Delete these hours</button>
+        <button className="ow-btn quiet" onClick={onDone}>Cancel</button>
       </div>
     </div>
   )
