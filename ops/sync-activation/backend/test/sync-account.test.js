@@ -198,6 +198,69 @@ test('Facebook sign-in creates one identity and refuses a foreign redirect', asy
   assert.equal((await svc('/social', { provider: 'google', code: 'c', redirectUri: 'x' }, { ip: '10.0.3.4' })).status, 503)
 })
 
+test('sign in with the mobile number over WhatsApp, no password', async () => {
+  assert.equal((await svc('/login/phone/start', { phone: '+356 9900 0077' }, { ip: '10.0.4.1' })).status, 404)
+  const st = await svc('/login/phone/start', { phone: `+${OWNER_PHONE}` }, { ip: '10.0.4.2' })
+  assert.equal(st.status, 200, JSON.stringify(st.body))
+  assert.match(st.body.waLink, /SYNC%20login%20[A-Z2-9]{6}$/)
+  const tok = /SYNC login ([A-Z2-9]{6})/.exec(st.body.text)[1]
+  assert.equal((await svc('/login/phone/status', { pollKey: st.body.pollKey })).body.waiting, true)
+  await S.handleWhatsAppVerify({ session: 'Argus1', payload: { id: 'l1', from: '35699000009@c.us', body: `SYNC login ${tok}` } })
+  assert.match(sent.at(-1).text, /different number/)
+  assert.equal((await svc('/login/phone/status', { pollKey: st.body.pollKey })).body.waiting, true)
+  await S.handleWhatsAppVerify({ session: 'Argus1', payload: { id: 'l2', from: `${OWNER_PHONE}@c.us`, body: `SYNC login ${tok}` } })
+  assert.match(sent.at(-1).text, /signed in/)
+  const ok = await svc('/login/phone/status', { pollKey: st.body.pollKey })
+  assert.equal(ok.status, 200); assert.equal(ok.body.waiting, false); assert.ok(ok.body.session.token)
+  assert.equal((await svc('/login/phone/status', { pollKey: st.body.pollKey })).status, 400, 'a sign-in is used once')
+  session = ok.body.session.token
+})
+
+test('nicknames are kept on the account and shown with the home', async () => {
+  const r = await svc('/prefs', { session, prefs: { nicknames: { [propertyId]: 'Sea flat' } } })
+  assert.equal(r.status, 200)
+  const me = await svc('/me', { session })
+  const p = me.body.owner.links[0].properties[0]
+  assert.equal(p.state.nickname, 'Sea flat')
+  assert.equal(p.state.update.state, 'pending', 'the earlier price proposal shows as pending')
+})
+
+test('viewings: owner sees requests without client identity and decides', async () => {
+  const calls = []
+  S._test.setWindows({ windowFromConfirmedViewing: async id => calls.push(['confirmed', id]), addWindow: async (pid, w) => { calls.push(['add', pid, w.start]); return { id: 1 } }, cancelWindow: async () => ({}) })
+  const soon = new Date(Date.now() + 2 * 86400e3)
+  const { rows: [v1] } = await pool.query(`INSERT INTO property_viewings (property_id, viewing_date, status, starts_at, duration_min, requester_phone, requester_name, viewing_agent_name) VALUES ($1,$2::date,'pending',$2,20,'35699112233','Secret Client','Daniel') RETURNING id`, [propertyId, soon])
+  const { rows: [v2] } = await pool.query(`INSERT INTO property_viewings (property_id, viewing_date, status, starts_at, duration_min) VALUES ($1,$2::date,'pending',$2,20) RETURNING id`, [propertyId, new Date(soon.getTime() + 3600e3)])
+  const list = await svc('/owner/viewings', { session })
+  assert.equal(list.status, 200)
+  assert.equal(list.body.viewings.length, 2)
+  assert.equal(JSON.stringify(list.body).includes('Secret Client'), false); assert.equal(JSON.stringify(list.body).includes('35699112233'), false)
+  assert.equal(list.body.viewings[0].agent, 'Daniel')
+  const a = await svc('/owner/viewings/decide', { session, viewingId: v1.id, decision: 'accept' })
+  assert.equal(a.body.status, 'confirmed'); assert.deepEqual(calls[0], ['confirmed', v1.id])
+  const p = await svc('/owner/viewings/decide', { session, viewingId: v2.id, decision: 'propose', proposeStart: new Date(soon.getTime() + 86400e3).toISOString() })
+  assert.equal(p.body.proposed, true)
+  const { rows } = await pool.query(`SELECT status, owner_survey_status, owner_decline_text FROM property_viewings WHERE id = ANY($1::int[]) ORDER BY id`, [[v1.id, v2.id]])
+  assert.equal(rows[0].status, 'confirmed'); assert.equal(rows[1].status, 'cancelled'); assert.match(rows[1].owner_decline_text, /Owner suggests/)
+  const { rows: [other] } = await pool.query(`INSERT INTO properties (ref, town, property_type, longlet_price) VALUES ('X-1','Gzira','Apartment',900) RETURNING id`)
+  const { rows: [v3] } = await pool.query(`INSERT INTO property_viewings (property_id, viewing_date, status, starts_at) VALUES ($1,$2::date,'pending',$2) RETURNING id`, [other.id, soon])
+  assert.equal((await svc('/owner/viewings/decide', { session, viewingId: v3.id, decision: 'accept' })).status, 404, 'not the owner of that home')
+  const h = await svc('/owner/hours', { session, propertyId, days: [{ date: soon.toISOString().slice(0, 10), ranges: [{ start: soon.toISOString(), end: new Date(soon.getTime() + 2 * 3600e3).toISOString() }] }] })
+  assert.equal(h.status, 200, JSON.stringify(h.body)); assert.equal(h.body.created, 1)
+  assert.equal((await svc('/owner/hours', { session, propertyId: other.id, days: [{ date: '2030-01-01', ranges: [] }] })).status, 404)
+})
+
+test('CRM: counter, owner context with responsible agent, claim decisions need permission', async () => {
+  const sum = await staff('GET', '/summary')
+  assert.equal(sum.status, 200); assert.equal(typeof sum.body.unread, 'number')
+  const ctx = await staff('GET', `/threads/${accountId}/context`)
+  assert.equal(ctx.status, 200); assert.equal(ctx.body.links[0].ownerName, 'Test Owner'); assert.equal(ctx.body.links[0].properties[0].ref, 'T-100')
+  await pool.query(`INSERT INTO agents (id, username, name, role, active, board_access) VALUES (5,'agent5','Agent Five','agent',true,false) ON CONFLICT DO NOTHING`)
+  const t5 = jwt.sign({ id: 5, username: 'agent5', role: 'agent', aud: 'crm' }, process.env.JWT_SECRET)
+  const res = await fetch(`${base}/api/crm/sync-inbox/threads/${accountId}/claim`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t5}` }, body: JSON.stringify({ ownerId, decision: 'reject' }) })
+  assert.equal(res.status, 403)
+})
+
 test('logout ends the session', async () => {
   await svc('/logout', { session })
   assert.equal((await svc('/me', { session })).status, 401)

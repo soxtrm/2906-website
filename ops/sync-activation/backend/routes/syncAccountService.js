@@ -50,6 +50,8 @@ router.post('/signup', authLimiter, send(req => S.signup({ email: req.body?.emai
 router.post('/login', authLimiter, loginByEmail, send(req => S.login({ email: req.body?.email, password: req.body?.password, userAgent: ua(req) })))
 router.post('/social', authLimiter, send(req => S.socialSignIn({ provider: req.body?.provider, code: req.body?.code, redirectUri: req.body?.redirectUri, userAgent: ua(req), linkToToken: req.body?.session })))
 router.post('/logout', send(req => S.logout(req.body?.session)))
+router.post('/login/phone/start', authLimiter, send(req => S.loginPhoneStart({ phone: req.body?.phone })))
+router.post('/login/phone/status', send(req => S.loginPhoneStatus({ pollKey: req.body?.pollKey, userAgent: ua(req) })))
 
 router.post('/me', send(async req => { const a = await me(req); return { account: S.accountView(a), owner: await S.ownerView(a) } }))
 router.post('/account/update', send(async req => S.updateAccount(await me(req), req.body || {})))
@@ -62,6 +64,10 @@ router.post('/phone/status', send(async req => S.phoneStatus(await me(req))))
 router.post('/claims/decide', send(async req => S.decideClaims(await me(req), req.body?.decisions)))
 router.post('/owner/event', send(async req => S.ownerEvent(await me(req), { eventType: req.body?.eventType, eventId: req.body?.eventId, data: req.body?.data })))
 
+router.post('/prefs', send(async req => S.setPrefs(await me(req), req.body?.prefs || {})))
+router.post('/owner/viewings', send(async req => S.ownerViewings(await me(req))))
+router.post('/owner/viewings/decide', send(async req => S.ownerDecide(await me(req), { viewingId: req.body?.viewingId, decision: req.body?.decision, note: req.body?.note, proposeStart: req.body?.proposeStart })))
+router.post('/owner/hours', send(async req => S.ownerSetDays(await me(req), { propertyId: req.body?.propertyId, days: req.body?.days })))
 router.post('/messages', send(async req => S.messages(await me(req), { after: req.body?.after })))
 router.post('/messages/send', send(async req => S.postMessage(await me(req), { text: req.body?.text, propertyId: req.body?.propertyId })))
 

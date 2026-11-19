@@ -1,4 +1,6 @@
 'use client'
+import { LiveRequests } from '@/components/owner/live'
+import { useOwner as useOwnerMode } from '@/lib/owner/store'
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -57,6 +59,12 @@ function RequestsInner() {
   )
 }
 
-export default function Requests() {
+function DemoRequests() {
   return <Suspense fallback={null}><RequestsInner /></Suspense>
+}
+
+// nexussync.one: the real workspace from ARGUS; ?demo=1: the preview with Maria.
+export default function RequestsPage() {
+  const { demo } = useOwnerMode()
+  return demo ? <DemoRequests /> : <LiveRequests />
 }

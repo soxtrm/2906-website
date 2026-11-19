@@ -1,11 +1,13 @@
 'use client'
+import { LiveProperties } from '@/components/owner/live'
+import { useOwner as useOwnerMode } from '@/lib/owner/store'
 import { useOwner } from '@/lib/owner/store'
 import Link from 'next/link'
 import { Pencil, Radio } from 'lucide-react'
 import { PropertyCard } from '@/components/owner/property-card'
 import { StarButton } from '@/components/owner/brand'
 
-export default function Properties() {
+function DemoProperties() {
   const { properties } = useOwner()
   return (
     <>
@@ -35,4 +37,10 @@ export default function Properties() {
       )}
     </>
   )
+}
+
+// nexussync.one: the real workspace from ARGUS; ?demo=1: the preview with Maria.
+export default function PropertiesPage() {
+  const { demo } = useOwnerMode()
+  return demo ? <DemoProperties /> : <LiveProperties />
 }

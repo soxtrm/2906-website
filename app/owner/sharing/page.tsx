@@ -1,4 +1,6 @@
 'use client'
+import { LiveSharing } from '@/components/owner/live'
+import { useOwner as useOwnerMode } from '@/lib/owner/store'
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useOwner } from '@/lib/owner/store'
@@ -114,6 +116,12 @@ function SharingInner() {
   )
 }
 
-export default function Sharing() {
+function DemoSharing() {
   return <Suspense fallback={null}><SharingInner /></Suspense>
+}
+
+// nexussync.one: the real workspace from ARGUS; ?demo=1: the preview with Maria.
+export default function SharingPage() {
+  const { demo } = useOwnerMode()
+  return demo ? <DemoSharing /> : <LiveSharing />
 }

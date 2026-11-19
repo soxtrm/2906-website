@@ -1,11 +1,13 @@
 'use client'
+import { LiveSettings } from '@/components/owner/live'
+import { useOwner as useOwnerMode } from '@/lib/owner/store'
 import Link from 'next/link'
 import { useOwner } from '@/lib/owner/store'
 import { ChannelPicker } from '@/components/owner/channel-picker'
 
 const HOURS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`)
 
-export default function Settings() {
+function DemoSettings() {
   const s = useOwner()
   const n = s.profile.notify
   return (
@@ -34,4 +36,10 @@ export default function Settings() {
       </div>
     </>
   )
+}
+
+// nexussync.one: the real workspace from ARGUS; ?demo=1: the preview with Maria.
+export default function SettingsPage() {
+  const { demo } = useOwnerMode()
+  return demo ? <DemoSettings /> : <LiveSettings />
 }

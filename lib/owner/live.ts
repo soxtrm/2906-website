@@ -1,6 +1,7 @@
 // Client side of the real SYNC backend (nexussync.one /api/sync/*). The session
 // lives in an httpOnly cookie; this file never sees it.
 export interface LiveAccount {
+  prefs?: { nicknames?: Record<string, string>; sharingDefaults?: string[] }
   id: string; email: string | null; emailVerified: boolean; name: string
   phone: { e164: string; verified: boolean; via: string | null } | null
   notifyChannel: 'whatsapp' | 'sms' | 'email' | 'app'
@@ -8,6 +9,21 @@ export interface LiveAccount {
 export interface LiveListing {
   externalId: string; sourcePropertyId: number; ref: string; claimState: string
   facts: { locality: string; type: string; bedrooms: number | null; bathrooms: number | null; rent: number | null; sale: number | null; availableFrom: string | null; amenities: string[]; photos: string[] }
+  state?: LiveState | null
+}
+export interface LiveState {
+  nickname: string | null
+  availability: string | null
+  published: boolean
+  update: { version: number; state: 'pending' | 'approved' | 'rejected' | 'superseded' | string; fields: Record<string, unknown>; at: string; reviewedAt: string | null } | null
+  sharing: { channel: string; audienceRef: string | null; scopes: string[]; grantedAt: string }[]
+  windows: { id: number; start: string; end: string }[]
+}
+export interface LiveViewing {
+  id: number; propertyId: number; ref: string; startsAt: string; durationMin: number
+  status: 'pending' | 'confirmed' | 'cancelled' | 'done' | string; decision: string; round: number
+  note: string | null; declineText: string | null
+  party: { size: number | null; type: string | null; job: string | null }; agent: string | null
 }
 export interface LiveLink {
   linkId: string; agencyKey: string; state: 'verified' | 'claim_pending' | 'invited' | 'not_invited' | 'disputed' | 'revoked'

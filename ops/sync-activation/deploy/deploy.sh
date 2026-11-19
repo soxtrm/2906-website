@@ -19,7 +19,7 @@ NEW="services/syncAccount.js routes/syncAccountService.js routes/crmSyncInbox.js
 URL=http://127.0.0.1:3001
 TESTNET=argus-sync-testnet
 TESTDB=argus-sync-testdb
-TABLES="owner_contacts owner_phone_variants properties agents agent_activity_log owner_contact_log owner_availability_answers nexus_owner_links nexus_owner_invitations nexus_owner_property_claims nexus_property_links nexus_inbound_events nexus_owner_property_updates nexus_owner_viewing_schedules nexus_owner_answers nexus_distribution_grants nexus_distribution_routes nexus_sync_outbox property_viewing_windows property_viewings website_source_inventory"
+TABLES="clients owner_contacts owner_phone_variants properties agents agent_activity_log owner_contact_log owner_availability_answers nexus_owner_links nexus_owner_invitations nexus_owner_property_claims nexus_property_links nexus_inbound_events nexus_owner_property_updates nexus_owner_viewing_schedules nexus_owner_answers nexus_distribution_grants nexus_distribution_routes nexus_sync_outbox property_viewing_windows property_viewings website_source_inventory"
 
 code() { curl -s -o /dev/null -m 10 -w '%{http_code}' "$@" || echo 000; }
 wait_up() { for i in $(seq 1 45); do [ "$(code "$URL/api/properties")" = 200 ] && return 0; sleep 2; done; return 1; }

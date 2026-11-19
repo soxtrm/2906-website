@@ -1,4 +1,6 @@
 'use client'
+import { LiveOverview } from '@/components/owner/live'
+import { useOwner as useOwnerMode } from '@/lib/owner/store'
 import Link from 'next/link'
 import { CalendarPlus, Radio } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
@@ -67,7 +69,7 @@ function ComingUp() {
   )
 }
 
-export default function Overview() {
+function DemoOverview() {
   const { properties, requests, threads, today } = useOwner()
   const waiting = requests.filter(r => r.status === 'awaiting_owner').sort((a, b) => a.start.localeCompare(b.start))
   const mon = startOfWeek(today)
@@ -126,4 +128,10 @@ export default function Overview() {
       </section>
     </>
   )
+}
+
+// nexussync.one: the real workspace from ARGUS; ?demo=1: the preview with Maria.
+export default function OverviewPage() {
+  const { demo } = useOwnerMode()
+  return demo ? <DemoOverview /> : <LiveOverview />
 }

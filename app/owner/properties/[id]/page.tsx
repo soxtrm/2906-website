@@ -1,4 +1,5 @@
 'use client'
+import { LiveProperty } from '@/components/owner/live'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
@@ -164,6 +165,14 @@ function PropertyDetailInner() {
   )
 }
 
+function LiveDetail() {
+  const { id } = useParams<{ id: string }>()
+  return <LiveProperty id={Number(id)} />
+}
+
+// nexussync.one: the home as ARGUS holds it; ?demo=1: the preview.
 export default function PropertyDetail() {
+  const { demo } = useOwner()
+  if (!demo) return <LiveDetail />
   return <Suspense fallback={null}><PropertyDetailInner /></Suspense>
 }

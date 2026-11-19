@@ -21,7 +21,7 @@ const TABS = [NAV[0], NAV[3], NAV[1]]
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/owner'
-  const { requests, threads, toasts, profile, reset, account, signOut, demo } = useOwner()
+  const { requests, threads, toasts, profile, reset, account, signOut, demo, live } = useOwner()
   const [more, setMore] = useState(false)
   // SYNC moment on every page: the star turns into the north star and a thin line
   // runs across the top. The first visit of a session also gets the logo splash.
@@ -36,7 +36,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     setSyncing(n => n + 1)
   }, [path])
   const counts = {
-    requests: requests.filter(r => r.status === 'awaiting_owner').length,
+    requests: demo ? requests.filter(r => r.status === 'awaiting_owner').length : live.viewings.filter(v => v.status === 'pending' && new Date(v.startsAt) > new Date()).length,
     messages: threads.reduce((n, t) => n + t.unread, 0),
   }
   const isActive = (href: string) => (href === '/owner' ? path === '/owner' : path.startsWith(href))

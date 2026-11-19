@@ -1,6 +1,7 @@
 import './owner.css'
 import './nexus-sync.css'
 import './sync-play.css'
+import './live.css'
 import type { Metadata, Viewport } from 'next'
 import { Archivo, Manrope } from 'next/font/google'
 import { OwnerProvider } from '@/lib/owner/store'

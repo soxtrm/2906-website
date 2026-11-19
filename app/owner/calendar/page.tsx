@@ -1,11 +1,13 @@
 'use client'
+import { LiveCalendar } from '@/components/owner/live'
+import { useOwner as useOwnerMode } from '@/lib/owner/store'
 import { WeekCalendar } from '@/components/owner/calendar'
 import { useOwner } from '@/lib/owner/store'
 import { propColor } from '@/components/owner/format'
 
 const DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-export default function CalendarPage() {
+function DemoCalendarPage() {
   const s = useOwner()
   return (
     <>
@@ -34,4 +36,10 @@ export default function CalendarPage() {
       </section>
     </>
   )
+}
+
+// nexussync.one: the real workspace from ARGUS; ?demo=1: the preview with Maria.
+export default function CalendarPagePage() {
+  const { demo } = useOwnerMode()
+  return demo ? <DemoCalendarPage /> : <LiveCalendar />
 }

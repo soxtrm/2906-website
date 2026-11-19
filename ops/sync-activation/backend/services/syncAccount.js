@@ -34,7 +34,8 @@ const sha = s => crypto.createHash('sha256').update(String(s)).digest('hex')
 const err = (code, message, status = 400) => new LinkError(code, message, status)
 const accountRef = a => `sync:${a.public_id}`
 const WA_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const WA_RE = /^\s*SYNC\s+verify\s+([A-Za-z2-9]{6})\s*[.!]?\s*$/i
+const WA_RE = /^\s*SYNC\s+(verify|login)\s+([A-Za-z2-9]{6})\s*[.!]?\s*$/i
+const LOGIN_TTL_MIN = 10
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function normEmail(e) {
@@ -67,6 +68,7 @@ function argusMainSession() { return process.env.SYNC_WA_SESSION || 'Argus1' }
 
 function accountView(a) {
   return {
+    prefs: a.prefs || {},
     id: a.public_id, email: a.email, emailVerified: !!a.email_verified_at, name: a.display_name || '',
     phone: a.phone_e164 ? { e164: `+${a.phone_e164}`, verified: !!a.phone_verified_at, via: a.phone_verified_via || null } : null,
     notifyChannel: a.notify_channel, createdAt: a.created_at,
@@ -271,7 +273,28 @@ async function handleWhatsAppVerify({ session, payload }) {
   if (!digits) digits = await require('./contactTouch').resolvePhone(session, payload.from).catch(() => null) || ''
   const reply = t => sender(session, payload.from, t).catch(e => log.warn('sync verify reply failed', { err: e.message }))
   if (!digits) { await reply('We could not read your number from this chat. Please confirm with an e-mail code in SYNC instead.'); return true }
-  const token = m[1].toUpperCase()
+  const verb = m[1].toLowerCase()
+  const token = m[2].toUpperCase()
+  if (verb === 'login') {
+    let res
+    try {
+      res = await tx(async q => {
+        const { rows: [c] } = await q.query(
+          `SELECT * FROM sync_checks WHERE kind='login_whatsapp' AND code_hash=$1 AND verified_at IS NULL AND expires_at > NOW() FOR UPDATE`, [sha(token)])
+        if (!c) return 'unknown'
+        if (c.target !== digits) { await q.query(`UPDATE sync_checks SET attempts=attempts+1 WHERE id=$1`, [c.id]); return 'other_number' }
+        await q.query(`UPDATE sync_checks SET verified_at=NOW(), sender=$2 WHERE id=$1`, [c.id, digits])
+        return 'ok'
+      })
+    } catch (e) { log.warn('sync login failed', { err: e.message }); res = 'error' }
+    await reply({
+      ok: 'You are signed in to SYNC. Go back to the page, it opens by itself.',
+      unknown: 'This SYNC sign-in code is not valid any more. Please start again on nexussync.one.',
+      other_number: 'This sign-in was started for a different number. Please send it from your own number.',
+      error: 'Something went wrong. Please try again in a minute.',
+    }[res])
+    return true
+  }
   let outcome
   try {
     outcome = await tx(async q => {
@@ -302,6 +325,196 @@ async function handleWhatsAppVerify({ session, payload }) {
   }
   await reply(texts[outcome])
   return true
+}
+
+// ── sign in with the mobile number (WhatsApp) ──────────────────────────────
+// The owner types the number; WhatsApp opens with "SYNC login CODE" to ARGUS
+// Main; the page waits with a separate poll key and gets the session once the
+// message arrived from exactly that number. No password needed.
+async function loginPhoneStart({ phone }) {
+  const digits = phoneDigits(phone)
+  const { rows: [a] } = await db.query(`SELECT * FROM sync_accounts WHERE phone_e164=$1 AND phone_verified_at IS NOT NULL AND disabled_at IS NULL`, [digits])
+  if (!a) throw err('NO_ACCOUNT', 'There is no SYNC account with this mobile number yet. Please create one first.', 404)
+  const { rows: [{ n }] } = await db.query(`SELECT COUNT(*)::int AS n FROM sync_checks WHERE account_id=$1 AND kind='login_whatsapp' AND created_at > NOW() - interval '1 hour'`, [a.id])
+  if (n >= 8) throw err('TOO_MANY', 'Too many sign-in attempts. Please wait an hour.', 429)
+  const token = waToken()
+  const pollKey = crypto.randomBytes(24).toString('base64url')
+  await db.query(`INSERT INTO sync_checks (account_id, kind, target, code_hash, poll_hash, expires_at) VALUES ($1,'login_whatsapp',$2,$3,$4, NOW() + ($5 || ' minutes')::interval)`,
+    [a.id, digits, sha(token), sha(pollKey), String(LOGIN_TTL_MIN)])
+  const text = `SYNC login ${token}`
+  return { pollKey, text, waLink: `https://wa.me/${argusMainNumber()}?text=${encodeURIComponent(text)}`, number: `+${argusMainNumber()}`, expiresInMinutes: LOGIN_TTL_MIN }
+}
+
+async function loginPhoneStatus({ pollKey, userAgent }) {
+  if (typeof pollKey !== 'string' || pollKey.length < 20 || pollKey.length > 60) throw err('CODE_EXPIRED', 'Please start the sign-in again.')
+  return tx(async q => {
+    const { rows: [c] } = await q.query(`SELECT * FROM sync_checks WHERE kind='login_whatsapp' AND poll_hash=$1 FOR UPDATE`, [sha(pollKey)])
+    if (!c || c.attempts < 0) throw err('CODE_EXPIRED', 'Please start the sign-in again.')
+    if (!c.verified_at) {
+      if (new Date(c.expires_at) <= new Date()) throw err('CODE_EXPIRED', 'That took too long. Please start the sign-in again.')
+      return { waiting: true }
+    }
+    await q.query(`UPDATE sync_checks SET attempts=-1, expires_at=NOW() WHERE id=$1`, [c.id])
+    const a = await accountById(q, c.account_id)
+    await audit(q, null, 'SYNC_LOGIN_WHATSAPP', { account: a.public_id })
+    return { waiting: false, account: accountView(a), session: await newSession(q, a.id, userAgent) }
+  })
+}
+
+// ── owner preferences: nicknames, sharing defaults ──────────────────────────
+async function setPrefs(account, patch) {
+  const cur = account.prefs || {}
+  const next = { ...cur }
+  if (patch && typeof patch.nicknames === 'object' && patch.nicknames) {
+    const nn = { ...(cur.nicknames || {}) }
+    for (const [k, v] of Object.entries(patch.nicknames).slice(0, 50)) {
+      if (!/^\d{1,9}$/.test(k)) continue
+      const t = String(v || '').trim().slice(0, 60)
+      if (t) nn[k] = t; else delete nn[k]
+    }
+    next.nicknames = nn
+  }
+  if (patch && patch.sharingDefaults !== undefined) {
+    const d = patch.sharingDefaults
+    const ok = ['origin_agency', 'all_eligible_agencies', 'nexus_direct_from_owner', 'private']
+    if (!Array.isArray(d) || d.some(x => !ok.includes(x))) throw err('PREFS_INVALID', 'Unknown sharing option.')
+    next.sharingDefaults = [...new Set(d)]
+  }
+  if (JSON.stringify(next).length > 8000) throw err('PREFS_INVALID', 'Too much data.')
+  const { rows: [a] } = await db.query(`UPDATE sync_accounts SET prefs=$2::jsonb, updated_at=NOW() WHERE id=$1 RETURNING *`, [account.id, JSON.stringify(next)])
+  return { prefs: a.prefs }
+}
+
+// The listings this account may act on: verified link, confirmed claim, active listing.
+async function ownedProperties(account) {
+  const { rows } = await db.query(
+    `SELECT p.id, p.ref, o.owner_contact_id FROM nexus_owner_links o
+       JOIN nexus_owner_property_claims c ON c.owner_link_id=o.id AND c.claim_state IN ('confirmed','corrected')
+       JOIN properties p ON p.id=c.property_id AND p.owner_id=o.owner_contact_id
+      WHERE o.agency_key=$1 AND o.nexus_account_ref=$2 AND o.link_state='verified'
+        AND p.archived_at IS NULL AND NOT COALESCE(p.is_staging,false)`, [AGENCY_KEY(), accountRef(account)])
+  return rows
+}
+async function ownedProperty(account, propertyId) {
+  const p = (await ownedProperties(account)).find(x => x.id === Number(propertyId))
+  if (!p) throw err('PROPERTY_NOT_IN_LINK', 'This home is not confirmed for your account.', 404)
+  return p
+}
+
+// What the owner sees about each confirmed home beyond the facts: status, what
+// they proposed and whether it was taken, who may share it, viewing hours.
+async function propertyState(account, ids) {
+  if (!ids.length) return {}
+  const agency = AGENCY_KEY()
+  const [p, u, g, w] = await Promise.all([
+    db.query(`SELECT id, available_status, available_date, published FROM properties WHERE id = ANY($1::int[])`, [ids]),
+    db.query(`SELECT DISTINCT ON (property_id) property_id, version, review_state, fields, created_at, reviewed_at FROM nexus_owner_property_updates
+               WHERE agency_key=$1 AND property_id = ANY($2::int[]) ORDER BY property_id, version DESC`, [agency, ids]),
+    db.query(`SELECT property_id, channel, audience_ref, scopes, granted_at FROM nexus_distribution_grants WHERE agency_key=$1 AND property_id = ANY($2::int[]) AND revoked_at IS NULL`, [agency, ids]),
+    db.query(`SELECT id, property_id, starts_at, ends_at FROM property_viewing_windows WHERE property_id = ANY($1::int[]) AND status='active' AND kind='window' AND ends_at > NOW() ORDER BY starts_at LIMIT 400`, [ids]),
+  ])
+  const nick = (account.prefs && account.prefs.nicknames) || {}
+  const out = {}
+  for (const id of ids) {
+    const r = p.rows.find(x => x.id === id) || {}
+    const up = u.rows.find(x => x.property_id === id)
+    out[id] = {
+      nickname: nick[String(id)] || null,
+      availability: r.available_status || null,
+      published: !!r.published,
+      update: up ? { version: up.version, state: up.review_state, fields: up.fields, at: up.created_at, reviewedAt: up.reviewed_at } : null,
+      sharing: g.rows.filter(x => x.property_id === id).map(x => ({ channel: x.channel, audienceRef: x.audience_ref || null, scopes: x.scopes, grantedAt: x.granted_at })),
+      windows: w.rows.filter(x => x.property_id === id).map(x => ({ id: x.id, start: x.starts_at, end: x.ends_at })),
+    }
+  }
+  return out
+}
+
+// ── viewings: the existing ARGUS booking (property_viewings) ────────────────
+// Same states and the same SQL as the owner schedule link (ownerBookingPortal).
+// Never returns the client's name, phone or nationality.
+async function ownerViewings(account) {
+  const props = await ownedProperties(account)
+  if (!props.length) return { viewings: [] }
+  const { rows } = await db.query(
+    `SELECT pv.id, pv.property_id, p.ref, pv.starts_at, pv.duration_min, pv.status, pv.owner_survey_status, pv.request_round,
+            pv.agent_justification, pv.owner_decline_text, pv.party_size, pv.viewing_agent_name, c.group_type, c.profession
+       FROM property_viewings pv JOIN properties p ON p.id=pv.property_id LEFT JOIN clients c ON c.id=pv.client_id
+      WHERE pv.property_id = ANY($1::int[]) AND pv.starts_at >= NOW() - INTERVAL '30 days'
+      ORDER BY pv.starts_at LIMIT 300`, [props.map(x => x.id)])
+  return { viewings: rows.map(v => ({
+    id: v.id, propertyId: v.property_id, ref: v.ref, startsAt: v.starts_at, durationMin: v.duration_min || 20,
+    status: v.status, decision: v.owner_survey_status || 'pending', round: v.request_round || 1,
+    note: v.agent_justification || null, declineText: v.owner_decline_text || null,
+    party: { size: v.party_size || null, type: v.group_type || null, job: v.profession || null },
+    agent: v.viewing_agent_name || null,
+  })) }
+}
+
+let windows = () => require('./viewingWindows')
+async function ownerDecide(account, { viewingId, decision, note, proposeStart }) {
+  const props = await ownedProperties(account)
+  const { rows: [v] } = await db.query(`SELECT id, property_id, status FROM property_viewings WHERE id=$1`, [Number(viewingId) || 0])
+  if (!v || !props.some(p => p.id === v.property_id)) throw err('VIEWING_NOT_FOUND', 'Viewing not found.', 404)
+  const text = String(note || '').trim().slice(0, 500)
+  if (decision === 'accept') {
+    const u = await db.query(
+      `UPDATE property_viewings SET status='confirmed', owner_survey_status='confirmed', owner_decision_at=NOW(), confirmed_at=COALESCE(confirmed_at,NOW()),
+              confirmation_method='owner_sync', owner_decline_text=NULL, updated_at=NOW()
+        WHERE id=$1 AND status='pending' RETURNING id`, [v.id])
+    if (u.rows[0]) await windows().windowFromConfirmedViewing(v.id, { ownerText: text })
+    await audit(db, null, 'SYNC_VIEWING_ACCEPTED', { account: account.public_id, viewing: v.id }, { id: v.property_id })
+    return { ok: true, status: 'confirmed', alreadyFinal: !u.rows[0] }
+  }
+  if (decision === 'decline' || decision === 'propose') {
+    let msg = text
+    if (decision === 'propose') {
+      const at = new Date(proposeStart)
+      if (!Number.isFinite(at.getTime()) || at.getTime() < Date.now() || at.getTime() > Date.now() + 60 * 86400e3) throw err('TIME_INVALID', 'Choose a time in the next 60 days.')
+      const end = new Date(at.getTime() + 30 * 60e3)
+      await windows().addWindow(v.property_id, { kind: 'window', start: at.toISOString(), end: end.toISOString(), confirmation: 'full_window' },
+        { sourceType: 'owner_sync', evidence: 'Owner proposed another viewing time in SYNC', reference: `sync:${account.public_id}:propose:${v.id}`, createdBy: 'owner', confidence: 'explicit' })
+      msg = `Owner suggests ${at.toLocaleString('en-GB', { timeZone: 'Europe/Malta', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${text ? `: ${text}` : ''}`
+    }
+    await db.query(
+      `UPDATE property_viewings SET status='cancelled', owner_survey_status='declined', owner_decision_at=NOW(), owner_decline_text=$2, cancelled_at=NOW(),
+              cancel_reason=$3, updated_at=NOW() WHERE id=$1 AND status IN ('pending','confirmed')`,
+      [v.id, msg || null, decision === 'propose' ? 'owner proposed another time in SYNC' : 'owner declined in SYNC'])
+    await audit(db, null, decision === 'propose' ? 'SYNC_VIEWING_PROPOSED' : 'SYNC_VIEWING_DECLINED', { account: account.public_id, viewing: v.id }, { id: v.property_id })
+    return { ok: true, status: 'cancelled', proposed: decision === 'propose' }
+  }
+  throw err('DECISION_INVALID', 'Accept, decline or propose another time.')
+}
+
+// Viewing hours: the owner sets whole days (several ranges per day). Each day
+// is one statement, so its ranges stay siblings; an empty day blocks it.
+async function ownerSetDays(account, { propertyId, days }) {
+  const p = await ownedProperty(account, propertyId)
+  if (!Array.isArray(days) || !days.length || days.length > 62) throw err('DAYS_INVALID', 'Choose between 1 and 62 days.')
+  const now = Date.now(), max = now + 92 * 86400e3
+  let created = 0, cleared = 0
+  for (const d of days) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d?.date || ''))) throw err('DAYS_INVALID', 'A day is missing its date.')
+    const ranges = Array.isArray(d.ranges) ? d.ranges.slice(0, 8) : []
+    const ref = `sync:${account.public_id}:${d.date}:${Date.now()}`
+    // whatever this owner set in SYNC for that day before is replaced
+    const { rows: old } = await db.query(
+      `SELECT id FROM property_viewing_windows WHERE property_id=$1 AND status='active' AND kind='window' AND source_type='owner_sync'
+          AND (starts_at AT TIME ZONE 'Europe/Malta')::date = $2::date`, [p.id, d.date])
+    if (!ranges.length) {
+      for (const o of old) { await windows().cancelWindow(p.id, o.id, `sync:${account.public_id}`); cleared++ }
+      continue
+    }
+    for (const r of ranges) {
+      const a = new Date(r.start), b = new Date(r.end)
+      if (!Number.isFinite(a.getTime()) || !Number.isFinite(b.getTime()) || b <= a || b - a > 14 * 3600e3 || a.getTime() < now - 3600e3 || a.getTime() > max) throw err('RANGE_INVALID', 'One of the time ranges is not valid.')
+      await windows().addWindow(p.id, { kind: 'window', start: a.toISOString(), end: b.toISOString(), confirmation: 'full_window' },
+        { sourceType: 'owner_sync', evidence: 'Owner set viewing hours in SYNC', reference: ref, createdBy: 'owner', confidence: 'explicit' })
+      created++
+    }
+  }
+  await audit(db, null, 'SYNC_VIEWING_HOURS', { account: account.public_id, days: days.length, created, cleared }, { id: p.id, ref: p.ref })
+  return { created, cleared }
 }
 
 // ── claim by confirmed mobile ───────────────────────────────────────────────
@@ -352,7 +565,8 @@ async function ownerView(account) {
   for (const link of links) {
     if (link.link_state === 'verified') {
       const v = await require('./nexusOwnerInbound').readOwnerLink({ linkId: link.public_id, nexusAccountRef: link.nexus_account_ref })
-      out.push({ linkId: link.public_id, agencyKey: agency, state: 'verified', properties: v.properties })
+      const st = await propertyState(account, v.properties.map(x => x.sourcePropertyId))
+      out.push({ linkId: link.public_id, agencyKey: agency, state: 'verified', properties: v.properties.map(x => ({ ...x, state: st[x.sourcePropertyId] || null })) })
     } else {
       const { rows } = await db.query(
         `SELECT p.ref, p.town, p.property_type, p.bedrooms, c.claim_state FROM nexus_owner_property_claims c
@@ -460,6 +674,60 @@ async function staffThreads() {
     links: r.links || [], lastAt: r.last_at, lastText: r.last_text ? String(r.last_text).slice(0, 140) : null, unread: r.unread || 0, createdAt: r.created_at })) }
 }
 
+// Unread owner messages and claims waiting for a decision: the inbox counter.
+async function staffSummary() {
+  const agency = AGENCY_KEY()
+  const [{ rows: [m] }, { rows: [c] }] = await Promise.all([
+    db.query(`SELECT COUNT(*)::int AS n FROM nexus_owner_messages WHERE agency_key=$1 AND direction='in' AND read_by_staff_at IS NULL`, [agency]),
+    db.query(`SELECT COUNT(*)::int AS n FROM nexus_owner_links WHERE agency_key=$1 AND link_state='claim_pending' AND nexus_account_ref LIKE 'sync:%'`, [agency]),
+  ])
+  return { unread: m.n, pendingClaims: c.n }
+}
+
+// Owner and listing context for one SYNC account: who the owner is in ARGUS,
+// the claimed listings and the agent responsible for each.
+async function staffContext(publicId) {
+  const a = await staffAccount(publicId)
+  const { rows: links } = await db.query(
+    `SELECT l.id, l.owner_contact_id, l.link_state, l.verified_at, oc.name AS owner_name FROM nexus_owner_links l
+       JOIN owner_contacts oc ON oc.id=l.owner_contact_id WHERE l.agency_key=$1 AND l.nexus_account_ref=$2 ORDER BY l.id`, [AGENCY_KEY(), accountRef(a)])
+  const out = []
+  for (const l of links) {
+    const { rows } = await db.query(
+      `SELECT p.id, p.ref, p.town, p.property_type, p.bedrooms, p.longlet_price, p.sale_price, p.available_status, c.claim_state, ag.name AS agent_name
+         FROM nexus_owner_property_claims c JOIN properties p ON p.id=c.property_id LEFT JOIN agents ag ON ag.id=p.listed_by_agent_id
+        WHERE c.owner_link_id=$1 ORDER BY p.id`, [l.id])
+    out.push({ ownerId: l.owner_contact_id, ownerName: l.owner_name, state: l.link_state, verifiedAt: l.verified_at,
+      properties: rows.map(r => ({ id: r.id, ref: r.ref, town: r.town, type: r.property_type, bedrooms: r.bedrooms, rent: r.longlet_price == null ? null : Number(r.longlet_price), sale: r.sale_price == null ? null : Number(r.sale_price), availability: r.available_status, claim: r.claim_state, agent: r.agent_name || null })) })
+  }
+  return { account: accountView(a), links: out }
+}
+
+// Staff approve or reject a SYNC claim. Approval uses the existing verification
+// (markVerified via verifyOwner); rejection detaches the account, nothing else.
+async function staffDecideClaim(publicId, agent, { ownerId, decision }) {
+  const a = await staffAccount(publicId)
+  if (!(agent?.role === 'admin' || agent?.nexusOwnerLink === true)) throw err('FORBIDDEN', 'Only admins or agents with NEXUS owner controls can decide claims.', 403)
+  const oid = Number(ownerId)
+  const { rows: [l] } = await db.query(`SELECT * FROM nexus_owner_links WHERE agency_key=$1 AND owner_contact_id=$2 AND nexus_account_ref=$3`, [AGENCY_KEY(), oid, accountRef(a)])
+  if (!l) throw err('CLAIM_NOT_FOUND', 'This account has no claim on that owner.', 404)
+  if (decision === 'approve') {
+    await tx(async q => q.query(`UPDATE nexus_owner_property_claims SET claim_state='confirmed', decided_at=COALESCE(decided_at,NOW()), decided_via=COALESCE(decided_via,'staff_sync_inbox'), updated_at=NOW()
+                                  WHERE owner_link_id=$1 AND claim_state='proposed'`, [l.id]))
+    const r = await L.verifyOwner(oid, agent, { method: `sync_phone_${a.phone_verified_via || 'confirmed'}_staff_approved` })
+    return { ...r, ownerId: oid }
+  }
+  if (decision === 'reject') {
+    await tx(async q => {
+      await q.query(`UPDATE nexus_owner_links SET nexus_account_ref=NULL, link_state='not_invited', verified_at=NULL, updated_at=NOW() WHERE id=$1`, [l.id])
+      await q.query(`UPDATE nexus_owner_property_claims SET claim_state='proposed', decided_at=NULL, updated_at=NOW() WHERE owner_link_id=$1`, [l.id])
+      await audit(q, agent, 'SYNC_CLAIM_REJECTED', { owner_contact_id: oid, account: a.public_id })
+    })
+    return { linkState: 'not_invited', ownerId: oid }
+  }
+  throw err('DECISION_INVALID', 'approve or reject')
+}
+
 async function staffAccount(publicId) {
   const { rows: [a] } = await db.query(`SELECT * FROM sync_accounts WHERE public_id::text=$1`, [String(publicId || '')])
   if (!a) throw err('ACCOUNT_NOT_FOUND', 'Account not found', 404)
@@ -489,8 +757,9 @@ async function staffReply(publicId, agent, { text, propertyId }) {
 module.exports = {
   signup, login, logout, sessionAccount, updateAccount, socialSignIn,
   emailStart, emailConfirm, phoneStart, phoneStatus, handleWhatsAppVerify,
+  loginPhoneStart, loginPhoneStatus, setPrefs, ownerViewings, ownerDecide, ownerSetDays, ownedProperties,
   ownerView, decideClaims, ownerEvent, messages, postMessage,
-  staffThreads, staffMessages, staffReply,
+  staffThreads, staffMessages, staffReply, staffSummary, staffContext, staffDecideClaim,
   accountView, claimByPhone, phoneDigits, passwordProblem, WA_RE,
-  _test: { setHttp, setMailer, setSender, sha, waToken },
+  _test: { setHttp, setMailer, setSender, sha, waToken, setWindows: fn => { windows = () => fn } },
 }

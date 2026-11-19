@@ -8,7 +8,7 @@ import { buildDemo, buildEmpty, type Demo } from './fixtures'
 import { MODE_LABEL, MODE_PERIOD, type Room, type DocumentItem, type OwnerProfile, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
 import { extractWishes, mergeWishes, type Wish } from './wishes'
 import { acceptWaVerify, backfill, checkCode, matchOwner, normalizePhone, waToken, type CodeState, type OwnerDetails, type WaPending } from './identity'
-import { sync, liveProperties, type LiveAccount, type LiveListing, type LiveMessage, type LiveOwner } from './live'
+import { sync, liveProperties, type Answer, type LiveAccount, type LiveListing, type LiveMessage, type LiveOwner, type LiveViewing } from './live'
 
 // A home ARGUS confirmed for this owner, in the workspace's own shape. ARGUS stays
 // the source; changes go back as owner events for an agent to approve.
@@ -49,8 +49,10 @@ interface Store extends Demo {
   /** true only for the demo with Maria (link with ?demo=1); real owners start empty */
   demo: boolean
   /** the real SYNC account and what ARGUS shares with it (empty in the demo) */
-  live: { account: LiveAccount | null; owner: LiveOwner | null; ready: boolean }
+  live: { account: LiveAccount | null; owner: LiveOwner | null; ready: boolean; viewings: LiveViewing[] }
   refreshLive: () => Promise<LiveAccount | null>
+  /** run a SYNC action, refresh what ARGUS shares, and say how it went */
+  liveDo: <T = Record<string, unknown>>(op: string, body?: Record<string, unknown>, okText?: string) => Promise<Answer<T>>
   setDemo: (on: boolean) => void
   toasts: Toast[]
   say: (text: string, tone?: Toast['tone']) => void
@@ -122,18 +124,20 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const [code, setCode] = useState<CodeState | null>(null)
   const [wa, setWa] = useState<WaPending | null>(null)
   const loaded = useRef(false)
-  const [live, setLive] = useState<Store['live']>({ account: null, owner: null, ready: false })
+  const [live, setLive] = useState<Store['live']>({ account: null, owner: null, ready: false, viewings: [] })
   const lastMsg = useRef(0)
 
   const refreshLive = useCallback(async () => {
     const r = await sync<{ account: LiveAccount; owner: LiveOwner }>('me')
     if (!r.ok) {
-      setLive({ account: null, owner: null, ready: true })
+      setLive({ account: null, owner: null, ready: true, viewings: [] })
       if (r.status === 401) setData(d => ({ ...d, account: null }))
       return null
     }
     const a = r.account
-    setLive({ account: a, owner: r.owner, ready: true })
+    const hasHomes = liveProperties(r.owner).length > 0
+    const v = hasHomes ? await sync<{ viewings: LiveViewing[] }>('owner/viewings') : null
+    setLive({ account: a, owner: r.owner, ready: true, viewings: v && v.ok ? v.viewings : [] })
     setData(d => {
       const known = new Set(d.properties.map(p => p.id))
       const fresh = liveProperties(r.owner).filter(l => !known.has(l.sourcePropertyId)).map(l => fromArgus(l, d.today, d.profile.defaults))
@@ -199,6 +203,12 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
 
   const store: Store = useMemo(() => ({
     ...data, demo, toasts, say, live, refreshLive,
+    async liveDo(op, body = {}, okText) {
+      const r = await sync(op, body)
+      if (!r.ok) say(r.message, 'err')
+      else { if (okText) say(okText); await refreshLive() }
+      return r as never
+    },
     setDemo(on) {
       try { if (on) localStorage.setItem('ow_mode', 'demo'); else localStorage.removeItem('ow_mode') } catch { /* */ }
       setDemoState(on); setData(on ? buildDemo() : buildEmpty())
@@ -264,7 +274,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       return true
     },
     signOut() {
-      if (!demo) { sync('logout'); setLive({ account: null, owner: null, ready: true }); lastMsg.current = 0; setData(buildEmpty()); say('Signed out.'); return }
+      if (!demo) { sync('logout'); setLive({ account: null, owner: null, ready: true, viewings: [] }); lastMsg.current = 0; setData(buildEmpty()); say('Signed out.'); return }
       setData(d => ({ ...d, account: d.account ? { ...d.account, signedIn: false } : null })); say('Signed out.')
     },
     sendCode(phone) {
