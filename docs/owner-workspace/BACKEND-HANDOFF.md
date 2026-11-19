@@ -106,3 +106,5 @@ replace the browser simulation. The demo (`?demo=1`) stays local.
 2. Meta app "ARGUS Social Publishing" (id 1123354370462124): add the product **Facebook Login**. Valid OAuth redirect URI `https://api.2906.estate/api/sync/auth/facebook/callback`; app domains `nexussync.one`, `2906.estate`.
 3. An SMS provider for owners without WhatsApp (for example Twilio), or email codes as the first fallback.
 4. A decision: ARGUS Postgres only (recommended) or Supabase Auth plus ARGUS.
+
+> **Update 19 Nov:** the data model and routes in this file are superseded by [BACKEND-BOUNDARIES.md](BACKEND-BOUNDARIES.md). ARGUS already has the NEXUS link layer (`nexus_owner_links`, claims, updates, outbox, `/api/nexus-link/v1`). Only the SYNC login tables are new, and a phone match creates a claim that an agent verifies.
