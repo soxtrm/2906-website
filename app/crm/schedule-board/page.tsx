@@ -29,6 +29,7 @@ const BoardIntelligenceMap = dynamic(() => import('@/components/crm/nexus-place-
 const NexusCheckWorkbench = dynamic(() => import('@/components/crm/nexus-check-workbench').then(m => m.NexusCheckWorkbench), { ssr: false })
 import { type Booking, bookingLine } from '@/lib/crm/booking'
 import { QuickFacebookButton } from '@/components/crm/facebook/quick-publish'
+import { BodyPortal } from '@/components/crm/body-portal'
 import { SwipeLinkCreatedModal, SwipeModeChoiceModal, SwipeMultiLinksModal, SwipeLinksPanel, MatchResultsPanel } from '@/components/crm/swipe-dialogs'
 
 // "Mine" is navy rather than a separate green: on this board the distinction
@@ -2353,7 +2354,7 @@ function Board() {
           </div>
         </div>
       )}
-      {detail && (
+      {detail && (<BodyPortal>
         <DetailModal
           refId={detail}
           intent={detailIntent}
@@ -2368,7 +2369,7 @@ function Board() {
           onStar={r => toggleStar(r)}
           onBook={r => { setDetail(null); setDetailIntent(null); setBooking(r) }}
         />
-      )}
+      </BodyPortal>)}
 
       {openToCheck && <NexusCheckWorkbench onClose={() => setOpenToCheck(false)} onChanged={reload} />}
       <AnimatePresence>
@@ -5059,7 +5060,7 @@ function DetailModal({ refId, intent, onClose, onAct, onTag, tagging, onStar, on
   }, [onClose])
 
   return (
-    <div className="crm-listing-detail-backdrop" onClick={onClose} style={{
+    <div className="crm-listing-detail-backdrop" role="dialog" aria-modal="true" aria-label="Listing" data-state="open" onClick={onClose} style={{
       position: 'fixed', inset: 0, background: 'rgba(19,19,19,0.55)', zIndex: 200,
       display: 'grid', placeItems: 'center', padding: 16,
     }}>

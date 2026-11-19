@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react'
 import { X, Copy, Check, Link2, Heart, Star, MessageCircle, CalendarPlus } from 'lucide-react'
 import { crmJson } from '@/lib/crm/api'
 import { A, AD, NAVY, F, FM } from '@/lib/crm/ui'
+import { BodyPortal } from '@/components/crm/body-portal'
 
 // Green = "available to act on" everywhere else in the CRM (lib/crm/ui.tsx
 // AVAIL.available) — reused verbatim so this reads as the same system, not a
@@ -23,11 +24,21 @@ const overlay: React.CSSProperties = {
 }
 const sheet: React.CSSProperties = {
   background: '#FFF', borderRadius: 16, width: '100%', maxWidth: 480,
-  maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+  maxHeight: 'min(85dvh, calc(100dvh - 32px))', overflow: 'hidden', display: 'flex', flexDirection: 'column',
   fontFamily: F, boxShadow: '0 24px 60px rgba(27,42,74,0.25)',
 }
+// Every Swipe Links dialog: straight under <body> (above the header and the bottom
+// island on a phone), marked as an open dialog so the island steps aside, and the
+// page behind it does not scroll away under the finger.
+function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <BodyPortal>
+      <div style={overlay} role="dialog" aria-modal="true" data-state="open" onClick={onClose}>{children}</div>
+    </BodyPortal>
+  )
+}
 const head: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '16px 18px', borderBottom: '1px solid #EDEBE5',
 }
 
@@ -39,7 +50,7 @@ export function SwipeLinkCreatedModal({ url, count, onClose }: { url: string; co
     catch { /* clipboard blocked — the field itself is still selectable */ }
   }
   return (
-    <div style={overlay} onClick={onClose}>
+    <Overlay onClose={onClose}>
       <div style={{ ...sheet, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
         <div style={head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
@@ -68,7 +79,7 @@ export function SwipeLinkCreatedModal({ url, count, onClose }: { url: string; co
           </div>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }
 
@@ -79,7 +90,7 @@ export function SwipeLinkCreatedModal({ url, count, onClose }: { url: string; co
 // that way.
 export function SwipeModeChoiceModal({ count, onPick, onClose }: { count: number; onPick: (mode: 'collected' | 'multiple') => void; onClose: () => void }) {
   return (
-    <div style={overlay} onClick={onClose}>
+    <Overlay onClose={onClose}>
       <div style={{ ...sheet, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
         <div style={head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
@@ -108,7 +119,7 @@ export function SwipeModeChoiceModal({ count, onPick, onClose }: { count: number
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }
 
@@ -132,7 +143,7 @@ export function SwipeMultiLinksModal({ links, onClose }: { links: { ref: string;
     } catch { /* clipboard blocked */ }
   }
   return (
-    <div style={overlay} onClick={onClose}>
+    <Overlay onClose={onClose}>
       <div style={{ ...sheet, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
         <div style={head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
@@ -140,7 +151,7 @@ export function SwipeMultiLinksModal({ links, onClose }: { links: { ref: string;
           </div>
           <button onClick={onClose} style={{ border: 0, background: 'none', cursor: 'pointer', color: '#999' }}><X size={18} /></button>
         </div>
-        <div style={{ padding: '12px 20px 20px', overflowY: 'auto' }}>
+        <div style={{ padding: '12px 20px calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto', minHeight: 0, flex: '1 1 auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
           {links.some(l => l.error) && (
             <p style={{ fontSize: 12, color: '#B91C1C', margin: '0 0 10px' }}>
               {links.filter(l => l.error).map(l => `#${l.ref}`).join(', ')} could not be created — try those again.
@@ -177,7 +188,7 @@ export function SwipeMultiLinksModal({ links, onClose }: { links: { ref: string;
           )}
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }
 
@@ -233,7 +244,7 @@ export function SwipeLinksPanel({
   const refOf = (id: number) => detail?.properties.find(p => p.id === id)
 
   return (
-    <div style={overlay} onClick={onClose}>
+    <Overlay onClose={onClose}>
       <div style={sheet} onClick={e => e.stopPropagation()}>
         <div style={head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
@@ -245,7 +256,7 @@ export function SwipeLinksPanel({
           <button onClick={onClose} style={{ border: 0, background: 'none', cursor: 'pointer', color: '#999' }}><X size={18} /></button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: 4 }}>
+        <div style={{ overflowY: 'auto', padding: 4, minHeight: 0, flex: '1 1 auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
           {err && <div style={{ padding: 20, color: '#B91C1C', fontSize: 12.5 }}>{err}</div>}
 
           {!openId && links && links.length === 0 && (
@@ -350,7 +361,7 @@ export function SwipeLinksPanel({
           )}
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }
 
@@ -429,7 +440,7 @@ export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: strin
   }
 
   return (
-    <div style={overlay} onClick={onClose}>
+    <Overlay onClose={onClose}>
       <div style={sheet} onClick={e => e.stopPropagation()}>
         <div style={head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#1A1A1A', fontSize: 14 }}>
@@ -464,7 +475,7 @@ export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: strin
           </p>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: '4px 18px 18px' }}>
+        <div style={{ overflowY: 'auto', padding: '4px 18px 18px', minHeight: 0, flex: '1 1 auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
           {err && <div style={{ padding: '16px 0', color: '#B91C1C', fontSize: 12.5 }}>{err}</div>}
           {!err && matches === null && <div style={{ padding: '40px 0', textAlign: 'center', color: '#BBB', fontSize: 12.5 }}>Matching…</div>}
           {!err && matches && matches.length === 0 && (
@@ -508,6 +519,6 @@ export function MatchResultsPanel({ propertyRef, onClose }: { propertyRef: strin
           ))}
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }

@@ -590,7 +590,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
       <main ref={contentRef} id="crm-content" tabIndex={-1} className="crm-content" data-mobile-nav-scroll="adaptive" onScroll={handleContentScroll}><div key={pathname} className="crm-route-enter">{children}</div></main>
     </div>
     <nav className="crm-bottom-nav" aria-label="Mobile navigation" data-compact={navigationCompact || undefined}>
-      <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Show mobile navigation" tabIndex={navigationCompact ? 0 : -1}><span /></button>
+      <button type="button" className="crm-bottom-nav-handle" onClick={() => setNavigationCompact(false)} aria-label="Show mobile navigation" tabIndex={navigationCompact ? 0 : -1}><svg className="crm-bottom-nav-star" viewBox="0 0 100 100" aria-hidden="true" fill="currentColor"><path d="M3 3 Q50 58 97 3 Q42 50 97 97 Q50 42 3 97 Q58 50 3 3 Z" /></svg></button>
       {items.filter(i => !i.disabled && i.key !== 'incoming').slice(0, 4).map(item => {
         const Icon = NAV_ICONS[item.key]
         const current = active(item.href)
