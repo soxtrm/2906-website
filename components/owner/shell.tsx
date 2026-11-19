@@ -45,6 +45,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="ow-authwrap">
         <div className="ow-auth-top"><Brand /></div>
+        <p className="ow-auth-preview">Preview: accounts are kept only in this browser and no code is sent. The real sign-up opens soon.</p>
         {children}
         <div className="ow-toasts" role="status" aria-live="polite">{toasts.map(t => <div key={t.id} className="ow-toast" data-tone={t.tone}>{t.text}</div>)}</div>
       </div>

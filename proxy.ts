@@ -42,7 +42,8 @@ export default function proxy(req: NextRequest) {
 
   // Owner Workspace (2026-11-18): owner.2906.estate → /owner/*, no i18n.
   // Preview only: hidden on the public domains until owner sign-in exists.
-  if (host.startsWith('owner.')) {
+  // nexussync.one (Kev, 19 Nov 2026) serves the same owner workspace as owner.2906.estate.
+  if (host.startsWith('owner.') || host === 'nexussync.one' || host === 'www.nexussync.one') {
     if (/^\/owner(\/|$)/.test(pathname)) return NextResponse.next()
     const url = req.nextUrl.clone()
     url.pathname = pathname === '/' ? '/owner' : `/owner${pathname}`

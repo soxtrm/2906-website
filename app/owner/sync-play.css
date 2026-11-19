@@ -395,3 +395,4 @@
 .ow-auth-top .ow-logo-mini svg { width: 18px; height: 18px; }
 .ow-auth-card .ow-auth-logo { display: none; }
 @media (max-width: 500px) { .ow-auth-top .ow-logo-star { height: 54px; } .ow-auth-top .ow-logo-word { height: 40px; } .ow-auth-top { margin: 10px auto 18px; } }
+.ow-auth-preview { max-width: 460px; margin: -10px auto 14px; text-align: center; font-size: 13px; font-weight: 600; color: var(--ow-warm-ink); background: var(--ow-warm-soft); border-radius: 12px; padding: 8px 12px; }
