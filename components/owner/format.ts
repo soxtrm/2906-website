@@ -39,3 +39,13 @@ export function occupants(a: { adults: number; children: number }) {
   if (a.children) parts.push(`${a.children} child${a.children === 1 ? '' : 'ren'}`)
   return parts.join(', ')
 }
+
+// One colour per property, used in the calendar, the chat and the wish list so
+// the owner recognises a home at a glance. Modern, no orange (Kev, 19 Nov).
+export const PROP_COLORS = ['#ec4899', '#14b8a6', '#6366f1', '#0ea5e9', '#a855f7', '#84cc16']
+export function propColor(ids: number[], id: number | null | undefined) {
+  if (id == null) return '#071449'
+  const i = ids.indexOf(id)
+  return PROP_COLORS[(i < 0 ? 0 : i) % PROP_COLORS.length]
+}
+export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('')

@@ -5,6 +5,7 @@ import { useOwner } from '@/lib/owner/store'
 import { addDays, effectiveDistribution, exclusiveActive, recipients } from '@/lib/owner/engine'
 import type { Distribution, Property } from '@/lib/owner/model'
 import { niceDate } from '@/components/owner/format'
+import { AgentSync } from '@/components/owner/agent-sync'
 
 function Toggle({ on, label, onChange, disabled }: { on: boolean; label: string; onChange: (v: boolean) => void; disabled?: boolean }) {
   return <button role="switch" aria-checked={on} aria-label={label} className="ow-toggle" disabled={disabled} onClick={() => onChange(!on)} />
@@ -43,6 +44,7 @@ function PropertySharing({ p }: { p: Property }) {
   return (
     <section className="ow-panel" id={`p-${p.id}`} aria-labelledby={`h-${p.id}`}>
       <div className="ow-prop-title"><h2 id={`h-${p.id}`}>{p.name}</h2><span className="ow-chip plain">{p.town}</span></div>
+      <AgentSync p={p} />
       <div className="ow-switch">
         <div><b>Use my defaults</b><p>{p.distribution.inherit ? 'Follows your settings above. Change them once, every such property follows.' : 'This property has its own rules.'}</p></div>
         <Toggle on={p.distribution.inherit} label="Use my defaults" onChange={v => s.setDistribution(p.id, { inherit: v, override: v ? p.distribution.override : d })} />

@@ -162,7 +162,7 @@ export function modeSwitchCheck(p: Property, to: OperatingMode, requests: Viewin
   }
   const future = requests.filter(r => r.propertyId === p.id && r.status === 'confirmed' && datePart(r.start) >= today)
   if (future.length) out.push({ level: 'warn', text: `${future.length} confirmed viewing${future.length > 1 ? 's' : ''} stay booked; tell the visitors the offer changed.` })
-  if (to === 'shortlet') out.push({ level: 'warn', text: 'Short lets in Malta need an MTA licence before going live.' })
+  if (to === 'shortlet' || to === 'summer_let') out.push({ level: 'warn', text: 'Short lets in Malta need an MTA licence before going live.' })
   return out
 }
 

@@ -2,7 +2,32 @@
   {
     "name": "overview says what needs the owner",
     "ok": true,
-    "extra": "3 viewing requests are waiting for your answer."
+    "extra": "3 people want to view your homes"
+  },
+  {
+    "name": "dashboard: chat names the real sender",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "dashboard: requests to review on the side",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "dashboard: a wish said on three homes counts for all",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "chat: wishes noted, nationality refused",
+    "ok": true,
+    "extra": "Noted for Tower Road shared flat: + Couple, − No pets. One part I cannot keep: nationality, origin or religion may not be used to choose tenants, so ARGUS does not record or filter by it. Everything else is saved."
+  },
+  {
+    "name": "wish list for that home has the new wishes and no nationality",
+    "ok": true,
+    "extra": ""
   },
   {
     "name": "nav badge shows waiting requests",
@@ -30,19 +55,29 @@
     "extra": "Viewing confirmed. The requester has been told. | You already have a confirmed viewing at 17:30 for this property."
   },
   {
-    "name": "calendar draws viewing hours as shutters",
+    "name": "calendar shows every home's viewing hours in its own colour",
     "ok": true,
-    "extra": "3"
+    "extra": "7"
   },
   {
     "name": "dragging on a day opens \"save viewing hours\"",
     "ok": true,
-    "extra": "Thursday, 10:00 to 12:00 at Tower Road shared flat"
+    "extra": "Thursday, 10:00 to 12:00"
   },
   {
     "name": "weekly rule saved",
     "ok": true,
     "extra": "Tower Road shared flatEvery Monday16:00–19:00Remove / Tower Road shared flatEvery Wednesday10:00–13:00Remove / Tower Road shared flatEvery Thursday10:00–12:00Remove / Tower Road shared flatEvery Friday15:00–18:00Remove / Seafront apartmentEvery Tuesday17:00–19:30Remove / Seafront apartmentEvery Saturday10:00–12:00Remove / Rotunda townhouseEvery Thursday16:30–18:30Remove"
+  },
+  {
+    "name": "calendar can be trimmed to 16–20",
+    "ok": true,
+    "extra": "16,17,18,19,20"
+  },
+  {
+    "name": "tapping a day opens the day with who is coming",
+    "ok": true,
+    "extra": "Daniel · Harbour Homes | Private person (NEXUS Housing)"
   },
   {
     "name": "room plan renders one zone per room",
@@ -65,9 +100,19 @@
     "extra": "NEXUS DirectBeing removed"
   },
   {
-    "name": "ARGUS Main thread with structured buttons",
+    "name": "add: every offer type is there",
+    "ok": true,
+    "extra": "Long let, Short let, Winter let, Summer let, Room rentals, For sale"
+  },
+  {
+    "name": "add: a dropped photo becomes the cover",
     "ok": true,
     "extra": ""
+  },
+  {
+    "name": "add: new property opens, marked as being checked",
+    "ok": true,
+    "extra": "/owner/properties/9004 Skip to contentAdd property Overview "
   },
   {
     "name": "mobile: no sideways scroll",
@@ -75,14 +120,14 @@
     "extra": "0"
   },
   {
-    "name": "mobile: bottom tab bar",
+    "name": "mobile: bottom tab bar with the add button",
     "ok": true,
     "extra": ""
   },
   {
     "name": "mobile: buttons are thumb-sized",
     "ok": true,
-    "extra": "46"
+    "extra": "42"
   },
   {
     "name": "no page errors and no backend calls",

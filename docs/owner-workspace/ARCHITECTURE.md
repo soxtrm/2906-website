@@ -174,3 +174,11 @@ louvred shutter (viewing hours, brand mark). Mobile: bottom tab bar + "More" she
 - Product decision recorded 2026-11-12 ("ARGUS Light is a NEXUS Marketplace interface, not
   built in the ARGUS CRM"): this workspace is a separate owner surface under `owner.`, not
   inside the agent CRM; Kev should confirm that this matches his intent.
+
+## Agency sync and the agent link (added 19 Nov 2026)
+
+Kev: "walkie-talkie against walkie-talkie" — an owner sends a home straight into the systems of the agencies it is shared with, and shares one agent link without copying anything.
+
+- **Send to my agencies.** The planned endpoint is `POST /api/owner/properties/:id/sync`, authenticated by the owner session. It reads the effective distribution (`engine.recipients`) and writes or refreshes `nexus_distribution_routes` for each allowed agency. It then queues `distribution.released` in `nexus_sync_outbox`, which reaches the agency's ARGUS or, for an agency without ARGUS, its walkie-talkie line. Delivery state is read back from the outbox: "synced", "pending" or "being removed".
+- **Agent link.** `GET /w/:token` uses a random token per property and does not contain the ref. It opens the listing for a **signed-in agent of an allowed agency** only. Anyone else sees a sign-in page or "not shared with your agency". The link never grants owner rights and never shows the owner's phone. Revoking a channel invalidates the link for that agency at once. The host follows the NEXUS Sync domain.
+- **Inbound.** Agents answer through the same link or their ARGUS. Their messages arrive in the owner's ARGUS Main chat with the sender named ("Tim · Benestates").

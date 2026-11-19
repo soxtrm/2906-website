@@ -3,6 +3,7 @@
 import type {
   Agency, AvailabilityException, AvailabilityRule, DocumentItem, OwnerProfile, Property, Thread, ViewingRequest,
 } from './model'
+import type { Wish } from './wishes'
 import { addDays, startOfWeek } from './engine'
 
 const IMG = (f: string) => `/link-marketplace/assets/${f}`
@@ -142,17 +143,38 @@ export function buildDemo(today = maltaToday()) {
       history: [ev(-1, '11:00', 'tenant', 'Requested on your direct listing'), ev(-1, '13:00', 'owner', 'New time suggested', next(5, '16:00').replace('T', ' '))] },
   ]
 
+  // One WhatsApp-style line with ARGUS Main. ARGUS knows which account wrote each
+  // relayed message, so every bubble says who is really behind it.
+  const SYS = { kind: 'system' as const }
   const threads: Thread[] = [
-    { id: 't1', title: 'ARGUS Main', with: 'ARGUS Main', unread: 2, messages: [
-      { id: 'm1', from: 'argus', at: at(-1, '19:13'), text: 'Harbour Homes asked to view the Seafront apartment next Tuesday at 17:30 for a couple moving in two weeks from now. They have two small dogs.',
-        actions: [{ label: 'Accept', requestId: 'rq1', action: 'accept' }, { label: 'Suggest another time', requestId: 'rq1', action: 'propose' }, { label: 'Decline', requestId: 'rq1', action: 'decline' }] },
-      { id: 'm2', from: 'argus', at: at(-1, '21:41'), text: 'A second request came in for the same Tuesday slot from NEXUS Housing. You can compare both in Requests; neither side sees the other.' },
-      { id: 'm3', from: 'argus', at: at(0, '07:56'), text: 'Someone asked to see Room 2 in Sliema next Wednesday at 11:00 through your booking link.' },
+    { id: 't1', title: 'ARGUS Main', with: 'ARGUS Main', unread: 3, messages: [
+      { id: 'm0', from: 'argus', sender: SYS, propertyId: 9003, at: at(-2, '09:02'), text: 'Is the Rotunda townhouse still available from next month?' },
+      { id: 'm0b', from: 'owner', propertyId: 9003, at: at(-2, '09:30'), text: 'Yes still available. Long term please, no students and no pets.' },
+      { id: 'm0c', from: 'argus', sender: { kind: 'agent', name: 'Petra', agency: 'Harbour Homes' }, propertyId: 9003, at: at(-1, '15:00'),
+        text: 'Hi Maria, I have a family of four for the townhouse, both parents working. Could they view on Thursday at 17:00?' },
+      { id: 'm0d', from: 'owner', propertyId: 9003, at: at(-1, '18:10'), text: 'Is the family planning to use the roof terrace for a small trampoline?' },
+      { id: 'm1', from: 'argus', sender: { kind: 'agent', name: 'Daniel', agency: 'Harbour Homes' }, propertyId: 9002, at: at(-1, '19:13'),
+        text: 'Hello Maria, could my clients see the Seafront apartment next Tuesday at 17:30? A couple moving in two weeks from now, both employed, with two small dogs.',
+        actions: [{ label: 'Accept', requestId: 'rq1', action: 'accept' }, { label: 'Other time', requestId: 'rq1', action: 'propose' }, { label: 'Decline', requestId: 'rq1', action: 'decline' }] },
+      { id: 'm1b', from: 'owner', propertyId: 9002, at: at(-1, '20:02'), text: 'Small dogs are fine there. I prefer a couple, no smokers.' },
+      { id: 'm2', from: 'argus', sender: { kind: 'client', name: 'Client via NEXUS Housing' }, propertyId: 9002, at: at(-1, '21:41'),
+        text: 'Hi, I work remotely and would like to see the apartment on Tuesday at 17:30 too. Is parking included?' },
+      { id: 'm2b', from: 'argus', sender: SYS, propertyId: 9002, at: at(-1, '21:42'), text: 'Two requests for the same Tuesday slot. Compare them in Requests; neither side sees the other.' },
+      { id: 'm3', from: 'argus', sender: SYS, propertyId: 9001, at: at(0, '07:56'), text: 'New request through your booking link: Room 2 in Sliema, next Wednesday at 11:00.' },
     ] },
-    { id: 't2', title: 'Harbour Homes · Rotunda townhouse', with: 'Harbour Homes', propertyId: 9003, requestId: 'rq5', unread: 0, messages: [
-      { id: 'm4', from: 'owner', at: at(-1, '18:10'), text: 'Is the family planning to use the roof terrace for a small trampoline?' },
-      { id: 'm5', from: 'argus', at: at(-1, '18:11'), text: 'Sent to Petra at Harbour Homes. I will let you know as soon as she answers.' },
-    ] },
+  ]
+
+  // Wishes the owner already told ARGUS (plus/minus list), with her own words.
+  const wishes: Wish[] = [
+    { id: 'ws1', key: 'long_stay', polarity: 'plus', label: 'Long stay (12 months+)', propertyId: 9003, quote: 'Long term please', at: at(-2, '09:30') },
+    { id: 'ws2', key: 'students', polarity: 'minus', label: 'No students', propertyId: 9003, quote: 'no students', at: at(-2, '09:30') },
+    { id: 'ws3', key: 'pets', polarity: 'minus', label: 'No pets', propertyId: 9003, quote: 'no pets', at: at(-2, '09:30') },
+    { id: 'ws4', key: 'pets', polarity: 'plus', label: 'Pets welcome', propertyId: 9002, quote: 'Small dogs are fine there', at: at(-1, '20:02') },
+    { id: 'ws5', key: 'couple', polarity: 'plus', label: 'Couple', propertyId: 9002, quote: 'I prefer a couple', at: at(-1, '20:02') },
+    { id: 'ws6', key: 'smoking', polarity: 'minus', label: 'Non-smokers only', propertyId: 9002, quote: 'no smokers', at: at(-1, '20:02') },
+    { id: 'ws7', key: 'smoking', polarity: 'minus', label: 'Non-smokers only', propertyId: 9003, quote: 'No smoking inside', at: at(-9, '10:00') },
+    { id: 'ws8', key: 'smoking', polarity: 'minus', label: 'Non-smokers only', propertyId: 9001, quote: 'Non-smokers for the rooms', at: at(-20, '10:00') },
+    { id: 'ws9', key: 'professionals', polarity: 'plus', label: 'Working professionals', propertyId: 9001, quote: 'working people best', at: at(-20, '10:00') },
   ]
 
   const documents: DocumentItem[] = [
@@ -161,7 +183,13 @@ export function buildDemo(today = maltaToday()) {
     { id: 'd3', propertyId: 9002, title: 'Energy performance certificate', kind: 'certificate', addedAt: addDays(today, -500), sharedWith: ['Harbour Homes', 'North Coast Lets'] },
   ]
 
-  return { today, now, profile, agencies, properties, rules, exceptions, requests, threads, documents }
+  // which agencies already have each home in their own ARGUS / walkie-talkie
+  const agencySync: Record<number, { agencyId: string; at: string }[]> = {
+    9002: [{ agencyId: 'ag-harbour', at: at(-3, '10:00') }, { agencyId: 'ag-north', at: at(-3, '10:00') }],
+    9003: [{ agencyId: 'ag-harbour', at: at(-1, '11:00') }],
+  }
+
+  return { today, now, profile, agencies, properties, rules, exceptions, requests, threads, documents, wishes, agencySync }
 }
 
 export type Demo = ReturnType<typeof buildDemo>

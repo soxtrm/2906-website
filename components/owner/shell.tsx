@@ -4,32 +4,23 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { CalendarDays, FileText, Home, Inbox, LayoutGrid, MessageCircle, MoreHorizontal, Settings, Share2 } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
+import { Brand, NexusStar } from './brand'
 
 const NAV = [
   { href: '/owner', label: 'Overview', icon: LayoutGrid },
-  { href: '/owner/properties', label: 'My properties', icon: Home },
-  { href: '/owner/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/owner/messages', label: 'Chat', icon: MessageCircle, count: 'messages' as const },
   { href: '/owner/requests', label: 'Requests', icon: Inbox, count: 'requests' as const },
-  { href: '/owner/messages', label: 'Messages', icon: MessageCircle, count: 'messages' as const },
+  { href: '/owner/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/owner/properties', label: 'My properties', icon: Home },
   { href: '/owner/sharing', label: 'Agencies & sharing', icon: Share2 },
   { href: '/owner/documents', label: 'Documents', icon: FileText },
   { href: '/owner/settings', label: 'Settings', icon: Settings },
 ]
-const TABS = [NAV[0], NAV[2], NAV[3], NAV[4]]
-
-function Mark() {
-  // a louvred shutter, the workspace's one motif
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-      <rect x="3" y="2" width="14" height="16" rx="2" fill="none" stroke="#fff" strokeWidth="1.6" />
-      {[5.5, 8.5, 11.5, 14.5].map(y => <line key={y} x1="5.5" x2="14.5" y1={y} y2={y} stroke="#e7cf98" strokeWidth="1.6" strokeLinecap="round" />)}
-    </svg>
-  )
-}
+const TABS = [NAV[0], NAV[3], NAV[1]]
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/owner'
-  const { requests, threads, toasts, profile } = useOwner()
+  const { requests, threads, toasts, profile, reset } = useOwner()
   const [more, setMore] = useState(false)
   const counts = {
     requests: requests.filter(r => r.status === 'awaiting_owner').length,
@@ -41,10 +32,8 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     <div className="ow-shell">
       <a href="#ow-main" className="sr-only" style={{ position: 'absolute', left: -9999 }}>Skip to content</a>
       <aside className="ow-rail" aria-label="Main">
-        <div className="ow-brand">
-          <span className="ow-brand-mark"><Mark /></span>
-          <span><b>Your properties</b><span>ARGUS for owners</span></span>
-        </div>
+        <Brand />
+        <Link href="/owner/add" className="ow-btn primary ow-rail-add ow-star-btn"><span className="ow-star"><NexusStar size={16} /></span>Add property</Link>
         <nav className="ow-nav">
           {NAV.map(n => {
             const Icon = n.icon
@@ -57,18 +46,40 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             )
           })}
         </nav>
-        <div className="ow-rail-foot">Signed in as {profile.name}<br /><span className="ow-preview-flag" style={{ marginTop: 8 }}>Preview with demo data</span></div>
+        <div className="ow-rail-foot">Signed in as {profile.name}<br /><button type="button" className="ow-preview-flag" style={{ marginTop: 8, border: 0 }} onClick={reset} title="Reset the demo">Preview with demo data</button></div>
       </aside>
 
-      <main id="ow-main" className="ow-main">{children}</main>
+      <main id="ow-main" className="ow-main">
+        <header className="ow-topbar">
+          <span className="ow-topbar-logo"><Brand small /></span>
+          <div className="ow-topbar-right">
+            <Link href="/owner/settings" className="ow-top-icon" aria-label="Settings" title="Settings"><Settings size={20} /></Link>
+            <Link href="/owner/settings" className="ow-top-me" aria-label={`Your profile, ${profile.name}`} title="Your profile">
+              <span>{profile.name.slice(0, 1).toUpperCase()}</span><b>{profile.name}</b>
+            </Link>
+          </div>
+        </header>
+        {children}
+      </main>
 
       <nav className="ow-tabbar" aria-label="Main">
-        {TABS.map(n => {
+        {TABS.slice(0, 2).map(n => {
           const Icon = n.icon
           const c = n.count ? counts[n.count] : 0
           return (
             <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? 'page' : undefined}>
-              <Icon size={22} aria-hidden="true" />{n.label === 'My properties' ? 'Homes' : n.label}
+              <Icon size={22} aria-hidden="true" />{n.label === 'Overview' ? 'Home' : n.label}
+              {c > 0 && <span className="ow-dot">{c}</span>}
+            </Link>
+          )
+        })}
+        <Link href="/owner/add" className="ow-tab-add" aria-current={isActive('/owner/add') ? 'page' : undefined} aria-label="Add property"><span><i className="ow-star"><NexusStar size={22} /></i></span></Link>
+        {TABS.slice(2).map(n => {
+          const Icon = n.icon
+          const c = n.count ? counts[n.count] : 0
+          return (
+            <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? 'page' : undefined}>
+              <Icon size={22} aria-hidden="true" />{n.label}
               {c > 0 && <span className="ow-dot">{c}</span>}
             </Link>
           )

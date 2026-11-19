@@ -7,14 +7,23 @@
 // docs/owner-workspace/ARCHITECTURE.md), so the preview fixtures can be swapped
 // for the API without reshaping the UI.
 
-export type OperatingMode = 'long_let' | 'rooms' | 'shortlet' | 'sale' | 'commercial'
+export type OperatingMode =
+  | 'long_let' | 'rooms' | 'shortlet' | 'winter_let' | 'summer_let' | 'sale' | 'commercial' | 'commercial_sale'
 
 export const MODE_LABEL: Record<OperatingMode, string> = {
   long_let: 'Long let',
   rooms: 'Room rentals',
   shortlet: 'Short let',
+  winter_let: 'Winter let',
+  summer_let: 'Summer let',
   sale: 'For sale',
-  commercial: 'Commercial',
+  commercial: 'Commercial rent',
+  commercial_sale: 'Commercial sale',
+}
+/** how the price of each offer type is quoted */
+export const MODE_PERIOD: Record<OperatingMode, 'month' | 'night' | 'total'> = {
+  long_let: 'month', rooms: 'month', shortlet: 'night', winter_let: 'month', summer_let: 'month',
+  sale: 'total', commercial: 'month', commercial_sale: 'total',
 }
 
 export type ListingState = 'live' | 'paused' | 'private' | 'draft'
@@ -27,6 +36,37 @@ export interface Offer {
   active: boolean
   /** audiences that see "price on request" instead of the figure */
   hidePriceFor: Audience[]
+  /** optional conditions the owner sets per offer; nothing here is required */
+  terms?: OfferTerms
+}
+
+export interface OfferTerms {
+  minMonths?: number
+  maxMonths?: number
+  minNights?: number
+  billsIncluded?: boolean
+  negotiable?: boolean
+  furnitureIncluded?: boolean
+  soldWithTenant?: boolean
+}
+
+/** "6–24 months", "min. 3 nights", "negotiable · with furniture" */
+export function termsLine(mode: OperatingMode, t?: OfferTerms): string {
+  if (!t) return ''
+  const out: string[] = []
+  if (MODE_PERIOD[mode] === 'month') {
+    if (t.minMonths && t.maxMonths) out.push(t.minMonths === t.maxMonths ? `${t.minMonths} months` : `${t.minMonths}–${t.maxMonths} months`)
+    else if (t.minMonths) out.push(`${t.minMonths}+ months`)
+    else if (t.maxMonths) out.push(`up to ${t.maxMonths} months`)
+    if (t.billsIncluded) out.push('bills included')
+  }
+  if (MODE_PERIOD[mode] === 'night' && t.minNights) out.push(`min. ${t.minNights} night${t.minNights > 1 ? 's' : ''}`)
+  if (MODE_PERIOD[mode] === 'total') {
+    if (t.negotiable) out.push('negotiable')
+    if (t.furnitureIncluded) out.push('with furniture')
+    if (t.soldWithTenant) out.push('sold with tenant')
+  }
+  return out.join(' · ')
 }
 
 export type Audience = 'public' | 'agencies' | 'nexus'
@@ -187,9 +227,20 @@ export interface ViewingRequest {
   history: RequestEvent[]
 }
 
+/** Who is really behind a message that ARGUS Main relays. ARGUS knows which
+ *  account wrote, so the owner sees "Tim · Benestates" instead of a faceless bot. */
+export interface Sender {
+  kind: 'system' | 'agent' | 'client' | 'argus'
+  name?: string
+  agency?: string
+}
+
 export interface Message {
   id: string
   from: 'owner' | 'argus' | 'agent'
+  sender?: Sender
+  /** the property this message is about, when known */
+  propertyId?: number
   text: string
   at: string
   /** structured actions rendered as buttons instead of more chat */

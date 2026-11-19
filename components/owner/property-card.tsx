@@ -1,11 +1,11 @@
 'use client'
 import Link from 'next/link'
-import type { Property } from '@/lib/owner/model'
+import { termsLine, type Property } from '@/lib/owner/model'
 import { useOwner } from '@/lib/owner/store'
 import { activeOffer, ago, modeLabel, niceDate, priceLine } from './format'
 
 const LISTING: Record<Property['listing'], { label: string; tone: string }> = {
-  live: { label: 'Live', tone: '' }, paused: { label: 'Paused', tone: 'honey' }, private: { label: 'Private', tone: 'plain' }, draft: { label: 'Draft', tone: 'plain' },
+  live: { label: 'Live', tone: '' }, paused: { label: 'Paused', tone: 'honey' }, private: { label: 'Private', tone: 'plain' }, draft: { label: 'Being checked', tone: 'honey' },
 }
 
 export function availabilityLine(p: Property, today: string) {
@@ -36,6 +36,7 @@ export function PropertyCard({ p }: { p: Property }) {
         </div>
         <p className="ow-muted">{p.address}</p>
         <p className="ow-price">{priceLine(activeOffer(p))}{p.mode === 'rooms' && <small> per room from</small>}</p>
+        {activeOffer(p)?.terms && termsLine(activeOffer(p)!.mode, activeOffer(p)!.terms) && <p className="ow-faint">{termsLine(activeOffer(p)!.mode, activeOffer(p)!.terms)}</p>}
         <div className="ow-facts"><span>{availabilityLine(p, today)}</span><span>Updated {ago(p.updatedAt, today)}</span></div>
         <div className="ow-row-chips">
           {waiting > 0 && <span className="ow-chip honey">{waiting} request{waiting > 1 ? 's' : ''} waiting</span>}

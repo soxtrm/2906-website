@@ -3,9 +3,16 @@
 // backend will. Swap `buildDemo` for the owner API (docs/owner-workspace) and
 // the pages keep working: they only use this hook.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { act, modeSwitchCheck, revokedBy, effectiveDistribution, type Action } from './engine'
+import { act, modeSwitchCheck, revokedBy, effectiveDistribution, recipients, type Action } from './engine'
 import { buildDemo, type Demo } from './fixtures'
-import type { AvailabilityRule, Distribution, OperatingMode, Property, RoomStatus } from './model'
+import { MODE_LABEL, MODE_PERIOD, type OfferTerms, type AvailabilityRule, type Distribution, type OperatingMode, type Property, type RoomStatus } from './model'
+import { extractWishes, mergeWishes, type Wish } from './wishes'
+
+export interface NewProperty {
+  propertyType: string; town: string; address: string; bedrooms: number; bathrooms: number; sizeSqm?: number
+  offers: { mode: OperatingMode; price: number; terms?: OfferTerms }[]; availableFrom?: string; furnished: string; features: string[]
+  description: string; photos: string[]
+}
 
 type Toast = { id: number; text: string; tone: 'ok' | 'warn' | 'err' }
 
@@ -27,13 +34,16 @@ interface Store extends Demo {
   setDistribution: (propertyId: number, next: { inherit: boolean; override: Distribution }) => void
   setListing: (propertyId: number, listing: Property['listing']) => void
   setDefaults: (d: Distribution) => void
-  sendMessage: (threadId: string, text: string) => void
+  sendMessage: (threadId: string, text: string, propertyId?: number | null) => void
+  removeWish: (key: string, propertyId: number | null) => void
+  syncAgencies: (propertyId: number) => void
+  addProperty: (p: NewProperty) => number
   readThread: (threadId: string) => void
   reset: () => void
 }
 
 const Ctx = createContext<Store | null>(null)
-const KEY = 'argus_owner_preview_v1'
+const KEY = 'argus_owner_preview_v3'
 
 export function OwnerProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Demo>(() => buildDemo())
@@ -102,7 +112,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
         modeHistory: [...x.modeHistory.map(h => (h.to ? h : { ...h, to: data.today })), { mode, from: data.today }],
         offers: x.offers.some(o => o.mode === mode)
           ? x.offers.map(o => ({ ...o, active: o.mode === mode }))
-          : [...x.offers.map(o => ({ ...o, active: false })), { id: `o${Date.now()}`, mode, price: x.offers[0]?.price || 0, period: mode === 'shortlet' ? 'night' : mode === 'sale' ? 'total' : 'month', active: true, hidePriceFor: [] }],
+          : [...x.offers.map(o => ({ ...o, active: false })), { id: `o${Date.now()}`, mode, price: x.offers[0]?.price || 0, period: MODE_PERIOD[mode], active: true, hidePriceFor: [] }],
       }))
       say('Offer changed. Photos, history and identity stay the same.')
       return { ok: true, reasons: checks.map(c => c.text) }
@@ -135,11 +145,55 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       say(`Defaults saved. ${n} propert${n === 1 ? 'y follows' : 'ies follow'} them.`)
     },
     setListing(propertyId, listing) { patchProp(propertyId, p => ({ ...p, listing })); say(listing === 'live' ? 'Listing is live.' : listing === 'paused' ? 'Listing paused. Nobody new can request it.' : 'Listing is private.') },
-    sendMessage(threadId, text) {
-      setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, messages: [...t.messages,
-        { id: `m${Date.now()}`, from: 'owner', at: `${d.today}T${new Date().toTimeString().slice(0, 5)}`, text },
-        { id: `m${Date.now() + 1}`, from: 'argus', at: `${d.today}T${new Date().toTimeString().slice(0, 5)}`, text: t.with === 'ARGUS Main' ? 'Noted. If this changes a viewing, use the buttons on the request so everyone gets the same update.' : `Passed on to ${t.with}. Your phone number stays private.` },
-      ] } : t)) }))
+    sendMessage(threadId, text, propertyId = null) {
+      const at = `${data.today}T${new Date().toTimeString().slice(0, 5)}`
+      const forAll = /(all|every) (my |of my )?(properties|flats|apartments|places)/i.test(text)
+      const scope = forAll ? null : propertyId
+      const found = extractWishes(text)
+      const fresh: Wish[] = [...found.wishes].sort((a, b) => (a.polarity === b.polarity ? 0 : a.polarity === 'plus' ? -1 : 1)).map((w, i) => ({ ...w, id: `ws${Date.now()}${i}`, propertyId: scope, at }))
+      const place = scope === null ? 'all your properties' : data.properties.find(p => p.id === scope)?.name || 'this property'
+      const parts: string[] = []
+      if (fresh.length) parts.push(`Noted for ${place}: ${fresh.map(w => `${w.polarity === 'plus' ? '+' : '−'} ${w.label}`).join(', ')}.`)
+      if (found.protectedRemark) parts.push('One part I cannot keep: nationality, origin or religion may not be used to choose tenants, so ARGUS does not record or filter by it. Everything else is saved.')
+      const reply = parts.join(' ') || 'Got it. If this changes a viewing, use the buttons on the request so everyone gets the same update.'
+      setData(d => ({
+        ...d,
+        wishes: mergeWishes(d.wishes, fresh),
+        threads: d.threads.map(t => (t.id === threadId ? { ...t, messages: [...t.messages,
+          { id: `m${Date.now()}`, from: 'owner', propertyId: scope ?? undefined, at, text },
+          { id: `m${Date.now() + 1}`, from: 'argus', sender: { kind: 'system' }, propertyId: scope ?? undefined, at, text: reply },
+        ] } : t)),
+      }))
+    },
+    syncAgencies(propertyId) {
+      const p = data.properties.find(x => x.id === propertyId)!
+      const reach = recipients(effectiveDistribution(data.profile, p), data.agencies, data.today)
+      const ids = [...new Set(reach.filter(r => r.agencyId).map(r => r.agencyId!))]
+      if (!ids.length) { say('This home is not shared with any agency yet. Switch agencies on first.', 'warn'); return }
+      const at = `${data.today}T${new Date().toTimeString().slice(0, 5)}`
+      setData(d => ({ ...d, agencySync: { ...d.agencySync, [propertyId]: ids.map(agencyId => ({ agencyId, at })) } }))
+      say(`Sent into ${ids.length} agenc${ids.length === 1 ? 'y' : 'ies'}: their ARGUS and walkie-talkie now have ${p.name}.`)
+    },
+    removeWish(key, propertyId) {
+      setData(d => ({ ...d, wishes: d.wishes.filter(w => !(w.key === key && (propertyId === null || w.propertyId === propertyId))) }))
+      say('Removed from the list.')
+    },
+    addProperty(n) {
+      const id = Math.max(...data.properties.map(p => p.id)) + 1
+      const first = n.offers[0]
+      const mode: OperatingMode = first?.mode || 'long_let'
+      const prop: Property = {
+        id, ref: `2906-D${id}`, name: `${n.propertyType} in ${n.town}`, address: n.address || n.town, town: n.town,
+        photos: n.photos.length ? n.photos : ['/link-marketplace/assets/valletta-old-bakery-street.webp'],
+        mode, modeHistory: [{ mode, from: data.today }], bedrooms: n.bedrooms, bathrooms: n.bathrooms, sizeSqm: n.sizeSqm,
+        listing: 'draft',
+        offers: n.offers.map((o, i) => ({ id: `o${id}-${i}`, mode: o.mode, price: o.price, period: MODE_PERIOD[o.mode], active: i === 0, hidePriceFor: [], terms: o.terms })),
+        rooms: [], availableFrom: n.availableFrom, lastConfirmedAt: data.today, updatedAt: `${data.today}T${new Date().toTimeString().slice(0, 5)}`,
+        distribution: { inherit: true, override: data.profile.defaults }, channels: [],
+      }
+      setData(d => ({ ...d, properties: [...d.properties, prop] }))
+      say(`Sent to ARGUS for checking: ${n.offers.map(o => MODE_LABEL[o.mode]).join(', ')}. It goes live on your channels once verified.`)
+      return id
     },
     readThread(threadId) { setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })) },
     reset() { try { localStorage.removeItem(KEY) } catch { /* */ } setData(buildDemo()); say('Demo data reset.') },
