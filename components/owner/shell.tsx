@@ -20,7 +20,10 @@ const NAV = [
 const TABS = [NAV[0], NAV[3], NAV[1]]
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
-  const path = usePathname() || '/owner'
+  // nexussync.one serves /login as a rewrite of /owner/login: the server renders with /owner/login,
+  // the browser reports /login. Normalise to the /owner form so both sides pick the same layout.
+  const raw = usePathname() || '/owner'
+  const path = /^\/owner(\/|$)/.test(raw) ? raw : `/owner${raw === '/' ? '' : raw}`
   const { requests, threads, toasts, profile, reset, account, signOut, demo, live } = useOwner()
   const [more, setMore] = useState(false)
   // SYNC moment on every page: the star turns into the north star and a thin line
