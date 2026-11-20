@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { CalendarDays, FileText, Home, Inbox, LayoutGrid, MessageCircle, MoreHorizontal, RefreshCw, Settings, UserRound, Share2 } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
-import { Brand, StarButton, StarPlay } from './brand'
+import { Brand, StarButton, StarPlay, SyncWordmark } from './brand'
 
 const NAV = [
   { href: '/owner', label: 'Overview', icon: LayoutGrid },
@@ -66,8 +66,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
       {splash && (
         <div className="ow-splash" aria-hidden="true">
           <span className="ow-splash-mark"><StarPlay size={64} color="#fff" /></span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/owner/sync-logo-white.png" alt="" width={1663} height={494} />
+          <SyncWordmark height={68} className="ow-splash-word" />
         </div>
       )}
       <a href="#ow-main" className="sr-only" style={{ position: 'absolute', left: -9999 }}>Skip to content</a>

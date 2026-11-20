@@ -58,7 +58,7 @@
 @keyframes ow-sync-word { 0% { opacity: 0; } 25%, 70% { opacity: 1; } 100% { opacity: 0; } }
 .ow-splash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; align-content: center; gap: 18px;
   background: radial-gradient(120% 120% at 50% 30%, #1d2f9e, #071449 70%); animation: ow-splash 1.5s ease forwards; }
-.ow-splash img { width: min(320px, 70vw); height: auto; opacity: 0; animation: ow-splash-logo 1.5s ease forwards; }
+.ow-splash-word { display: block; color: #fff; width: min(260px, 62vw); height: auto; opacity: 0; animation: ow-splash-logo 1.5s ease forwards; }
 .ow-splash-mark .ow-sp-main { animation: ow-north-main 1.2s cubic-bezier(.65, 0, .35, 1); }
 .ow-splash-mark .ow-sp-mini { animation: ow-north-mini 1.2s cubic-bezier(.65, 0, .35, 1); }
 @keyframes ow-splash { 0%, 75% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
@@ -226,7 +226,7 @@
 .ow-doc-share input { width: 20px; height: 20px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .ow .ow-sp-main, .ow .ow-sp-mini, .ow .ow-logo-star, .ow-syncline, .ow-splash, .ow-splash img, .ow-top-sync em { animation: none !important; }
+  .ow .ow-sp-main, .ow .ow-sp-mini, .ow .ow-logo-star, .ow-syncline, .ow-splash, .ow-splash-word, .ow-top-sync em { animation: none !important; }
   .ow-splash { display: none; }
 }
 @media (max-width: 860px) { .ow-chat.tall { height: calc(100dvh - 205px); min-height: 0; } .ow-chatpage-intro { display: none; } .ow-wa-compose { padding: 6px 8px; } .ow-wa-compose .ow-about select { min-height: 36px; } }
@@ -241,7 +241,7 @@
 .ow-logo-wordbox { position: relative; display: inline-block; line-height: 0; }
 .ow-logo-wordbox::after { content: ''; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(105deg, transparent 35%, rgba(120, 160, 255, .95) 48%, #fff 50%, rgba(120, 160, 255, .95) 52%, transparent 65%) 160% 0 / 260% 100% no-repeat;
-  -webkit-mask: url(/owner/sync-word-navy.png) center / contain no-repeat; mask: url(/owner/sync-word-navy.png) center / contain no-repeat; opacity: 0; }
+  -webkit-mask: url(/brand/sync-wordmark.svg) center / contain no-repeat; mask: url(/brand/sync-wordmark.svg) center / contain no-repeat; opacity: 0; }
 .ow-logo:hover .ow-logo-wordbox::after { animation: ow-word-shine 1.4s cubic-bezier(.65, 0, .35, 1) .15s; }
 .ow-logo:hover .ow-logo-word { animation: ow-word-nudge 1.4s cubic-bezier(.34, 1.56, .64, 1); }
 @keyframes ow-word-shine { 0% { opacity: 1; background-position: 160% 0; } 100% { opacity: 1; background-position: -60% 0; } }
@@ -390,11 +390,11 @@
 /* sign-in pages: the logo big and centred above the card */
 .ow-auth-top { display: flex; justify-content: center; margin: 26px auto 26px; }
 .ow-auth-top .ow-logo { padding: 0; gap: 16px; }
-.ow-auth-top .ow-logo-star { height: 78px; }
-.ow-auth-top .ow-logo-word { height: 58px; }
+.ow-auth-top .ow-logo-star { height: 66px; }
+.ow-auth-top .ow-logo-word { height: 48px; }
 .ow-auth-top .ow-logo-mini svg { width: 18px; height: 18px; }
 .ow-auth-card .ow-auth-logo { display: none; }
-@media (max-width: 500px) { .ow-auth-top .ow-logo-star { height: 54px; } .ow-auth-top .ow-logo-word { height: 40px; } .ow-auth-top { margin: 10px auto 18px; } }
+@media (max-width: 500px) { .ow-auth-top .ow-logo-star { height: 46px; } .ow-auth-top .ow-logo-word { height: 34px; } .ow-auth-top { margin: 10px auto 18px; } }
 .ow-auth-preview { max-width: 460px; margin: -10px auto 14px; text-align: center; font-size: 13px; font-weight: 600; color: var(--ow-warm-ink); background: var(--ow-warm-soft); border-radius: 12px; padding: 8px 12px; }
 
 /* verify with WhatsApp */

@@ -7,6 +7,7 @@
 // The live number of homes comes from the same inventory the Marketplace shows; nothing is invented.
 // ============================================================================
 import { useEffect, useState } from 'react'
+import { NexusStar } from '@/components/brand/logo'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, Building2, CalendarClock, Handshake, Home, Users, Wrench } from 'lucide-react'
 
@@ -42,7 +43,7 @@ export function StudiosHome() {
   return (
     <div className="st">
       <header className="st-top">
-        <a className="st-brand" href="/" aria-label="NEXUS STUDIOS home"><span className="st-star" aria-hidden />NEXUS <b>STUDIOS</b></a>
+        <a className="st-brand" href="/" aria-label="NEXUS STUDIOS home"><NexusStar size={18} className="st-star" />NEXUS <b>STUDIOS</b></a>
         <nav aria-label="NEXUS products">
           <a href="/marketplace">Marketplace</a>
           <a href="https://nexusbooking.one/studio">Venues</a>
