@@ -17,23 +17,34 @@ if 'localityFromText' in s: print('REFUSE: already applied'); sys.exit(1)
 EDITS = [
     ("async function extractListing(cleanedText, { allowNoOwner = false } = {}) {\n",
      """// The town as the text itself gives it, for when the AI reader is unavailable: the first lines, split at
-// dashes and commas, plus the last words of a headline. Only a name the locality resolver knows counts.
+// dashes and commas, plus the first and last words of a line. Only a name the locality resolver is sure
+// of counts, and only when the text names exactly one town.
 async function localityFromText(text) {
+  const resolver = require('../services/localityResolver')
   const clean = s => stripEmoji(String(s || '')).replace(/[*_!"“”()\\[\\]]+/g, ' ').replace(/\\s+/g, ' ').trim()
   const lines = String(text || '').split('\\n').map(clean).filter(Boolean).slice(0, 4)
-  const seen = new Set()
+  const tried = new Set()
+  const found = new Set()
   for (const line of lines) {
     const frags = line.split(/\\s[–—-]\\s|,|\\||\\/|\\bnear\\b|\\bin\\b|\\bnext to\\b|\\bat\\b/i).map(x => x.trim()).filter(x => x.length >= 3 && x.length <= 40)
     const words = line.split(' ')
     const tail = [3, 2, 1].filter(n => words.length > n).map(n => words.slice(-n).join(' '))
     const head = [3, 2, 1].filter(n => words.length >= n).map(n => words.slice(0, n).join(' '))
-    for (const c of [...frags.slice().reverse(), ...frags, ...tail, ...head]) {
-      if (seen.has(c)) continue
-      seen.add(c)
-      try { const town = await matchLocation(c); if (town) return town } catch { return '' }
+    for (const c of [...frags, ...tail, ...head]) {
+      if (tried.has(c)) continue
+      tried.add(c)
+      let res = null
+      try { res = await resolver.resolveLocality(c) } catch { return '' }
+      if (res && res.status === 'RESOLVED' && res.canonical_name && res.confidence === 'high') found.add(res.canonical_name)
     }
   }
-  return ''
+  // "Ibragg, Swieqi": a neighbourhood and its own town are one place. Two different towns are not:
+  // then the town stays unknown for the reviewer rather than being guessed.
+  for (const n of [...found]) {
+    const parent = (n.match(/\\(([^)]+)\\)\\s*$/) || [])[1]
+    if (parent && found.has(parent)) found.delete(n)
+  }
+  return found.size === 1 ? [...found][0] : ''
 }
 async function withTextLocality(listing, text) {
   if (listing && listing.property && !String(listing.property.location || '').trim()) {
