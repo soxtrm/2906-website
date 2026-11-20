@@ -2,7 +2,7 @@
 import { NEXUS_STAR_PATH } from '@/lib/brand-paths'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox, BadgeCheck } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -498,7 +498,7 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight, ownerquality: BadgeCheck }
 
 // Board desktop header (founder mockup 2026-10-19): these carry labels in the
 // header; every other workspace sits behind "More".
