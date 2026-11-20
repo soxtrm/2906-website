@@ -495,7 +495,7 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { syncinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight }
 
 // Board desktop header (founder mockup 2026-10-19): these carry labels in the
 // header; every other workspace sits behind "More".
