@@ -1,0 +1,207 @@
+[
+  {
+    "name": "overview says what needs the owner",
+    "ok": true,
+    "extra": "3 people want to view your homes"
+  },
+  {
+    "name": "dashboard: chat names the real sender",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "dashboard: requests to review on the side",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "dashboard: a wish said on three homes counts for all",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "chat: wishes noted, nationality refused",
+    "ok": true,
+    "extra": "Noted for Tower Road shared flat: + Couple, − No pets. One part I cannot keep: nationality, origin or religion may not be used to choose tenants, so ARGUS does not record or filter by it. Everything else is saved."
+  },
+  {
+    "name": "wish list for that home has the new wishes and no nationality",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "nav badge shows waiting requests",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "requests: three waiting",
+    "ok": true,
+    "extra": "3"
+  },
+  {
+    "name": "competing requests linked, not merged",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "compare view shows both requests for the same slot",
+    "ok": true,
+    "extra": "2"
+  },
+  {
+    "name": "second accept for the same time is refused (no double booking)",
+    "ok": true,
+    "extra": "Viewing confirmed. The requester has been told. | You already have a confirmed viewing at 17:30 for this property."
+  },
+  {
+    "name": "calendar shows every home's viewing hours in its own colour",
+    "ok": true,
+    "extra": "7"
+  },
+  {
+    "name": "dragging on a day opens \"save viewing hours\"",
+    "ok": true,
+    "extra": "Thursday, 10:00 to 12:00"
+  },
+  {
+    "name": "weekly rule saved",
+    "ok": true,
+    "extra": "Tower Road shared flatEvery Monday16:00–19:00Remove / Tower Road shared flatEvery Wednesday10:00–13:00Remove / Tower Road shared flatEvery Thursday10:00–12:00Remove / Tower Road shared flatEvery Friday15:00–18:00Remove / Seafront apartmentEvery Tuesday17:00–19:30Remove / Seafront apartmentEvery Saturday10:00–12:00Remove / Rotunda townhouseEvery Thursday16:30–18:30Remove"
+  },
+  {
+    "name": "calendar can be trimmed to 16–20",
+    "ok": true,
+    "extra": "16:00,17:00,18:00,19:00,20:00"
+  },
+  {
+    "name": "tapping a day opens the day with who is coming",
+    "ok": true,
+    "extra": "Daniel · Harbour Homes | Private person (NEXUS Housing)"
+  },
+  {
+    "name": "room plan renders one zone per room",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "switching a shared flat with a tenant to long let is blocked",
+    "ok": true,
+    "extra": "1 room is occupied (Room 1). The whole flat can only be offered once they are free."
+  },
+  {
+    "name": "exclusive deal visible with end date and release",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "revoking a channel starts delisting and shows it",
+    "ok": true,
+    "extra": "NEXUS DirectBeing removed"
+  },
+  {
+    "name": "documents: shared with an agency",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "chat: the document arrived as a WhatsApp-style attachment",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "profile: linked person becomes the one main contact",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "sign up: a wrong code links nothing",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "sign up: WhatsApp verification waits for the prepared message",
+    "ok": true,
+    "extra": "Waiting for your message SYNC verify M9VQNX"
+  },
+  {
+    "name": "sign up: the WhatsApp sender number finds the 3 homes of the owner",
+    "ok": true,
+    "extra": "Welcome, we found 3 homes"
+  },
+  {
+    "name": "sign up: owners without WhatsApp choose another channel",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "agencies: the biggest come first",
+    "ok": true,
+    "extra": "Frank Salt"
+  },
+  {
+    "name": "agencies: ticking adds it",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "calendar: tapping viewing hours opens an editor",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "add: every offer type is there",
+    "ok": true,
+    "extra": "Long let, Short let, Winter let, Summer let, Room rentals, For sale"
+  },
+  {
+    "name": "add: a dropped photo becomes the cover",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "add: new property opens, marked as being checked",
+    "ok": true,
+    "extra": "/owner/properties/9004 SYNC.Skip to contentAdd property Over"
+  },
+  {
+    "name": "edit: listing renamed",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "edit: a room can be added",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "edit: the new room got its own photo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "real visitors start empty: no demo owner, no demo homes",
+    "ok": true,
+    "extra": "Skip to contentAdd property Overview Chat1 Requests Calendar My properties Agenc"
+  },
+  {
+    "name": "mobile: no sideways scroll",
+    "ok": true,
+    "extra": "0"
+  },
+  {
+    "name": "mobile: bottom tab bar with the add button",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "mobile: buttons are thumb-sized",
+    "ok": true,
+    "extra": "42"
+  },
+  {
+    "name": "no page errors and no backend calls",
+    "ok": true,
+    "extra": ""
+  }
+]
