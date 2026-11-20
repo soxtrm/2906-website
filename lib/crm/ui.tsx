@@ -413,6 +413,8 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // everyone like Clientgroups is, the page itself shows "Admins only" for
   // a non-admin rather than filtering the sidebar item away.
   { key: 'ownergroups', icon: '⌂', label: 'Ownergroups', href: '/ownergroups' },
+  // Owner messages from NEXUS Sync (nexussync.one). The page existed without any way to reach it.
+  { key: 'syncinbox', icon: '✉', label: 'Sync Inbox', href: '/sync-inbox' },
   { key: 'earnings',  icon: '€', label: 'Earnings',  href: '/earnings', disabled: true },
   { key: 'admin',     icon: '⚙', label: 'Admin',     href: '/admin', disabled: true },
   // Kev, 2026-09-11: "outreach kann auch ins crm tab, halt nur für mich" —
@@ -509,7 +511,8 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const dark = theme != null ? theme === 'dark' : !!darkDefault
   const normalizedPath = pathname.replace(/^\/crm(?=\/|$)/, '') || '/'
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
-  const items = NAV.filter(i => nav.includes(i.key) && (!i.adminOnly || me?.role === 'admin'))
+  // 'syncinbox' is newer than the nav list the server sends: every non-board account gets it.
+  const items = NAV.filter(i => (nav.includes(i.key) || (i.key === 'syncinbox' && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
   // Pending count on the Incoming entry: staff only, refreshed while ARGUS is open.
   const intake = useIntakeSummary(60_000, items.some(i => i.key === 'incoming') && (me?.role === 'admin' || me?.role === 'agent'))
   const pendingIntake = intake?.counts.needs_verification || 0
