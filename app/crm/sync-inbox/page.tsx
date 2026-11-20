@@ -62,7 +62,7 @@ function SyncInbox() {
                 <b>{x.name || x.email || 'SYNC owner'}</b>
                 {x.unread > 0 && <span style={{ background: '#4f6bff', color: '#fff', borderRadius: 99, padding: '0 8px', fontSize: 12 }}>{x.unread}</span>}
               </span>
-              <small style={{ color: 'var(--crm-muted)' }}>{x.phone ? `${x.phone}${x.phoneVerified ? ' ✓' : ''}` : 'Mobile not confirmed'} · {when(x.lastAt || x.createdAt)}</small>
+              <small style={{ color: 'var(--crm-muted)' }}>{x.phone ? `${x.phone}${x.phoneVerified ? ' ✓' : ''}` : x.phoneVerified ? 'Mobile confirmed' : 'Mobile not confirmed'} · {when(x.lastAt || x.createdAt)}</small>
               {x.links.map(l => <small key={l.ownerId} style={{ color: l.state === 'verified' ? '#4ADE80' : '#FBBF24' }}>{STATE[l.state] || l.state} · owner #{l.ownerId}</small>)}
               {x.lastText && <small style={{ color: 'var(--crm-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.lastText}</small>}
             </button>
