@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import { BedDouble, Bath, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Home, MapPin, MessageCircle, Pencil, Share2, Sparkles, UsersRound, X } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
 import { liveProperties, pendingClaims, type LiveListing, type LiveViewing } from '@/lib/owner/live'
+import { ActivityList, HouseRules } from './house-rules'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const eur = (n: number | null | undefined) => (n == null ? '' : `€${Math.round(n).toLocaleString('en-GB')}`)
@@ -186,9 +187,9 @@ export function LiveProperty({ id }: { id: number }) {
   const homes = useHomes()
   const l = homes.find(h => h.sourcePropertyId === id)
   const [photo, setPhoto] = useState(0)
-  const [tab, setTab] = useState<'status' | 'edit' | 'share' | 'hours'>(() => {
+  const [tab, setTab] = useState<'status' | 'rules' | 'edit' | 'share' | 'hours'>(() => {
     const t = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('tab')
-    return t === 'share' || t === 'edit' || t === 'hours' ? t : 'status'
+    return t === 'share' || t === 'edit' || t === 'hours' || t === 'rules' ? t : 'status'
   })
   const [nick, setNick] = useState<string | null>(null)
   const [rent, setRent] = useState<string | null>(null)
@@ -230,7 +231,7 @@ export function LiveProperty({ id }: { id: number }) {
       </header>
 
       <div className="lv-tabs" role="tablist">
-        {([['status', 'Availability'], ['edit', 'Details & price'], ['share', 'Sharing'], ['hours', 'Viewings']] as const).map(([k, t]) => (
+        {([['status', 'Availability'], ['rules', 'House rules'], ['edit', 'Details & price'], ['share', 'Sharing'], ['hours', 'Viewings']] as const).map(([k, t]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{t}</button>
         ))}
       </div>
@@ -250,6 +251,8 @@ export function LiveProperty({ id }: { id: number }) {
           </div>
         </section>
       )}
+
+      {tab === 'rules' && <HouseRules propertyId={id} />}
 
       {tab === 'edit' && (
         <section className="lv-section">
@@ -449,6 +452,11 @@ export function LiveSettings() {
         <div className="lv-chips">
           {(['whatsapp', 'email', 'app'] as const).map(c => <button key={c} aria-pressed={a.notifyChannel === c} onClick={() => s.liveDo('account/update', { notifyChannel: c }, 'Saved.')}>{c === 'app' ? 'Only in SYNC' : c === 'email' ? 'E-mail' : 'WhatsApp'}</button>)}
         </div>
+      </section>
+      <section className="lv-section">
+        <h2>Your activity</h2>
+        <p className="lv-faint">What you changed in SYNC, as ARGUS recorded it.</p>
+        <ActivityList />
       </section>
       <button className="lv-btn big wide" onClick={() => s.signOut()}><Home size={18} />Sign out</button>
     </div>
