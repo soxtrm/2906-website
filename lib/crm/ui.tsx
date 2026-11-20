@@ -444,6 +444,8 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'baseinventory', icon: '▤', label: 'Base Inventory', href: '/base-inventory' },
   // Integrations → Property Sources (2026-11-09): admin-only server-side and here.
   { key: 'sources', icon: '⇄', label: 'Property Sources', href: '/property-sources', adminOnly: true },
+  // Listings taken off the public website, with the reason and a way back (2026-11-20). Admin only, here and server-side.
+  { key: 'websitereview', icon: '◌', label: 'Website Review', href: '/website-review', adminOnly: true },
   // Intelligence → Owner Conversation Quality (2026-11-10): weekly owner-AI review, admin only.
   { key: 'ownerquality', icon: '✓', label: 'Owner AI Quality', href: '/owner-quality', adminOnly: true },
 ]
@@ -495,7 +497,7 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { syncinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight }
 
 // Board desktop header (founder mockup 2026-10-19): these carry labels in the
 // header; every other workspace sits behind "More".
@@ -512,7 +514,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const normalizedPath = pathname.replace(/^\/crm(?=\/|$)/, '') || '/'
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   // 'syncinbox' is newer than the nav list the server sends: every non-board account gets it.
-  const items = NAV.filter(i => (nav.includes(i.key) || (i.key === 'syncinbox' && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
+  const items = NAV.filter(i => (nav.includes(i.key) || ((i.key === 'syncinbox' || i.key === 'websitereview') && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
   // Pending count on the Incoming entry: staff only, refreshed while ARGUS is open.
   const intake = useIntakeSummary(60_000, items.some(i => i.key === 'incoming') && (me?.role === 'admin' || me?.role === 'agent'))
   const pendingIntake = intake?.counts.needs_verification || 0
