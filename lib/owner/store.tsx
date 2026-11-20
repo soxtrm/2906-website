@@ -197,6 +197,9 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     setToasts(t => [...t, { id, text, tone }])
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4200)
   }, [])
+  // Real accounts: these actions change only this browser so far. Saying that ARGUS, an agency or a channel
+  // received something would be untrue, so a real owner is told plainly. The demo keeps its story texts.
+  const local = (demoText: string) => (demo ? say(demoText) : say('Kept on this device only. This is not sent to ARGUS or any agency yet.', 'warn'))
 
   const patchProp = (id: number, fn: (p: Property) => Property) =>
     setData(d => ({ ...d, properties: d.properties.map(p => (p.id === id ? { ...fn(p), updatedAt: `${d.today}T${new Date().toTimeString().slice(0, 5)}` } : p)) }))
@@ -302,11 +305,11 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     },
     pickAgency(id, on, name) {
       setData(d => ({ ...d, agencyPicks: { ...d.agencyPicks, ids: on ? [...new Set([...d.agencyPicks.ids, id])] : d.agencyPicks.ids.filter(x => x !== id) } }))
-      say(on ? `${name} added. If they are not on ARGUS yet, ARGUS invites them; your homes reach them once they join.` : `${name} removed.`)
+      local(on ? `${name} added. If they are not on ARGUS yet, ARGUS invites them; your homes reach them once they join.` : `${name} removed.`)
     },
     pickMany(ids) {
       setData(d => ({ ...d, agencyPicks: { ...d.agencyPicks, ids: [...new Set([...d.agencyPicks.ids, ...ids])] } }))
-      say(`${ids.length} agencies added.`)
+      local(`${ids.length} agencies added.`)
     },
     setOpenGroups(g) { setData(d => ({ ...d, agencyPicks: { ...d.agencyPicks, ...g } })); say('Saved.') },
     setDetails(next) {
@@ -314,7 +317,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       // only empty ARGUS fields are filled from the owner side; differences go to an agent
       const { fill, conflicts } = backfill(data.argusDetails, merged)
       setData(d => ({ ...d, details: merged, argusDetails: { ...d.argusDetails, ...fill } }))
-      say(conflicts.length ? `Saved. ARGUS will check ${conflicts.length} detail${conflicts.length === 1 ? '' : 's'} that differ from its records.` : 'Saved. ARGUS uses these for your contracts.')
+      local(conflicts.length ? `Saved. ARGUS will check ${conflicts.length} detail${conflicts.length === 1 ? '' : 's'} that differ from its records.` : 'Saved. ARGUS uses these for your contracts.')
     },
     decide(requestId, a, actor = 'owner') {
       const r = data.requests.find(x => x.id === requestId)
@@ -365,11 +368,11 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     },
     setPrice(propertyId, price) {
       patchProp(propertyId, p => ({ ...p, offers: p.offers.map(o => (o.active ? { ...o, price } : o)) }))
-      say('Price updated on every channel that shows it.')
+      local('Price updated on every channel that shows it.')
     },
     setHidePrice(propertyId, agencies) {
       patchProp(propertyId, p => ({ ...p, offers: p.offers.map(o => (o.active ? { ...o, hidePriceFor: agencies ? ['agencies'] : [] } : o)) }))
-      say(agencies ? 'Agencies now see "price on request".' : 'Agencies see the price again.')
+      local(agencies ? 'Agencies now see "price on request".' : 'Agencies see the price again.')
     },
     setDistribution(propertyId, next) {
       const p = data.properties.find(x => x.id === propertyId)!
@@ -383,14 +386,14 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
           ...gone.map(g => ({ channel: g.channel, agencyId: g.agencyId, state: 'delisting' as const, since: `${data.today}T12:00` })),
         ],
       }))
-      say(gone.length ? `Saved. ${gone.length} channel${gone.length > 1 ? 's are' : ' is'} being asked to take it down.` : 'Sharing saved.')
+      local(gone.length ? `Saved. ${gone.length} channel${gone.length > 1 ? 's are' : ' is'} being asked to take it down.` : 'Sharing saved.')
     },
     setDefaults(def) {
       setData(d => ({ ...d, profile: { ...d.profile, defaults: def } }))
       const n = data.properties.filter(p => p.distribution.inherit).length
-      say(`Defaults saved. ${n} propert${n === 1 ? 'y follows' : 'ies follow'} them.`)
+      local(`Defaults saved. ${n} propert${n === 1 ? 'y follows' : 'ies follow'} them.`)
     },
-    setListing(propertyId, listing) { patchProp(propertyId, p => ({ ...p, listing })); say(listing === 'live' ? 'Listing is live.' : listing === 'paused' ? 'Listing paused. Nobody new can request it.' : 'Listing is private.') },
+    setListing(propertyId, listing) { patchProp(propertyId, p => ({ ...p, listing })); local(listing === 'live' ? 'Listing is live.' : listing === 'paused' ? 'Listing paused. Nobody new can request it.' : 'Listing is private.') },
     sendMessage(threadId, text, propertyId = null) {
       const at = `${data.today}T${new Date().toTimeString().slice(0, 5)}`
       const forAll = /(all|every) (my |of my )?(properties|flats|apartments|places)/i.test(text)
@@ -423,6 +426,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
       }))
     },
     syncAgencies(propertyId) {
+      if (!demo) { say('Sending a home to agencies is not available yet. Nothing was sent.', 'warn'); return }
       const p = data.properties.find(x => x.id === propertyId)!
       const reach = recipients(effectiveDistribution(data.profile, p), data.agencies, data.today)
       const ids = [...new Set(reach.filter(r => r.agencyId).map(r => r.agencyId!))]
@@ -450,7 +454,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     },
     shareDocument(docId, agencies) {
       setData(d => ({ ...d, documents: d.documents.map(x => (x.id === docId ? { ...x, sharedWith: agencies } : x)) }))
-      say(agencies.length ? `Shared with ${agencies.join(', ')}. They see it in their ARGUS.` : 'No longer shared. Only you can see it.')
+      local(agencies.length ? `Shared with ${agencies.join(', ')}. They see it in their ARGUS.` : 'No longer shared. Only you can see it.')
     },
     sendDocument(docId) {
       const doc = data.documents.find(x => x.id === docId)
@@ -470,8 +474,8 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
     setProfile(p) { setData(d => ({ ...d, profile: { ...d.profile, ...p } })); say('Profile saved.') },
     updateDelegate(name, p) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.map(x => (x.name === name ? { ...x, ...p } : x)) } })); say('Saved.') },
     removeDelegate(name) { setData(d => ({ ...d, profile: { ...d.profile, delegates: d.profile.delegates.filter(x => x.name !== name) } })); say(`${name} no longer has access.`) },
-    addDelegate(x) { setData(d => ({ ...d, profile: { ...d.profile, delegates: [...d.profile.delegates, x] } })); say(`${x.name} gets an invitation to sign in.`) },
-    updateProperty(id, patch) { patchProp(id, p => ({ ...p, ...patch })); say('Saved. Every channel that shows this home gets the update.') },
+    addDelegate(x) { setData(d => ({ ...d, profile: { ...d.profile, delegates: [...d.profile.delegates, x] } })); local(`${x.name} gets an invitation to sign in.`) },
+    updateProperty(id, patch) { patchProp(id, p => ({ ...p, ...patch })); local('Saved. Every channel that shows this home gets the update.') },
     setPhotos(id, photos) {
       patchProp(id, p => ({ ...p, photos, photoRooms: Object.fromEntries(Object.entries(p.photoRooms || {}).filter(([u]) => photos.includes(u))) }))
     },
@@ -518,7 +522,7 @@ export function OwnerProvider({ children }: { children: React.ReactNode }) {
         distribution: { inherit: true, override: data.profile.defaults }, channels: [],
       }
       setData(d => ({ ...d, properties: [...d.properties, prop] }))
-      say(`Sent to ARGUS for checking: ${n.offers.map(o => MODE_LABEL[o.mode]).join(', ')}. It goes live on your channels once verified.`)
+      local(`Sent to ARGUS for checking: ${n.offers.map(o => MODE_LABEL[o.mode]).join(', ')}. It goes live on your channels once verified.`)
       return id
     },
     readThread(threadId) { setData(d => ({ ...d, threads: d.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })) },

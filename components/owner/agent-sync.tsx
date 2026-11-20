@@ -15,7 +15,8 @@ export const AGENT_LINK_BASE = 'https://sync.2906.estate/w/'
 
 export function AgentSync({ p }: { p: Property }) {
   const s = useOwner()
-  const synced = s.agencySync[p.id] || []
+  // nothing reaches an agency for a real account yet: no "sent" state, no buttons that pretend
+  const synced = s.demo ? (s.agencySync[p.id] || []) : []
   const link = `${AGENT_LINK_BASE}${p.ref.toLowerCase()}`
   async function share() {
     const data = { title: p.name, text: `${p.name}: viewing requests go straight to the owner's calendar.`, url: link }
@@ -30,7 +31,7 @@ export function AgentSync({ p }: { p: Property }) {
         <span className="ow-agentsync-icon"><Radio size={18} /></span>
         <div>
           <b>Agents</b>
-          <p className="ow-faint">{synced.length ? `In ${synced.length} agenc${synced.length === 1 ? 'y' : 'ies'}' own system` : 'Not sent to any agency yet'}</p>
+          <p className="ow-faint">{!s.demo ? 'Sending to agencies is not available yet. Nothing is shared from here.' : synced.length ? `In ${synced.length} agenc${synced.length === 1 ? 'y' : 'ies'}' own system` : 'Not sent to any agency yet'}</p>
         </div>
       </div>
       {synced.length > 0 && (
@@ -39,8 +40,8 @@ export function AgentSync({ p }: { p: Property }) {
         </ul>
       )}
       <div className="ow-req-actions">
-        <button type="button" className="ow-btn primary small" onClick={() => s.syncAgencies(p.id)}><Radio size={16} />{synced.length ? 'Sync again' : 'Send to my agencies'}</button>
-        <button type="button" className="ow-btn small" onClick={share}><Share2 size={16} />Share agent link</button>
+        <button type="button" className="ow-btn primary small" disabled={!s.demo} aria-disabled={!s.demo} onClick={() => s.syncAgencies(p.id)}><Radio size={16} />{synced.length ? 'Sync again' : 'Send to my agencies'}</button>
+        <button type="button" className="ow-btn small" disabled={!s.demo} aria-disabled={!s.demo} onClick={share}><Share2 size={16} />Share agent link</button>
       </div>
     </div>
   )
