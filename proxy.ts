@@ -16,12 +16,36 @@ const BACKEND = ARGUS_ORIGIN
 // request, same as visiting it directly.
 const SHORT_SLUG_RE = /^\/\d{2,6}[a-z0-9]{1,20}$/
 
+const STUDIOS_HOSTS = new Set(['nexusstudios.one', 'www.nexusstudios.one'])
+const MP_HOSTS = new Set(['nexusmp.one', 'www.nexusmp.one'])
+
 // Next.js 16 "proxy" (formerly middleware).
 // Public site (2906.estate / other hosts): delegate to next-intl exactly as before.
 // CRM subdomain (crm.2906.estate): rewrite to the /crm/* route group, no i18n.
 export default function proxy(req: NextRequest) {
   const host = (req.headers.get('host') || '').toLowerCase()
   const { pathname } = req.nextUrl
+
+  // NEXUS STUDIOS (2026-11-20): nexusstudios.one is the business side of NEXUS. Its Marketplace is the
+  // existing one (public/link-marketplace, same data), served at /marketplace. nexusmp.one is a direct entry
+  // into that Marketplace (308, query kept): not a third product. Anything else on these hosts is not found.
+  if (STUDIOS_HOSTS.has(host) || MP_HOSTS.has(host)) {
+    if (MP_HOSTS.has(host)) {
+      const to = new URL('https://nexusstudios.one/marketplace')
+      to.search = req.nextUrl.search
+      return NextResponse.redirect(to, 308)
+    }
+    if (host.startsWith('www.')) return NextResponse.redirect(new URL(pathname + req.nextUrl.search, 'https://nexusstudios.one'), 308)
+    const url = req.nextUrl.clone()
+    if (pathname === '/') { url.pathname = '/studios'; return NextResponse.rewrite(url) }
+    if (pathname === '/marketplace' || pathname === '/marketplace/') { url.pathname = '/link-marketplace/index.html'; return NextResponse.rewrite(url) }
+    if (pathname.startsWith('/link-marketplace/') || pathname.startsWith('/Link/') || pathname === '/link-matrix') return NextResponse.next()
+    return new NextResponse('Not found', { status: 404 })
+  }
+  if (/^\/studios(\/|$)/.test(pathname)) {
+    if (!host.endsWith('.vercel.app') && !host.startsWith('localhost')) return new NextResponse('Not found', { status: 404 })
+    return NextResponse.next()
+  }
 
   // Nexus Link has a fast marketplace at /link and the deeper Matrix at
   // /link-matrix. Keep both static surfaces out of locale and CRM rewriting.

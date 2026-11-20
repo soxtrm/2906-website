@@ -4,14 +4,6 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    return [
-      { source: '/link', destination: '/link-marketplace/index.html' },
-      { source: '/Link', destination: '/link-marketplace/index.html' },
-      { source: '/link-matrix', destination: '/Link/index.html' },
-      { source: '/Link/map-view', destination: '/Link/map-view/index.html' },
-    ]
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -33,6 +25,13 @@ const nextConfig = {
   async rewrites() {
     const nexus = 'https://nexuslink.fit'
     return {
+      // was a second rewrites() further up, silently replaced by this one (/link-matrix was 404)
+      afterFiles: [
+        { source: '/link', destination: '/link-marketplace/index.html' },
+        { source: '/Link', destination: '/link-marketplace/index.html' },
+        { source: '/link-matrix', destination: '/Link/index.html' },
+        { source: '/Link/map-view', destination: '/Link/map-view/index.html' },
+      ],
       beforeFiles: [
         { source: '/private-preview', destination: `${nexus}/preview-f100547a49` },
         { source: '/private-preview/:path*', destination: `${nexus}/preview-f100547a49/:path*` },
