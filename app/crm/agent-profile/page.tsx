@@ -20,6 +20,7 @@ import { ArrowUpRight, BellRing, Building2, CalendarClock, MessageSquareText, Ra
 import { CrmProvider, CrmShell, useCrm, DCARD, DCARD_BORDER, DTEXT, DTEXT_DIM, DTEXT_FAINT, DBORDER, A, AD, F } from '@/lib/crm/ui'
 import { crmFetch, crmJson } from '@/lib/crm/api'
 import { FacebookIntegrationCard } from '@/components/crm/facebook/integration-card'
+import { WhatsAppConnect } from '@/components/crm/whatsapp-connect'
 import './profile.css'
 // Dynamically imported inside buildInvoicePdf() instead of a static top-level
 // import: jspdf pulls in fflate's Node build (a dynamic Worker() require)
@@ -104,13 +105,6 @@ const FEATURE_BADGE: Record<string, { bg: string; fg: string; label: string }> =
   available: { bg: 'rgba(79,123,242,0.14)', fg: '#7EA0FF', label: 'AVAILABLE' },
   coming_soon: { bg: 'rgba(255,255,255,0.06)', fg: DTEXT_FAINT, label: 'COMING SOON' },
   admin_required: { bg: 'rgba(242,165,61,0.14)', fg: '#F2A53D', label: 'ADMIN REQUIRED' },
-}
-const WA_BADGE: Record<string, { bg: string; fg: string; label: string }> = {
-  CONNECTED: { bg: 'rgba(62,207,142,0.14)', fg: '#3ECF8E', label: 'Connected' },
-  CONNECTING: { bg: 'rgba(242,165,61,0.14)', fg: '#F2A53D', label: 'Connecting' },
-  QR_REQUIRED: { bg: 'rgba(242,165,61,0.14)', fg: '#F2A53D', label: 'QR required' },
-  OFFLINE: { bg: 'rgba(255,255,255,0.06)', fg: DTEXT_FAINT, label: 'Offline' },
-  ERROR: { bg: 'rgba(242,89,122,0.14)', fg: '#F2597A', label: 'Error' },
 }
 
 function Badge({ bg, fg, label }: { bg: string; fg: string; label: string }) {
@@ -405,7 +399,7 @@ function AgentProfilePage() {
       </div>
 
       {/* ── WhatsApp connection ──────────────────────────────────────────── */}
-      <WhatsAppConnectionPanel agentId={agentId!} agent={a} whatsapp={bundle.whatsapp} canSeeFull={canSeeFull} onChange={load} />
+      <WhatsAppConnect agentId={agentId!} savedPhone={a.whatsapp_phone} initial={bundle.whatsapp} canManage={canSeeFull} onChange={load} />
 
       {/* ── Integrations → Facebook Business Pages (own profile only) ───── */}
       {isSelf && <div style={{ marginBottom: 16 }}><FacebookIntegrationCard /></div>}
@@ -500,101 +494,6 @@ function AgentProfilePage() {
             </div>}
       </SectionCard>
     </div>
-  )
-}
-
-// ARGUS Agent Layer, Second Delivery §1-5: self-serve QR connect. Polls the
-// SAME status endpoint the aggregate profile load uses, refreshing the QR
-// image each tick since WAHA's QR rotates/expires. RBAC is enforced
-// server-side (assertScope in crmAgentProfile.js) -- `canSeeFull` here is
-// only a display convenience, not the actual security boundary.
-function WhatsAppConnectionPanel({ agentId, agent, whatsapp, canSeeFull, onChange }: { agentId: number; agent: Agent; whatsapp: Bundle['whatsapp']; canSeeFull: boolean; onChange: () => void }) {
-  const [live, setLive] = useState(whatsapp)
-  const [busy, setBusy] = useState(false)
-  const [polling, setPolling] = useState(false)
-  const [connectName, setConnectName] = useState(agent.display_name || agent.username || '')
-  const [connectPhone, setConnectPhone] = useState(agent.whatsapp_phone || '')
-
-  useEffect(() => { setLive(whatsapp) }, [whatsapp])
-
-  useEffect(() => {
-    if (!polling) return
-    const t = setInterval(async () => {
-      try {
-        const d = await crmFetch(`agent-profile/${agentId}/whatsapp/status`)
-        setLive(d)
-        if (d.status === 'CONNECTED') { setPolling(false); onChange() }
-      } catch { /* keep polling, transient network error */ }
-    }, 3000)
-    return () => clearInterval(t)
-  }, [polling, agentId, onChange])
-
-  async function connect() {
-    if (!connectName.trim() || !connectPhone.replace(/\D/g, '')) {
-      alert('Add your Argus name and WhatsApp number first.')
-      return
-    }
-    setBusy(true)
-    try {
-      await crmJson(`agent-profile/${agentId}`, 'PATCH', {
-        display_name: connectName.trim(), whatsapp_phone: connectPhone.replace(/\D/g, ''),
-      })
-      const d = await crmFetch(`agent-profile/${agentId}/whatsapp/connect`, { method: 'POST' })
-      setLive(d)
-      if (d.status !== 'CONNECTED') setPolling(true)
-      else onChange()
-    } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not start WhatsApp connection') }
-    finally { setBusy(false) }
-  }
-
-  async function disconnect() {
-    if (!confirm('Disconnect this WhatsApp session?')) return
-    setBusy(true)
-    try {
-      await crmJson(`agent-profile/${agentId}/whatsapp/disconnect`, 'POST', {})
-      setPolling(false)
-      onChange()
-    } catch (e: any) { alert(e?.data?.error || e?.message || 'Could not disconnect') }
-    finally { setBusy(false) }
-  }
-
-  return (
-    <SectionCard title="Connect to Argus" icon="💬" right={<Badge {...(WA_BADGE[live.status] || WA_BADGE.OFFLINE)} />}>
-      {canSeeFull && live.status !== 'CONNECTED' && (
-        <div className="agent-connect-setup">
-          <div><strong>Your Argus identity</strong><span>One stable profile, one WAHA session. The QR and connected number are mirrored back here.</span></div>
-          <label><span>Display username</span><input value={connectName} onChange={event => setConnectName(event.target.value)} placeholder="e.g. Maria" /></label>
-          <label><span>WhatsApp number</span><input value={connectPhone} onChange={event => setConnectPhone(event.target.value)} inputMode="tel" placeholder="356 99 123 456" /></label>
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: DTEXT_DIM, marginBottom: 10 }}>
-        <div>Session: <span style={{ color: DTEXT }}>{live.session || 'not assigned'}</span></div>
-        {live.phone && <div>Number: <span style={{ color: DTEXT }}>{live.phone}</span></div>}
-      </div>
-
-      {canSeeFull && live.status !== 'CONNECTED' && !live.qr && (
-        <button onClick={connect} disabled={busy} style={btnPrimary()}>{busy ? 'Starting…' : 'Generate secure QR'}</button>
-      )}
-
-      {live.qr && live.status !== 'CONNECTED' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 4 }}>
-          <div style={{ fontSize: 11.5, color: DTEXT_DIM }}>Scan this QR with WhatsApp (Linked Devices → Link a Device):</div>
-          <img src={live.qr} alt="WhatsApp QR" style={{ width: 180, height: 180, borderRadius: 10, border: `1px solid ${DBORDER}`, background: '#fff', padding: 6 }} />
-          <button onClick={connect} disabled={busy} style={btnGhost()}>↻ Refresh QR</button>
-        </div>
-      )}
-
-      {canSeeFull && live.status === 'CONNECTED' && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={connect} disabled={busy} style={btnGhost()}>Reconnect</button>
-          <button onClick={disconnect} disabled={busy} style={{ ...btnGhost(), color: 'var(--crm-danger)' }}>Disconnect</button>
-        </div>
-      )}
-
-      {!canSeeFull && (
-        <div style={{ fontSize: 11, color: DTEXT_FAINT }}>Only this Agent (or an admin) can manage this connection.</div>
-      )}
-    </SectionCard>
   )
 }
 
