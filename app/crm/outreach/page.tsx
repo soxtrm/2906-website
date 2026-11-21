@@ -6,6 +6,7 @@ import { crmGet, crmJson } from '@/lib/crm/api'
 import { normalizeOutreachCountDraft } from '@/lib/crm/outreach-count'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { AccountRail, ActivityView, AutomationSetup, DayDetail, DayTimeline, KpiBar, LazyDetails, TemplateReview, useOverview, type DayCell } from './control-center'
+import { AutoStatusPanel, MessageLibrary, useAutoStatus } from './auto-status'
 import { AccountCards, AutoPauseRow, HealthFilter, PaceCard, PersonaPreview, SevenDays, healthMatches, type P0Account } from './outreach-p0'
 
 // ── ARGUS / NEON design tokens ───────────────────────────────────────────────
@@ -51,7 +52,7 @@ type Account = {
   dailyTargetMin?: number; dailyTargetMax?: number; persona?: string | null
   quotaToday?: { day: string; target: number; cap: number; used: number; sent: number; remaining: number; remainingToTarget: number } | null
 }
-type DayDisplay = { state: 'empty' | 'auto_prepared' | 'scheduled' | 'running' | 'completed' | 'paused' | 'attention' | 'failed' | 'cancelled'; label: string }
+type DayDisplay = { state: 'empty' | 'auto_prepared' | 'ready_to_start' | 'scheduled' | 'running' | 'completed' | 'partial' | 'no_sends' | 'skipped' | 'missed' | 'paused' | 'attention' | 'failed' | 'cancelled'; label: string }
 type Template = { id: number; label: string; text: string; created_at: string }
 type Entry = {
   id: number; normalized_phone: string; display_name: string | null
@@ -64,7 +65,7 @@ type Plan = {
   label: 'TODAY' | 'TOMORROW' | 'IN_2_DAYS' | 'IN_3_DAYS' | 'IN_4_DAYS' | string
   stats: { total: number; eligible: number; hot: number; cold: number; skip: number; sent: number }
   entries?: Entry[]
-  message_mode?: 'free_text' | 'persona_rotation' | null; template_slot?: number | null
+  message_mode?: 'free_text' | 'persona_rotation' | 'library' | null; template_slot?: number | null
   target_count?: number | null; display?: DayDisplay
 }
 type DueReminder = {
@@ -104,6 +105,14 @@ function outreachDaypart(time: string) {
   return 'Evening'
 }
 
+function personaName(persona?: string | null) {
+  return persona === 'kev' ? 'Kevin' : persona ? persona[0].toUpperCase() + persona.slice(1) : 'account'
+}
+function greetingAt(iso: string) {
+  const part = outreachDaypart(maltaHM(new Date(iso)))
+  return part === 'Morning' ? 'Good morning' : part === 'Afternoon' ? 'Good afternoon' : 'Good evening'
+}
+
 function outreachTimeLabel(value: string | null) {
   if (!value) return null
   const time = maltaHM(new Date(value))
@@ -124,8 +133,13 @@ function maltaMinutes(d: Date) {
 // One glyph + one word per day state: never colour alone (spec 7).
 const DAY_BADGE: Record<DayDisplay['state'], { glyph: string; word: string }> = {
   empty: { glyph: '—', word: 'Empty' },
-  auto_prepared: { glyph: 'A', word: 'Auto' },
-  scheduled: { glyph: '✓', word: 'Saved' },
+  auto_prepared: { glyph: '◷', word: 'Ready' },
+  ready_to_start: { glyph: '◷', word: 'Ready' },
+  scheduled: { glyph: '✓', word: 'Scheduled' },
+  partial: { glyph: '◐', word: 'Partial' },
+  no_sends: { glyph: '0', word: 'None sent' },
+  skipped: { glyph: '↷', word: 'Skipped' },
+  missed: { glyph: '–', word: 'Not sent' },
   running: { glyph: '▶', word: 'Running' },
   completed: { glyph: '✔', word: 'Done' },
   paused: { glyph: 'Ⅱ', word: 'Paused' },
@@ -312,8 +326,9 @@ function ArgusConsole() {
       {!accounts && !error && <div style={{ padding: 24, color: MUTED, fontSize: 12 }}>Loading…</div>}
 
       {activeTab === 'templates' && <div className="cc-layout" style={{ gridTemplateColumns: '1fr' }}>
-        <TemplateReview />
+        <MessageLibrary />
         <LazyDetails summary="Saved free-text drafts (manual planner)"><TemplateLibrary /></LazyDetails>
+        <LazyDetails summary="Old period-based persona texts (not used by Auto while the library has texts)"><TemplateReview /></LazyDetails>
       </div>}
 
       {accounts && overview && activeTab === 'overview' && (() => {
@@ -575,6 +590,11 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   const [saveAll, setSaveAll] = useState<{ busy: boolean; result: any | null; error: string }>({ busy: false, result: null, error: '' })
   const [autoSummary, setAutoSummary] = useState('')
   const pickedInitialPlan = useRef(false)
+  // Kev, 2026-11-21: Auto is started (or stopped) only after a confirmation that
+  // says exactly what will happen; the status panel shows what is really queued.
+  const [autoConfirm, setAutoConfirm] = useState<null | 'on' | 'off'>(null)
+  const [statusTick, setStatusTick] = useState(0)
+  const autoStatus = useAutoStatus(account.id, statusTick)
 
   // A background refresh must never overwrite a value the admin is editing
   // (recovery spec 2026-11-09): sync from the server only while not dirty.
@@ -667,6 +687,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function refresh(alsoReloadEntriesForPlanId?: number) {
     await loadPlans()
     if (alsoReloadEntriesForPlanId) await loadEntries(alsoReloadEntriesForPlanId)
+    setStatusTick(t => t + 1)
     onChanged()
   }
 
@@ -719,7 +740,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
   async function autoRun(selectedLabels: OutreachDayLabel[] = [...OUTREACH_DAY_LABELS]) {
     if (!plans?.length || busy || !selectedLabels.length) return
     const last = loadLastUsed(account.id)
-    const seedCount = commitCountDraft()
+    // Kev, 2026-11-21: ONE batch number for Auto — the Batch per day field (± variation).
+    const seedCount = autoBase()
     const seedText = msgDraft.trim() || account.outreachAutoMessage || activePlan?.message_template || last?.text || ''
 
     setCount(seedCount)
@@ -729,7 +751,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
     setBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/accounts/${account.id}/auto-prepare`, 'POST', { baseCount: seedCount, message: seedText, labels: selectedLabels })
+      const r = await crmJson(`outreach/accounts/${account.id}/auto-prepare`, 'POST', { baseCount: seedCount, variation: variationDraft, message: seedText, labels: selectedLabels })
       setPlans(r.rollingPlans)
       await onChanged()
       saveLastUsed(account.id, { text: seedText, count: seedCount })
@@ -739,7 +761,8 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
       const contacts = prepared.reduce((sum: number, plan: any) => sum + Number(plan.preparedCount || 0), 0)
       const preparedTimes = prepared.map((plan: any) => outreachTimeLabel(plan.scheduledAt)).filter(Boolean)
       const timeSummary = preparedTimes.length ? ` · ${preparedTimes.join(' → ')}` : ''
-      setAutoSummary(`✓ PREPARED · ${prepared.length} day${prepared.length === 1 ? '' : 's'} · +15 min per eligible day${timeSummary} · use Auto ON to arm the saved schedule`)
+      setAutoSummary(`Prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${Math.max(1, seedCount - variationDraft)}–${Math.min(40, seedCount + variationDraft)} owners per day${timeSummary}. Nothing is scheduled until Auto is started.`)
+      setStatusTick(t => t + 1)
       setNote(`Auto prepared ${prepared.length} day${prepared.length === 1 ? '' : 's'} · ${contacts} previews · ${preserved.length} preserved${blocked.length ? ` · ${blocked.length} blocked by time/safety` : ''}.`)
       setSelectedPrepareDays([])
       setPrepareDaysOpen(false)
@@ -837,15 +860,25 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
     } catch (e: any) { setTargetState(s => ({ ...s, busy: false, error: e?.message || 'Failed to save the daily target' })) }
   }
 
+  function autoBase() {
+    return targetValid && (targetNumber as number) > 0 ? Math.min(DAILY_TARGET_CAP, targetNumber as number) : Math.min(DAILY_TARGET_CAP, commitCountDraft())
+  }
+  const autoCount = targetValid && (targetNumber as number) > 0 ? Math.min(DAILY_TARGET_CAP, targetNumber as number) : Math.min(DAILY_TARGET_CAP, count)
+
   async function toggleAuto(enabled: boolean) {
     setAutoBusy(true); setNote('')
     try {
-      const r = await crmJson(`outreach/accounts/${account.id}/auto`, 'POST', { enabled })
+      const r = await crmJson(`outreach/accounts/${account.id}/auto`, 'POST', enabled
+        ? { enabled, start: true, baseCount: autoBase(), variation: variationDraft }
+        : { enabled })
       if (r.rollingPlans) setPlans(r.rollingPlans)
       else await loadPlans()
+      const scheduled = r.started ? r.started.scheduled + r.started.alreadyScheduled : 0
       setNote(enabled
-        ? (r.armed ? 'Auto armed — the saved schedule will run when contacts remain eligible.' : 'Auto configured but not armed — review the blocked days shown below.')
-        : `Auto off — ${(r.paused || []).length} future auto day(s) paused. Nothing new is sent.`)
+        ? (r.armed ? `Auto started — ${scheduled} day${scheduled === 1 ? '' : 's'} scheduled. Each day runs on its own; see the status above.` : 'Auto is on, but no day could be scheduled — the reason is shown per day above.')
+        : `Auto stopped — ${(r.paused || []).length} future Auto day(s) held. Nothing new is sent.`)
+      setAutoConfirm(null)
+      setStatusTick(t => t + 1)
       await onChanged()
     } catch (e: any) { setNote(e?.message || 'Could not change Auto') } finally { setAutoBusy(false) }
   }
@@ -893,10 +926,10 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
         <h2>Prepare. Review. Connect.</h2>
         <p>One account. One queue. Every step in view.</p>
         <div className="queue-automation" aria-label="Automation">
-          <button type="button" role="switch" aria-checked={Boolean(account.outreachAutoEnabled)} className={`auto-switch${account.outreachAutoEnabled ? ' is-on' : ''}`} disabled={autoBusy || account.operationalStatus === 'restricted'} onClick={() => toggleAuto(!account.outreachAutoEnabled)}>
-            <i aria-hidden /><span><b>{autoBusy ? 'Working…' : account.outreachAutoEnabled ? 'Auto ON' : 'Auto OFF'}</b><small>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Armed · rolling schedule' : 'Configured · needs attention') : 'Off · nothing will run automatically'}</small></span>
+          <button type="button" role="switch" aria-checked={Boolean(account.outreachAutoEnabled)} className={`auto-switch${account.outreachAutoEnabled ? ' is-on' : ''}`} disabled={autoBusy || account.operationalStatus === 'restricted'} onClick={() => setAutoConfirm(account.outreachAutoEnabled && account.outreachAutoRolling ? 'off' : 'on')}>
+            <i aria-hidden /><span><b>{autoBusy ? 'Working…' : account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Auto running' : 'Auto ready to start') : 'Auto off'}</b><small>{account.outreachAutoEnabled ? (account.outreachAutoRolling ? 'Schedules the next five days by itself' : 'Days prepared, nothing scheduled yet — press to start') : 'Nothing runs automatically — press to set up'}</small></span>
           </button>
-          <button type="button" className="queue-autosetup" disabled={saveAll.busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={saveAllDays}><ShieldCheck size={17} />{saveAll.busy ? 'Saving…' : 'SAVE ALL'}<span>Schedule every prepared day</span></button>
+          <button type="button" className="queue-autosetup" disabled={saveAll.busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={saveAllDays}><ShieldCheck size={17} />{saveAll.busy ? 'Scheduling…' : 'Schedule all days'}<span>Schedule every prepared day now</span></button>
           <button className="queue-autosetup is-secondary" disabled={busy || account.operationalStatus === 'restricted' || !plans?.length} onClick={() => setPrepareDaysOpen(open => !open)} aria-expanded={prepareDaysOpen}><Zap size={17} />{busy ? 'Preparing…' : 'Prepare free days'}<span>Choose days by hand</span></button>
           {account.quotaToday && <div className="quota-meter" aria-label={`Today ${account.quotaToday.used} of ${account.quotaToday.cap} owners used`}>
             <span>TODAY</span><b>{account.quotaToday.used}<small>/{account.quotaToday.cap}</small></b>
@@ -904,6 +937,20 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
             <small>target {account.quotaToday.target} · {account.quotaToday.remaining} left</small>
           </div>}
         </div>
+        {autoConfirm && <div className="auto-confirm" role="dialog" aria-label={autoConfirm === 'on' ? 'Start Auto' : 'Stop Auto'}>
+          {autoConfirm === 'on' ? <>
+            <b>Start Auto for {displayName}?</b>
+            <p>ARGUS prepares and schedules the next five days by itself: <b>{Math.max(1, autoCount - variationDraft)}–{Math.min(40, autoCount + variationDraft)} owners per day</b> ({autoCount}{variationDraft ? ' ±5' : ''}, from Batch per day below), the first day about 08:30–09:15 and 15 minutes later on each following day, only between 08:30 and 19:30 Malta. Every message is one of the {personaName(account.persona)} library texts with the greeting for the moment it is sent. Opted-out owners, cooldowns and the 40/day cap still apply.</p>
+            <div><button type="button" className="auto-confirm-go" disabled={autoBusy} onClick={() => toggleAuto(true)}>{autoBusy ? 'Starting…' : 'Start Auto'}</button>
+              {account.outreachAutoEnabled && <button type="button" disabled={autoBusy} onClick={() => toggleAuto(false)}>Turn Auto off</button>}
+              <button type="button" onClick={() => setAutoConfirm(null)}>Cancel</button></div>
+          </> : <>
+            <b>Stop Auto for {displayName}?</b>
+            <p>Future Auto days are held and nothing new is sent. A run that is sending right now finishes its current list.</p>
+            <div><button type="button" className="auto-confirm-stop" disabled={autoBusy} onClick={() => toggleAuto(false)}>{autoBusy ? 'Stopping…' : 'Stop Auto'}</button><button type="button" onClick={() => setAutoConfirm(null)}>Keep running</button></div>
+          </>}
+        </div>}
+        <AutoStatusPanel data={autoStatus.data} error={autoStatus.error} />
         {(saveAll.result || saveAll.error) && <div className={`save-all-result${saveAll.error || !saveAll.result?.ok ? ' is-warning' : ''}`} role="status">
           {saveAll.error ? <b>✕ {saveAll.error}</b> : <>
             <b>{saveAll.result.ok ? '✓ All days scheduled' : '! Some days were not scheduled'}</b>
@@ -940,7 +987,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
       <div className="account-safety-panel">
         <div className="account-volume-compact account-daily-target">
-          <span>DAILY TARGET · eligible owners</span>
+          <span>BATCH PER DAY · Auto draws each day in this range</span>
           <input className="pace-slider" aria-label={`${account.label} daily target slider`} type="range" min={0} max={DAILY_TARGET_CAP} step={1} value={targetValid ? (targetNumber as number) : (savedTarget ?? 0)} onChange={e => setTargetDraft(e.target.value)} />
           <input aria-label={`${account.label} daily target`} type="text" inputMode="numeric" pattern="[0-9]*" value={targetDraft} placeholder="20" onChange={e => setTargetDraft(e.target.value.replace(/\D/g, '').slice(0, 2))} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveTarget() } }} />
           <label className="target-variation"><input type="checkbox" checked={variationDraft === 5} onChange={e => setVariationDraft(e.target.checked ? 5 : 0)} /> ±5</label>
@@ -1077,7 +1124,7 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
           <button disabled={busy} onClick={savePastedList} style={btnGhost}>Save edits</button>
           <button disabled={busy} onClick={() => generate(false)} title="Creates a fresh list of exactly the target size. Existing unsent entries are released back to the pool." style={{ ...btnGhost, flex: '1 1 auto' }}>{(s?.total || 0) > 0 ? `Replace with ${Math.min(count, accountListMax)}` : `+ Create ${Math.min(count, accountListMax)}`}</button>
           <input aria-label="Target contacts in list" type="text" inputMode="numeric" pattern="[0-9]*" value={countDraft} onChange={e => setCountDraft(e.target.value)} onBlur={commitCountDraft} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitCountDraft(); e.currentTarget.blur() } }} style={inputSmall} />
-          <span style={{ fontSize: 9, color: FAINT }}>Target · max {accountListMax}</span>
+          <span style={{ fontSize: 9, color: FAINT }} title="Size of THIS day's list when you create or top it up by hand. Auto uses Batch per day above.">List size (this day)</span>
           <button disabled={busy || (s?.eligible || 0) >= Math.min(count, accountListMax)} onClick={() => generate(true)} title="Keeps the current queue and adds only enough new owners to reach the target." style={btnGhost}>Top up to {Math.min(count, accountListMax)}</button>
           <button disabled={busy} onClick={clearList} title="Removes everyone from this queue and releases their reservation." style={btnGhost}>Clear</button>
         </div>
@@ -1085,7 +1132,9 @@ function ProfileConsole({ account, accent, onChanged, templates, onTemplatesChan
 
       </section>
       <section className="queue-message"><h3><MessageSquare size={17} /> Your message <span>02</span></h3>
-      <p className="queue-help">{activePlan?.message_mode === 'persona_rotation'
+      <p className="queue-help">{activePlan?.message_mode === 'library'
+        ? `Message library · one of the ${personaName(account.persona)} texts is picked for each owner (never the same text twice to one owner) and the greeting is set at the moment of sending${activePlan.scheduled_at ? ` — "${greetingAt(activePlan.scheduled_at)}" at ${maltaHM(new Date(activePlan.scheduled_at))}` : ''}. The text below is one example. Writing your own text here and saving it switches this day to your wording.`
+        : activePlan?.message_mode === 'persona_rotation'
         ? `Persona rotation · variant ${activePlan.template_slot ?? '—'}. The greeting and closing are chosen at the moment of sending (Malta time). Editing the text below switches this day to your own wording.`
         : 'Your own wording. A leading greeting and the closing are corrected to the Malta time of sending.'}</p>
       {/* message + save */}
