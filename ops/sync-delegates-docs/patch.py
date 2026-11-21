@@ -126,6 +126,8 @@ for rel, edits in EDITS.items():
     path = os.path.join(root, rel)
     text = open(path, 'rb').read().decode('utf-8')
     for old, new in edits:
+        # already applied? (checked first: several replacements still contain their own anchor)
+        if any(text.count(new.replace('\n', nl)) == 1 for nl in ('\n', '\r\n')): print(f'already applied in {rel}: {old[:50]!r}'); continue
         hit = None
         for nl in ('\n', '\r\n'):
             o, n = old.replace('\n', nl), new.replace('\n', nl)

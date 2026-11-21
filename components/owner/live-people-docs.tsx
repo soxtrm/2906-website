@@ -114,7 +114,7 @@ export function LiveRepresentatives() {
 
 // ── documents ────────────────────────────────────────────────────────────────
 const CAT: Record<string, string> = { contract: 'Contract', id: 'ID', energy_certificate: 'Energy certificate', insurance: 'Insurance', inventory: 'Inventory', invoice: 'Invoice', floor_plan: 'Floor plan', permit: 'Permit', other: 'Other' }
-interface Doc { id: number; title: string; category: string; propertyId: number | null; mime: string; size: number; shared: boolean; createdAt: string }
+interface Doc { id: number; title: string; category: string; propertyId: number | null; mime: string; size: number; shared: boolean; createdAt: string; scanState?: 'pending' | 'clean' }
 const MAX = 3 * 1024 * 1024
 
 export function LiveDocuments() {
@@ -140,7 +140,8 @@ export function LiveDocuments() {
     const r = await sync('documents/upload', { category: cat, title: f.name.replace(/\.[a-z0-9]{2,5}$/i, ''), propertyId: home === '' ? null : home, dataBase64: data })
     setBusy(false)
     if (!r.ok) { s.say(r.message, 'err'); return }
-    s.say('Saved privately. Only you can see it.'); await load()
+    const st = (r as { document?: { scanState?: string } }).document?.scanState
+    s.say(st === 'pending' ? 'Saved. It is being checked for viruses and opens in a minute.' : 'Saved privately. Only you can see it.'); await load()
   }
   const open = async (d: Doc, download: boolean) => {
     const r = await sync<{ file: { name: string; mime: string; dataBase64: string } }>('documents/file', { id: d.id })
@@ -183,13 +184,13 @@ export function LiveDocuments() {
               <li key={d.id}>
                 <div><b><FileText size={16} aria-hidden="true" /> {d.title}</b>
                   <small>{CAT[d.category] || d.category} · {d.propertyId ? homeLabel(d.propertyId, own) : 'All homes'} · {(d.size / 1024).toFixed(0)} KB · {new Date(d.createdAt).toLocaleDateString('en-GB')}</small>
-                  <small className={d.shared ? 'rp-shared' : ''}>{d.shared ? 'Shared with your agency (2906)' : 'Private'}</small></div>
-                <span className="rp-actions">
+                  <small className={d.shared ? 'rp-shared' : ''}>{d.scanState === 'pending' ? 'Being checked for viruses…' : d.shared ? 'Shared with your agency (2906)' : 'Private'}</small></div>
+                {d.scanState === 'pending' ? <span className="rp-actions"><button className="lv-btn quiet" onClick={load}>Check again</button></span> : <span className="rp-actions">
                   <button className="lv-btn quiet" aria-label={`Open ${d.title}`} onClick={() => open(d, false)}><Eye size={16} /></button>
                   <button className="lv-btn quiet" aria-label={`Download ${d.title}`} onClick={() => open(d, true)}><Download size={16} /></button>
                   <button className="lv-btn quiet" disabled={busy} onClick={() => act('documents/share', { id: d.id, share: !d.shared }, d.shared ? 'No longer shared.' : 'Shared with your agency.')}>{d.shared ? <><X size={16} />Stop sharing</> : <><Share2 size={16} />Share</>}</button>
                   <button className="lv-btn quiet" aria-label={`Delete ${d.title}`} disabled={busy} onClick={() => { if (window.confirm(`Delete "${d.title}" for good? The file is removed from ARGUS.`)) act('documents/delete', { id: d.id }, 'Deleted.') }}><Trash2 size={16} /></button>
-                </span>
+                </span>}
               </li>
             ))}
           </ul>

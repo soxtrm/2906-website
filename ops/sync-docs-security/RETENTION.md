@@ -1,0 +1,9 @@
+# NEXUS SYNC private documents: storage, deletion, backups
+
+- **Where:** files in `/opt/2906-system/backend/private-docs/` (dir 700, files 600, not served by any web route), metadata in ARGUS `owner_documents` (`storage = 'sync_private'`).
+- **Who can open a file:** the owner (every request checks the session and the owner record) and, only while the owner shares it, signed-in CRM staff through a link that expires after 10 minutes. Every download re-checks sharing, deletion and the virus check, so un-sharing stops an unexpired link at once. Representatives never see documents.
+- **Virus check:** every upload is quarantined (`scan_state = 'pending'`) until ClamAV (`argus-clamav`, signatures updated by freshclam) reports it clean. Infected files are deleted at once and logged (`SYNC_DOCUMENT_INFECTED`). If the scanner is down, files stay pending and are re-checked every 10 minutes.
+- **Owner deletes a document:** the file is removed from the server immediately; the row stays with `deleted_at` and `url = 'sync-deleted'` (no content) for the audit trail.
+- **Backups:** nightly 02:45 UTC, `ops/private-docs-backup/private_docs_backup.sh`: files + metadata in one snapshot, AES-256 (gpg) with the key `/etc/argus-backup/private-docs.key` (root only), checked by decrypting and comparing every checksum. Kept 30 days in `/var/backups/2906/private-docs/` (root only). A deleted document disappears from backups when the last archive holding it expires (at most 30 days). A copy of the key must also be kept outside the server, or the backups cannot be read if the server is lost.
+- **Restore:** `restore.sh <archive> check | files | files+metadata` (never overwrites). Drill: `backup/drill.sh` on staging.
+- **Off-site:** not yet; the existing encrypted off-site copy of ARGUS backups waits for its own approval (`/etc/argus-backup/OFFSITE_APPROVED`).
