@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import '../marketplace/marketplace.css'
+import '../marketplace/instant.css'
 import './exchange.css'
 import { Exchange } from './exchange'
 

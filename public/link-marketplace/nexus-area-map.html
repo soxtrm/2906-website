@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Area map</title><style>
+/* NEXUS Marketplace area map (2026-11-21): same API as estate-area-map.html (channel 'estate-area-map'), neutral NEXUS look:
+   light grey streets in light mode, charcoal in dark mode, no rotation, no blur. Wheel zoom stays off (page scroll wins). */
+html,body{margin:0;height:100%;overflow:hidden;background:#ecebe7}
+#map{position:absolute;inset:0;background:#ecebe7}
+.leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.06);opacity:.9}
+.leaflet-control-attribution{background:rgb(255 255 255/.8)!important;color:#55575c!important;font:9px/1.35 ui-sans-serif,system-ui,sans-serif!important}.leaflet-control-attribution a{color:#111!important}
+.controls{position:absolute;z-index:1000;right:10px;top:10px;display:grid;gap:6px}
+.controls button{width:34px;height:34px;padding:0;border:0;border-radius:10px;background:#fff;color:#111;font:600 18px/1 ui-sans-serif,system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 3px rgb(0 0 0/.18)}
+.controls button:focus-visible{outline:2px solid #111;outline-offset:2px}
+#error{position:absolute;top:45%;left:0;right:0;padding:20px;text-align:center;font:14px ui-sans-serif,system-ui,sans-serif;color:#55575c}
+@media (prefers-color-scheme:dark){html,body,#map{background:#141416}.leaflet-tile-pane{filter:invert(1) grayscale(1) brightness(.78) contrast(1.08);opacity:.85}
+  .leaflet-control-attribution{background:rgb(20 20 22/.8)!important;color:#a1a1a6!important}.leaflet-control-attribution a{color:#f2f2f0!important}
+  .controls button{background:#1f1f22;color:#f2f2f0}#error{color:#a1a1a6}}
+</style><div id="map"></div><div class="controls"><button id="in" aria-label="Zoom in">+</button><button id="out" aria-label="Zoom out">−</button><button id="home" aria-label="Back to the area">⌂</button></div><p id="error" hidden>Map unavailable. The places are listed next to it.</p><script type="module">
+import {createPropertyMap} from './property-map.mjs';
+let map, latest, originKey, building=false;
+const notify=(value)=>parent.postMessage({channel:'estate-area-map',...value},location.origin);
+async function render(){if(!latest||building)return;if(map&&originKey!==JSON.stringify(latest.intelligence.origin)){map.destroy();map=null;}if(!map){originKey=JSON.stringify(latest.intelligence.origin);building=true;try{map=await createPropertyMap(document.getElementById('map'),latest.intelligence,{onSelect:id=>notify({selected:id})});}catch{document.getElementById('error').hidden=false;}finally{building=false;}}if(!map)return;map.select(latest.category,latest.selected?[]:latest.places);if(latest.selected)map.focus(latest.selected);map.route(latest.geometry,latest.mode);}
+addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.channel!=='estate-area-map')return;latest=event.data;render();});
+document.getElementById('in').onclick=()=>map?.zoom(1);document.getElementById('out').onclick=()=>map?.zoom(-1);document.getElementById('home').onclick=()=>map?.recenter();notify({ready:true});
+</script></html>

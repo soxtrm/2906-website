@@ -32,7 +32,8 @@ export type FeatureEntry = { key: string; label: string; group: string; kind: 'b
 export type Dict = { entries: FeatureEntry[]; byTag: Record<string, string> }
 export const toDict = (entries: (FeatureEntry & { argusTag?: string | null })[]): Dict => ({ entries, byTag: Object.fromEntries(entries.filter(e => e.argusTag).map(e => [e.argusTag as string, e.key])) })
 export type Evidenced = { key: string; label: string; text: string; evidence: 'agent_confirmed' | 'document' | 'verified'; evidenceLabel: string }
-export type Availability = { kind: 'now' | 'confirmed' | 'from'; label: string; from: string | null }
+// confirmedAt = the last EXPLICIT availability confirmation in ARGUS (owner answer or agent "Available Confirmed"), never an edit
+export type Availability = { kind: 'now' | 'confirmed' | 'from'; label: string; from: string | null; confirmedAt: string | null }
 
 export type ListingCard = {
   id: string
@@ -104,9 +105,10 @@ export function titleOf(p: Raw) {
 function availabilityOf(p: Raw): Availability {
   const from = p.availableFrom ? String(p.availableFrom).slice(0, 10) : null
   const future = from && new Date(from).getTime() > Date.now() + 86400e3
-  if (p.status === 'upcoming' || future) return { kind: 'from', label: from ? `From ${new Date(from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Coming soon', from }
-  if (p.status === 'available_confirmed') return { kind: 'confirmed', label: 'Available · confirmed', from }
-  return { kind: 'now', label: 'Available', from }
+  const confirmedAt = p.status === 'available_confirmed' && p.confirmedAt ? String(p.confirmedAt) : null
+  if (p.status === 'upcoming' || future) return { kind: 'from', label: from ? `From ${new Date(from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Coming Soon', from, confirmedAt: null }
+  if (p.status === 'available_confirmed') return { kind: 'confirmed', label: 'Available', from, confirmedAt }
+  return { kind: 'now', label: 'Available', from, confirmedAt: null }
 }
 
 function smartOf(overview: PropertyLifeOverview | null): SmartFact[] {
@@ -170,7 +172,7 @@ export function toCard(p: Raw, places: NexusPlace[], dict?: Dict): ListingCard {
     propertyType: type, typeLabel: type ? tc(type) : null,
     area: p.areaLabel || 'Malta', areaKey: String(p.area || ''), regions: Array.isArray(p.regions) ? p.regions : [],
     price: Number(p.rent ?? p.price) || null, pricePeriod: p.rentPeriod === 'night' ? 'night' : market === 'sales' ? null : 'month',
-    bedrooms: Number.isFinite(Number(p.bedrooms)) ? Number(p.bedrooms) : null, bathrooms: Number.isFinite(Number(p.bathrooms)) ? Number(p.bathrooms) : null,
+    bedrooms: p.bedrooms != null && Number.isFinite(Number(p.bedrooms)) ? Number(p.bedrooms) : null, bathrooms: Number(p.bathrooms) > 0 ? Number(p.bathrooms) : null,
     size: Number(p.size) || null, images: images.slice(0, 6).map(u => sized(u, 720)), imageCount: images.length,
     availability: availabilityOf(p), updatedAt: p.updatedAt || null,
     features, featureKeys, evidenced, teaser: teaserOf(p.description),

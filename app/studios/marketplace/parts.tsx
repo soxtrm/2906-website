@@ -3,10 +3,12 @@
 // (used by the overlay on the list and by the stand-alone page), co-agency terms and the enquiry form.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bath, BedDouble, CalendarDays, Check, ChevronLeft, ChevronRight, ExternalLink, Handshake, MapPin, Maximize2, MessageCircle, Ruler, ShieldCheck, X } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Bath, BedDouble, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, FileText, Handshake, ListChecks, Maximize2, MessageCircle, Ruler, ShieldCheck, X } from 'lucide-react'
 import type { Agency, Cooperation, ListingCard, ListingDetail } from '@/lib/marketplace/model'
-import { PropertyLifeOverview } from '@/components/property-life-overview'
-import { ChatPanel } from './chat'
+import { ChatPanel, initialsOf, type ChatMeta } from './chat'
+import { SmartArea } from './smart'
+import { availabilityText, heroSet, width } from './instant'
 
 export const eur = (n: number) => `€${n.toLocaleString('en-GB')}`
 // distances: never more precise than the data (area centre -> '~', under 100 m -> '<0.1 km')
@@ -137,94 +139,170 @@ export function MetricBadge({ value, measures }: { value: string; measures: stri
 }
 
 // ---- listing body: shared by the overlay and the stand-alone page ---------------------------------------
-// Wide layout (Kev, 21 Nov 2026): location-first heading, photo mosaic, chips like the card, features, the 2906
-// Smart Intelligence (real places, routes and times), and the agency conversation on the right.
+// NEXUS Instant detail (Kev, 21 Nov 2026): the card photo morphs into the hero (shared layoutId), the body renders at
+// once from the card data and fills in as the details arrive (sections fly in, staggered); the hero shows the
+// already-loaded card photo first and fades the large one in. The NEXUS conversation docks on the right; once the
+// visitor reads further down it becomes a floating tab (bottom sheet on phones) and keeps its draft.
 type Partial_ = ListingCard & Partial<Pick<ListingDetail, 'description' | 'allImages' | 'overview' | 'locationNote' | 'featureGroups' | 'coordinates'>>
 const uniqueImages = (list: string[]) => { const seen = new Set<string>(); return list.filter(u => { const k = u.replace(/\/image\/upload\/[^/]*\//, '/image/upload/'); if (seen.has(k)) return false; seen.add(k); return true }) }
-const resize = (u: string, w: number) => u.replace(/\/image\/upload\/w_\d+,/, `/image/upload/w_${w},`)
 
-function Mosaic({ images, title }: { images: string[]; title: string }) {
+function HeroImg({ src, alt }: { src: string; alt: string }) {
+  const [big, setBig] = useState(false)
+  useEffect(() => setBig(false), [src])
+  return <>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img src={width(src, 720)} alt={alt} decoding="async" fetchPriority="high" />
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img className="pd-hd" data-on={big || undefined} src={width(src, 1600)} srcSet={heroSet(src)} sizes="(max-width: 900px) 100vw, 62vw" alt="" aria-hidden="true" decoding="async" onLoad={() => setBig(true)} />
+  </>
+}
+
+function Mosaic({ images, title, morph }: { images: string[]; title: string; morph?: string }) {
   const [full, setFull] = useState<number | null>(null)
   if (!images.length) return <div className="pd-mosaic empty">No photos yet</div>
   const side = images.slice(1, 5)
   return (
     <div className="pd-mosaic" data-n={Math.min(5, images.length)}>
-      <button className="pd-hero" onClick={() => setFull(0)} aria-label={`Open ${images.length} photos full screen`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={resize(images[0], 1600)} srcSet={`${resize(images[0], 960)} 960w, ${resize(images[0], 1600)} 1600w`} sizes="(max-width: 900px) 100vw, 60vw" alt={title} fetchPriority="high" decoding="async" />
-      </button>
+      <motion.button layoutId={morph} className="pd-hero" onClick={() => setFull(0)} aria-label={`Open ${images.length} photos full screen`} transition={{ type: 'spring', stiffness: 260, damping: 32 }}>
+        <HeroImg src={images[0]} alt={title} />
+      </motion.button>
       {side.map((src, i) => (
-        <button key={src} className="pd-thumb" onClick={() => setFull(i + 1)} aria-label={`Photo ${i + 2}`}>
+        <motion.button key={src} className="pd-thumb" onClick={() => setFull(i + 1)} aria-label={`Photo ${i + 2}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 + i * 0.05 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={resize(src, 720)} alt="" loading="lazy" decoding="async" />
+          <img src={width(src, 720)} alt="" loading={i < 2 ? 'eager' : 'lazy'} decoding="async" />
           {i === side.length - 1 && images.length > 5 && <span>+{images.length - 5} photos</span>}
-        </button>
+        </motion.button>
       ))}
       <button className="pd-all" onClick={() => setFull(0)}><Maximize2 size={14} aria-hidden="true" />All {images.length} photos</button>
-      {full !== null && <Viewer images={images.map(u => resize(u, 1600))} start={full} onClose={() => setFull(null)} />}
+      {full !== null && <Viewer images={images.map(u => width(u, 1600))} start={full} onClose={() => setFull(null)} />}
     </div>
   )
 }
 
-export function ListingBody({ l, pro, loading, headingId }: { l: Partial_; pro: boolean; loading?: boolean; headingId?: string }) {
+const rise = { h: { opacity: 0, y: 14 }, v: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 320, damping: 34 } } }
+
+export function ListingBody({ l, pro, loading, headingId, morph, chatFocus = 0 }: { l: Partial_; pro: boolean; loading?: boolean; headingId?: string; morph?: string; chatFocus?: number }) {
+  const reduce = useReducedMotion()
   const images = uniqueImages(l.allImages?.length ? l.allImages : l.images)
   const groups = l.featureGroups || []
   const [more, setMore] = useState(false)
+  const [now, setNow] = useState(0)
+  useEffect(() => setNow(Date.now()), [])
   const desc = l.description || ''
-  const long = desc.length > 520
+  const long = desc.length > 620
   const chips = [...(l.typeLabel ? [l.typeLabel] : []), ...l.features]
+  const av = availabilityText(l.availability, l.updatedAt, now || undefined)
   return (
-    <div className="pd">
-      <header className="pd-head">
+    <motion.div className="pd" initial={reduce ? false : 'h'} animate="v" variants={{ v: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } } }}>
+      <motion.header className="pd-head" variants={rise}>
         <div className="pd-head-main">
-          <p className="pd-pills"><span className={`mc-pill mc-avail k-${l.availability.kind}`}>{l.availability.label}</span><span className="pd-ref">{l.marketLabel} · Ref {l.id}</span></p>
+          <p className="pd-pills"><span className={`mc-pill mc-avail k-${av.tone}`} title={av.title}>{now ? av.text : l.availability.label}</span><span className="pd-ref">{l.marketLabel} · Ref {l.id}</span></p>
           <h1 id={headingId}>{l.area}</h1>
           <p className="pd-sub">{l.title}</p>
         </div>
         <div className="pd-head-price">
           <span className="mc-price">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</span>
           <span className="pd-facts">
-            {!!l.bedrooms && <span><BedDouble size={17} aria-hidden="true" />{l.bedrooms} {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>}
-            {!!l.bathrooms && <span><Bath size={17} aria-hidden="true" />{l.bathrooms} {l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>}
-            {l.size && <span><Ruler size={17} aria-hidden="true" />{l.size} m²</span>}
+            {l.bedrooms != null && l.bedrooms > 0 && <span><BedDouble size={16} aria-hidden="true" />{l.bedrooms} {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>}
+            {l.bedrooms === 0 && <span><BedDouble size={16} aria-hidden="true" />Studio</span>}
+            <span title={l.bathrooms ? undefined : 'Number of bathrooms not recorded yet'}><Bath size={16} aria-hidden="true" />{l.bathrooms ? `${l.bathrooms} ${l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}` : 'Bathrooms ?'}</span>
+            {l.size && <span><Ruler size={16} aria-hidden="true" />{l.size} m²</span>}
           </span>
         </div>
-      </header>
-      <Mosaic images={images} title={l.title} />
+      </motion.header>
       <div className="pd-grid">
         <div className="pd-main">
-          {chips.length > 0 && <p className="pd-chips">{chips.map(c => <span key={c}>{c}</span>)}</p>}
-          {l.smart.length > 0 && <p className="pd-near">{l.smart.map(s => <span key={s.key}>{s.label} {km(s.km, l.smartFromCentre)}</span>)}</p>}
-          {loading && <div className="mp-lines" aria-busy="true"><i /><i /><i /></div>}
+          <Mosaic images={images} title={l.title} morph={reduce ? undefined : morph} />
+          {chips.length > 0 && <motion.p className="pd-chips" variants={rise}>{chips.map(c => <span key={c}>{c}</span>)}</motion.p>}
+          {loading && !desc && <div className="mp-lines" aria-busy="true"><i /><i /><i /><i /></div>}
           {desc && (
-            <section className="pd-sec">
-              <h2>About this home</h2>
+            <motion.section className="pd-sec" variants={rise} initial={reduce ? false : 'h'} animate="v">
+              <h2><FileText size={18} aria-hidden="true" />About this home</h2>
               <div className="mp-desc" data-clamped={long && !more ? true : undefined}>{desc.split(/\n+/).map((p, k) => <p key={k}>{p}</p>)}</div>
-              {long && <button className="mp-link" onClick={() => setMore(m => !m)}>{more ? 'Show less' : 'Read more'}</button>}
-            </section>
+              {long && <button className="pd-more" onClick={() => setMore(m => !m)} aria-expanded={more}>{more ? 'Show less' : 'Read the full description'}<ChevronDown size={15} aria-hidden="true" /></button>}
+            </motion.section>
           )}
           {groups.length > 0 && (
-            <section className="pd-sec" id="mp-sec-features">
-              <h2>Features</h2>
+            <motion.section className="pd-sec" id="mp-sec-features" variants={rise} initial={reduce ? false : 'h'} animate="v">
+              <h2><ListChecks size={18} aria-hidden="true" />Features</h2>
               <div className="mp-fgroups">{groups.map(g => (
                 <div key={g.key}><b>{g.label}</b><ul>{g.items.map(i => <li key={i.key} title={i.source}><Check size={13} aria-hidden="true" />{i.text}<small>{i.source === 'From the listing description' ? 'listing text' : i.source}</small></li>)}</ul></div>
               ))}</div>
-            </section>
+            </motion.section>
           )}
-          <section className="pd-sec pd-si" id="mp-sec-area">
-            <div className="pd-si-head"><span className="pd-kicker">NEXUS Smart Intelligence</span><h2>Life around {l.area}</h2>
-              <p className="mp-muted">{l.locationNote} {l.smartFromCentre ? `Distances and routes start from the ${l.area} area point, not from the front door.` : ''}</p></div>
-            {l.overview
-              ? <PropertyLifeOverview overview={l.overview} description={desc} features={l.features} />
-              : l.coordinates ? <AreaMap c={l.coordinates} exact={!l.smartFromCentre} area={l.area} /> : <p className="mp-muted">Area data is loading…</p>}
-          </section>
+          {pro && l.provider.kind === 'agency' && <CooperationBox c={l.cooperation} agencyName={l.provider.agency.name} />}
         </div>
         <aside className="pd-side">
-          <ProviderBox l={l} />
-          {pro && l.provider.kind === 'agency' && <CooperationBox c={l.cooperation} agencyName={l.provider.agency.name} />}
-          <ChatPanel l={l} />
+          <ChatDock l={l} focus={chatFocus} />
         </aside>
       </div>
+      <motion.section className="pd-sec pd-si" id="mp-sec-area" variants={rise}>
+        <div className="pd-si-head"><span className="pd-kicker">NEXUS Smart Intelligence</span><h2>Life around {l.area}</h2>
+          <p className="mp-muted">{l.locationNote || `Shown at ${l.area} level for privacy; the exact address follows with a viewing.`}</p></div>
+        {l.overview ? <SmartArea overview={l.overview} area={l.area} fromCentre={l.smartFromCentre} />
+          : loading ? <div className="sa-skel" aria-busy="true"><i /><i /><i /><i /><i /><i /></div>
+          : l.coordinates ? <AreaMap c={l.coordinates} exact={!l.smartFromCentre} area={l.area} /> : <p className="mp-muted">This area is not mapped yet.</p>}
+      </motion.section>
+    </motion.div>
+  )
+}
+
+// ---- the NEXUS conversation: docked on the right, a floating tab once out of view -------------------------
+// One ChatPanel instance for the whole visit of this listing (never remounted), so the draft, the started
+// conversation and a half-filled viewing request survive collapsing and reopening.
+function ChatDock({ l, focus }: { l: ListingCard; focus: number }) {
+  const reduce = useReducedMotion()
+  const dock = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const [inView, setInView] = useState(true)
+  const [floating, setFloating] = useState(false)
+  const [narrow, setNarrow] = useState(false)
+  const [h, setH] = useState(0)
+  const [meta, setMeta] = useState<ChatMeta | null>(null)
+  const [focusKey, setFocusKey] = useState(0)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)'); const on = () => setNarrow(mq.matches); on()
+    mq.addEventListener('change', on); return () => mq.removeEventListener('change', on)
+  }, [])
+  useEffect(() => {
+    const el = dock.current; if (!el) return
+    // docked while at least about a third of the panel is readable; below that it folds into the floating tab
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting && e.intersectionRatio >= 0.35), { threshold: [0, 0.2, 0.35, 0.5, 1], rootMargin: '-64px 0px -40px 0px' })
+    io.observe(el); return () => io.disconnect()
+  }, [])
+  useEffect(() => { if (inView && !narrow) setFloating(false) }, [inView, narrow])
+  // a card's "Message" button: open the conversation straight away (sheet on phones, docked panel on desktop)
+  useEffect(() => { if (!focus) return; if (window.matchMedia('(max-width: 900px)').matches) setFloating(true); setFocusKey(k => k + 1) }, [focus])
+  // phones: the conversation lives in a bottom sheet (tab -> sheet); desktop: docked while its column is on screen
+  const mode = floating ? 'float' : narrow || !inView ? 'tab' : 'docked'
+  useEffect(() => { if (mode === 'docked' && panel.current) setH(panel.current.offsetHeight) })
+  useEffect(() => { // phones: the page behind the sheet keeps its place; Esc closes the sheet
+    if (mode !== 'float') return
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setFloating(false) } }
+    window.addEventListener('keydown', k, true); return () => window.removeEventListener('keydown', k, true)
+  }, [mode])
+  const open = () => { setFloating(true); setFocusKey(k => k + 1) }
+  return (
+    <div className="pd-dock" id="mp-sec-chat" ref={dock} data-mode={mode} style={mode !== 'docked' && h && !narrow ? { minHeight: h } : undefined}>
+      <motion.div ref={panel} className="pd-chat" data-mode={mode} layout={reduce ? false : 'position'} transition={{ type: 'spring', stiffness: 380, damping: 36 }}>
+        <ChatPanel l={l} onMeta={setMeta} focusKey={focusKey} onClose={mode === 'float' ? () => setFloating(false) : undefined} />
+      </motion.div>
+      <AnimatePresence>
+        {mode === 'tab' && (
+          <motion.button key="tab" type="button" className="pd-chat-tab" onClick={open} aria-label={`Message ${meta?.name || 'the agent'}`}
+            initial={reduce ? false : { opacity: 0, y: 18, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reduce ? undefined : { opacity: 0, y: 18, scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 30 }} whileHover={reduce ? undefined : { y: -2 }} whileTap={reduce ? undefined : { scale: 0.96 }}>
+            {meta?.photo
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={meta.photo} alt="" />
+              : <span className="pd-chat-tab-av" aria-hidden="true">{initialsOf(meta?.name || 'A')}</span>}
+            <span className="pd-chat-tab-txt"><b>{meta?.started ? `Chat with ${meta.name}` : `Message ${meta?.name || 'the agent'}`}</b><small>Ref {l.id} · private NEXUS chat</small></span>
+            <MessageCircle size={18} aria-hidden="true" />
+            {!!meta?.unread && <i className="pd-chat-badge">{meta.unread}</i>}
+          </motion.button>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>{mode === 'float' && narrow && <motion.div key="scrim" className="pd-chat-scrim" onClick={() => setFloating(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />}</AnimatePresence>
     </div>
   )
 }

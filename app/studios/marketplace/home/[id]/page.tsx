@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import '../../marketplace.css'
+import '../../instant.css'
 import { ListingView } from './listing'
 import { fetchNexusContext, type NexusPlace } from '@/lib/nexus-property-context'
 import { toCard } from '@/lib/marketplace/model'

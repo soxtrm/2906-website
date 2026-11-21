@@ -5,7 +5,7 @@
 // the owner (a booked ARGUS viewing) -> confirmed by the owner. Nothing is shown as booked before that.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { CalendarDays, Check, CheckCheck, Clock, MessageCircle, RotateCw, Send, ShieldCheck, X } from 'lucide-react'
+import { CalendarDays, Check, CheckCheck, Clock, ExternalLink, Lock, RotateCw, Send, ShieldCheck, X } from 'lucide-react'
 import type { ListingCard } from '@/lib/marketplace/model'
 
 type Msg = { id: number; from: 'visitor' | 'staff' | 'system'; kind: string; text: string; at: string; meta?: Record<string, unknown> }
@@ -30,7 +30,10 @@ const STATE: Record<Req['state'], { label: string; tone: string }> = {
   not_possible: { label: 'The owner could not confirm', tone: 'no' }, cancelled: { label: 'Cancelled', tone: 'no' },
 }
 
-export function ChatPanel({ l }: { l: ListingCard }) {
+export type ChatMeta = { name: string; photo: string | null; unread: number; started: boolean }
+export const initialsOf = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('')
+
+export function ChatPanel({ l, onMeta, focusKey = 0, onClose }: { l: ListingCard; onMeta?: (m: ChatMeta) => void; focusKey?: number; onClose?: () => void }) {
   const reduce = useReducedMotion()
   const [auth, setAuth] = useState<{ id: string; token: string } | null>(null)
   const [conv, setConv] = useState<Conv | null>(null)
@@ -39,7 +42,13 @@ export function ChatPanel({ l }: { l: ListingCard }) {
   const [text, setText] = useState('')
   const [picking, setPicking] = useState(false)
   const list = useRef<HTMLDivElement>(null)
+  const root = useRef<HTMLDivElement>(null)
   const agency = l.provider.kind === 'agency' ? l.provider.agency : null
+  const who = conv?.agent?.name || (l.provider.kind === 'agency' ? l.provider.agent?.name : null) || agency?.name || 'Agency'
+  const photo = conv?.agent?.photo || null
+  useEffect(() => { onMeta?.({ name: who, photo, unread: conv?.unread || 0, started: !!auth }) }, [who, photo, conv?.unread, auth]) // eslint-disable-line react-hooks/exhaustive-deps
+  // "Message" on a card / the floating tab: put the cursor where the visitor writes
+  useEffect(() => { if (focusKey) setTimeout(() => root.current?.querySelector<HTMLElement>('.mc-compose textarea, .mc-start input')?.focus({ preventScroll: true }), 60) }, [focusKey])
 
   const refresh = useCallback(async (a = auth) => {
     if (!a) return
@@ -65,17 +74,25 @@ export function ChatPanel({ l }: { l: ListingCard }) {
   }
 
   return (
-    <div className="mc-chat" id="mp-sec-contact">
+    <div className="mc-chat" ref={root}>
       <header className="mc-chat-head">
-        {conv?.agent?.photo
+        {photo
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={conv.agent.photo} alt="" className="mc-chat-av" />
-          : <span className="mc-chat-av" aria-hidden="true">{(conv?.agent?.name || (l.provider.kind === 'agency' && l.provider.agent?.name) || agency.name)[0]}</span>}
+          ? <img src={photo} alt="" className="mc-chat-av" />
+          : <span className="mc-chat-av" aria-hidden="true">{initialsOf(who)}</span>}
         <span className="mc-chat-who">
-          <b>{conv?.agent?.name || (l.provider.kind === 'agency' ? l.provider.agent?.name : null) || agency.name}</b>
-          <small>{agency.name}{agency.verified && <ShieldCheck size={12} aria-label="verified agency" />} · Ref {l.id}</small>
+          <b>{who}</b>
+          <small className="mc-chat-org">
+            {agency.logo
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={agency.logo} alt={agency.name} title={agency.name} />
+              : <span>{agency.name}</span>}
+            {agency.verified && <ShieldCheck size={12} aria-label="verified agency" />}
+            <span className="mc-chat-ref">· Ref {l.id}</span>
+          </small>
         </span>
-        <span className="mc-chat-live" data-on={!!conv || undefined}>{conv ? (conv.status === 'open' ? 'Conversation open' : 'Closed') : 'Usually answers the same day'}</span>
+        <span className="mc-chat-live" data-on={!!conv || undefined}>{conv ? (conv.status === 'open' ? 'Conversation open' : 'Closed') : 'Replies arrive here'}</span>
+        {onClose && <button type="button" className="mc-chat-x" onClick={onClose} aria-label="Minimise chat"><X size={16} /></button>}
       </header>
 
       {!auth ? <StartForm l={l} onStarted={(a, c) => { save(l.id, a); setAuth(a); setConv(c) }} /> : <>
@@ -121,7 +138,8 @@ export function ChatPanel({ l }: { l: ListingCard }) {
           <button className="mc-book" onClick={() => setPicking(true)}><CalendarDays size={16} />Request a viewing</button>
         )}
       </>}
-      {agency.whatsapp && <a className="mc-wa" href={`https://wa.me/${agency.whatsapp}?text=${encodeURIComponent(`Hello ${agency.name}, about Ref ${l.id} (${l.title})`)}`} target="_blank" rel="noopener"><MessageCircle size={13} aria-hidden="true" />Prefer WhatsApp? {agency.whatsappLabel}</a>}
+      <p className="mc-foot-note"><span><Lock size={11} aria-hidden="true" /> Private NEXUS conversation with {agency.name}. No phone numbers are shared.</span>
+        <a href={`/marketplace?agency=${encodeURIComponent(agency.key)}&market=${l.market}`}>All homes from {agency.name}</a>{agency.website && <a href={agency.website} target="_blank" rel="noopener">Website<ExternalLink size={10} aria-hidden="true" /></a>}</p>
     </div>
   )
 }
@@ -137,21 +155,30 @@ function StartForm({ l, onStarted }: { l: ListingCard; onStarted: (a: { id: stri
     catch (e) { setErr((e as Error).message) }
     setBusy(false)
   }
+  // compact first: the message; name and a way to reach you open as soon as the visitor starts (Kev: compact panel)
+  const [more, setMore] = useState(false)
+  const reduce = useReducedMotion()
   return (
-    <form className="mc-start" onSubmit={e => { e.preventDefault(); go() }}>
-      <div className="mp-seg small" role="group" aria-label="I am">
-        <button type="button" aria-pressed={role === 'home-seeker'} onClick={() => setRole('home-seeker')}>Looking for myself</button>
-        <button type="button" aria-pressed={role === 'agent'} onClick={() => setRole('agent')}>Agent for a client</button>
-      </div>
-      <label>Your name<input required value={name} onChange={e => setName(e.target.value)} autoComplete="name" /></label>
-      <div className="mc-start-row">
-        <label>E-mail<input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" /></label>
-        <label>or phone<input type="tel" value={phone} onChange={e => setPhone(e.target.value)} autoComplete="tel" /></label>
-      </div>
-      <label>Message<textarea rows={3} maxLength={2000} value={message} onChange={e => setMessage(e.target.value)} /></label>
+    <form className="mc-start" onSubmit={e => { e.preventDefault(); if (!more) { setMore(true); return } go() }} onFocus={() => setMore(true)}>
+      <label className="mc-start-msg"><span className="sr">Message</span><textarea rows={2} maxLength={2000} value={message} onChange={e => setMessage(e.target.value)} aria-label="Message" /></label>
+      <AnimatePresence initial={false}>
+        {more && (
+          <motion.div key="who" className="mc-start-who" initial={reduce ? false : { opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={reduce ? undefined : { opacity: 0, height: 0 }} transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}>
+            <div className="mp-seg small" role="group" aria-label="I am">
+              <button type="button" aria-pressed={role === 'home-seeker'} onClick={() => setRole('home-seeker')}>Looking for myself</button>
+              <button type="button" aria-pressed={role === 'agent'} onClick={() => setRole('agent')}>Agent for a client</button>
+            </div>
+            <label>Your name<input required value={name} onChange={e => setName(e.target.value)} autoComplete="name" /></label>
+            <div className="mc-start-row">
+              <label>E-mail<input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" /></label>
+              <label>or phone<input type="tel" value={phone} onChange={e => setPhone(e.target.value)} autoComplete="tel" /></label>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {err && <p className="mp-err">{err}</p>}
-      <button className="mp-send" disabled={busy || !name.trim() || !message.trim() || (!email.includes('@') && phone.replace(/\D/g, '').length < 7)}><Send size={16} />{busy ? 'Sending…' : 'Start conversation'}</button>
-      <p className="mp-muted small">Your details go only to {l.provider.kind === 'agency' ? l.provider.agency.name : 'the agency'}. This chat stays open on this device.</p>
+      <button className="mp-send" disabled={busy || !message.trim() || (more && (!name.trim() || (!email.includes('@') && phone.replace(/\D/g, '').length < 7)))}><Send size={16} />{busy ? 'Sending…' : more ? 'Start conversation' : 'Write to the agent'}</button>
+      {more && <p className="mp-muted small">Your details go only to {l.provider.kind === 'agency' ? l.provider.agency.name : 'the agency'}. This chat stays open on this device.</p>}
     </form>
   )
 }

@@ -7,11 +7,13 @@
 // feature dictionary. "Professional" adds references, co-agency terms (only when agreed) and client shortlists.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, CalendarDays, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, GraduationCap, Heart, HeartPulse, ListChecks, MessageCircle, MoreVertical, Plus, Search, Share2, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
+import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, GraduationCap, Heart, HeartPulse, ListChecks, MapPin, MessageCircle, MoreVertical, Plus, Ruler, Search, Share2, ShieldCheck, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
 import { MarketplaceLogo } from '@/components/brand/logo'
 import type { Agency, ListingCard, ListingDetail, Market, SmartFact } from '@/lib/marketplace/model'
 import { nrm, understand } from '@/lib/marketplace/query'
-import { AgencyMark, ListingBody, MetricBadge, eur, km, waHref } from './parts'
+import { AgencyMark, ListingBody, MetricBadge, eur, km } from './parts'
+import { initialsOf } from './chat'
+import { availabilityText, cached, cardSet, loadDetail, prefetch, width } from './instant'
 
 type Filters = { market: Market; type: string; area: string; min: string; max: string; beds: string; now: boolean; soon: boolean; q: string; sort: 'fresh' | 'price-asc' | 'price-desc'; feature: string; feat: string; agency: string; ids: string; view: string }
 type FeatureOpt = { key: string; label: string; group: string; aliases: string[]; count: number }
@@ -57,6 +59,7 @@ export function Marketplace() {
   const [pro, setPro] = useState(false)
   const [open, setOpen] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [morphId, setMorphId] = useState<string | null>(null)   // the card the overlay grew out of (shared photo)
   const [shortlist, setShortlist] = useState<string[]>([])
   const [saved, setSaved] = useState<string[]>([])
   const [openSection, setOpenSection] = useState<string | null>(null)
@@ -145,9 +148,9 @@ export function Marketplace() {
 
   // ---- overlay: own address, back button closes it ----
   const href = useCallback((id: string) => `${base.current}/home/${encodeURIComponent(id)}`, [])
-  const openListing = (id: string, section?: string) => { lastFocus.current = document.activeElement as HTMLElement; scrollY0.current = window.scrollY; setOpenSection(section || null); window.history.pushState({ mp: id }, '', href(id)); setOpenId(id) }
+  const openListing = (id: string, section?: string) => { prefetch(id, undefined, true); lastFocus.current = document.activeElement as HTMLElement; scrollY0.current = window.scrollY; setOpenSection(section || null); setMorphId(id); window.history.pushState({ mp: id }, '', href(id)); setOpenId(id) }
   const closeListing = () => { if (window.history.state && window.history.state.mp) window.history.back(); else { window.history.replaceState(null, '', `${base.current}${filterQuery(f)}`); setOpenId(null) }; setTimeout(() => lastFocus.current?.focus?.({ preventScroll: true }), 30) }
-  const step = (d: number) => { const k = list.findIndex(l => l.id === openId); const next = list[k + d]; if (!next) return; window.history.replaceState({ mp: next.id }, '', href(next.id)); setOpenId(next.id) }
+  const step = (d: number) => { const k = list.findIndex(l => l.id === openId); const next = list[k + d]; if (!next) return; prefetch(next.id, next.images[0], true); const after = list[k + 2 * d]; if (after) prefetch(after.id, after.images[0]); setMorphId(null); setOpenSection(null); window.history.replaceState({ mp: next.id }, '', href(next.id)); setOpenId(next.id) }
   const openCard = (all || []).find(l => l.id === openId) || null
   const openIndex = list.findIndex(l => l.id === openId)
 
@@ -163,6 +166,7 @@ export function Marketplace() {
         <a className="mp-brand" href={base.current} aria-label="Marketplace home"><MarketplaceLogo height={13} /></a>
         <nav className="mp-tabs" aria-label="Marketplace sections">
           <a aria-current="page" href={base.current}>Homes</a>
+          <a href={`${base.current}/rooms`} className="mp-tab-quiet">Rooms</a>
           <a href="/marketplace/classic#places" className="mp-tab-quiet">Places</a>
           <a href={exchangeHref} className="mp-tab-quiet">Exchange</a>
           <span className="mp-tab-soon" title="Coming to NEXUS STUDIOS">Workers <small>soon</small></span>
@@ -238,6 +242,7 @@ export function Marketplace() {
         {chips.length > 0 && <div className="mp-featchips" aria-label="Active filters">{chips.map(c => <button key={c.key} onClick={c.clear} aria-label={`Remove filter ${c.label}`}>{c.label}<X size={13} aria-hidden="true" /></button>)}
           <button className="mp-clear" onClick={() => set({ ...DEFAULT, market: f.market, sort: f.sort })}>Clear all</button></div>}
         {f.agency && agencies.get(f.agency) && <div className="mp-agency-strip"><AgencyMark agency={agencies.get(f.agency)!} size="md" /><span className="mp-muted small">{agencies.get(f.agency)!.verifiedBasis}</span></div>}
+        {!all && !ids.length && !chips.length && !f.q && <div className="mp-banners mp-banners-skel" aria-hidden="true"><i /><i /><i /></div>}
         {all && !chips.length && !f.q && (
           <div className="mp-banners" aria-label="Highlights">
             {counts.confirmed > 0 && <button className="mp-banner b1" onClick={() => set({ now: true, soon: false })}><Check size={16} aria-hidden="true" /><span><b>{counts.confirmed} confirmed available</b>checked with the owner</span></button>}
@@ -249,13 +254,13 @@ export function Marketplace() {
 
       <main>
         {failed ? <p className="mp-empty">Listings are not available right now. Please try again in a moment.</p>
-          : !all ? <div className="mp-grid" aria-busy="true">{Array.from({ length: 8 }, (_, i) => <div key={i} className="mp-card mp-skel" />)}</div>
+          : !all ? <><p className="mp-count" aria-hidden="true">&nbsp;</p><div className="mp-grid" aria-busy="true">{Array.from({ length: 10 }, (_, i) => <div key={i} className="mp-card mp-skel" />)}</div></>
           : !list.length ? <p className="mp-empty">No homes match these filters. <button className="mp-link" onClick={() => set({ ...DEFAULT, market: f.market })}>Clear filters</button></p>
           : <>
             {!ids.length && <p className="mp-count">{list.length} {list.length === 1 ? 'home' : 'homes'}{(f.area || u.area) ? ` in ${f.area || u.area}` : ''}</p>}
-            <motion.div className="mp-grid" layout={!reduce}>
+            <motion.div className="mp-grid">
               <AnimatePresence initial={false}>
-                {list.slice(0, ids.length ? 30 : shown).map(l => <Card key={l.id} l={l} pro={pro} reduce={!!reduce} href={href(l.id)} onOpen={s => openListing(l.id, s)} listed={shortlist.includes(l.id)} onList={() => toggleShort(l.id)} saved={saved.includes(l.id)} onSave={() => toggleSaved(l.id)} />)}
+                {list.slice(0, ids.length ? 30 : shown).map((l, n) => <Card key={l.id} l={l} index={n} pro={pro} reduce={!!reduce} href={href(l.id)} hidePhoto={!!openId && morphId === l.id && openId === l.id} onOpen={s => openListing(l.id, s)} listed={shortlist.includes(l.id)} onList={() => toggleShort(l.id)} saved={saved.includes(l.id)} onSave={() => toggleSaved(l.id)} />)}
               </AnimatePresence>
             </motion.div>
             {!ids.length && shown < list.length && <button className="mp-more" onClick={() => setShown(n => n + PAGE)}>Show more ({list.length - shown})</button>}
@@ -273,37 +278,42 @@ export function Marketplace() {
       <footer className="mp-foot">Listings from ARGUS, updated live. Locations are shown at area level until a viewing. <a href="/marketplace/classic">Classic view</a></footer>
 
       <AnimatePresence>
-        {openCard && <ListingOverlay key="ov" card={openCard} section={openSection} pro={pro} reduce={!!reduce} onClose={closeListing} pageHref={href(openCard.id)}
+        {openCard && <ListingOverlay key="ov" card={openCard} section={openSection} morph={morphId === openCard.id ? `mp-photo-${openCard.id}` : null} pro={pro} reduce={!!reduce} onClose={closeListing} pageHref={href(openCard.id)}
           prev={openIndex > 0 ? () => step(-1) : null} next={openIndex >= 0 && openIndex < list.length - 1 ? () => step(1) : null} position={openIndex >= 0 ? `${openIndex + 1} / ${list.length}` : null} />}
       </AnimatePresence>
     </div>
   )
 }
 
-function ListingOverlay({ card, section, pro, reduce, onClose, pageHref, prev, next, position }: { card: ListingCard; section: string | null; pro: boolean; reduce: boolean; onClose: () => void; pageHref: string; prev: (() => void) | null; next: (() => void) | null; position: string | null }) {
-  const [detail, setDetail] = useState<ListingDetail | null>(null)
-  const box = useRef<HTMLDivElement>(null)
+function ListingOverlay({ card, section, morph, pro, reduce, onClose, pageHref, prev, next, position }: { card: ListingCard; section: string | null; morph: string | null; pro: boolean; reduce: boolean; onClose: () => void; pageHref: string; prev: (() => void) | null; next: (() => void) | null; position: string | null }) {
+  // details from the prefetch cache when the visitor hovered / saw the card; otherwise fetched now while the
+  // prepared container already shows everything the card knows
+  const [detail, setDetail] = useState<ListingDetail | null>(() => cached(card.id))
+  const [chatFocus, setChatFocus] = useState(0)
+  const box = useRef<HTMLDivElement>(null)     // the overlay itself is the one scroll container (wheel works anywhere)
+  const sheet = useRef<HTMLDivElement>(null)
   useEffect(() => {
     let alive = true
-    setDetail(null)
-    fetch(`/api/marketplace/listings?id=${encodeURIComponent(card.id)}`).then(r => (r.ok ? r.json() : null)).then(d => { if (alive && d?.listing) setDetail(d.listing) }).catch(() => {})
+    const hit = cached(card.id); setDetail(hit)
+    if (!hit) loadDetail(card.id).then(d => { if (alive && d) setDetail(d) })
     box.current?.scrollTo({ top: 0 })
     return () => { alive = false }
   }, [card.id])
-  // "+N More" on the card opens the overlay at the matching section once the details are there
+  // "Message" on a card opens the conversation; "+N More" opens at the matching section once the details are there
+  useEffect(() => { if (section === 'chat') setChatFocus(k => k + 1) }, [section, card.id])
   useEffect(() => {
-    if (!section || !detail || detail.id !== card.id) return
-    const t = setTimeout(() => { const el = box.current?.querySelector<HTMLElement>(`#mp-sec-${section}`); if (el && box.current) box.current.scrollTo({ top: el.offsetTop - 64, behavior: reduce ? 'auto' : 'smooth' }) }, 120)
+    if (!section || section === 'chat' || !detail || detail.id !== card.id) return
+    const t = setTimeout(() => { const el = box.current?.querySelector<HTMLElement>(`#mp-sec-${section}`); if (el && box.current) box.current.scrollTo({ top: el.getBoundingClientRect().top - box.current.getBoundingClientRect().top + box.current.scrollTop - 72, behavior: reduce ? 'auto' : 'smooth' }) }, 120)
     return () => clearTimeout(t)
   }, [section, detail, card.id, reduce])
   useEffect(() => {
     const html = document.documentElement, prevOverflow = html.style.overflow
     html.style.overflow = 'hidden'
-    box.current?.focus()
+    sheet.current?.focus({ preventScroll: true })
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-      if (e.key === 'Tab' && box.current) { // keep focus inside the dialog
-        const els = box.current.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input,textarea,select,[tabindex]:not([tabindex="-1"])')
+      if (e.key === 'Tab' && sheet.current) { // keep focus inside the dialog
+        const els = sheet.current.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input,textarea,select,[tabindex]:not([tabindex="-1"])')
         if (!els.length) return
         const first = els[0], last = els[els.length - 1]
         if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
@@ -314,9 +324,11 @@ function ListingOverlay({ card, section, pro, reduce, onClose, pageHref, prev, n
   }, [onClose])
   const l = detail && detail.id === card.id ? detail : card
   return (
-    <motion.div className="mp-overlay" initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduce ? undefined : { opacity: 0 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <motion.div ref={box} className="mp-sheet" role="dialog" aria-modal="true" aria-labelledby="mp-sheet-title" tabIndex={-1}
-        initial={reduce ? false : { y: 28, opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={reduce ? undefined : { y: 28, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 34 }}>
+    <motion.div ref={box} className="mp-overlay" layoutScroll initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduce ? undefined : { opacity: 0, transition: { duration: 0.18 } }}
+      transition={{ duration: 0.16 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <motion.div ref={sheet} className="mp-sheet" role="dialog" aria-modal="true" aria-labelledby="mp-sheet-title" tabIndex={-1}
+        initial={reduce ? false : morph ? { opacity: 0.4 } : { y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={reduce ? undefined : { opacity: 0 }} transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+        onClick={e => { if (e.target === e.currentTarget) e.stopPropagation() }}>
         <div className="mp-sheet-bar">
           <button onClick={onClose} className="mp-sheet-close" aria-label="Close"><X size={18} /></button>
           {position && <span className="mp-muted small">{position}</span>}
@@ -325,21 +337,18 @@ function ListingOverlay({ card, section, pro, reduce, onClose, pageHref, prev, n
           <button onClick={next || undefined} disabled={!next} aria-label="Next home"><ChevronRight size={18} /></button>
           <a href={pageHref} className="mp-sheet-page" target="_blank" rel="noopener">Own page<ExternalLink size={13} aria-hidden="true" /></a>
         </div>
-        <ListingBody l={l} pro={pro} loading={!detail || detail.id !== card.id} headingId="mp-sheet-title" />
+        <ListingBody key={card.id} l={l} pro={pro} loading={!detail || detail.id !== card.id} headingId="mp-sheet-title" morph={morph || undefined} chatFocus={chatFocus} />
       </motion.div>
     </motion.div>
   )
 }
 
-// ---- the listing card (Kev's reference, 21 Nov 2026) ---------------------------------------------------
-// Photo first with small status pills; one info row (price · location · beds · baths); a few feature tags with a
-// real "+N More"; two lines of the real description; green nearby chips with a real "+N More"; a footer with the
-// agency, the listing agent and working actions (WhatsApp message / viewing request, save, more).
-const freshShort = (iso: string | null) => {
-  if (!iso) return null
-  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400e3)
-  return d <= 0 ? 'Today' : d === 1 ? '1 day' : d < 14 ? `${d} days` : d < 60 ? `${Math.round(d / 7)} wk` : d < 365 ? `${Math.round(d / 30)} mo` : '1 yr+'
-}
+// ---- the listing card (Kev's reference, 21 Nov 2026; compact NEXUS refinement the same evening) ----------
+// Photo first with one honest status pill ("Available · Confirmed Today" only from a real confirmation); one info
+// row (price · location · beds · baths, "?" when unknown); compact feature tags with a real "+N More"; the real
+// description; nearby facts; one provider identity (logo, verified, agent) and the NEXUS conversation as the action.
+// Instant: hovering / focusing / touching a card prefetches its details and warms the hero photo; cards that stay
+// on screen prefetch quietly (two at a time). Only the first photo loads until the visitor touches the strip.
 // One chip row that shows as many chips as really fit and a "+N More" with the exact number of hidden ones.
 // Widths are measured from an invisible copy, so the count is right at every card size.
 function FitRow({ items, className, chip, more, href, onClick, label, title }: { items: { key: string; node: React.ReactNode }[]; className: string; chip?: string; more: (n: number) => React.ReactNode; href: string; onClick: (e: React.MouseEvent) => void; label?: string; title?: string }) {
@@ -376,51 +385,63 @@ function FitRow({ items, className, chip, more, href, onClick, label, title }: {
   )
 }
 
-function Card({ l, pro, reduce, href, onOpen, listed, onList, saved, onSave }: { l: ListingCard; pro: boolean; reduce: boolean; href: string; onOpen: (section?: string) => void; listed: boolean; onList: () => void; saved: boolean; onSave: () => void }) {
+function Card({ l, index, pro, reduce, href, hidePhoto, onOpen, listed, onList, saved, onSave }: { l: ListingCard; index: number; pro: boolean; reduce: boolean; href: string; hidePhoto: boolean; onOpen: (section?: string) => void; listed: boolean; onList: () => void; saved: boolean; onSave: () => void }) {
   const [i, setI] = useState(0)
+  const [armed, setArmed] = useState(false)   // further photos only once the visitor shows interest
   const [menu, setMenu] = useState(false)
   const [copied, setCopied] = useState(false)
   const strip = useRef<HTMLDivElement>(null)
-  const go = (d: number) => { const el = strip.current; if (!el) return; const n = Math.max(0, Math.min(l.images.length - 1, i + d)); el.scrollTo({ left: n * el.clientWidth, behavior: reduce ? 'auto' : 'smooth' }) }
+  const root = useRef<HTMLElement>(null)
+  const go = (d: number) => { setArmed(true); const el = strip.current; if (!el) return; const n = Math.max(0, Math.min(l.images.length - 1, i + d)); el.scrollTo({ left: n * el.clientWidth, behavior: reduce ? 'auto' : 'smooth' }) }
   // plain click opens the overlay; ctrl/cmd/middle click keeps the normal link behaviour (new tab)
   const click = (section?: string) => (e: React.MouseEvent) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); onOpen(section) }
+  const intent = () => { setArmed(true); prefetch(l.id, l.images[0], true) }
+  useEffect(() => { // on screen for a moment -> prepare the details quietly
+    const el = root.current; if (!el) return
+    let t: ReturnType<typeof setTimeout> | undefined
+    const io = new IntersectionObserver(([e]) => { clearTimeout(t); if (e.isIntersecting) t = setTimeout(() => prefetch(l.id), 650) })
+    io.observe(el); return () => { clearTimeout(t); io.disconnect() }
+  }, [l.id])
   const tagsAll = [...(l.typeLabel ? [l.typeLabel] : []), ...l.features]
   const agency = l.provider.kind === 'agency' ? l.provider.agency : null
   const agent = l.provider.kind === 'agency' ? l.provider.agent : null
-  const msg = waHref(l, 'message'), view = waHref(l, 'viewing')
-  const far = l.availability.kind === 'from' && l.availability.from && new Date(l.availability.from).getTime() > Date.now() + 92 * 86400e3
   const badge = pro && l.cooperation.status === 'confirmed' ? l.cooperation.badge : undefined
+  const av = availabilityText(l.availability, l.updatedAt)
   const share = async () => { const url = `${window.location.origin}${href}`; try { if (navigator.share) await navigator.share({ title: l.title, url }); else { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1600) } } catch { /* cancelled */ } setMenu(false) }
+  const eager = index < 5
   return (
-    <motion.article className="mc" layout={!reduce} initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0 }} transition={{ duration: 0.25 }} whileHover={reduce ? undefined : { y: -3 }}>
-      <div className="mc-photo">
-        <div className="mp-strip" ref={strip} onScroll={e => setI(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}>
+    <motion.article ref={root} className="mc" initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 34, delay: reduce ? 0 : Math.min(index % 24, 10) * 0.03 }} whileHover={reduce ? undefined : { y: -3 }}
+      onPointerEnter={intent} onFocus={intent} onTouchStart={intent}>
+      <motion.div className="mc-photo" layoutId={reduce ? undefined : `mp-photo-${l.id}`} style={hidePhoto ? { visibility: 'hidden' } : undefined}>
+        <div className="mp-strip" ref={strip} onScroll={e => { setArmed(true); setI(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth))) }}>
           {l.images.length ? l.images.map((src, k) => (
             <a key={src} href={href} onClick={click()} tabIndex={k === 0 ? 0 : -1} aria-label={k === 0 ? `${l.title}, ${l.price ? eur(l.price) : 'price on request'}` : undefined}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" loading="lazy" decoding="async" />
+              {(k === 0 || armed) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={width(src, 720)} srcSet={cardSet(src)} sizes="(max-width: 640px) 100vw, (max-width: 1180px) 50vw, 380px" alt="" loading={k === 0 && eager ? 'eager' : 'lazy'} fetchPriority={k === 0 && index < 2 ? 'high' : undefined} decoding="async" />
+              )}
             </a>
           )) : <a href={href} onClick={click()} className="mc-nophoto">No photos yet</a>}
         </div>
-        <span className={`mc-pill mc-avail k-${l.availability.kind}`}>{l.availability.label}</span>
-        <span className="mc-tr">
-          {freshShort(l.updatedAt) && <span className="mc-pill mc-fresh" title={`Listing updated ${new Date(l.updatedAt!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}>{freshShort(l.updatedAt)}</span>}
-          {badge && <MetricBadge value={badge.value} measures={badge.measures} />}
-        </span>
+        <span className={`mc-pill mc-avail k-${av.tone}`} title={av.title}>{av.text}</span>
+        {badge && <span className="mc-tr"><MetricBadge value={badge.value} measures={badge.measures} /></span>}
         {l.images.length > 1 && <>
           <button className="mp-nav l" onClick={() => go(-1)} disabled={i === 0} aria-label="Previous photo"><ChevronLeft size={18} /></button>
           <button className="mp-nav r" onClick={() => go(1)} disabled={i >= l.images.length - 1} aria-label="Next photo"><ChevronRight size={18} /></button>
           <span className="mc-dots" aria-hidden="true">{l.images.map((_, k) => <i key={k} data-on={k === i || undefined} />)}</span>
         </>}
-      </div>
+      </motion.div>
 
       <a className="mc-main" href={href} onClick={click()}>
-        <span className="mc-price">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</span>
-        <span className="mc-loc">{l.area}</span>
+        <span className="mc-price">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod === 'month' ? 'mo' : l.pricePeriod}` : ''}</small></> : 'Price on request'}</span>
         <span className="mc-rooms">
-          {!!l.bedrooms && <span title={`${l.bedrooms} ${l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}`}><BedDouble size={16} aria-hidden="true" />{l.bedrooms}<i className="sr"> {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</i></span>}
-          {!!l.bathrooms && <span title={`${l.bathrooms} ${l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}`}><Bath size={16} aria-hidden="true" />{l.bathrooms}<i className="sr"> {l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</i></span>}
+          {l.bedrooms != null && l.bedrooms > 0 && <span title={`${l.bedrooms} ${l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}`}><BedDouble size={15} aria-hidden="true" />{l.bedrooms}<i className="sr"> {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</i></span>}
+          {l.bedrooms === 0 && <span title="Studio"><BedDouble size={15} aria-hidden="true" />Studio</span>}
+          <span title={l.bathrooms ? `${l.bathrooms} ${l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}` : 'Bathrooms not recorded yet'} data-unknown={!l.bathrooms || undefined}><Bath size={15} aria-hidden="true" />{l.bathrooms || '?'}<i className="sr"> {l.bathrooms ? (l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms') : 'bathrooms unknown'}</i></span>
+          {l.size && <span title={`${l.size} m²`}><Ruler size={14} aria-hidden="true" />{l.size}<small>m²</small></span>}
         </span>
+        <span className="mc-loc"><MapPin size={13} aria-hidden="true" />{l.area}</span>
       </a>
 
       {tagsAll.length > 0 && (
@@ -434,32 +455,32 @@ function Card({ l, pro, reduce, href, onOpen, listed, onList, saved, onSave }: {
           more={n => <span className="mc-more">+{n} More</span>} />
       )}
 
+      <span className="mc-fill" aria-hidden="true" />
       <div className="mc-foot">
         <span className="mc-by">
           {agency ? <>
-            <small>Listed with</small>
             {agency.logo
               // eslint-disable-next-line @next/next/no-img-element
               ? <img src={agency.logo} alt={agency.name} title={agency.name} />
               : <b>{agency.name}</b>}
-            {l.otherAgencies.length > 0 && <small className="mc-more-ag">+{l.otherAgencies.length} More</small>}
-            {agent && <><i className="mc-sep" aria-hidden="true" /><span className="mc-agent">{agent.name}</span></>}
+            {agency.verified && <ShieldCheck size={12} className="mc-ver" aria-label="verified agency" />}
+            {l.otherAgencies.length > 0 && <small className="mc-more-ag">+{l.otherAgencies.length}</small>}
+            {agent && <><i className="mc-sep" aria-hidden="true" /><span className="mc-av" aria-hidden="true">{initialsOf(agent.name)}</span><span className="mc-agent">{agent.name}</span></>}
           </> : <small>Provider being confirmed</small>}
         </span>
         <span className="mc-actions">
-          {msg ? <a href={msg} target="_blank" rel="noopener" title={`WhatsApp ${agency?.name} about Ref ${l.id}`}><MessageCircle size={14} aria-hidden="true" />Message</a>
+          {agency ? <a href={href} onClick={click('chat')} title={`Private NEXUS chat with ${agent?.name || agency.name} about Ref ${l.id}`}><MessageCircle size={13} aria-hidden="true" />Message</a>
             : <a href={href} onClick={click()}>Details</a>}
-          {view && !far && <a href={view} target="_blank" rel="noopener" title="Ask the agency for a viewing: nothing is booked until they confirm"><CalendarDays size={14} aria-hidden="true" />{l.market === 'stays' ? 'Request' : 'Viewing'}</a>}
-          <motion.button className="mc-icon" aria-pressed={saved} aria-label={saved ? 'Remove from saved' : 'Save'} onClick={onSave} whileTap={reduce ? undefined : { scale: 0.85 }}>
-            <Heart size={17} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" />
+          <motion.button className="mc-icon" aria-pressed={saved} aria-label={saved ? 'Remove from saved' : 'Save'} onClick={onSave} whileTap={reduce ? undefined : { scale: 0.8 }}>
+            <Heart size={16} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" />
           </motion.button>
           <span className="mc-menu-wrap">
-            <button className="mc-icon" aria-label="More options" aria-expanded={menu} onClick={() => setMenu(m => !m)} onBlur={() => setTimeout(() => setMenu(false), 160)}><MoreVertical size={17} aria-hidden="true" /></button>
-            {menu && <span className="mc-menu" role="menu">
+            <button className="mc-icon" aria-label="More options" aria-expanded={menu} onClick={() => setMenu(m => !m)} onBlur={() => setTimeout(() => setMenu(false), 160)}><MoreVertical size={16} aria-hidden="true" /></button>
+            <AnimatePresence>{menu && <motion.span className="mc-menu" role="menu" initial={{ opacity: 0, y: 6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.97 }} transition={{ duration: 0.14 }}>
               <button role="menuitem" onClick={share}><Share2 size={14} aria-hidden="true" />{copied ? 'Link copied' : 'Share'}</button>
               <a role="menuitem" href={href} target="_blank" rel="noopener"><ExternalLink size={14} aria-hidden="true" />Open in new tab</a>
               {pro && <button role="menuitem" onClick={() => { onList(); setMenu(false) }}>{listed ? <Check size={14} /> : <Plus size={14} />}{listed ? 'In shortlist' : 'Add to shortlist'}</button>}
-            </span>}
+            </motion.span>}</AnimatePresence>
           </span>
         </span>
       </div>

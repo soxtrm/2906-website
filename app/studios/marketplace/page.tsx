@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './marketplace.css'
+import './instant.css'
 import { Marketplace } from './marketplace'
 
 export const metadata: Metadata = {
