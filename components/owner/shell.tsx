@@ -2,22 +2,23 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, FileText, Home, Inbox, LayoutGrid, MessageCircle, MoreHorizontal, RefreshCw, Settings, UserRound, Share2 } from 'lucide-react'
+import { CalendarDays, FileText, Home, LayoutGrid, MessageCircle, MoreHorizontal, RefreshCw, Settings, UserRound, Share2 } from 'lucide-react'
 import { useOwner } from '@/lib/owner/store'
 import { Brand, StarButton, StarPlay, SyncWordmark } from './brand'
 
 const NAV = [
+  // owner navigation (Kev, 21 Nov 2026): Overview · My Properties · Calendar · Messages · Documents · Settings.
+  // Requests live in the calendar's left column; sharing and profile follow as secondary entries.
   { href: '/owner', label: 'Overview', icon: LayoutGrid },
-  { href: '/owner/messages', label: 'Chat', icon: MessageCircle, count: 'messages' as const },
-  { href: '/owner/requests', label: 'Requests', icon: Inbox, count: 'requests' as const },
-  { href: '/owner/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/owner/properties', label: 'My properties', icon: Home },
-  { href: '/owner/sharing', label: 'Agencies & sharing', icon: Share2 },
+  { href: '/owner/calendar', label: 'Calendar', icon: CalendarDays, count: 'requests' as const },
+  { href: '/owner/messages', label: 'Messages', icon: MessageCircle, count: 'messages' as const },
   { href: '/owner/documents', label: 'Documents', icon: FileText },
-  { href: '/owner/profile', label: 'Profile', icon: UserRound },
   { href: '/owner/settings', label: 'Settings', icon: Settings },
+  { href: '/owner/sharing', label: 'Agencies & sharing', icon: Share2 },
+  { href: '/owner/profile', label: 'Profile', icon: UserRound },
 ]
-const TABS = [NAV[0], NAV[3], NAV[1]]
+const TABS = [NAV[0], NAV[2], NAV[3]]
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
   // nexussync.one serves /login as a rewrite of /owner/login: the server renders with /owner/login,

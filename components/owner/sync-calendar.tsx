@@ -158,7 +158,11 @@ function CalendarView({ api, ready, canLeaveSample, onSample }: { api: Api; read
   useEffect(() => { if (narrow) setView('day') }, [narrow])
   const [anchor, setAnchor] = useState(todayKey())
   const [homeFilter, setHomeFilter] = useState<number | 0>(0)
-  useEffect(() => { const h = Number(new URLSearchParams(window.location.search).get('home')); if (h) setHomeFilter(h) }, [])
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const h = Number(q.get('home')); if (h) setHomeFilter(h)
+    const d = q.get('day'); if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) { setAnchor(d); jumped.current = true }
+  }, [])
   const [picked, setPicked] = useState<LiveViewing | null>(null)        // tap-tap mode
   const [drag, setDrag] = useState<{ v: LiveViewing; x: number; y: number } | null>(null)
   const [hover, setHover] = useState<Slot | null>(null)

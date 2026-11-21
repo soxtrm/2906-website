@@ -159,3 +159,52 @@
 @media (max-width: 1100px) { .sc-split:not(.narrow) { grid-template-columns: 290px minmax(0, 1fr); } }
 @media (max-width: 820px) { .sc-legend { margin-left: 0; } .sc-title h1 { font-size: 30px; } .sc-grid { grid-template-columns: 48px repeat(var(--cols), minmax(0, 1fr)); } .sc-dayhead { display: none; } .sc-corner { display: none; } }
 @media (prefers-reduced-motion: reduce) { .sc-btn { transition: none; } }
+
+/* NEXUS Sync overview (2026-11-21) */
+.ov { max-width: 1180px; gap: 20px; }
+.ov-hello { display: grid; gap: 6px; }
+.ov-kicker { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #697088; }
+.ov-kicker svg { color: #ef6046; }
+.ov-hello h1 { margin: 0; font-family: var(--ow-display, Archivo), sans-serif; font-weight: 640; font-size: clamp(32px, 4.4vw, 54px); letter-spacing: -.035em; line-height: 1.02; color: #071449; }
+.ov-grad { background: linear-gradient(90deg, #8e2cff, #ff477d 55%, #ff8a56); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ov-hello p { margin: 4px 0 0; font-size: 17px; color: #3b4466; }
+.ov-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ov-tile { display: grid; gap: 2px; align-content: start; padding: 16px 16px 14px; border-radius: 20px; background: #fff; border: 1px solid rgba(7, 20, 73, .09); box-shadow: 0 1px 2px rgba(7, 20, 73, .06), 0 10px 28px rgba(7, 20, 73, .06); color: #071449; text-decoration: none; transition: transform .18s, box-shadow .18s; }
+.ov-tile:hover { transform: translateY(-2px); box-shadow: 0 2px 6px rgba(7, 20, 73, .08), 0 22px 48px rgba(7, 20, 73, .12); }
+.ov-tile svg { color: #697088; margin-bottom: 6px; }
+.ov-tile b { font-family: var(--ow-display, Archivo), sans-serif; font-weight: 640; font-size: 34px; letter-spacing: -.02em; line-height: 1; }
+.ov-tile span { font-weight: 750; font-size: 14px; } .ov-tile small { color: #697088; font-size: 12.5px; font-weight: 600; }
+.ov-tile[data-hot] { background: #071449; color: #fff; border-color: #071449; }
+.ov-tile[data-hot] svg, .ov-tile[data-hot] small { color: rgba(255, 255, 255, .75); }
+.ov-week { padding: 18px; border-radius: 22px; background: #fff; border: 1px solid rgba(7, 20, 73, .09); box-shadow: 0 1px 2px rgba(7, 20, 73, .06), 0 10px 28px rgba(7, 20, 73, .06); }
+.ov-week-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.ov-week-head h2 { margin: 0; font-family: var(--ow-display, Archivo), sans-serif; font-weight: 640; font-size: 20px; }
+.ov-sample { padding: 4px 10px; border-radius: 999px; background: linear-gradient(90deg, rgba(142, 44, 255, .1), rgba(255, 138, 86, .14)); color: #9b3420; font-size: 12px; font-weight: 800; }
+.ov-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.ov-day { display: grid; justify-items: center; gap: 4px; padding: 10px 4px 12px; border-radius: 16px; background: #fbfaf7; border: 1px solid rgba(7, 20, 73, .07); color: #071449; text-decoration: none; transition: transform .15s, border-color .15s; }
+.ov-day:hover { transform: translateY(-2px); border-color: #071449; }
+.ov-day small { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #697088; }
+.ov-day b { font-family: var(--ow-display, Archivo), sans-serif; font-size: 22px; font-weight: 640; }
+.ov-day[data-today] b { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #ef6046; color: #fff; }
+.ov-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
+.ov-dots i { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: 999px; font-style: normal; font-size: 10.5px; font-weight: 800; }
+.ov-dots [data-k=p] { border: 1.5px dashed #e8a33a; background: #fff8ec; color: #8a5a10; }
+.ov-dots [data-k=c] { border: 1.5px solid #22a85a; background: #eaf7ef; color: #0f5a32; }
+.ov-dots [data-k=o] { background: repeating-linear-gradient(135deg, rgba(34, 168, 90, .14) 0 5px, rgba(34, 168, 90, .04) 5px 10px); color: #0f5a32; }
+.ov-dots [data-k=n] { color: #9aa0b6; }
+.ov-start { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; }
+.ov-start > div { padding: 18px; border-radius: 22px; background: #fff; border: 1px solid rgba(7, 20, 73, .09); }
+.ov-start h2 { margin: 0 0 10px; font-family: var(--ow-display, Archivo), sans-serif; font-weight: 640; font-size: 20px; }
+.ov-start ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.ov-start li { display: flex; gap: 12px; }
+.ov-start li > span { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px dashed rgba(7, 20, 73, .25); color: #fff; }
+.ov-start li[data-done] > span { background: #22a85a; border: 0; }
+.ov-start li b { font-size: 15px; } .ov-start li p { margin: 2px 0 4px; color: #3b4466; font-size: 14px; }
+.ov-try { display: grid; align-content: start; gap: 8px; padding: 20px; border-radius: 22px; background: #071449; color: #fff; text-decoration: none; position: relative; overflow: hidden; }
+.ov-try::after { content: ''; position: absolute; inset: auto -40px -60px auto; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 71, 125, .45), transparent 65%); }
+.ov-try svg:first-child { color: #ff8a56; } .ov-try b { font-family: var(--ow-display, Archivo), sans-serif; font-size: 22px; font-weight: 640; }
+.ov-try span { color: rgba(255, 255, 255, .78); font-size: 14px; } .ov-try em { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-weight: 800; color: #ff8a56; }
+@media (max-width: 900px) { .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ov-start { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .ov-days { grid-template-columns: repeat(7, 44px); overflow-x: auto; padding-bottom: 4px; } .ov-tile b { font-size: 28px; } }
+.ov-try b { display: block; color: #fff; position: relative; z-index: 1; } .ov-try span, .ov-try em, .ov-try svg { position: relative; z-index: 1; }
+.ov { grid-template-columns: minmax(0, 1fr); } .ov > * { min-width: 0; } .ov-week { overflow: hidden; } @media (max-width: 520px) { .ov-days { grid-template-columns: repeat(7, minmax(44px, 1fr)); overflow-x: auto; } .ov-tile { padding: 14px 12px 12px; } .ov-week { padding: 14px 12px; } }
