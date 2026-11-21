@@ -152,7 +152,7 @@ async function upload(S, account, { propertyId, category, title, dataBase64 }) {
 async function mine(account, id, { forUpdate = false } = {}) {
   const ids = await ownerContactIds(account)
   const { rows: [d] } = await db.query(
-    `SELECT * FROM owner_documents WHERE id=$1 AND storage='sync_private' AND deleted_at IS NULL AND owner_contact_id = ANY($2::int[])${forUpdate ? ' FOR UPDATE' : ''}`, [Number(id) || 0, ids])
+    `SELECT * FROM owner_documents WHERE id=$1 AND storage='sync_private' AND sync_account_id IS NOT NULL AND deleted_at IS NULL AND owner_contact_id = ANY($2::int[])${forUpdate ? ' FOR UPDATE' : ''}`, [Number(id) || 0, ids])
   if (!d) throw err('DOCUMENT_NOT_FOUND', 'Document not found.', 404)
   return d
 }
@@ -161,7 +161,8 @@ async function list(account) {
   requireEnabled()
   const ids = await ownerContactIds(account)
   if (!ids.length) return { documents: [] }
-  const { rows } = await db.query(`SELECT * FROM owner_documents WHERE storage='sync_private' AND deleted_at IS NULL AND owner_contact_id = ANY($1::int[]) ORDER BY created_at DESC LIMIT 200`, [ids])
+  // only what the owner uploaded in SYNC; CRM records about the owner (also when stored privately) stay staff-side
+  const { rows } = await db.query(`SELECT * FROM owner_documents WHERE storage='sync_private' AND sync_account_id IS NOT NULL AND deleted_at IS NULL AND owner_contact_id = ANY($1::int[]) ORDER BY created_at DESC LIMIT 200`, [ids])
   return { documents: rows.map(view), categories: CATEGORIES }
 }
 
