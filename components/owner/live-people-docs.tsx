@@ -121,11 +121,15 @@ export function LiveDocuments() {
   const s = useOwner()
   const own = (s.live.owner?.links || []).filter(l => !(l as { role?: string }).role).flatMap(l => l.properties || [])
   const [docs, setDocs] = useState<Doc[] | null>(null)
+  const [off, setOff] = useState(false)
   const [cat, setCat] = useState('contract')
   const [home, setHome] = useState<number | ''>('')
   const [busy, setBusy] = useState(false)
   const input = useRef<HTMLInputElement>(null)
-  const load = useCallback(async () => { const r = await sync<{ documents: Doc[] }>('documents'); if (r.ok) setDocs(r.documents); else s.say(r.message, 'err') }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const load = useCallback(async () => {
+    const r = await sync<{ documents: Doc[] }>('documents')
+    if (r.ok) setDocs(r.documents); else if (r.error === 'DOCUMENTS_NOT_ENABLED') setOff(true); else s.say(r.message, 'err')
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [load])
 
   const upload = async (f: File) => {
@@ -149,6 +153,12 @@ export function LiveDocuments() {
   }
   const act = async (op: string, body: Record<string, unknown>, ok: string) => { setBusy(true); const r = await sync(op, body); setBusy(false); if (!r.ok) s.say(r.message, 'err'); else { s.say(ok); await load() } }
 
+  if (off) return (
+    <div className="lv">
+      <header className="lv-hello"><h1>Documents</h1></header>
+      <section className="lv-section"><h2>Coming soon</h2><p>We are finishing the safeguards for private documents (virus check, encrypted backups). Until then, please send documents to your agent as before. Nothing is stored here yet.</p></section>
+    </div>
+  )
   return (
     <div className="lv">
       <header className="lv-hello"><h1>Documents</h1><p className="lv-faint">Kept privately in ARGUS, not in this browser. Nobody else sees a document until you share it.</p></header>

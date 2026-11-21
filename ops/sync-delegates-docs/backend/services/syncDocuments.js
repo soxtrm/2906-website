@@ -27,6 +27,10 @@ const DIR = () => process.env.SYNC_PRIVATE_DOCS_DIR || path.join(__dirname, '..'
 const MAX_BYTES = 3 * 1024 * 1024
 const CATEGORIES = ['contract', 'id', 'energy_certificate', 'insurance', 'inventory', 'invoice', 'floor_plan', 'permit', 'other']
 const STAFF_LINK_MIN = 10
+// Documents stay switched off until the founder enables them after the safeguards are in place
+// (scanning, encrypted backups). Off: every document call answers 503 and nothing is stored or served.
+const enabled = () => process.env.SYNC_DOCUMENTS_ENABLED === '1'
+function requireEnabled() { if (!enabled()) throw err('DOCUMENTS_NOT_ENABLED', 'Documents are being secured and will open soon. Nothing was stored.', 503) }
 const PUBLIC_API = () => String(process.env.SYNC_STAFF_FILE_ORIGIN || 'https://api.2906.estate').replace(/\/+$/, '')
 
 function sniff(buf) {
@@ -64,6 +68,7 @@ async function ownerContactIds(account) {
 const view = r => ({ id: r.id, title: r.filename, category: r.category, propertyId: r.property_id, mime: r.mime, size: r.size_bytes, shared: r.visibility === 'agency', sharedAt: r.shared_at, createdAt: r.created_at })
 
 async function upload(S, account, { propertyId, category, title, dataBase64 }) {
+  requireEnabled()
   if (!CATEGORIES.includes(category)) throw err('CATEGORY_INVALID', 'Choose what kind of document this is.')
   const name = cleanName(title)
   if (!name) throw err('TITLE_INVALID', 'Give the document a name.')
@@ -101,6 +106,7 @@ async function mine(account, id, { forUpdate = false } = {}) {
 }
 
 async function list(account) {
+  requireEnabled()
   const ids = await ownerContactIds(account)
   if (!ids.length) return { documents: [] }
   const { rows } = await db.query(`SELECT * FROM owner_documents WHERE storage='sync_private' AND deleted_at IS NULL AND owner_contact_id = ANY($1::int[]) ORDER BY created_at DESC LIMIT 200`, [ids])
@@ -108,12 +114,14 @@ async function list(account) {
 }
 
 async function file(account, { id }) {
+  requireEnabled()
   const d = await mine(account, id)
   const buf = fs.readFileSync(path.join(DIR(), d.storage_key))
   return { file: { name: d.filename, mime: d.mime, size: buf.length, dataBase64: buf.toString('base64') } }
 }
 
 async function share(account, { id, share: on }) {
+  requireEnabled()
   const d = await mine(account, id)
   const vis = on ? 'agency' : 'private'
   await db.query(`UPDATE owner_documents SET visibility=$2, shared_at=CASE WHEN $2='agency' THEN NOW() ELSE NULL END WHERE id=$1`, [d.id, vis])
@@ -122,6 +130,7 @@ async function share(account, { id, share: on }) {
 }
 
 async function remove(account, { id }) {
+  requireEnabled()
   const d = await mine(account, id)
   try { fs.unlinkSync(path.join(DIR(), d.storage_key)) } catch (e) { if (e.code !== 'ENOENT') throw e }
   await db.query(`UPDATE owner_documents SET deleted_at=NOW(), visibility='private', shared_at=NULL, url='sync-deleted' WHERE id=$1`, [d.id])
@@ -142,6 +151,7 @@ function staffDocumentRows(rows) {
     .map(r => { const o = { ...r }; if (r.storage === 'sync_private') o.url = staffLink(r.id); delete o.storage; delete o.visibility; delete o.deleted_at; delete o.storage_key; return o })
 }
 async function staffFile(id, { exp, sig }) {
+  if (!enabled()) return null
   const e = Number(exp)
   if (!Number.isInteger(e) || e < Date.now() / 1000 || e > Date.now() / 1000 + STAFF_LINK_MIN * 60 + 5) return null
   const want = staffSig(Number(id), e)

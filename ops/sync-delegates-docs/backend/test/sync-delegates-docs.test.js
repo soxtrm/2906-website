@@ -13,6 +13,7 @@ process.env.NEXUS_LINK_INBOUND_SECRET = SECRET
 process.env.ARGUS_AGENCY_KEY = '2906'
 process.env.SYNC_PRIVATE_DOCS_DIR = '/tmp/sync-docs-test'
 process.env.SYNC_STAFF_FILE_ORIGIN = 'http://staff.test'
+process.env.SYNC_DOCUMENTS_ENABLED = '1'
 const ROOT = process.env.BACKEND_DIR || '/app'
 const R = p => path.join(ROOT, p)
 const express = require(R('node_modules/express'))
@@ -179,6 +180,17 @@ const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a
 const up = (who, buf, extra = {}) => svc('/documents/upload', { session: who.session, category: 'contract', title: 'Lease 2026', dataBase64: buf.toString('base64'), ...extra })
 const staffTok = jwt.sign({ id: 1, username: 'admin1', role: 'admin', aud: 'crm' }, process.env.JWT_SECRET)
 const staffProfile = async () => { const r = await fetch(`${base}/api/crm/owners/${O.ownerId}`, { headers: { authorization: `Bearer ${staffTok}` } }); return { status: r.status, body: await r.json() } }
+
+test('documents switched off: nothing stored, nothing served', async () => {
+  process.env.SYNC_DOCUMENTS_ENABLED = '0'
+  try {
+    for (const [op, body] of [['/documents', {}], ['/documents/upload', { category: 'contract', title: 'x', dataBase64: PDF.toString('base64') }], ['/documents/file', { id: 1 }], ['/documents/share', { id: 1, share: true }], ['/documents/delete', { id: 1 }]]) {
+      const r = await svc(op, { session: O.session, ...body })
+      assert.equal(r.status, 503, op); assert.equal(r.body.error, 'DOCUMENTS_NOT_ENABLED')
+    }
+    assert.equal((await pool.query(`SELECT COUNT(*)::int n FROM owner_documents`)).rows[0].n, 0)
+  } finally { process.env.SYNC_DOCUMENTS_ENABLED = '1' }
+})
 
 let doc
 test('documents: only checked file types, sizes and safe PDFs', async () => {
