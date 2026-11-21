@@ -9,6 +9,7 @@ import {
 import { CrmProvider, CrmShell } from '@/lib/crm/ui'
 import { crmFetch } from '@/lib/crm/api'
 import { BookingDialog } from '@/components/crm/booking-dialog'
+import { ViewingFeedback } from '@/components/crm/viewing-feedback'
 import { Calendar } from '@/components/ui/calendar'
 import { type Booking, STATUS_LABEL, dayLabel, maltaDayKey, time12, timeLabel } from '@/lib/crm/booking'
 
@@ -146,6 +147,8 @@ function BookingsInner() {
             </div>
           </div>
         </section>
+
+        <ViewingFeedback />
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-xl border border-white/10 bg-white/[.035] p-1">

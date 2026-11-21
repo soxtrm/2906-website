@@ -1,4 +1,5 @@
 'use client'
+import { OwnerInfoButton } from './owner-info-button'
 // ============================================================================
 // board-dialogs.tsx — the things an agent can start from a board card.
 //
@@ -508,7 +509,7 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
   // Listing's own snapshot (routes/crmScheduleBoard.js GET /listings, Phase 2
   // canCreateGroup/groupJid) — optional because a caller that only wants the
   // conversation (no Book/Group actions available) can omit all three.
-  viewing?: { canCreateGroup?: boolean; groupJid?: string | null } | null
+  viewing?: { id?: number; canCreateGroup?: boolean; groupJid?: string | null } | null
   ownerGroupRequest?: { status?: string; groupJid?: string | null } | null
   onBook?: () => void
   onCreateGroup?: () => void
@@ -810,6 +811,10 @@ export function ChatDialog({ refId, town, viewing, ownerGroupRequest, onBook, on
                 </button>
               )
             })()}
+            {canCreateGroupBtn && viewing?.id && (
+              <OwnerInfoButton viewingId={viewing.id}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-[rgba(184,149,63,.5)] text-[#E8CC82] hover:brightness-110" />
+            )}
           </div>
         )}
 
