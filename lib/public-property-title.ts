@@ -79,7 +79,8 @@ export function publicPropertyDescription(p: P, max = 158) {
 export function publicShareImage(p: P) {
   const first = (p.images || []).find(u => typeof u === 'string' && /^https:\/\//.test(u))
   if (!first) return null
-  return /res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(first)
-    ? first.replace('/image/upload/', '/image/upload/c_fill,g_auto,w_1200,h_630,q_auto,f_jpg/')
-    : first
+  const m = first.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)$/)
+  if (!m) return first
+  // drop transformations already in the URL (e.g. a card-sized "w_720,…/") so the card is really 1200×630
+  return `${m[1]}c_fill,g_auto,w_1200,h_630,q_auto,f_jpg/${m[2].replace(/^(?:[a-z]{1,3}_[^/]*\/)+/, '')}`
 }
