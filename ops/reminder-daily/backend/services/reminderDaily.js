@@ -155,7 +155,7 @@ async function record(reminderId, runDate, phone, fields) {
 }
 
 // ── 09:00: plan the day ──────────────────────────────────────────────────────
-async function planDay(now = new Date(), { dryRun = false } = {}) {
+async function planDay(now = new Date(), { dryRun = false, onlyReminderIds = null } = {}) {
   const day = maltaParts(now)
   if (!enabled()) return { skipped: 'disabled' }
   if (day.weekday === 'Sun') return { skipped: 'sunday', date: day.date }
@@ -166,8 +166,9 @@ async function planDay(now = new Date(), { dryRun = false } = {}) {
   const rows = (await db.query(
     `SELECT r.* FROM reminders r
       WHERE r.status = 'pending' AND r.contact_due_date BETWEEN $1::date AND $2::date
+        AND ($3::int[] IS NULL OR r.id = ANY($3::int[]))
         AND NOT EXISTS (SELECT 1 FROM reminder_dispatches d WHERE d.reminder_id = r.id AND (d.run_date = $2::date OR d.state IN ('sent','ambiguous','skipped')))
-      ORDER BY r.contact_due_date, r.id`, [earliest, day.date])).rows
+      ORDER BY r.contact_due_date, r.id`, [onlyReminderIds ? '2020-01-01' : earliest, day.date, onlyReminderIds])).rows
   const townList = await towns()
   const planned = [], skipped = [], waiting = []
   const slots = new Map()        // session → next free minute
@@ -183,6 +184,7 @@ async function planDay(now = new Date(), { dryRun = false } = {}) {
     if (!phone) res = out('skipped', 'no_owner_phone')
     else if (taken) res = out('skipped', 'another_reminder_for_this_owner_today')
     else if (r.auto_send_status === 'blocked') res = out('skipped', `blocked:${r.auto_send_block_reason || 'unknown'}`)
+    else if (r.auto_send_status === 'paused_manual') res = out('skipped', 'paused_by_hand')
     if (!res) {
       const c = classify(r, townList)
       if (c.skip) res = out('skipped', c.skip)
@@ -195,10 +197,12 @@ async function planDay(now = new Date(), { dryRun = false } = {}) {
         else {
           const persona = String(sender.account_persona || '').toLowerCase()
           const needsPhrase = c.intent === 'owner_requested_callback' && !c.vars.agreed_followup_time_phrase
+          const canary = !!onlyReminderIds && /ARGUS CANARY/.test(String(r.original_note || ''))
           const n = (await db.query(
             `SELECT COUNT(*)::int AS n FROM outreach_library_templates WHERE persona=$1 AND intent=$2 AND active AND review_status='approved'
-               AND ($3::boolean IS FALSE OR body NOT LIKE '%{{agreed_followup_time_phrase}}%')`, [persona, c.intent, needsPhrase])).rows[0].n
-          const base = { intent: c.intent, session_name: sender.session_name, persona, context: { ...ctx, vars: c.vars } }
+               AND ($3::boolean IS FALSE OR body NOT LIKE '%{{agreed_followup_time_phrase}}%')
+               AND (COALESCE(code,'') NOT LIKE 'ARGUS-CANARY-%' OR $4::boolean)`, [persona, c.intent, needsPhrase, canary])).rows[0].n
+          const base = { intent: c.intent, session_name: sender.session_name, persona, context: { ...ctx, vars: c.vars, ...(canary ? { canary: true } : {}) } }
           if (!n) res = out('waiting', `no_approved_template:${c.intent}:${persona}`, base)
           else {
             const minute = Math.max(slots.get(sender.session_name) || SEND_START_MIN, day.date === maltaParts(now).date ? maltaParts(now).minutes + 1 : SEND_START_MIN)
@@ -262,8 +266,15 @@ async function sendOne(d, now) {
   if (who.kind !== 'owner' || who.reason) return finish('skipped', who.reason || 'not_an_owner')
   const gate = await require('./ownerSendGate').checkOwnerSend({ phone: reminder.owner_phone, kind: 'reminder', automated: true })
   if (!gate.allow) return finish('skipped', `owner_gate:${gate.reason}`)
-  const recent = await recentContact(reminder.owner_phone, { excludeDispatchId: d.id })
-  if (recent) return finish('skipped', `owner_contacted_within_${COOLDOWN_DAYS}_days:${recent.via}`)
+  // Kev, 2026-11-21: a date the owner asked for is kept — the generic 4-day cooldown does not
+  // cancel it. Only a message to this owner earlier TODAY moves it to the next day (no double contact).
+  if (d.intent === 'owner_requested_callback') {
+    const today = await recentContact(reminder.owner_phone, { days: 1, excludeDispatchId: d.id })
+    if (today && maltaParts(new Date(today.at)).date === maltaParts(now).date) return finish('waiting', `owner_already_contacted_today:${today.via}`)
+  } else {
+    const recent = await recentContact(reminder.owner_phone, { excludeDispatchId: d.id })
+    if (recent) return finish('skipped', `owner_contacted_within_${COOLDOWN_DAYS}_days:${recent.via}`)
+  }
   let status = 'UNKNOWN'
   try { status = String((await waha.getSessionStatus(d.session_name))?.status || 'UNKNOWN').toUpperCase() } catch (_) {}
   if (!HEALTHY.has(status)) {
@@ -280,7 +291,7 @@ async function sendOne(d, now) {
   let rendered
   try {
     const needsPhrase = d.intent === 'owner_requested_callback' && !vars.agreed_followup_time_phrase
-    const t = await lib.pick(d.persona, { phone: reminder.owner_phone, intent: d.intent, filter: needsPhrase ? x => !x.body.includes('{{agreed_followup_time_phrase}}') : null })
+    const t = await lib.pick(d.persona, { phone: reminder.owner_phone, intent: d.intent, allowCanary: d.context?.canary === true, filter: needsPhrase ? x => !x.body.includes('{{agreed_followup_time_phrase}}') : null })
     const g = lib.greetingFor(reminder.owner_phone, now)
     rendered = { text: lib.renderTemplate(t.body, { greeting: g.greeting, fresh, vars }), templateId: t.id }
   } catch (err) { return finish('waiting', err.code === 'no_library_templates' ? `no_approved_template:${d.intent}:${d.persona}` : `render_failed:${err.code || err.message}`) }

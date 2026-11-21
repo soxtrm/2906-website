@@ -31,7 +31,7 @@ const CALLBACK_VERB_RE = /\b(?:contact|message|msg|text|write|call|ring|ask|chec
 const OTHER_PROPERTY_RE = /\b(?:another|other|different|second|new|one\s+more)\b[^.?!]{0,40}\b(?:apartment|flat|property|place|house|penthouse|maisonette|studio|unit|villa|one)\b|\bbut\s+(?:i|we)\s+(?:do\s+)?(?:have|got|will\s+have)\b|\b(?:i|we)\s+(?:do\s+)?have\s+(?:a|an|one|two|\d)\b/i
 const QUESTION_RE = /\?|\b(?:who\s+(?:is|are)\s+(?:this|you)|who'?s\s+this|how\s+much|what\s+(?:is|are)|which\s+(?:agency|company)|can\s+you|could\s+you|do\s+you)\b/i
 const DATA_RE = /\d|€|eur\b/i
-const FILLER_RE = /^(?:(?:hi|hello|hey|dear|good\s+(?:morning|afternoon|evening)|kevin|kev|cedric|gabriela|sorry|no|nope|nothing|none|not|thanks|thank\s+you|thx|tx|ok|okay|unfortunately|at|the|this|moment|now|right|currently|for|anything|available|all|rented|rent|out|already|taken|gone|i|we|don'?t|do|have|it'?s|it|is|was|has|been|any|more|anymore|at\s+the\s+moment|yet|still|sir|madam|mate|bro|regards|kind|best|bye|cheers|good\s+luck|apologies|[.,!🙏👍🙂😊🙁😕👌❤️]+)\s*)+$/i
+const FILLER_RE = /^(?:(?:hi|hello|hey|dear|good\s+(?:morning|afternoon|evening)|kevin|kev|cedric|gabriela|sorry|no|nope|nothing|none|not|else|more|other|thanks|thank\s+you|thx|tx|ok|okay|unfortunately|at|the|this|moment|now|right|currently|for|anything|available|all|rented|rent|out|already|taken|gone|i|we|don'?t|do|have|it'?s|it|is|was|has|been|any|more|anymore|at\s+the\s+moment|yet|still|sir|madam|mate|bro|regards|kind|best|bye|cheers|good\s+luck|apologies|[.,!🙏👍🙂😊🙁😕👌❤️]+)\s*)+$/i
 
 function decide(text) {
   const raw = String(text || '').replace(/\s+/g, ' ').trim()
@@ -100,6 +100,14 @@ async function handle({ session, chatId, phone, text, messageId, receivedAt = ne
   } catch { /* soft */ }
 
   if (d.kind === 'quiet_no') {
+    // Kev, 2026-11-21: only once the answer is saved. A property question that is still
+    // 'awaiting' with no recorded reply means the availability pipeline did not store it.
+    if (owner?.id) {
+      const open = (await db.query(
+        `SELECT id FROM availability_checks WHERE owner_id=$1 AND status='awaiting' AND created_at > NOW() - interval '14 days'
+            AND (reply_at IS NULL OR reply_at < $2::timestamptz - interval '2 minutes') LIMIT 1`, [owner.id, receivedAt]).catch(() => ({ rows: [] }))).rows[0]
+      if (open) { await audit({ ...base, action: 'kept_answer_not_saved', detail: { checkId: open.id } }); return { action: 'kept', why: 'answer_not_saved' } }
+    }
     await markRead(session, chatId, phone)
     await audit({ ...base, action: 'marked_read', detail: { question: asked.via } })
     return { action: 'marked_read', disposition: d.kind }
@@ -113,6 +121,14 @@ async function handle({ session, chatId, phone, text, messageId, receivedAt = ne
       if (id) reminder = (await db.query(`SELECT id, contact_due_date::text AS due FROM reminders WHERE id=$1`, [id])).rows[0]
     }
     if (!reminder) { await audit({ ...base, action: 'kept_callback_not_recorded' }); return { action: 'kept', why: 'callback_not_recorded' } }
+    // The owner named a date: no weekly recheck / availability cadence before it (the
+    // pause lifts ON that date, when the callback itself goes out). A later pause stays.
+    if (owner?.id && reminder.due) {
+      const cur = (await db.query(`SELECT owner_contact_paused_until::text AS until FROM owner_contacts WHERE id=$1`, [owner.id])).rows[0]
+      if (!cur?.until || cur.until < reminder.due) {
+        await require('./ownerSendGate').setContactPause({ scope: 'owner', id: owner.id, until: reminder.due, note: `Owner asked to be contacted on ${reminder.due} (reminder ${reminder.id})`, by: 'inbox-callback' })
+      }
+    }
     await markRead(session, chatId, phone)
     await audit({ ...base, action: 'marked_read', detail: { reminderId: reminder.id, due: reminder.due, question: asked.via } })
     return { action: 'marked_read', disposition: d.kind, reminderId: reminder.id }
@@ -135,6 +151,20 @@ async function handle({ session, chatId, phone, text, messageId, receivedAt = ne
   return { action: 'kept', disposition: d.kind }
 }
 
+// Kev, 2026-11-21: ONE decision per owner turn. The webhook asks this before any
+// reply generator runs: a plain "No" / "No, contact me in January" / "stop" that
+// answers OUR question is final — no AI reply, no OG-1 reply, no second bot message.
+// Anything actionable is not final and goes through the normal pipeline.
+async function finalTurn({ phone, session, text }) {
+  const d = decide(text)
+  if (!['quiet_no', 'no_with_callback', 'opt_out'].includes(d.kind)) return { final: false, kind: d.kind }
+  const owner = await ownerFor(phone)
+  const asked = await askedRecently(phone, owner?.id)
+  if (!asked) return { final: false, kind: d.kind, why: 'no_preceding_question' }
+  log.info('[inbox] final owner turn — reply generators suppressed', { kind: d.kind, question: asked.via, session })
+  return { final: true, kind: d.kind, question: asked.via }
+}
+
 // Called for every inbound owner DM; returns at once, decides 45 s later.
 function onInbound({ session, chatId, senderPhone, text, messageId }) {
   const phone = senderPhone || chatId
@@ -148,4 +178,4 @@ function onInbound({ session, chatId, senderPhone, text, messageId }) {
   }, DELAY_MS).unref?.()
 }
 
-module.exports = { decide, handle, onInbound, markRead, DELAY_MS }
+module.exports = { decide, handle, onInbound, finalTurn, markRead, DELAY_MS }

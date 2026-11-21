@@ -31,6 +31,7 @@ verify() {
 }
 case "${1:-}" in
   stage)
+    rm -f "$PKG/.stage-pass"
     cleanup_test; rm -rf "$STAGE"; mkdir -p "$STAGE"
     rsync -a --exclude node_modules --exclude uploads --exclude logs --exclude '.*' --exclude backups --exclude '*.log' --exclude exports --exclude private-docs "$LIVE/" "$STAGE/"
     mkdir -p "$STAGE/test" "$STAGE/node_modules" "$STAGE/data"
@@ -59,9 +60,12 @@ case "${1:-}" in
     docker exec -i "$TESTDB" psql -U postgres -v ON_ERROR_STOP=1 -q < "$PKG/backend/$DOWN" && echo "down.sql ok"
     docker exec -i "$TESTDB" psql -U postgres -v ON_ERROR_STOP=1 -q < "$PKG/backend/$MIG" && echo "re-apply ok"
     cleanup_test
-    [ "$r" = 0 ] && echo "STAGE TESTS PASSED" || { echo "STAGE TESTS FAILED"; exit 1; }
+    if [ "$r" = 0 ] && ! grep -qE '^not ok |^# fail [1-9]' /tmp/argus-reminder-test.out; then date +%s > "$PKG/.stage-pass"; echo "STAGE TESTS PASSED"; else rm -f "$PKG/.stage-pass"; echo "STAGE TESTS FAILED — release stopped"; exit 1; fi
     ;;
   apply)
+    # a release needs a passing stage run of this package in the last 2 h (no chained shortcuts)
+    [ -f "$PKG/.stage-pass" ] && [ $(( $(date +%s) - $(cat "$PKG/.stage-pass") )) -lt 7200 ] || { echo "REFUSE: no passing stage run in the last 2 h"; exit 1; }
+    rm -f "$PKG/.stage-pass"
     cd "$LIVE"
     sha256sum -c "$PKG/deploy/base.sha256" || { echo "REFUSE: a live file changed since the patch was built"; exit 1; }
     for f in $NEW; do [ -e "$LIVE/$f" ] && { echo "REFUSE: $f exists"; exit 1; }; done

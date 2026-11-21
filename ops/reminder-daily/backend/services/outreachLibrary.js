@@ -159,6 +159,11 @@ async function setReview(ids, status, actor = 'admin') {
   if (!['approved', 'pending_review', 'rejected'].includes(status)) { const err = new Error('invalid review status'); err.code = 'invalid_status'; throw err }
   const list = (Array.isArray(ids) ? ids : [ids]).map(Number).filter(Number.isInteger)
   if (!list.length) return []
+  if (status === 'approved') {
+    const rows = (await db.query(`SELECT id, persona, body FROM outreach_library_templates WHERE id = ANY($1::int[])`, [list])).rows
+    const bad = rows.map(r => ({ id: r.id, problem: validateBody(r.persona, r.body) })).filter(x => x.problem)
+    if (bad.length) { const err = new Error(`cannot approve: ${bad.map(b => `${b.id} ${b.problem}`).join(', ')}`); err.code = 'invalid_template'; err.bad = bad; throw err }
+  }
   return (await db.query(
     `UPDATE outreach_library_templates SET review_status=$2, reviewed_by=$3, reviewed_at=NOW(), updated_at=NOW(),
             active = CASE WHEN $2 = 'rejected' THEN FALSE ELSE active END
@@ -173,10 +178,12 @@ async function setActive(id, active, actor = 'admin') {
 
 // One text for one recipient. Random among the persona's active texts,
 // excluding what this phone already received and the account's last sends.
-async function pick(persona, { phone = null, accountId = null, intent = 'new_owner_general', filter = null, rng = Math.random } = {}) {
+async function pick(persona, { phone = null, accountId = null, intent = 'new_owner_general', filter = null, allowCanary = false, rng = Math.random } = {}) {
+  // canary texts (production self-checks between our own numbers) are never picked for an owner
   let rows = (await db.query(
     `SELECT id, number, body, intent FROM outreach_library_templates
-      WHERE persona=$1 AND active AND intent=$2 AND review_status='approved' ORDER BY number`, [persona, intent])).rows
+      WHERE persona=$1 AND active AND intent=$2 AND review_status='approved'
+        AND (COALESCE(code,'') LIKE 'ARGUS-CANARY-%') = $3 ORDER BY number`, [persona, intent, allowCanary === true])).rows
   if (filter) rows = rows.filter(filter)
   if (!rows.length) { const err = new Error(`no approved ${intent} texts for ${persona}`); err.code = 'no_library_templates'; throw err }
   const p = String(phone || '').replace(/\D/g, '')

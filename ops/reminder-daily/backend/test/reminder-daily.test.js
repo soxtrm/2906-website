@@ -135,8 +135,9 @@ test('P0-A · after approving the callback / upcoming drafts the waiting ones ar
   const up = sent.find(r => r.owner_phone === owners['Upcoming Owner'].phone)
   assert.ok(up && /Gabriela/.test(up.rendered_text) && /3-Bedroom Apartment in G(z|ż)ira/.test(up.rendered_text), up && up.rendered_text)
   assert.equal(up.session_name, 'Gabriela')
+  // an owner-requested callback date is kept even though we wrote 2 days ago (no 4-day cadence override)
   const recent = rows.find(r => r.owner_phone === owners['Recent Owner'].phone)
-  assert.match(`${recent.state}:${recent.reason}`, /skipped:owner_contacted_within_4_days/)
+  assert.equal(recent.state, 'sent', `${recent.state}:${recent.reason}`)
   const dnc = rows.find(r => r.owner_phone === '35679000004')
   assert.match(`${dnc.state}:${dnc.reason}`, /skipped:owner_gate:dnc/)
   assert.ok(!wire.some(w => w.phone.endsWith('79000004')), 'opted-out owner was messaged')
@@ -255,4 +256,68 @@ test('P0-B · owner answers "No" to "is it still available?": not_available (not
   await av.__onRented(b.c, { ownerSession: 'Kevsecond', ownerChat: `${o.phone}@c.us`, replyMsgId: 'msgB' })
   assert.equal((await pool.query(`SELECT available_status FROM properties WHERE id=$1`, [b.p.id])).rows[0].available_status, 'pending_check')
   assert.equal(queued.filter(m => /thank/i.test(m.text || '')).length, 0, JSON.stringify(queued))
+})
+
+
+test('Update 3 · context-specific "No", one decision per turn, read after save, callback pause, manual pause, approval checks, canary isolation', async () => {
+  const av = require(R('services/availability.js'))
+  const c = t => av.classifyReply(t).status
+  assert.equal(c('No'), 'replied_no')
+  assert.equal(c('No sorry, not at the moment'), 'replied_no')
+  assert.equal(c('No, this apartment is unavailable'), 'replied_no')
+  assert.equal(c('No, nothing else available'), 'replied_other')
+  assert.equal(c('Yes still available'), 'replied_available')
+  const scope = require(R('services/ownerScopeReply.js')).classifyOwnerScope
+  assert.equal(scope('No, nothing else available').scope, null)
+  assert.equal(scope('No, nothing available at the moment').scope, 'owner_all_unavailable')
+  assert.equal(inbox.decide('No, nothing else available').kind, 'quiet_no')
+
+  // one decision per turn
+  const o = await owner('Turn Owner', '35679000051')
+  await pool.query(`INSERT INTO outreach_log (phone, account_used, message_text, sent_at) VALUES ($1,'Kevsecond','Is it still available?', NOW() - interval '1 day')`, [o.phone])
+  assert.equal((await inbox.finalTurn({ phone: o.phone, session: 'Kevsecond', text: 'No' })).final, true)
+  assert.equal((await inbox.finalTurn({ phone: o.phone, session: 'Kevsecond', text: 'No, but I have another apartment in Msida' })).final, false)
+  assert.equal((await inbox.finalTurn({ phone: '35679000052', session: 'Kevsecond', text: 'No' })).final, false)
+
+  // read only after the answer is saved
+  const p = (await pool.query(`INSERT INTO properties (ref, town, property_type, owner_id, available_status, published) VALUES ('T-9','Sliema','apartment',$1,'available',TRUE) RETURNING id`, [o.id])).rows[0]
+  const chk = (await pool.query(`INSERT INTO availability_checks (property_id, owner_id, status, owner_chat_id, account_session, created_at) VALUES ($1,$2,'awaiting',$3,'Kevsecond', NOW() - interval '1 hour') RETURNING id`, [p.id, o.id, `${o.phone}@c.us`])).rows[0]
+  let r = await inbox.handle({ session: 'Kevsecond', chatId: `${o.phone}@c.us`, phone: o.phone, text: 'No', messageId: 't1', receivedAt: new Date() })
+  assert.equal(r.why, 'answer_not_saved')
+  await pool.query(`UPDATE availability_checks SET status='replied_no', reply_at=NOW() WHERE id=$1`, [chk.id])
+  r = await inbox.handle({ session: 'Kevsecond', chatId: `${o.phone}@c.us`, phone: o.phone, text: 'No', messageId: 't1', receivedAt: new Date() })
+  assert.equal(r.action, 'marked_read')
+
+  // callback date holds the other automations until that date
+  const cb = await owner('Pause Owner', '35679000053')
+  await pool.query(`INSERT INTO outreach_log (phone, account_used, message_text, sent_at) VALUES ($1,'Kevsecond','Is it still available?', NOW() - interval '1 day')`, [cb.phone])
+  r = await inbox.handle({ session: 'Kevsecond', chatId: `${cb.phone}@c.us`, phone: cb.phone, text: 'No, contact me in February', messageId: 't2', receivedAt: new Date() })
+  assert.equal(r.action, 'marked_read')
+  const due = (await pool.query(`SELECT contact_due_date::text d FROM reminders WHERE id=$1`, [r.reminderId])).rows[0].d
+  const until = (await pool.query(`SELECT owner_contact_paused_until::text u FROM owner_contacts WHERE id=$1`, [cb.id])).rows[0].u
+  assert.equal(until, due)
+  const gate = await require(R('services/ownerSendGate.js')).checkOwnerSend({ phone: cb.phone, kind: 'availability', automated: true })
+  assert.equal(gate.allow, false); assert.match(gate.reason, /owner_contact_paused/)
+
+  // a reminder a person paused stays paused; a same-day earlier message defers a callback
+  const D = '2026-12-10'
+  const mp = await owner('Manual Pause Owner', '35679000054')
+  const id1 = await reminder(mp.phone, 'please contact me in December', D, { timing: 'December', status: 'paused_manual' })
+  const sd = await owner('Same Day Owner', '35679000055')
+  const id2 = await reminder(sd.phone, 'please contact me in December', D, { timing: 'December' })
+  await pool.query(`INSERT INTO outreach_log (phone, account_used, message_text, sent_at) VALUES ($1,'Kevsecond','x', $2)`, [sd.phone, malta(D, '08:40')])
+  await daily.planDay(malta(D, '09:00'))
+  for (const m of ['09:10', '09:20', '09:30', '09:40']) await daily.tick(malta(D, m), { limit: 5 })
+  const st = Object.fromEntries((await pool.query(`SELECT reminder_id, state, reason FROM reminder_dispatches WHERE reminder_id = ANY($1::int[])`, [[id1, id2]])).rows.map(x => [x.reminder_id, `${x.state}:${x.reason}`]))
+  assert.equal(st[id1], 'skipped:paused_by_hand')
+  assert.match(st[id2], /^waiting:owner_already_contacted_today/)
+
+  // approval refuses a text that signs as somebody else; canary texts are never picked for owners
+  const bad = (await pool.query(`INSERT INTO outreach_library_templates (persona, number, body, intent, review_status, code) VALUES ('gabriela', 480, $1, 'owner_requested_callback', 'pending_review', 'ARGUS-TEST-BAD-01') RETURNING id`,
+    ['{{opening}}I hope you are well. Following up as agreed about your property.\n\nKevin Eich'])).rows[0].id
+  await assert.rejects(lib.setReview([bad], 'approved', 'test'), /invalid_template|cannot approve/)
+  await pool.query(`INSERT INTO outreach_library_templates (persona, number, body, intent, review_status, code) VALUES ('cedric', 481, $1, 'owner_requested_callback', 'approved', 'ARGUS-CANARY-CEDRIC-01')`,
+    ['{{opening}}ARGUS CANARY self-check, please ignore.\n\nCedric'])
+  for (let i = 0; i < 20; i++) await assert.rejects(lib.pick('cedric', { intent: 'owner_requested_callback' }), /no approved/)
+  assert.match((await lib.pick('cedric', { intent: 'owner_requested_callback', allowCanary: true })).body, /CANARY/)
 })
