@@ -108,12 +108,13 @@ export function SafeDrafts() {
   )
 }
 
-// ── Activate Reminder Due: the six groups the 09:00 run needs ──────────────
-// Kev, 2026-11-21: approve 30 texts in six groups, not 150 one by one. Each text is
-// shown exactly as an owner would get it at 09:00 (greeting of that moment, example
-// context), with its signature checked against the persona. Approving never sends.
-const SIGN: Record<string, RegExp> = { kev: /\bKevin\b/, gabriela: /\bGabriela\b/, cedric: /\bCedric\b/ }
-const FOREIGN: Record<string, RegExp> = { kev: /\b(?:Gabriela|Cedric)\b/, gabriela: /\b(?:Kevin|Kev|Cedric)\b/, cedric: /\b(?:Kevin|Kev|Gabriela)\b/ }
+// ── Reminder Due texts: checked automatically, no approval round ──────────
+// Kev, 2026-11-21 ("must run autonomously"): the run checks every callback / upcoming
+// text itself (persona, own signature, sender exists, placeholders, no invented facts,
+// greeting made at send time, purpose) and uses the ones that pass. A failing text is
+// held with the exact reason; the rest of its group keeps sending. Kev can still stop a text.
+type VText = Draft & { validation: { ok: boolean; problems: string[]; at: string } | null; reviewed_by: string | null; sent: number }
+type VGroup = { persona: string; intent: string; sendable: number; held: number; rejected: number }
 const EXAMPLE: Record<string, string> = {
   agreed_followup_time_phrase: 'at the end of November', followup_subject: 'the 2-Bedroom Apartment in Sliema', upcoming_property_label: 'the 3-Bedroom Apartment in Gżira',
 }
@@ -122,58 +123,109 @@ function asSent(body: string) {
     .replace(/^(Good morning, )([A-Z])([a-z])/, (m, a, c, n) => `${a}${c.toLowerCase()}${n}`)
 }
 const GROUP_INTENTS: [string, string][] = [['owner_requested_callback', 'Owner asked for a callback'], ['upcoming_property_followup', 'Upcoming property']]
+const PROBLEM: Record<string, string> = {
+  missing_own_signature: 'not signed with the persona’s own name', foreign_persona_signature: 'signs as another persona', contains_numbers: 'contains a number (only the owner’s details may)',
+  mentions_price: 'mentions a price', mentions_property_type: 'names a property type outside the owner’s details', claims_a_client: 'claims a client', claims_a_viewing_or_deal: 'claims a viewing or deal',
+  greeting_not_generated_at_send_time: 'greeting is not made at sending time', unresolved_placeholder_text: 'unfilled placeholder text', no_paragraphs: 'no paragraphs', too_short: 'too short', too_long: 'too long',
+}
+const problemText = (p: string) => PROBLEM[p] || (p.startsWith('no_verified_sender_for:') ? `no active ${p.split(':')[1]} WhatsApp account` : p.replace(/[:_]/g, ' '))
 
 export function ActivateReminderDue({ onChanged }: { onChanged?: () => void }) {
-  const [rows, setRows] = useState<Draft[] | null>(null)
+  const [data, setData] = useState<{ templates: VText[]; groups: VGroup[] } | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
-  const load = useCallback(async () => {
-    const all: Draft[] = []
-    for (const [intent] of GROUP_INTENTS) all.push(...(await crmGet(`outreach/library?intent=${intent}`)).templates)
-    setRows(all.filter(r => !String(r.code || '').startsWith('ARGUS-CANARY-')))
-  }, [])
+  const load = useCallback(async () => { setData(await crmGet('outreach/reminder-daily/templates')) }, [])
   useEffect(() => { load().catch(e => setMsg(e?.message || 'Could not load the texts')) }, [load])
-  if (!rows) return null
-  const groups = PERSONAS.flatMap(([p, pl]) => GROUP_INTENTS.map(([i, il]) => {
-    const list = rows.filter(r => r.persona === p && r.intent === i && r.review_status !== 'rejected')
-    const bad = list.filter(r => !SIGN[p].test(r.body) || FOREIGN[p].test(r.body))
-    return { key: `${p}:${i}`, persona: p, personaLabel: pl, intentLabel: il, list, bad,
-      approved: list.filter(r => r.review_status === 'approved' && r.active).length, pending: list.filter(r => r.review_status === 'pending_review') }
-  }))
-  const ready = groups.filter(g => g.approved > 0).length
-  async function approve(ids: number[]) {
-    if (!ids.length) return
+  if (!data) return msg ? <p className="msg-library-error">{msg}</p> : null
+  const total = data.templates.length
+  const sendable = data.templates.filter(t => t.active && t.review_status === 'approved').length
+  const held = data.templates.filter(t => t.review_status === 'pending_review')
+  async function stop(id: number) {
     setBusy(true); setMsg('')
-    try { const r = await crmJson('outreach/library/review', 'POST', { ids, status: 'approved' }); setMsg(`${r.updated.length} text${r.updated.length === 1 ? '' : 's'} approved. Nothing was sent.`); await load(); onChanged?.() }
-    catch (e: any) { setMsg(e?.message || 'Not approved') } finally { setBusy(false) }
+    try { await crmJson('outreach/library/review', 'POST', { ids: [id], status: 'rejected' }); setMsg('Text stopped — it will not be sent again. The other texts of its group carry on.'); await load(); onChanged?.() }
+    catch (e: any) { setMsg(e?.message || 'Not changed') } finally { setBusy(false) }
   }
-  const allPending = groups.filter(g => !g.bad.length).flatMap(g => g.pending.map(r => r.id))
   return (
-    <section className="rd-activate" aria-label="Activate Reminder Due">
+    <section className="rd-activate" aria-label="Reminder Due texts">
       <header>
         <div>
-          <h3>Activate Reminder Due · {ready} of 6 groups ready</h3>
-          <p>The 09:00 run sends only approved texts: “owner asked for a callback” and “upcoming property”, for Kevin, Gabriela and Cedric. Every text below is shown as the owner would get it at 09:00 — greeting of that moment, example details filled in. Your existing approved texts are not touched. Approving sends nothing.</p>
+          <h3>Reminder Due texts · {sendable} of {total} in use · checked automatically</h3>
+          <p>No approval round. Before every run ARGUS checks each text: right persona and its own signature, an active sending account for that persona, only the owner’s own details as placeholders (no invented price, property, client or viewing), greeting made at the moment of sending, and that it reads as a callback or an upcoming-property follow-up. Texts that pass are used; a text that fails is held with the reason and the others of its group carry on. You can still stop any text.</p>
         </div>
-        <button type="button" className="rd-approve-all" disabled={busy || !allPending.length} onClick={() => approve(allPending)}>{busy ? 'Approving…' : allPending.length ? `Approve all ${allPending.length} waiting texts` : 'All six groups approved'}</button>
       </header>
       {msg && <p className="rd-msg" role="status">{msg}</p>}
+      {held.length > 0 && <p className="rd-msg" style={{ color: '#ffb86b' }}>{held.length} held: {held.map(t => `${t.code?.replace(/^ARGUS-/, '') || `#${t.number}`} (${(t.validation?.problems || ['not checked yet']).map(problemText).join(', ')})`).join(' · ')}</p>}
       <div className="rd-groups">
-        {groups.map(g => (
-          <div key={g.key} className={`rd-group${g.approved ? ' is-ready' : ''}${g.bad.length ? ' is-bad' : ''}`}>
-            <div className="rd-group-head">
-              <b>{g.personaLabel} · {g.intentLabel}</b>
-              <small>{g.approved} approved · {g.pending.length} waiting · {g.bad.length ? `${g.bad.length} signature problem(s) — cannot approve` : `signs as ${g.personaLabel} ✓`}</small>
-              <span>
-                <button type="button" onClick={() => setOpen(open === g.key ? null : g.key)} aria-expanded={open === g.key}>{open === g.key ? 'Hide texts' : `Preview ${g.list.length}`}</button>
-                {g.pending.length > 0 && !g.bad.length && <button type="button" className="is-primary" disabled={busy} onClick={() => approve(g.pending.map(r => r.id))}>Approve {g.pending.length}</button>}
-              </span>
+        {PERSONAS.flatMap(([p, pl]) => GROUP_INTENTS.map(([i, il]) => {
+          const key = `${p}:${i}`
+          const g = data.groups.find(x => x.persona === p && x.intent === i) || { sendable: 0, held: 0, rejected: 0 }
+          const list = data.templates.filter(t => t.persona === p && t.intent === i)
+          return (
+            <div key={key} className={`rd-group${g.sendable ? ' is-ready' : ' is-bad'}`}>
+              <div className="rd-group-head">
+                <b>{pl} · {il}</b>
+                <small>{g.sendable} in use{g.held ? ` · ${g.held} held` : ''}{g.rejected ? ` · ${g.rejected} stopped` : ''} · {list.reduce((n, t) => n + (t.sent || 0), 0)} sent so far</small>
+                <span><button type="button" onClick={() => setOpen(open === key ? null : key)} aria-expanded={open === key}>{open === key ? 'Hide texts' : `Show ${list.length} texts`}</button></span>
+              </div>
+              {open === key && <ol className="rd-previews">{list.map(t => (
+                <li key={t.id}>
+                  <small>{t.code?.replace(/^ARGUS-[A-Z]+-/, '') || `#${t.number}`} · {t.review_status === 'rejected' || !t.active ? 'stopped' : t.review_status === 'approved' ? (t.validation?.ok ? 'passed the check · in use' : 'in use') : `held — ${(t.validation?.problems || ['not checked yet']).map(problemText).join(', ')}`}{t.sent ? ` · sent ${t.sent}×` : ''}</small>
+                  <p>{asSent(t.body)}</p>
+                  {t.review_status === 'approved' && t.active && <button type="button" className="rd-stop" disabled={busy} onClick={() => stop(t.id)}>Stop using this text</button>}
+                </li>))}
+              </ol>}
             </div>
-            {open === g.key && <ol className="rd-previews">{g.list.map(r => <li key={r.id}><small>{r.code?.replace(/^ARGUS-[A-Z]+-/, '') || `#${r.number}`} · {STATUS[r.review_status]}</small><p>{asSent(r.body)}</p></li>)}</ol>}
-          </div>
-        ))}
+          )
+        }))}
       </div>
+    </section>
+  )
+}
+
+// ── Reminder Due operations: what ARGUS did by itself, and what needs a person ──
+type Mon = {
+  today: string; enabled: boolean; nextRun: string; nextRunDate: string; dueToday: number
+  days: ({ date: string } & Record<string, number | string>)[]; suppressed: { reason: string; n: number }[]; rescheduled: number
+  exceptions: { id: number; date: string; state: string; reason: string | null; session_name: string; owner_name: string | null; phone_last4: string }[]
+  attention: { id: number; session: string; phone_last4: string; text: string; disposition: string; action: string; created_at: string }[]
+}
+const SUPPRESSED: Record<string, string> = {
+  another_reminder_for_this_owner_today: 'owner already gets a message today', automatic_reply_not_an_owner_request: 'note was an automatic reply', not_a_follow_up_request: 'note is not a follow-up request',
+  owner_gate: 'contact rule (opt-out, pause, person active)', blocked: 'blocked (not an owner / opted out)', paused_by_hand: 'paused by a person', held_back: 'held back by the reply guard',
+  property_available_now_needs_agent: 'property available now — for an agent', listing_advert_not_an_owner_request: 'listing advert, not an owner request', no_verified_sender: 'no verified sending account',
+  sender_account_inactive: 'sending account inactive', reminder_contacted: 'already contacted', no_owner_phone: 'no phone number',
+}
+export function ReminderOperations() {
+  const [m, setM] = useState<Mon | null>(null)
+  const [err, setErr] = useState('')
+  useEffect(() => { const f = () => crmGet('outreach/reminder-daily/monitor').then(setM).catch((e: any) => setErr(e?.message || 'Operations unavailable')); f(); const t = setInterval(f, 60_000); return () => clearInterval(t) }, [])
+  if (err) return <p className="msg-library-error">{err}</p>
+  if (!m) return null
+  const sum = (k: string) => m.days.reduce((n, d) => n + (Number(d[k]) || 0), 0)
+  const next = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(m.nextRun))
+  return (
+    <section className="rd-panel rd-ops" aria-label="Reminder Due operations">
+      <header><div>
+        <h3>Reminder Due · runs by itself {m.enabled ? '' : '(switched off)'}</h3>
+        <p>Every Monday–Saturday at 09:00 ARGUS sends the callbacks owners asked for and the upcoming-property follow-ups, from the account the owner spoke to, with a checked text and the greeting of that moment. Every contact rule is checked again at the moment of sending. Old reminders are released a few per day. Only the exceptions below need you.</p>
+      </div></header>
+      <div className="rd-summary">
+        <span><b>{next}</b>Next run</span>
+        <span><b>{m.dueToday}</b>Due today</span>
+        <span className="is-sent"><b>{sum('sent')}</b>Sent · 7 days</span>
+        <span className="is-failed"><b>{sum('failed') + sum('ambiguous')}</b>Failed / check</span>
+        <span className="is-waiting"><b>{m.rescheduled}</b>Rescheduled</span>
+        <span><b>{sum('skipped')}</b>Suppressed</span>
+        <span className="is-waiting"><b>{m.attention.length}</b>Replies for you</span>
+      </div>
+      {m.suppressed.length > 0 && <p className="rd-upcoming">Suppressed, last 7 days: {m.suppressed.map(s => `${SUPPRESSED[s.reason] || s.reason.replace(/_/g, ' ')} ${s.n}`).join(' · ')}</p>}
+      {m.exceptions.length > 0 && <ol className="rd-rows">{m.exceptions.map(x => <li key={x.id} className={`is-${x.state}`}><div className="rd-line"><span className="rd-state">{x.state === 'ambiguous' ? 'Check chat' : 'Failed'}</span><span className="rd-who"><b>{x.owner_name || 'Owner'} ·{x.phone_last4} · {x.session_name}</b><small>{x.date} · {String(x.reason || '').replace(/[:_]/g, ' ')}</small></span></div></li>)}</ol>}
+      {m.attention.length > 0 && <>
+        <p className="rd-upcoming">Owner replies that need a person (kept unread in WhatsApp):</p>
+        <ol className="rd-rows">{m.attention.map(a => <li key={a.id} className="is-waiting"><div className="rd-line"><span className="rd-state">{a.disposition.replace(/_/g, ' ')}</span><span className="rd-who"><b>“{a.text}”</b><small>{a.session} ·{a.phone_last4} · {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(a.created_at))}</small></span></div></li>)}</ol>
+      </>}
+      {!m.exceptions.length && !m.attention.length && <p className="auto-empty">Nothing needs you right now.</p>}
     </section>
   )
 }
@@ -189,7 +241,10 @@ const REASON: Record<string, string> = {
 const reasonText = (r: string | null) => {
   if (!r) return ''
   if (REASON[r]) return REASON[r]
-  if (r.startsWith('no_approved_template:')) { const [, intent, persona] = r.split(':'); return `no approved ${intent.replace(/_/g, ' ')} text for ${persona === 'kev' ? 'Kevin' : persona} — approve one under Templates` }
+  if (r.startsWith('no_approved_template:')) { const [, intent, persona] = r.split(':'); return `no usable ${intent.replace(/_/g, ' ')} text for ${persona === 'kev' ? 'Kevin' : persona} — see Reminder Due texts` }
+  if (r.startsWith('held_back:')) return 'held back by the reply guard — not sent'
+  if (r === 'property_available_now_needs_agent') return 'property is available now — for an agent, not a follow-up text'
+  if (r === 'listing_advert_not_an_owner_request') return 'the note is a listing advert, not an owner request'
   if (r.startsWith('owner_contacted_within_')) return 'owner was contacted in the last 4 days'
   if (r.startsWith('owner_gate:')) return `blocked: ${r.slice(11).replace(/_/g, ' ')}`
   if (r.startsWith('sender_offline')) return `${r.split(':')[1] || 'sending account'} offline${r.endsWith('retrying') ? ' — retrying' : ''}`
@@ -273,7 +328,7 @@ export function InboxDecisions() {
 // ── Next 09:00 run (dry run, nothing is written or sent) ────────────────────
 type PRow = { id: number; owner_name: string | null; phone_last4: string; due: string; parsed_timing: string | null; note: string; source_session: string; state: string; reason: string | null; intent: string | null; session: string | null; approx: boolean }
 export function NextRunPreview() {
-  const [data, setData] = useState<{ date: string | null; skippedRun: string | null; planned: PRow[]; waiting: PRow[]; skipped: PRow[] } | null>(null)
+  const [data, setData] = useState<{ date: string | null; skippedRun: string | null; planned: PRow[]; waiting: PRow[]; skipped: PRow[]; backlog?: { limit: number; released: { reminderId: number; category: string; wasDue: string }[]; redated?: { reminderId: number; from: string; to: string; phrase: string }[]; remaining: number } | null } | null>(null)
   const [error, setError] = useState('')
   useEffect(() => { crmGet('outreach/reminder-daily/preview').then(setData).catch((e: any) => setError(e?.message || 'Preview unavailable')) }, [])
   if (error) return <p className="msg-library-error">{error}</p>
@@ -290,6 +345,7 @@ export function NextRunPreview() {
         <span className="is-waiting"><b>{data.waiting.length}</b>Waiting</span>
         <span><b>{data.skipped.length}</b>Left out</span>
       </div>
+      {data.backlog && <p className="rd-upcoming">From the old reminders: {data.backlog.released.length} released into this run (callbacks first, at most {data.backlog.limit} a day and 3 per account; originally due {data.backlog.released.map(x => x.wasDue).join(', ') || '—'}) · {data.backlog.remaining} still queued{data.backlog.redated?.length ? ` · ${data.backlog.redated.length} saved date${data.backlog.redated.length === 1 ? '' : 's'} corrected to the owner’s own (${data.backlog.redated.map(x => x.phrase).join(', ')})` : ''}.</p>}
       <ol className="rd-rows">
         {all.map(r => (
           <li key={r.id} className={`is-${r.state}`}><div className="rd-line">
