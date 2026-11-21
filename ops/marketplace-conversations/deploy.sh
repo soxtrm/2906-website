@@ -83,7 +83,7 @@ case "${1:-}" in
     verify || { undo; exit 1; }
     # positive probe without creating anything: a real listing answers "add your contact" instead of "unknown listing"
     REF=$(docker exec "$PG" sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT ref FROM properties WHERE published AND ref::text LIKE '"'"'2906-%'"'"' ORDER BY id DESC LIMIT 1"')
-    e=$(curl -s -m 10 -X POST -H 'content-type: application/json' -d "{\"ref\":\"$REF\",\"name\":\"Probe\"}" "$URL/api/nexus/mp/conversations" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("error"))')
+    e=$(curl -s -m 10 -X POST -H 'content-type: application/json' -d "{\"ref\":\"$REF\",\"name\":\"Probe\",\"message\":\"probe\"}" "$URL/api/nexus/mp/conversations" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("error"))')
     [ "$e" = CONTACT_REQUIRED ] && echo "ok   real listing $REF resolves (no conversation created)" || { echo "FAIL real listing lookup ($e)"; undo; exit 1; }
     echo "HOTFIX APPLIED AND VERIFIED (backup $BK)"
     ;;

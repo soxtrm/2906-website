@@ -53,7 +53,7 @@ test('a visitor starts a conversation about a listing; contact is required, owne
   assert.equal(bad.status, 400); assert.equal(bad.body.error, 'CONTACT_REQUIRED')
   const none = await visitor('POST', '/conversations', { ref: 'WSI-X-1', name: 'Mia', email: 'mia@example.test', message: 'Hi' })
   assert.equal(none.status, 404); assert.equal(none.body.error, 'LISTING_NOT_AGENCY')
-  const legacy = await visitor('POST', '/conversations', { ref: '2906-4411', name: 'Leo' })
+  const legacy = await visitor('POST', '/conversations', { ref: '2906-4411', name: 'Leo', message: 'Hi' })
   assert.equal(legacy.status, 400, 'legacy short ref resolves to the listing (then asks for contact)'); assert.equal(legacy.body.error, 'CONTACT_REQUIRED')
   const gone = await visitor('POST', '/conversations', { ref: '2906-0000', name: 'Leo', email: 'leo@example.test', message: 'Hi' })
   assert.equal(gone.status, 404); assert.equal(gone.body.error, 'LISTING_NOT_FOUND')
