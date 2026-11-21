@@ -24,31 +24,49 @@ const log = require('../logger')
 const DELAY_MS = 45_000
 const QUESTION_LOOKBACK_DAYS = 14
 const MONTHS = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?'
-const NEG_RE = /\b(?:no|nope|nothing|none|not\s+(?:now|yet|at\s+the\s+moment|available|anymore|right\s+now)|sorry|unfortunately|rented|taken|gone|don'?t\s+have|do\s+not\s+have|haven'?t\s+got|no\s+longer)\b/i
-const POS_RE = /\b(?:yes|yeah|yep|still\s+available|is\s+available|it'?s\s+available|available\s+(?:now|from)|vacant|free\s+(?:now|from))\b/i
+// Kev, 2026-11-21 (Barbara / Andrew Zammit / Raymond Psaila): owners do not write from a
+// word list. The decision reads MEANING: nothing available, "I'll let you know", a future
+// month, a plain closing — and anything that still needs a person stays actionable.
+const POS_RE = /\b(?:yes|yeah|yep|still\s+available|is\s+(?:still\s+)?available|it'?s\s+(?:still\s+)?available|available\s+(?:now|from)|vacant|free\s+(?:now|from))\b/i
 const TIME_RE = new RegExp(`\\b(?:${MONTHS}|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next\\s+(?:week|month|year|season|summer|winter)|in\\s+(?:a|one|two|three|four|six|\\d{1,2})\\s+(?:weeks?|months?)|end\\s+of\\s+(?:the\\s+)?(?:week|month|year)|after\\s+(?:christmas|easter|summer|the\\s+summer|new\\s+year)|later\\s+(?:this|next)|in\\s+the\\s+(?:new\\s+year|summer|spring|autumn|winter))\\b`, 'i')
-const CALLBACK_VERB_RE = /\b(?:contact|message|msg|text|write|call|ring|ask|check|get\s+back|come\s+back|reach\s+out|try\s+(?:again|me)|let\s+you\s+know|keep\s+you\s+(?:posted|informed|updated)|touch\s+base)\b/i
-const OTHER_PROPERTY_RE = /\b(?:another|other|different|second|new|one\s+more)\b[^.?!]{0,40}\b(?:apartment|flat|property|place|house|penthouse|maisonette|studio|unit|villa|one)\b|\bbut\s+(?:i|we)\s+(?:do\s+)?(?:have|got|will\s+have)\b|\b(?:i|we)\s+(?:do\s+)?have\s+(?:a|an|one|two|\d)\b/i
-const QUESTION_RE = /\?|\b(?:who\s+(?:is|are)\s+(?:this|you)|who'?s\s+this|how\s+much|what\s+(?:is|are)|which\s+(?:agency|company)|can\s+you|could\s+you|do\s+you)\b/i
-const DATA_RE = /\d|€|eur\b/i
-const FILLER_RE = /^(?:(?:hi|hello|hey|dear|good\s+(?:morning|afternoon|evening)|kevin|kev|cedric|gabriela|sorry|no|nope|nothing|none|not|else|more|other|thanks|thank\s+you|thx|tx|ok|okay|unfortunately|at|the|this|moment|now|right|currently|for|anything|available|all|rented|rent|out|already|taken|gone|i|we|don'?t|do|have|it'?s|it|is|was|has|been|any|more|anymore|at\s+the\s+moment|yet|still|sir|madam|mate|bro|regards|kind|best|bye|cheers|good\s+luck|apologies|[.,!🙏👍🙂😊🙁😕👌❤️]+)\s*)+$/i
+const MONTH_RE = new RegExp(`\\b(${MONTHS})\\b`, 'i')
+// the owner asks US to come back
+const CALLBACK_VERB_RE = /\b(?:contact|message|msg|text|write|call|ring|ask|remind|try|check\s+(?:back\s+)?with|get\s+back\s+to|come\s+back\s+to|reach\s+out\s+to|whatsapp)\s+(?:me|us)\b|\bcheck\s+(?:back|again)\b|\btouch\s+base\b|\bkeep\s+in\s+touch\b/i
+// the owner promises to come back to us
+const WILL_UPDATE_RE = /\b(?:i'?ll|i\s+will|we'?ll|we\s+will|will)\b[^.?!]{0,40}\b(?:let\s+you\s+know|inform\s+you|contact\s+you|message\s+you|text\s+you|write\s+(?:to\s+)?you|get\s+back\s+to\s+you|keep\s+you\s+(?:posted|updated|informed)|send\s+(?:you|it|them|details|photos|pics)|be\s+in\s+touch)\b|\b(?:i|we)\s+will\s+when\b|\bwhen\s+(?:i|we)\s+(?:have|get)\s+(?:something|anything)\b|\bwill\s+do\b/i
+// "nothing available" in the many ways owners write it (also "all are taken", "atm")
+const NOTHING_RE = /\b(?:nothing|none|nada)\b|\bno\s+(?:propert(?:y|ies)|flats?|apartments?|units?|places?|houses?|vacanc(?:y|ies)|availability)\b|\b(?:all|everything|both)\b[^.?!]{0,30}\b(?:taken|rented|let|leased|gone|occupied|full|booked|sold)\b|\bfully\s+(?:rented|booked|let|occupied)\b|\b(?:don'?t|do\s+not|didn'?t)\s+have\s+(?:any|anything)\b|\bnot\s+(?:at\s+the\s+moment|now|right\s+now|currently|for\s+now|atm|available)\b|\bunfortunately\s+not\b/i
+const SHORT_NO_RE = /^(?:(?:hi|hello|good\s+\w+)[\s,.!]+)?(?:no|nope|sorry|sorry\s+no|no\s+sorry|unfortunately\s+not|not\s+really|nah)\b[\s,.!🙏👍🙂😊🙁😕]*(?:thanks?|thank\s+you|thx|kevin|kev|cedric|gabriela)?[\s,.!🙏👍🙂😊🙁😕]*$/i
+const CLOSING_RE = /^(?:(?:ok(?:ay)?|thanks?|thank\s+you(?:\s+(?:so\s+much|very\s+much|too))?|thx|ty|tx|(?:you'?re\s+)?welcome|cheers|great|perfect|noted|sure|no\s+problem|np|bye|good\s*(?:night|day|evening)|have\s+a\s+(?:nice|good|great)\s+(?:day|evening|week(?:end)?)|same\s+to\s+you|you\s+too|kevin|kev|cedric|gabriela)[\s,.!🙏👍👌🙂😊❤️]*)+$/i
+const OTHER_PROPERTY_RE = /\b(?:another|other|different|second|one\s+more)\b[^.?!]{0,40}\b(?:apartment|flat|property|place|house|penthouse|maisonette|studio|unit|villa|one)\b|\bbut\s+(?:i|we)\s+(?:do\s+)?(?:have|got)\b|\b(?:i|we)\s+(?:do\s+)?(?:have|got)\s+(?:a|an|one|two|three|\d)\s*(?:-|\s)?(?:bed|bedroom|bedroomed|apartment|flat|penthouse|maisonette|studio|house|property)\b|\bnew\s+(?:apartment|flat|property|listing|place)\b|\bavailable\s+(?:again|now)\b/i
+const QUESTION_RE = /\?|\b(?:who\s+(?:is|are)\s+(?:this|you)|who'?s\s+this|how\s+much|which\s+(?:agency|company)|can\s+you|could\s+you|do\s+you|are\s+you)\b/i
+const PRICE_RE = /€\s*\d|\d+\s*(?:€|eur|euros?|k\b)|\bper\s+month\b/i
+const ELSE_RE = /\b(?:nothing|anything|none)\s+else\b|\bno\s+other\b|\bnothing\s+more\b/i
 
 function decide(text) {
   const raw = String(text || '').replace(/\s+/g, ' ').trim()
   if (!raw) return { kind: 'empty' }
   const gate = require('./ownerSendGate')
   if (gate.isExplicitOptOut?.(raw) || /\b(?:stop\s+(?:contacting|messaging|texting|writing)|don'?t\s+(?:contact|message|text|write)|do\s+not\s+(?:contact|message)|remove\s+(?:me|my\s+number)|unsubscribe)\b/i.test(raw)) return { kind: 'opt_out' }
-  if (OTHER_PROPERTY_RE.test(raw)) return { kind: 'other_property' }
   if (QUESTION_RE.test(raw)) return { kind: 'actionable', why: 'question' }
-  if (!NEG_RE.test(raw) || POS_RE.test(raw)) return { kind: 'not_negative' }
-  if (TIME_RE.test(raw)) {
-    const explicit = CALLBACK_VERB_RE.test(raw)
-    // "rented since 1 March for 1200" carries facts for a person, not a callback
-    if (!explicit && (DATA_RE.test(raw) || /since/i.test(raw))) return { kind: 'actionable', why: 'negative_with_details' }
-    return { kind: 'no_with_callback', explicit }
+  if (OTHER_PROPERTY_RE.test(raw) && !ELSE_RE.test(raw)) return { kind: 'other_property' }
+  if (CLOSING_RE.test(raw)) return { kind: 'closing' }
+  const month = (MONTH_RE.exec(raw) || [])[1] || null
+  const callback = CALLBACK_VERB_RE.test(raw)
+  const willUpdate = WILL_UPDATE_RE.test(raw)
+  const timed = TIME_RE.test(raw)
+  if (callback && timed) return { kind: 'no_with_callback', explicit: true, month }
+  if (timed && /\b(?:might|may|will|should|probably|hopefully|expect|expecting|coming|planning|from|by|until|till|after)\b/i.test(raw) && !/\bsince\b/i.test(raw)) {
+    // "I might have something in February" / "nothing now, maybe from March": a future month, no request to call
+    return { kind: 'future_availability', month, details: PRICE_RE.test(raw) }
   }
-  if (raw.length <= 160 && !DATA_RE.test(raw) && FILLER_RE.test(raw)) return { kind: 'quiet_no' }
-  return { kind: 'actionable', why: 'negative_with_details' }
+  if (willUpdate) return { kind: 'owner_will_update', month: timed ? month : null }
+  if (POS_RE.test(raw) && !NOTHING_RE.test(raw)) return { kind: 'not_negative' }
+  if (NOTHING_RE.test(raw) || SHORT_NO_RE.test(raw)) {
+    if (PRICE_RE.test(raw) || /\bsince\b/i.test(raw)) return { kind: 'actionable', why: 'negative_with_details' }
+    return { kind: 'quiet_no' }
+  }
+  return { kind: 'not_negative' }
 }
 
 const phone9 = v => String(v || '').replace(/\D/g, '').slice(-9)
@@ -79,7 +97,37 @@ async function markRead(session, chatId, phone) {
   // waha.markChatUnread consults this key, so a later "make it look fresh" stays read
   const key = s => `recheck7d:quiet:${String(session || '').toLowerCase()}:${String(s || '').replace(/\D/g, '').slice(-9)}`
   for (const k of [key(chatId), key(phone)]) await redis.set(k, '1', 'EX', 6 * 3600).catch(() => {})
-  await require('../waha').sendSeen(session, chatId)
+  // what we can actually know: whether WAHA accepted the read receipt. GOWS exposes no
+  // unread counter, so the state on the phone itself is NOT observable from the server.
+  const w = require('../waha')
+  if (w.sendSeenChecked) return { ...(await w.sendSeenChecked(session, chatId)), phoneState: 'not_observable' }
+  await w.sendSeen(session, chatId)
+  return { api: 'called', phoneState: 'not_observable' }
+}
+
+const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+function addDaysIso(n, from = new Date()) { const d = new Date(from.getTime() + n * 86400e3); return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Malta' }).format(d) }
+// Follow-up for "something in <month>": the Monday about 3 weeks before that month starts
+// (at least 3 days from now). The phrase keeps the owner's month — no invented day.
+function followupForMonth(raw, now = new Date()) {
+  if (!raw) return null
+  const idx = MONTH_NAMES.findIndex(m => m.startsWith(String(raw).toLowerCase().slice(0, 3)))
+  if (idx < 0) return null
+  const today = new Date(`${addDaysIso(0, now)}T12:00:00Z`)
+  let year = today.getUTCFullYear()
+  let start = new Date(Date.UTC(year, idx, 1, 12))
+  if (start <= today) start = new Date(Date.UTC(++year, idx, 1, 12))
+  const due = new Date(start.getTime() - 21 * 86400e3)
+  while (due.getUTCDay() !== 1) due.setUTCDate(due.getUTCDate() + 1)
+  const min = new Date(today.getTime() + 3 * 86400e3)
+  const pick = due < min ? min : due
+  const name = MONTH_NAMES[idx][0].toUpperCase() + MONTH_NAMES[idx].slice(1)
+  return { due: pick.toISOString().slice(0, 10), phrase: `in ${name}`, month: name }
+}
+async function pauseUntil(ownerId, until, note) {
+  const cur = (await db.query(`SELECT owner_contact_paused_until::text AS until FROM owner_contacts WHERE id=$1`, [ownerId])).rows[0]
+  if (cur?.until && cur.until >= until) return
+  await require('./ownerSendGate').setContactPause({ scope: 'owner', id: ownerId, until, note, by: 'inbox-decision' })
 }
 
 async function ownerFor(phone) {
@@ -108,9 +156,42 @@ async function handle({ session, chatId, phone, text, messageId, receivedAt = ne
             AND (reply_at IS NULL OR reply_at < $2::timestamptz - interval '2 minutes') LIMIT 1`, [owner.id, receivedAt]).catch(() => ({ rows: [] }))).rows[0]
       if (open) { await audit({ ...base, action: 'kept_answer_not_saved', detail: { checkId: open.id } }); return { action: 'kept', why: 'answer_not_saved' } }
     }
-    await markRead(session, chatId, phone)
-    await audit({ ...base, action: 'marked_read', detail: { question: asked.via } })
+    const seen = await markRead(session, chatId, phone)
+    await audit({ ...base, action: 'marked_read', detail: { seen, question: asked.via } })
     return { action: 'marked_read', disposition: d.kind }
+  }
+  if (d.kind === 'closing' || d.kind === 'owner_will_update') {
+    // "Welcome" / "Thanks" / "I'll let you know": nothing to answer. "I'll let you know" also
+    // starts the 21-day no-stock cadence (no earlier contact unless they write or set a date).
+    if (d.kind === 'owner_will_update' && owner?.id) await pauseUntil(owner.id, addDaysIso(21), 'Owner will let us know (21-day cadence)')
+    const seen = await markRead(session, chatId, phone)
+    await audit({ ...base, action: 'marked_read', detail: { seen, question: asked.via } })
+    return { action: 'marked_read', disposition: d.kind }
+  }
+  if (d.kind === 'future_availability') {
+    // "might have something in February": plan ONE follow-up about 3 weeks before that month,
+    // never a made-up day for the availability itself (the reminder keeps the month only).
+    const plan = followupForMonth(d.month)
+    let reminderId = null
+    if (plan) {
+      const p9 = phone9(phone)
+      const existing = (await db.query(
+        `SELECT id FROM reminders WHERE right(regexp_replace(owner_phone,'\D','','g'),9)=$1 AND status='pending' AND created_at > $2::timestamptz - interval '2 minutes' ORDER BY id DESC LIMIT 1`, [p9, receivedAt])).rows[0]
+      if (existing) {
+        await db.query(`UPDATE reminders SET contact_due_date=$2, parsed_timing=$3 WHERE id=$1`, [existing.id, plan.due, plan.phrase])
+        reminderId = existing.id
+      } else {
+        reminderId = (await db.query(
+          `INSERT INTO reminders (source_session, source_phone, source_message_id, owner_phone, owner_name, original_note, parsed_timing, contact_due_date, status)
+           VALUES ($1,$2,$3,$2,NULL,$4,$5,$6,'pending') RETURNING id`,
+          [session, String(phone).replace(/\D/g, ''), messageId || null, String(text).slice(0, 1000), plan.phrase, plan.due])).rows[0].id
+      }
+      if (owner?.id) await pauseUntil(owner.id, plan.due, `Owner expects availability ${plan.phrase} — follow-up planned ${plan.due}`)
+    }
+    if (!plan || d.details) { await audit({ ...base, action: 'kept_visible', detail: { why: plan ? 'future_availability_with_details' : 'month_not_understood', reminderId } }); return { action: 'kept', disposition: d.kind, reminderId } }
+    const seen = await markRead(session, chatId, phone)
+    await audit({ ...base, action: 'marked_read', detail: { seen, reminderId, due: plan.due, month: plan.phrase, question: asked.via } })
+    return { action: 'marked_read', disposition: d.kind, reminderId }
   }
   if (d.kind === 'no_with_callback') {
     let reminder = (await db.query(
@@ -129,8 +210,8 @@ async function handle({ session, chatId, phone, text, messageId, receivedAt = ne
         await require('./ownerSendGate').setContactPause({ scope: 'owner', id: owner.id, until: reminder.due, note: `Owner asked to be contacted on ${reminder.due} (reminder ${reminder.id})`, by: 'inbox-callback' })
       }
     }
-    await markRead(session, chatId, phone)
-    await audit({ ...base, action: 'marked_read', detail: { reminderId: reminder.id, due: reminder.due, question: asked.via } })
+    const seen = await markRead(session, chatId, phone)
+    await audit({ ...base, action: 'marked_read', detail: { seen, reminderId: reminder.id, due: reminder.due, question: asked.via } })
     return { action: 'marked_read', disposition: d.kind, reminderId: reminder.id }
   }
   if (d.kind === 'opt_out') {
@@ -143,8 +224,8 @@ async function handle({ session, chatId, phone, text, messageId, receivedAt = ne
       `UPDATE reminders SET status='cancelled', auto_send_status='blocked', auto_send_block_reason='Explicit owner opt-out'
         WHERE status='pending' AND right(regexp_replace(owner_phone,'\\D','','g'),9)=$1 RETURNING id`, [p])
     await db.query(`UPDATE reminder_dispatches SET state='skipped', reason='owner_opt_out', updated_at=NOW() WHERE right(owner_phone,9)=$1 AND state IN ('planned','waiting')`, [p])
-    await markRead(session, chatId, phone)
-    await audit({ ...base, action: 'marked_read', detail: { cancelledReminders: cancelled.rows.map(r => r.id) } })
+    const seen = await markRead(session, chatId, phone)
+    await audit({ ...base, action: 'marked_read', detail: { seen, cancelledReminders: cancelled.rows.map(r => r.id) } })
     return { action: 'marked_read', disposition: d.kind, cancelledReminders: cancelled.rows.length }
   }
   await audit({ ...base, action: 'kept_visible', detail: { why: d.why || d.kind, question: asked.via } })
@@ -155,9 +236,10 @@ async function handle({ session, chatId, phone, text, messageId, receivedAt = ne
 // reply generator runs: a plain "No" / "No, contact me in January" / "stop" that
 // answers OUR question is final — no AI reply, no OG-1 reply, no second bot message.
 // Anything actionable is not final and goes through the normal pipeline.
+const FINAL_KINDS = ['quiet_no', 'no_with_callback', 'opt_out', 'owner_will_update', 'future_availability', 'closing']
 async function finalTurn({ phone, session, text }) {
   const d = decide(text)
-  if (!['quiet_no', 'no_with_callback', 'opt_out'].includes(d.kind)) return { final: false, kind: d.kind }
+  if (!FINAL_KINDS.includes(d.kind)) return { final: false, kind: d.kind }
   const owner = await ownerFor(phone)
   const asked = await askedRecently(phone, owner?.id)
   if (!asked) return { final: false, kind: d.kind, why: 'no_preceding_question' }
@@ -178,4 +260,4 @@ function onInbound({ session, chatId, senderPhone, text, messageId }) {
   }, DELAY_MS).unref?.()
 }
 
-module.exports = { decide, handle, onInbound, finalTurn, markRead, DELAY_MS }
+module.exports = { decide, handle, onInbound, finalTurn, markRead, followupForMonth, FINAL_KINDS, DELAY_MS }

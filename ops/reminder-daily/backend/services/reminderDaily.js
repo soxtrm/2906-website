@@ -175,7 +175,9 @@ async function planDay(now = new Date(), { dryRun = false, onlyReminderIds = nul
   const owners = new Set()
   for (const r of rows) {
     const phone = digits(r.owner_phone)
-    const ctx = { due: String(r.contact_due_date).slice(0, 10), note: String(r.original_note || '').slice(0, 300), parsedTiming: r.parsed_timing || null }
+    // month-only requests stay approximate: the owner gave a month, never a day we invent
+    const approx = !!r.parsed_timing && !/\d/.test(String(r.parsed_timing))
+    const ctx = { due: String(r.contact_due_date).slice(0, 10), note: String(r.original_note || '').slice(0, 300), parsedTiming: r.parsed_timing || null, approx }
     const out = (state, reason, extra = {}) => ({ reminderId: r.id, phone, state, reason, ...extra })
     let res
     const taken = phone && (owners.has(phone.slice(-9)) || (await db.query(
@@ -265,7 +267,10 @@ async function sendOne(d, now) {
   const who = await require('./reminderOutreach').classifyReminderContact(reminder)
   if (who.kind !== 'owner' || who.reason) return finish('skipped', who.reason || 'not_an_owner')
   const gate = await require('./ownerSendGate').checkOwnerSend({ phone: reminder.owner_phone, kind: 'reminder', automated: true })
-  if (!gate.allow) return finish('skipped', `owner_gate:${gate.reason}`)
+  // Kev, 2026-11-21: a date the OWNER asked for wins over a no-stock pause (21-day cadence);
+  // DNC, stop, human-active and every other gate still apply.
+  const pauseOnly = !gate.allow && /^(?:owner|property)_contact_paused/.test(String(gate.reason || ''))
+  if (!gate.allow && !(pauseOnly && d.intent === 'owner_requested_callback')) return finish('skipped', `owner_gate:${gate.reason}`)
   // Kev, 2026-11-21: a date the owner asked for is kept — the generic 4-day cooldown does not
   // cancel it. Only a message to this owner earlier TODAY moves it to the next day (no double contact).
   if (d.intent === 'owner_requested_callback') {
@@ -351,4 +356,17 @@ async function report(date = maltaParts().date) {
   return { date, since: await since(), enabled: enabled(), summary, rows, upcoming }
 }
 
-module.exports = { planDay, tick, replanWaiting, recoverInterrupted, report, classify, normalizePhrase, propertyLabel, maltaParts, maltaAt, sendOne, AUTO_REPLY_RE }
+// What the next 09:00 run would do, without writing anything (CRM "next run" preview).
+async function preview(date) {
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? date : null
+  let at = day ? maltaAt(day, SEND_START_MIN) : new Date()
+  if (!day) { const p = maltaParts(); let d = p.minutes < SEND_START_MIN ? p.date : addDays(p.date, 1); if (maltaParts(maltaAt(d, SEND_START_MIN)).weekday === 'Sun') d = addDays(d, 1); at = maltaAt(d, SEND_START_MIN) }
+  const r = await planDay(at, { dryRun: true })
+  const ids = [...(r.planned || []), ...(r.waiting || []), ...(r.skipped || [])].map(x => x.reminderId)
+  const rows = ids.length ? (await db.query(`SELECT id, owner_name, right(owner_phone,4) AS phone_last4, contact_due_date::text AS due, parsed_timing, left(original_note, 160) AS note, source_session FROM reminders WHERE id = ANY($1::int[])`, [ids])).rows : []
+  const by = new Map(rows.map(x => [x.id, x]))
+  const out = list => (list || []).map(x => ({ ...by.get(x.reminderId), state: x.state, reason: x.reason || null, intent: x.intent || null, session: x.session_name || null, plannedAt: x.planned_at || null, approx: !!(by.get(x.reminderId)?.parsed_timing && !/\d/.test(by.get(x.reminderId).parsed_timing)) }))
+  return { date: r.date || null, skippedRun: typeof r.skipped === 'string' ? r.skipped : null, planned: out(r.planned), waiting: out(r.waiting), skipped: out(Array.isArray(r.skipped) ? r.skipped : []) }
+}
+
+module.exports = { preview, planDay, tick, replanWaiting, recoverInterrupted, report, classify, normalizePhrase, propertyLabel, maltaParts, maltaAt, sendOne, AUTO_REPLY_RE }

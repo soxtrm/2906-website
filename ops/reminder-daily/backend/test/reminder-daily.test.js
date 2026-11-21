@@ -26,6 +26,7 @@ stub('waha.js', new Proxy({
   getSessionStatus: async () => ({ status: session.status }),
   sendText: async (s, phone, text) => { if (session.failNext) { const e = session.failNext; session.failNext = null; throw e } wire.push({ session: s, phone: String(phone), text }) },
   sendSeen: async (s, chatId) => { seen.push({ s, chatId }) },
+  sendSeenChecked: async (s, chatId) => { seen.push({ s, chatId }); return { api: 'accepted' } },
   getWorkingSessions: async () => [{ name: 'Kevsecond' }, { name: 'Gabriela' }],
 }, { get: (t, k) => (k in t ? t[k] : k === 'then' ? undefined : async () => null) }))
 stub('queues.js', { addJob: async () => ({ id: 'x' }), QUEUES: new Proxy({}, { get: () => ({ getJob: async () => null, add: async () => ({}) }) }) })
@@ -320,4 +321,83 @@ test('Update 3 · context-specific "No", one decision per turn, read after save,
     ['{{opening}}ARGUS CANARY self-check, please ignore.\n\nCedric'])
   for (let i = 0; i < 20; i++) await assert.rejects(lib.pick('cedric', { intent: 'owner_requested_callback' }), /no approved/)
   assert.match((await lib.pick('cedric', { intent: 'owner_requested_callback', allowCanary: true })).body, /CANARY/)
+})
+
+
+test('Update 4 · the four real conversations, one reply per owner turn, recheck timing, 21-day cadence, callback priority, preview, backlog', async () => {
+  // regression cases from Kev's screenshots (21 Nov)
+  const d = t => inbox.decide(t).kind
+  assert.equal(d("I'm sorry I have nothing available at the moment, thank you for asking"), 'quiet_no')       // Andrew Zammit
+  assert.equal(d('There is nothing available atm'), 'quiet_no')                                             // Barbara
+  assert.equal(d('As I said we have some just one bedroom, going from 3 to 4. But all are taken.'), 'quiet_no') // Barbara
+  assert.equal(d('Good morning. Thank you Keith, I will when we have something available'), 'owner_will_update') // Barbara
+  assert.equal(d('Welcome'), 'closing')                                                                      // Andrew Zammit
+  assert.equal(d('Not at the moment but I might have something in February'), 'future_availability')
+  assert.equal(d('No, but I have another apartment'), 'other_property')
+  assert.equal(d('I am looking for a family. or maybe 4 sharing over 35 of age'), 'not_negative')           // Raymond: real information
+  assert.equal(d('Who is this?'), 'actionable')
+
+  // one owner turn -> at most one automated reply; a final turn -> none; a person is never blocked
+  const guard = require(R('services/ownerTurnGuard.js'))
+  const bot = { automated: true, module: 'autoOwnerConversation' }, av2 = { automated: true, module: 'availability' }, human = { automated: false, module: 'person_or_route' }
+  const chat = '35679000061@c.us'
+  await guard.noteInbound({ session: 'Argus2', phone: '35679000061', chatId: chat, final: true })
+  assert.equal((await guard.check('Argus2', chat, 'No worries, thank you for your feedback', { caller: bot })).reason, 'owner_turn_final')
+  assert.equal((await guard.check('Argus2', chat, 'Ok, thank you, noted. I will not ask again', { caller: av2 })).allow, false)
+  assert.equal((await guard.check('Argus2', chat, 'Kev typing in the CRM', { caller: human })).allow, true)
+  assert.equal(await guard.reactionAllowed('Argus2', 'false_35679000061@c.us_ABC'), false)
+  await new Promise(r => setTimeout(r, 10))
+  await guard.noteInbound({ session: 'Argus2', phone: '35679000061', chatId: chat, final: false, at: Date.now() + 5 })
+  await new Promise(r => setTimeout(r, 10))
+  assert.equal((await guard.check('Argus2', chat, 'first answer', { caller: av2 })).allow, true)
+  await guard.noteSent('Argus2', chat)
+  assert.equal((await guard.check('Argus2', chat, 'second answer from another module', { caller: bot })).reason, 'already_replied_this_turn')
+
+  // weekly recheck: "yes" written before the viewings question went out is NOT its answer (Raymond)
+  const r7 = require(R('services/ownerRecheck7d.js'))
+  await r7.ensureSchema()
+  const ro = await owner('Raymond Regression', '35679000062')
+  const th = (await pool.query(`INSERT INTO owner_recheck_threads (owner_id, session, chat_id, stage, property_ids, step_at, sent_at) VALUES ($1,'Kevsecond',$2,'asked_viewings','{}', NOW() + interval '60 seconds', NOW()) RETURNING id`, [ro.id, `${ro.phone}@c.us`])).rows[0].id
+  const res = await r7.handleInbound({ payload: { id: 'r1', fromMe: false }, session: 'Kevsecond', text: 'yes', senderPhone: ro.phone, chatId: `${ro.phone}@c.us` })
+  assert.equal(res.reason, 'before_question_sent')
+  assert.equal((await pool.query(`SELECT stage FROM owner_recheck_threads WHERE id=$1`, [th])).rows[0].stage, 'asked_viewings')
+
+  // 21-day no-stock cadence: a paused owner is not eligible for outreach from ANY account
+  assert.equal(require(R('services/ownerScopeReply.js')).PAUSE_DAYS, 21)
+  const acc = (await pool.query(`SELECT id FROM whatsapp_accounts WHERE session_name='Kevsecond'`)).rows[0].id
+  await pool.query(`UPDATE owner_contacts SET owner_contact_paused_until = CURRENT_DATE + 21 WHERE id=$1`, [ro.id])
+  const cc = await require(R('services/cooldownRules.js')).canContact(ro.id, acc)
+  assert.equal(cc.allowed, false); assert.match(cc.reason, /owner_paused_until/)
+
+  // "might have something in February": follow-up about 3 weeks before February, month kept, no invented day
+  const fo = await owner('February Owner', '35679000063')
+  await pool.query(`INSERT INTO outreach_log (phone, account_used, message_text, sent_at) VALUES ($1,'Kevsecond','x', NOW() - interval '1 day')`, [fo.phone])
+  const fr = await inbox.handle({ session: 'Kevsecond', chatId: `${fo.phone}@c.us`, phone: fo.phone, text: 'Not at the moment but I might have something in February', messageId: 'f1', receivedAt: new Date() })
+  assert.equal(fr.action, 'marked_read', JSON.stringify(fr))
+  const rem = (await pool.query(`SELECT contact_due_date::text d, parsed_timing FROM reminders WHERE id=$1`, [fr.reminderId])).rows[0]
+  assert.equal(rem.parsed_timing, 'in February')
+  assert.ok(rem.d < '2027-02-01' && rem.d >= '2027-01-01', rem.d)
+  assert.equal((await pool.query(`SELECT owner_contact_paused_until::text u FROM owner_contacts WHERE id=$1`, [fo.id])).rows[0].u, rem.d)
+
+  // an owner-requested callback wins over a no-stock pause; an upcoming follow-up does not
+  const D = '2026-12-11'
+  const cbo = await owner('Callback Paused Owner', '35679000064')
+  const upo = await owner('Upcoming Paused Owner', '35679000065')
+  await pool.query(`UPDATE owner_contacts SET owner_contact_paused_until = '2026-12-31' WHERE id = ANY($1::int[])`, [[cbo.id, upo.id]])
+  const c1 = await reminder(cbo.phone, 'please contact me in December', D, { timing: 'December' })
+  const c2 = await reminder(upo.phone, 'the 2 bedroom flat in Sliema will be available in December', D, { timing: 'December' })
+  const pv = await daily.preview(D)
+  assert.ok([...pv.planned, ...pv.waiting].some(x => x.id === c1), JSON.stringify(pv).slice(0, 300))
+  assert.equal((await pool.query(`SELECT COUNT(*)::int n FROM reminder_dispatches WHERE run_date=$1`, [D])).rows[0].n, 0, 'preview wrote records')
+  await daily.planDay(malta(D, '09:00'))
+  for (const m of ['09:10', '09:20', '09:30', '09:40']) await daily.tick(malta(D, m), { limit: 5 })
+  const st = Object.fromEntries((await pool.query(`SELECT reminder_id, state, reason FROM reminder_dispatches WHERE reminder_id = ANY($1::int[])`, [[c1, c2]])).rows.map(x => [x.reminder_id, `${x.state}:${x.reason}`]))
+  assert.match(st[c1], /^sent:/)
+  assert.match(st[c2], /^skipped:owner_gate:owner_contact_paused/)
+
+  // backlog report is read-only and explains every inactive reminder
+  const before = (await pool.query(`SELECT md5(string_agg(id||status||auto_send_status, ',' ORDER BY id)) h FROM reminders`)).rows[0].h
+  const bl = await require(R('services/reminderBacklog.js')).report()
+  assert.ok(bl.total >= 1 && bl.categories.length >= 1, JSON.stringify(bl).slice(0, 200))
+  assert.equal((await pool.query(`SELECT md5(string_agg(id||status||auto_send_status, ',' ORDER BY id)) h FROM reminders`)).rows[0].h, before)
 })
