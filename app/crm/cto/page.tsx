@@ -36,7 +36,7 @@ function Cockpit() {
   const shown = only === 'all' ? features : features.filter(f => f.status === only)
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      <p style={{ margin: 0, opacity: .75, fontSize: 13 }}>Report generated {new Date(report.generatedAt).toLocaleString('en-GB', { timeZone: 'Europe/Malta' })} · repo {report.repository.branch} @ {report.repository.head}{health ? ` · this page is served by build ${health.build.commit || '?'}` : ''}. Machine-readable: <a href="https://github.com/soxtrm/2906-website/blob/claude/argus-crm-release-20261120/docs/cto/NEXUS_CTO_STATUS.json" style={{ color: 'inherit', fontWeight: 700 }}>NEXUS_CTO_STATUS.json</a></p>
+      <p style={{ margin: 0, opacity: .75, fontSize: 13 }}>Report generated {new Date(report.generatedAt).toLocaleString('en-GB', { timeZone: 'Europe/Malta' })} · repo {report.repository.branch} @ {report.repository.head}{health ? ` · served by ${health.build.commit ? `build ${health.build.commit}` : health.build.deployment || 'unknown build'}` : ''}. Machine-readable: <a href="https://github.com/soxtrm/2906-website/blob/claude/argus-crm-release-20261120/docs/cto/NEXUS_CTO_STATUS.json" style={{ color: 'inherit', fontWeight: 700 }}>NEXUS_CTO_STATUS.json</a></p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
         {Object.entries(products).map(([k, p]) => {
           const c = p.features.reduce((m: Record<string, number>, f) => (m[f.status] = (m[f.status] || 0) + 1, m), {})
