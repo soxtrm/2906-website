@@ -178,3 +178,23 @@ test('dashboard: own requests for agents, all for owner-contact staff, no owner 
   assert.equal(typeof s.body.feedbackDue, 'number')
   assert.equal((await call('POST', '/sync', T.katya)).status, 403)
 })
+
+test('future appointments are tracked whatever their creation date, also from the old /book flow', async () => {
+  const far = new Date(Date.now() + 40 * 86400e3)
+  const { rows: [old] } = await pool.query(
+    `INSERT INTO property_viewings (property_id, viewing_date, starts_at, duration_min, status, user_id, viewing_agent_id, source, created_at)
+     VALUES ($1, ($2::timestamptz AT TIME ZONE 'Europe/Malta')::date, $2::timestamptz, 20, 'pending', 13, 13, 'board_slot', NOW() - interval '90 days') RETURNING id`, [propId, far])
+  const d = new Date(Date.now() + 9 * 86400e3)
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Malta' }).format(d)
+  const { rows: [legacy] } = await pool.query(
+    `INSERT INTO property_viewings (property_id, viewing_date, viewing_time, status, user_id, viewing_agent_id, source, created_at)
+     VALUES ($1, $2::date, '16:30', 'pending', 13, 13, 'agent_book', NOW() - interval '200 days') RETURNING id`, [propId, day])
+  await F.syncAll({ send: false })
+  const { rows } = await pool.query(`SELECT viewing_id, slot_at FROM viewing_followups WHERE viewing_id = ANY($1::int[]) ORDER BY viewing_id`, [[old.id, legacy.id]])
+  assert.equal(rows.length, 2)
+  const legacySlot = rows.find(r => r.viewing_id === legacy.id).slot_at
+  assert.equal(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit' }).format(new Date(legacySlot)), '16:30')
+  const list = await call('GET', '/', T.katya)
+  const ids = list.body.followups.map(f => f.viewingId)
+  assert.ok(ids.includes(old.id) && ids.includes(legacy.id), 'both visible in the dashboard')
+})
