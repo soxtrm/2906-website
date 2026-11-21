@@ -7,7 +7,7 @@ import { normalizeOutreachCountDraft } from '@/lib/crm/outreach-count'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { AccountRail, ActivityView, AutomationSetup, DayDetail, DayTimeline, KpiBar, LazyDetails, TemplateReview, useOverview, type DayCell } from './control-center'
 import { AutoStatusPanel, useAutoStatus } from './auto-status'
-import { ActivateReminderDue, InboxDecisions, ReminderDuePanel, SafeDrafts } from './safe-drafts'
+import { ActivateReminderDue, InboxDecisions, NextRunPreview, ReminderBacklog, ReminderDuePanel, ReplyGuardLog, SafeDrafts } from './safe-drafts'
 import { AccountCards, AutoPauseRow, HealthFilter, PaceCard, PersonaPreview, SevenDays, healthMatches, type P0Account } from './outreach-p0'
 
 // ── ARGUS / NEON design tokens ───────────────────────────────────────────────
@@ -374,8 +374,11 @@ function ArgusConsole() {
             </>}
             {activeTab === 'activity' && <>
               <ActivateReminderDue />
+              <NextRunPreview />
               <ReminderDuePanel />
               <InboxDecisions />
+              <ReplyGuardLog />
+              <ReminderBacklog />
               <LazyDetails summary={`Reminders · ${dueReminders.rows.length + rechecks.tasks.length}`} defaultOpen={dueReminders.rows.length + rechecks.tasks.length > 0}>
                 <OwnerRecheckLane data={rechecks} onChanged={load} />
                 <DueReminderLane data={dueReminders} />

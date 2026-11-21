@@ -259,12 +259,97 @@ export function InboxDecisions() {
           <li key={r.id} className={r.action === 'marked_read' ? 'is-sent' : 'is-waiting'}>
             <div className="rd-line">
               <span className="rd-state">{ACTION[r.action] || r.action}</span>
-              <span className="rd-who"><b>“{r.text}”</b><small>{r.session} ·{r.phone_last4} · {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at))}{r.detail?.reminderId ? ` · callback saved (due ${r.detail.due})` : ''}{r.detail?.cancelledReminders?.length ? ` · ${r.detail.cancelledReminders.length} reminder(s) cancelled` : ''}</small></span>
+              <span className="rd-who"><b>“{r.text}”</b><small>{r.session} ·{r.phone_last4} · {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at))}{r.detail?.reminderId ? ` · callback saved (due ${r.detail.due})` : ''}{r.detail?.cancelledReminders?.length ? ` · ${r.detail.cancelledReminders.length} reminder(s) cancelled` : ''}{r.action === 'marked_read' ? (r.detail?.seen?.api === 'accepted' ? ' · read receipt accepted by WhatsApp API (phone state not observable)' : r.detail?.seen?.api === 'error' ? ' · read receipt FAILED' : ' · read receipt sent') : ''}</small></span>
             </div>
           </li>
         ))}
       </ol>
       {!rows.length && <p className="auto-empty">No owner reply has been handled yet.</p>}
+    </section>
+  )
+}
+
+
+// ── Next 09:00 run (dry run, nothing is written or sent) ────────────────────
+type PRow = { id: number; owner_name: string | null; phone_last4: string; due: string; parsed_timing: string | null; note: string; source_session: string; state: string; reason: string | null; intent: string | null; session: string | null; approx: boolean }
+export function NextRunPreview() {
+  const [data, setData] = useState<{ date: string | null; skippedRun: string | null; planned: PRow[]; waiting: PRow[]; skipped: PRow[] } | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => { crmGet('outreach/reminder-daily/preview').then(setData).catch((e: any) => setError(e?.message || 'Preview unavailable')) }, [])
+  if (error) return <p className="msg-library-error">{error}</p>
+  if (!data) return null
+  const all = [...data.planned, ...data.waiting, ...data.skipped]
+  return (
+    <section className="rd-panel" aria-label="Next reminder run">
+      <header><div>
+        <h3>Next run · {data.date ? new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(`${data.date}T12:00:00Z`)) : '—'} 09:00</h3>
+        <p>A dry run of exactly what the 09:00 job will do with today’s data: who gets a message, who waits and why, who is left out and why. Nothing is written or sent by this preview. A month the owner named stays a month (“approx.”) — no day is invented.</p>
+      </div></header>
+      <div className="rd-summary">
+        <span className="is-sent"><b>{data.planned.length}</b>Will be sent</span>
+        <span className="is-waiting"><b>{data.waiting.length}</b>Waiting</span>
+        <span><b>{data.skipped.length}</b>Left out</span>
+      </div>
+      <ol className="rd-rows">
+        {all.map(r => (
+          <li key={r.id} className={`is-${r.state}`}><div className="rd-line">
+            <span className="rd-state">{RSTATE[r.state] || r.state}</span>
+            <span className="rd-who"><b>{r.owner_name || 'Owner'} ·{r.phone_last4} — {r.state === 'planned' ? `via ${r.session}` : reasonText(r.reason)}</b>
+              <small>due {r.parsed_timing && r.approx ? `${r.parsed_timing} (approx.)` : r.due} · {r.note}</small></span>
+          </div></li>
+        ))}
+      </ol>
+      {!all.length && <p className="auto-empty">No reminder falls due for the next run.</p>}
+    </section>
+  )
+}
+
+// ── Inactive reminders: why, and which could be reviewed (read-only) ────────
+type Cat = { key: string; label: string; count: number; safeToReview: number; sample: { id: number; owner: string | null; phoneLast4: string; due: string; timing: string | null; note: string; status: string; safe: boolean }[] }
+export function ReminderBacklog() {
+  const [data, setData] = useState<{ total: number; overdue: number; paused: number; safeToReview: number; since: string; categories: Cat[] } | null>(null)
+  const [open, setOpen] = useState<string | null>(null)
+  useEffect(() => { crmGet('outreach/reminder-backlog').then(setData).catch(() => setData(null)) }, [])
+  if (!data) return null
+  return (
+    <section className="rd-panel" aria-label="Inactive reminders">
+      <header><div>
+        <h3>Inactive reminders · {data.total}</h3>
+        <p>{data.overdue} were due before the automatic start ({data.since}) and {data.paused} are paused since 1 Nov. None of them is sent automatically. Each is sorted into one reason; <b>{data.safeToReview}</b> look safe to review for reactivation (an owner request the run understands, owner reachable, not contacted since, due in the last 90 days). Reviewing changes nothing by itself.</p>
+      </div></header>
+      <ol className="rd-rows">
+        {data.categories.map(c => (
+          <li key={c.key} className={c.safeToReview ? 'is-sent' : 'is-skipped'}>
+            <button type="button" onClick={() => setOpen(open === c.key ? null : c.key)} aria-expanded={open === c.key}>
+              <span className="rd-state">{c.count}</span>
+              <span className="rd-who"><b>{c.label}</b><small>{c.safeToReview ? `${c.safeToReview} safe to review` : 'not for reactivation'}</small></span>
+              <span className="rd-reason">{open === c.key ? 'Hide examples' : 'Show examples'}</span>
+            </button>
+            {open === c.key && <div className="rd-detail">{c.sample.map(s => <p key={s.id}><small>#{s.id} · {s.owner || 'Owner'} ·{s.phoneLast4} · due {s.timing && !/\d/.test(s.timing) ? `${s.timing} (approx.)` : s.due}</small>{s.note}</p>)}</div>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+// ── Reply guard: automated messages that were held back ─────────────────────
+type GRow = { id: number; session: string; chat_last4: string; module: string; reason: string; text: string; created_at: string }
+const GREASON: Record<string, string> = { owner_turn_final: 'owner’s answer needed no reply', already_replied_this_turn: 'this owner message was already answered' }
+export function ReplyGuardLog() {
+  const [rows, setRows] = useState<GRow[] | null>(null)
+  useEffect(() => { crmGet('outreach/reply-guard').then(r => setRows(r.rows)).catch(() => setRows([])) }, [])
+  if (!rows) return null
+  return (
+    <section className="rd-panel" aria-label="Held back replies">
+      <header><div><h3>Held back · second bot replies</h3><p>One owner message gets at most one automated reply, and none when the owner’s answer needs nothing (“nothing available”, “I’ll let you know”, a date, “stop”, “thanks”). Messages you write yourself are never held back.</p></div></header>
+      <ol className="rd-rows">
+        {rows.map(r => <li key={r.id} className="is-skipped"><div className="rd-line">
+          <span className="rd-state">{r.module}</span>
+          <span className="rd-who"><b>“{r.text}”</b><small>{r.session} ·{r.chat_last4} · {GREASON[r.reason] || r.reason} · {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at))}</small></span>
+        </div></li>)}
+      </ol>
+      {!rows.length && <p className="auto-empty">Nothing held back yet.</p>}
     </section>
   )
 }
