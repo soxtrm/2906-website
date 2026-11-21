@@ -127,7 +127,8 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
   const topUp = first(nearby, 'top-up', 1, 2.5)
   const coast = first(nearby, 'swimming', 3, 8)
   const health = first(nearby, 'health', 3, 5)
-  const movement = [...first(nearby, 'gym', 2, 5), ...first(nearby, 'mobility', 2, 2)].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 3)
+  // bus / ferry stops are no longer shown (Kev, 21 Nov): the data stays, the interface keeps gyms
+  const movement = first(nearby, 'gym', 3, 5)
   const advantages: string[] = []
   const considerations: string[] = []
 
@@ -140,7 +141,6 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
   if (!weekly[0]) considerations.push('A full-size supermarket has not been mapped within 8 km yet.')
   else if (weekly[0].distanceKm > 2.5) considerations.push('The nearest mapped weekly shop is likely more practical by car or delivery.')
   if (!health[0] || health[0].distanceKm > 2) considerations.push('No mapped health option is currently shown within 2 km.')
-  if (!movement.some(place => place.role === 'mobility')) considerations.push('A nearby bus or ferry anchor still needs to be connected for this area.')
   if (String(property.locationDisclosure || '').toLowerCase() !== 'exact') considerations.push('Distances start from the privacy-safe area pin; front-door routes can differ.')
 
   if (!advantages.length) advantages.push('The area is mapped and ready for a personal route comparison.')
@@ -164,7 +164,7 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
       { key: 'groceries', label: 'Weekly shopping', summary: weekly.length ? `${weekly.length} full-size options mapped` : 'Large store coverage incomplete', places: [...weekly, ...topUp] },
       { key: 'coast', label: 'Coast & swimming', summary: coast.length ? `${coast.length} coastal options mapped` : 'No connected coastal option yet', places: coast },
       { key: 'health', label: 'Health', summary: health.length ? `${health.length} nearby options mapped` : 'Health coverage incomplete', places: health },
-      { key: 'movement', label: 'Move & connect', summary: movement.length ? `${movement.length} useful anchors mapped` : 'Mobility coverage incomplete', places: movement },
+      { key: 'movement', label: 'Gyms & fitness', summary: movement.length ? `${movement.length} gyms mapped` : 'No gym mapped within 5 km yet', places: movement },
     ],
   }
 }

@@ -25,7 +25,7 @@ export const AGENCIES: Record<string, Agency> = {
 }
 
 export type Market = 'longlets' | 'stays' | 'sales'
-export type SmartFact = { key: 'shop' | 'coast' | 'health' | 'gym' | 'bus' | 'school'; label: string; name: string; km: number }
+export type SmartFact = { key: 'shop' | 'coast' | 'health' | 'gym' | 'school'; label: string; name: string; km: number }
 export type FeatureGroup = { key: string; label: string; items: { key: string; text: string; source: string }[] }
 // Feature dictionary (ARGUS nexus_feature_dictionary, standard entries): labels, aliases, and the ARGUS tag each maps to.
 export type FeatureEntry = { key: string; label: string; group: string; kind: 'boolean' | 'count' | 'choice'; filterable: boolean; aliases: string[] }
@@ -117,7 +117,7 @@ function smartOf(overview: PropertyLifeOverview | null): SmartFact[] {
     return p && p.distanceKm <= max ? [{ key: out, label, name: p.name, km: Math.round(p.distanceKm * 10) / 10 }] : []
   }
   return [...pick('groceries', 'weekly-shop', 'Supermarket', 'shop', 3), ...pick('coast', null, 'Sea', 'coast', 3), ...pick('health', null, 'Health', 'health', 3),
-    ...pick('movement', 'mobility', 'Bus', 'bus', 1), ...pick('movement', 'gym', 'Gym', 'gym', 3), ...pick('school', null, 'School', 'school', 3)]
+    ...pick('movement', 'gym', 'Gym', 'gym', 3), ...pick('school', null, 'School', 'school', 3)]
 }
 
 function featureGroupsOf(evidenced: Evidenced[], knownTags: string[], dict?: Dict): FeatureGroup[] {
