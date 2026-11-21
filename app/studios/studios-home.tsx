@@ -15,8 +15,8 @@ type Item = { listable?: boolean; status?: string; images?: unknown[] }
 const LIVE = new Set(['available', 'available_confirmed'])
 
 const SOON = [
-  { icon: Handshake, title: 'Agent Exchange', text: 'Share an anonymous client brief, find the agent with the right home, agree the terms before anyone is introduced.', state: 'In development' },
-  { icon: Building2, title: 'Agency profiles', text: 'One verified profile per agency and agent, linked to the homes you are authorised to offer.', state: 'In development' },
+  { icon: Handshake, title: 'Agent Exchange', text: 'Work listings with other agencies on co-agency terms agreed in writing. Anonymous client briefs follow.', state: 'Early access', href: '/exchange' },
+  { icon: Building2, title: 'Agency profiles', text: 'One verified profile per agency and agent, linked to the homes you are authorised to offer. Agency and agent are already named on every listing.', state: 'In development' },
   { icon: Users, title: 'Workers and services', text: 'Profiles and requests for trades and services, as a category of its own.', state: 'Planned' },
 ]
 
@@ -82,8 +82,8 @@ export function StudiosHome() {
             {SOON.map((s, i) => (
               <motion.li key={s.title} className="st-row" {...rise(3 + i)}>
                 <span className="st-icon is-quiet"><s.icon size={18} aria-hidden /></span>
-                <div><h3>{s.title}</h3><p>{s.text}</p></div>
-                <span className="st-state">{s.state}</span>
+                <div><h3>{s.href ? <a href={s.href}>{s.title} <ArrowUpRight size={14} aria-hidden /></a> : s.title}</h3><p>{s.text}</p></div>
+                <span className={`st-state${s.href ? ' is-live' : ''}`}>{s.state}</span>
               </motion.li>
             ))}
           </ul>

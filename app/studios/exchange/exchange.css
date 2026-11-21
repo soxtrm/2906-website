@@ -1,0 +1,41 @@
+/* NEXUS STUDIOS Exchange (2026-11-21), on the Marketplace tokens */
+.ex-hero { padding: 26px 0 18px; max-width: 760px; }
+.ex-kicker { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 5px 11px; border-radius: 999px; background: color-mix(in srgb, var(--st-coral) 13%, var(--st-surface)); color: var(--st-text); font-size: 12.5px; font-weight: 800; }
+.ex-kicker svg { color: var(--st-coral); }
+.ex-hero h1 { margin: 0; font-family: var(--st-display); font-size: clamp(28px, 4.2vw, 46px); font-weight: 640; letter-spacing: -.025em; line-height: 1.05; }
+.ex-lead { margin: 12px 0 0; font-size: 16.5px; line-height: 1.55; color: var(--st-muted); }
+.ex-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 8px 0 26px; }
+.ex-rules div { display: grid; gap: 6px; padding: 16px; border-radius: 18px; background: var(--st-surface); border: 1px solid var(--st-line); }
+.ex-rules svg { color: var(--st-coral); }
+.ex-rules b { font-size: 15px; } .ex-rules p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--st-muted); }
+.ex-block { margin-top: 26px; }
+.ex-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.ex-head h2 { margin: 0; font-family: var(--st-display); font-size: 22px; font-weight: 640; letter-spacing: -.01em; }
+.ex-skel { min-height: 110px; border-radius: 18px; background: var(--st-raised); }
+.ex-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 18px; border-radius: 18px; border: 1px dashed var(--st-line); background: var(--st-surface); }
+.ex-empty > svg { color: var(--st-muted); }
+.ex-empty > div { flex: 1 1 320px; display: grid; gap: 4px; }
+.ex-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; background: var(--st-coral); color: #fff !important; font-weight: 800; font-size: 14px; text-decoration: none; }
+.ex-btn.quiet { background: var(--st-text); color: var(--st-bg) !important; }
+.ex-shared { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.ex-shared a { display: grid; gap: 4px; padding: 14px; border-radius: 16px; background: var(--st-surface); border: 1px solid var(--st-line); text-decoration: none; }
+.ex-shared span { font-size: 13px; color: var(--st-muted); font-weight: 600; }
+.ex-shared .ex-terms { color: var(--st-live); font-weight: 800; }
+.ex-agencies { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.ex-agencies li { display: grid; gap: 8px; padding: 18px; border-radius: 18px; background: var(--st-surface); border: 1px solid var(--st-line); box-shadow: var(--st-shadow); }
+.ex-agencies dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin: 4px 0 0; }
+.ex-agencies dt { font-size: 11.5px; font-weight: 800; color: var(--st-muted); text-transform: uppercase; letter-spacing: .04em; }
+.ex-agencies dd { margin: 2px 0 0; font-size: 15px; font-weight: 700; }
+.ex-ok { display: inline-flex; align-items: center; gap: 4px; color: var(--st-live); }
+.ex-links { display: flex; gap: 14px; margin: 4px 0 0; font-size: 13.5px; font-weight: 800; }
+.ex-links a { color: var(--st-coral); }
+.ex-join { max-width: 760px; padding: 20px; border-radius: 20px; background: var(--st-surface); border: 1px solid var(--st-line); }
+.ex-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.ex-form label { display: grid; gap: 4px; font-size: 12.5px; font-weight: 700; color: var(--st-muted); }
+.ex-form label small { font-weight: 600; }
+.ex-form input, .ex-form textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--st-line); background: var(--st-bg); color: var(--st-text); font: 500 15px var(--st-font); resize: vertical; }
+.ex-form .wide { grid-column: 1 / -1; }
+.ex-sent { display: flex; gap: 12px; align-items: flex-start; color: var(--st-live); }
+.ex-sent p { margin: 4px 0 0; }
+.ex-sent b { color: var(--st-text); font-size: 16px; }
+@media (max-width: 640px) { .ex-form { grid-template-columns: 1fr; } .ex-agencies dl { grid-template-columns: 1fr 1fr; } }

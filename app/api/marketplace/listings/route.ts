@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     if (!cache || Date.now() - cache.at > 5 * 60e3) cache = { at: Date.now(), cards: raw.map(p => toCard(p, places, dict)) }
     // searchable features: standard + filterable ones that at least one listing has
     const used = new Set(cache.cards.flatMap(c => c.featureKeys))
-    const features = dict.entries.filter(e => e.filterable && used.has(e.key)).map(e => ({ key: e.key, label: e.label, aliases: e.aliases, count: cache!.cards.filter(c => c.featureKeys.includes(e.key)).length }))
+    const features = dict.entries.filter(e => e.filterable && used.has(e.key)).map(e => ({ key: e.key, label: e.label, group: e.group, aliases: e.aliases, count: cache!.cards.filter(c => c.featureKeys.includes(e.key)).length }))
     return NextResponse.json({ generatedAt: new Date(cache.at).toISOString(), count: cache.cards.length, listings: cache.cards, features },
       { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } })
   } catch {

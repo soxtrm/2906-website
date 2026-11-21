@@ -43,6 +43,8 @@ export default function proxy(req: NextRequest) {
     const home = pathname.match(/^\/marketplace\/home\/([A-Za-z0-9-]{1,40})\/?$/)
     if (home) { url.pathname = `/studios/marketplace/home/${home[1]}`; return NextResponse.rewrite(url) }
     if (pathname === '/marketplace/classic' || pathname === '/marketplace/classic/') { url.pathname = '/link-marketplace/index.html'; return NextResponse.rewrite(url) }
+    // NEXUS STUDIOS Exchange (2026-11-21): co-agency inventory on agreed terms, participating agencies, partner requests
+    if (pathname === '/exchange' || pathname === '/exchange/') { url.pathname = '/studios/exchange'; return NextResponse.rewrite(url) }
     if (pathname.startsWith('/link-marketplace/') || pathname.startsWith('/Link/') || pathname === '/link-matrix') return NextResponse.next()
     return new NextResponse('Not found', { status: 404 })
   }

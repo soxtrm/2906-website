@@ -3,16 +3,23 @@
 // contact data are never part of a public listing. Agency associations come only from the source system
 // (ARGUS instance = agency 2906); nothing is inferred. Cooperation terms are shown only once agreed.
 import { buildLifeOverview, type NexusPlace, type PropertyLifeOverview } from '@/lib/nexus-property-context'
+import { cooperationFor } from './cooperation'
 
-export type Agency = { key: string; name: string; verified: boolean }
+// verified = the listings come from the agency's own system (its ARGUS instance), not from scraping or a third party
+export type Agency = { key: string; name: string; verified: boolean; verifiedBasis: string; logo: string | null; website: string | null; island: string }
 export type Agent = { id: number; name: string }
 export type Provider =
   | { kind: 'agency'; agency: Agency; agent: Agent | null }
   | { kind: 'owner_direct' }                        // not used yet: direct-from-owner listings come with the upload assistant
-export type Cooperation = { status: 'not_published'; note: string }
+// Co-agency terms appear only once the listing agency has agreed them in writing (lib/marketplace/cooperation.ts).
+export type Cooperation =
+  | { status: 'not_published'; note: string }
+  | { status: 'confirmed'; headline: string; basis: string; conditions: string[]; agreedAt: string; reference: string }
 
 // Agencies whose inventory this marketplace shows. Source: the ARGUS instance itself, not a guess.
-export const AGENCIES: Record<string, Agency> = { '2906': { key: '2906', name: '2906 Estate', verified: true } }
+export const AGENCIES: Record<string, Agency> = {
+  '2906': { key: '2906', name: '2906 Estate', verified: true, verifiedBasis: 'Listings come directly from the agency’s own ARGUS system.', logo: '/logo-wide.png', website: 'https://www.2906.estate', island: 'Malta & Gozo' },
+}
 
 export type Market = 'longlets' | 'stays' | 'sales'
 export type SmartFact = { key: 'shop' | 'coast' | 'health' | 'gym'; label: string; name: string; km: number }
@@ -92,7 +99,6 @@ export function providerOf(p: Raw): Provider {
   return agency ? { kind: 'agency', agency, agent } : { kind: 'owner_direct' }
 }
 
-const COOPERATION: Cooperation = { status: 'not_published', note: 'Co-agency terms are agreed per agency. None are published for this listing yet: contact the listing agency.' }
 
 function evidencedOf(p: Raw): Evidenced[] {
   return (Array.isArray(p.features) ? p.features : []).map((f: Raw) => ({
@@ -111,6 +117,7 @@ export function toCard(p: Raw, places: NexusPlace[], dict?: Dict): ListingCard {
   const evidenced = evidencedOf(p)
   const knownTags = Object.entries(facts).filter(([, v]: [string, any]) => v?.status === 'KNOWN' && v?.value === true).map(([k]) => k)
   const featureKeys = [...new Set([...evidenced.map(e => e.key), ...knownTags.map(t => dict?.byTag[t] || t)])]
+  const provider = providerOf(p)
   return {
     id: String(p.id), title: titleOf(p), market, marketLabel: MARKET_LABEL[market],
     propertyType: TYPE[String(p.propertyType || '').toLowerCase()] || null,
@@ -121,7 +128,7 @@ export function toCard(p: Raw, places: NexusPlace[], dict?: Dict): ListingCard {
     availability: availabilityOf(p), updatedAt: p.updatedAt || null,
     features: [...new Set([...evidenced.map(e => e.text), ...knownTags.map(k => FEATURE_LABEL[k]).filter(Boolean)])].slice(0, 6) as string[],
     featureKeys, evidenced,
-    smart: smartOf(overview), provider: providerOf(p), cooperation: COOPERATION,
+    smart: smartOf(overview), provider, cooperation: cooperationFor(provider.kind === 'agency' ? provider.agency.key : null),
   }
 }
 
