@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import { FileText, MessageCircle, Share2, Upload } from 'lucide-react'
 import type { DocumentItem } from '@/lib/owner/model'
 import { useOwner } from '@/lib/owner/store'
+import { LiveDocuments } from '@/components/owner/live-people-docs'
 import { niceDate, propColor } from '@/components/owner/format'
 
 const KIND: Record<DocumentItem['kind'], string> = { contract: 'Contract', inventory: 'Inventory', certificate: 'Certificate', id: 'ID', other: 'Other' }
@@ -14,7 +15,7 @@ function read(f: File): Promise<string> {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(f) })
 }
 
-export default function Documents() {
+function DemoDocuments() {
   const s = useOwner()
   const ids = s.properties.map(p => p.id)
   const input = useRef<HTMLInputElement>(null)
@@ -91,4 +92,9 @@ export default function Documents() {
       </ul>
     </>
   )
+}
+
+export default function Documents() {
+  const { demo } = useOwner()
+  return demo ? <DemoDocuments /> : <LiveDocuments />
 }

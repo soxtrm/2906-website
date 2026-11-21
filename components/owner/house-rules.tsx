@@ -60,7 +60,7 @@ function summary(c: Cond) {
   return bits.join(' · ')
 }
 
-export function HouseRules({ propertyId }: { propertyId: number }) {
+export function HouseRules({ propertyId, readOnly = false }: { propertyId: number; readOnly?: boolean }) {
   const s = useOwner()
   const [data, setData] = useState<Data | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
@@ -106,7 +106,7 @@ export function HouseRules({ propertyId }: { propertyId: number }) {
       <h2>House rules for this home</h2>
       <p className="lv-faint">Only for this home. Saved in ARGUS straight away, so they are the same on every device. Agencies only see them if you share the home with them.</p>
 
-      {data.proposals.map(p => (
+      {!readOnly && data.proposals.map(p => (
         <div key={p.id} className="hr-proposal">
           <Sparkles size={18} aria-hidden="true" />
           <div>
@@ -135,7 +135,7 @@ export function HouseRules({ propertyId }: { propertyId: number }) {
                 </button>
                 <div className="hr-status" role="group" aria-label={`${t.label}: status`}>
                   {STATUS.map(st => (
-                    <button key={st.v} data-v={st.v} aria-pressed={c?.status === st.v} disabled={busy}
+                    <button key={st.v} data-v={st.v} aria-pressed={c?.status === st.v} disabled={busy || readOnly}
                       onClick={async () => { if (c?.status === st.v) { setOpen(isOpen ? null : t.key); return } const ok = await save(t.key, st.v, st.v === 'conditional' ? (c?.details || {}) : st.v === c?.status ? c.details : {}, c?.note ?? null); if (ok && st.v === 'conditional') setOpen(t.key) }}>
                       {st.label}
                     </button>
@@ -146,7 +146,7 @@ export function HouseRules({ propertyId }: { propertyId: number }) {
               {hints.map(h => (
                 <small key={h.field + h.scope} className="hr-hint">From your earlier chats with ARGUS{h.scope === 'owner' ? ' (all homes)' : ''}: “{h.value}”</small>
               ))}
-              {isOpen && <Editor topic={t.key} cond={c} busy={busy} onSave={(d, note) => save(t.key, c?.status && c.status !== 'unknown' ? c.status : 'conditional', d, note)} />}
+              {isOpen && !readOnly && <Editor topic={t.key} cond={c} busy={busy} onSave={(d, note) => save(t.key, c?.status && c.status !== 'unknown' ? c.status : 'conditional', d, note)} />}
             </div>
           )
         })}

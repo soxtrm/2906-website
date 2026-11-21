@@ -1,6 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+// where to go after signing in: only our own owner or invitation pages (2026-11-21)
+const nextPath = () => { try { const n = new URLSearchParams(location.search).get('next'); return n && /^\/(owner\/|invite\/)[A-Za-z0-9/_-]*$/.test(n) ? n : '/owner' } catch { return '/owner' } }
 import { useEffect, useState } from 'react'
 import { sync, type LiveAccount } from '@/lib/owner/live'
 import { PhoneLogin } from '@/components/owner/phone-login'
@@ -21,7 +23,7 @@ export default function Login() {
     if (!(await s.signIn(email, pw))) return
     if (s.demo) { router.push('/owner'); return }
     const me = await sync<{ account: LiveAccount }>('me')
-    router.push(me.ok && me.account.phone?.verified ? '/owner' : '/owner/signup')
+    router.push(me.ok && me.account.phone?.verified ? nextPath() : '/owner/signup')
   }
   if (!s.demo && !withEmail) return (
     <div className="ow-auth">
@@ -29,9 +31,9 @@ export default function Login() {
         <div className="ow-auth-logo"><StarPlay size={34} color="#071449" /></div>
         <h1>Welcome back</h1>
         {error && <p className="ow-error" role="alert">{error}</p>}
-        <PhoneLogin onDone={() => router.push('/owner')} />
+        <PhoneLogin onDone={() => router.push(nextPath())} />
         <p className="ow-or"><span>or</span></p>
-        <SocialSignIn onDone={() => router.push('/owner')} divider={false} />
+        <SocialSignIn onDone={() => router.push(nextPath())} divider={false} />
         <button type="button" className="ow-btn big" onClick={() => setWithEmail(true)}>Use e-mail instead</button>
         <p className="ow-faint">New here? <Link className="ow-link" href="/owner/signup">Create an account</Link></p>
       </div>

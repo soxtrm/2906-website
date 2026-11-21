@@ -182,3 +182,23 @@ textarea.lv-input { padding: 12px 14px; min-height: 110px; width: 100%; resize: 
 .hr-activity li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--ow-line); }
 .hr-activity small { color: var(--ow-ink-3); font-weight: 600; white-space: nowrap; }
 @media (max-width: 560px) { .hr-status { width: 100%; justify-content: space-between; flex-wrap: nowrap; } .hr-status button { flex: 1 1 auto; padding: 0 4px; font-size: 12.5px; white-space: nowrap; } .hr-activity li { flex-direction: column; gap: 2px; } }
+
+/* representatives and documents (2026-11-21) */
+.rp-h3 { margin: 6px 0 0; font-size: 16px; }
+.rp-h3 small { font-weight: 600; color: var(--ow-ink-3); font-size: 13px; }
+.rp-perms { display: grid; gap: 8px; }
+.rp-link { display: grid; gap: 8px; padding: 12px; border-radius: var(--ow-r-md); background: var(--ow-ok-soft); }
+.rp-link code { font-size: 13px; word-break: break-all; background: #fff; padding: 8px 10px; border-radius: 10px; }
+.rp-link .lv-btn { justify-self: start; min-height: 42px; }
+.rp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.rp-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 12px; border: 1px solid var(--ow-line); border-radius: var(--ow-r-md); background: var(--ow-surface); }
+.rp-list li[data-state=revoked], .rp-list li[data-state=expired], .rp-list li[data-state=declined] { opacity: .6; }
+.rp-list li > div { display: grid; gap: 2px; min-width: 0; flex: 1 1 240px; }
+.rp-list li b { display: inline-flex; align-items: center; gap: 6px; }
+.rp-list small { color: var(--ow-ink-3); font-weight: 600; font-size: 13px; }
+.rp-list small.rp-shared { color: var(--ow-ok); }
+.rp-list .lv-btn { min-height: 42px; padding: 0 12px; font-size: 14px; }
+.rp-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.rp-badge { margin: 0; padding: 10px 14px; border-radius: var(--ow-r-md); background: var(--ow-warm-soft); color: var(--ow-warm-ink); font-weight: 700; font-size: 14px; }
+.rp-warn { padding: 10px 12px; border-radius: var(--ow-r-md); background: var(--ow-alert-soft); color: var(--ow-alert); font-weight: 600; }
+.rp-invite { max-width: 640px; margin: 0 auto; }

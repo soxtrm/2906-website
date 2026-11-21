@@ -66,6 +66,15 @@ EDITS = {
          "  const { rows: [m] } = await db.query(\n    `INSERT INTO nexus_owner_messages (agency_key, account_id, owner_link_id, property_id, direction, sender_kind, sender_name, body)\n     VALUES ($1,$2,$3,$4,'in','owner',$5,$6) RETURNING *`,\n"
          "    [AGENCY_KEY(), dm ? dm.ownerAccountId : account.id, dm ? dm.ownerLinkId : (links[0]?.id || null), Number.isInteger(propertyId) ? propertyId : null,\n"
          "     dm ? `${account.display_name || 'Representative'} (representative)` : (account.display_name || null), body])\n"),
+        # the owner's own latest availability answer, so SYNC shows what they said while ARGUS updates the listing
+        ("  const [p, u, g, w] = await Promise.all([\n", "  const [p, u, g, w, aa] = await Promise.all([\n"),
+        ("AND status='active' AND kind='window' AND ends_at > NOW() ORDER BY starts_at LIMIT 400`, [ids]),\n  ])\n",
+         "AND status='active' AND kind='window' AND ends_at > NOW() ORDER BY starts_at LIMIT 400`, [ids]),\n"
+         "    db.query(`SELECT DISTINCT ON (property_id) property_id, outcome, available_from, created_at FROM owner_availability_answers\n"
+         "               WHERE agency_key=$1 AND property_id = ANY($2::int[]) ORDER BY property_id, created_at DESC, id DESC`, [agency, ids]),\n  ])\n"),
+        ("      windows: w.rows.filter(x => x.property_id === id).map(x => ({ id: x.id, start: x.starts_at, end: x.ends_at })),\n",
+         "      windows: w.rows.filter(x => x.property_id === id).map(x => ({ id: x.id, start: x.starts_at, end: x.ends_at })),\n"
+         "      answer: (a => (a ? { outcome: a.outcome, availableFrom: a.available_from, at: a.created_at } : null))(aa.rows.find(x => x.property_id === id)),\n"),
     ],
     'routes/syncAccountService.js': [
         ("router.post('/owner/activity', send(async req => PC.activity(S, await me(req), { before: req.body?.before })))\n",

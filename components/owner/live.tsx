@@ -57,6 +57,8 @@ export function HomeCard({ l, big = false }: { l: LiveListing; big?: boolean }) 
   )
 }
 
+const ANSWER: Record<string, string> = { available: 'available now', available_from: 'free from', reserved: 'reserved', rented: 'rented', temporarily_held: 'held' }
+
 // ── viewing request row ─────────────────────────────────────────────────────
 function ViewingRow({ v, home }: { v: LiveViewing; home?: LiveListing }) {
   const s = useOwner()
@@ -65,6 +67,8 @@ function ViewingRow({ v, home }: { v: LiveViewing; home?: LiveListing }) {
   const [when, setWhen] = useState('')
   const at = new Date(v.startsAt)
   const future = at.getTime() > Date.now()
+  const vlink = (s.live.owner?.links || []).find(k => k.properties?.some(p => p.sourcePropertyId === v.propertyId))
+  const mayDecide = !vlink?.role || !!vlink.permissions?.includes('schedule')
   const who = [v.party.size ? `${v.party.size} ${v.party.size === 1 ? 'person' : 'people'}` : null, v.party.type, v.party.job].filter(Boolean).join(' · ')
   const act = async (decision: 'accept' | 'decline' | 'propose') => {
     setBusy(true)
@@ -82,7 +86,7 @@ function ViewingRow({ v, home }: { v: LiveViewing; home?: LiveListing }) {
         {v.agent && <p className="lv-faint">Agent: {v.agent}</p>}
         {v.note && <p className="lv-faint">“{v.note}”</p>}
         {v.declineText && <p className="lv-faint">{v.declineText}</p>}
-        {v.status === 'pending' && future && !propose && (
+        {v.status === 'pending' && future && !propose && mayDecide && (
           <div className="lv-actions">
             <button className="lv-btn ok" disabled={busy} onClick={() => act('accept')}><Check size={20} />Accept</button>
             <button className="lv-btn" disabled={busy} onClick={() => setPropose(true)}><Clock size={20} />Other time</button>
@@ -186,6 +190,9 @@ export function LiveProperty({ id }: { id: number }) {
   const s = useOwner()
   const homes = useHomes()
   const l = homes.find(h => h.sourcePropertyId === id)
+  // representatives see only what the owner granted (the server checks the same on every call)
+  const link = (s.live.owner?.links || []).find(k => k.properties?.some(p => p.sourcePropertyId === id))
+  const can = (perm: 'edit' | 'schedule' | 'share') => !link?.role || (perm !== 'share' && !!link.permissions?.includes(perm))
   const [photo, setPhoto] = useState(0)
   const [tab, setTab] = useState<'status' | 'rules' | 'edit' | 'share' | 'hours'>(() => {
     const t = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('tab')
@@ -231,30 +238,31 @@ export function LiveProperty({ id }: { id: number }) {
       </header>
 
       <div className="lv-tabs" role="tablist">
-        {([['status', 'Availability'], ['rules', 'House rules'], ['edit', 'Details & price'], ['share', 'Sharing'], ['hours', 'Viewings']] as const).map(([k, t]) => (
+        {([['status', 'Availability'], ['rules', 'House rules'], ['edit', 'Details & price'], ['share', 'Sharing'], ['hours', 'Viewings']] as const).filter(([k]) => (k === 'share' ? can('share') : k === 'status' || k === 'edit' ? can('edit') : true)).map(([k, t]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{t}</button>
         ))}
       </div>
 
-      {tab === 'status' && (
+      {tab === 'status' && can('edit') && (
         <section className="lv-section">
           <h2>Is it free?</h2>
-          <p className="lv-faint">Now: {(AVAIL[st?.availability || ''] || { label: st?.availability || 'unknown' }).label}. ARGUS updates the listing; “Rented” is checked by an agent first.</p>
+          <p className="lv-faint">Listing now: {(AVAIL[st?.availability || ''] || { label: st?.availability || 'unknown' }).label}.{st?.answer ? ` Your last answer: ${ANSWER[st.answer.outcome] || st.answer.outcome}${st.answer.availableFrom ? ` (${new Date(st.answer.availableFrom).toLocaleDateString('en-GB')})` : ''}, ${new Date(st.answer.at).toLocaleDateString('en-GB')}.` : ''} ARGUS updates the listing from your answer; “Rented” is checked by an agent first.</p>
           <div className="lv-big-choices">
-            <button className="lv-choice ok" disabled={busy} onClick={() => ev('availability.answered', { outcome: 'available' }, 'Thank you. Marked as available.')}><Check size={22} />Available now</button>
+            <button className="lv-choice ok" disabled={busy} onClick={() => ev('availability.answered', { outcome: 'available' }, 'Thank you. Saved: available. ARGUS updates the listing.')}><Check size={22} />Available now</button>
             <div className="lv-choice-row">
               <input type="date" className="lv-input" value={from} onChange={e => setFrom(e.target.value)} aria-label="Free from" />
               <button className="lv-choice" disabled={busy || !from} onClick={() => ev('availability.answered', { outcome: 'available_from', availableFrom: from }, 'Saved: free from that day.')}>Free from this date</button>
             </div>
-            <button className="lv-choice" disabled={busy} onClick={() => ev('availability.answered', { outcome: 'reserved' }, 'Marked as reserved.')}>Reserved</button>
+            <button className="lv-choice" disabled={busy} onClick={() => ev('availability.answered', { outcome: 'reserved' }, 'Saved: reserved. ARGUS updates the listing.')}>Reserved</button>
             <button className="lv-choice" disabled={busy} onClick={() => ev('availability.answered', { outcome: 'rented' }, 'Sent. An agent confirms it is rented.')}>Rented</button>
           </div>
         </section>
       )}
 
-      {tab === 'rules' && <HouseRules propertyId={id} />}
+      {link?.role && <p className="rp-badge">You look after this home for its owner. {can('edit') ? 'You may change it.' : 'You can see it.'}{can('schedule') ? ' You handle viewings.' : ''}</p>}
+      {tab === 'rules' && <HouseRules propertyId={id} readOnly={!can('edit')} />}
 
-      {tab === 'edit' && (
+      {tab === 'edit' && can('edit') && (
         <section className="lv-section">
           <h2>Your name for this home</h2>
           <p className="lv-faint">Only you see it.</p>
@@ -280,7 +288,7 @@ export function LiveProperty({ id }: { id: number }) {
         </section>
       )}
 
-      {tab === 'share' && (
+      {tab === 'share' && can('share') && (
         <section className="lv-section">
           <h2>Who may offer this home?</h2>
           <p className="lv-faint">Only for this home. Switch off everything to keep it private.</p>
@@ -300,7 +308,7 @@ export function LiveProperty({ id }: { id: number }) {
 
       {tab === 'hours' && (
         <section className="lv-section">
-          <HoursEditor propertyId={id} windows={st?.windows || []} />
+          {can('schedule') && <HoursEditor propertyId={id} windows={st?.windows || []} />}
           <h2>Viewings for this home</h2>
           {viewings.length ? viewings.map(v => <ViewingRow key={v.id} v={v} home={l} />) : <p className="lv-faint">No viewings yet.</p>}
         </section>

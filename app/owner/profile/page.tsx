@@ -7,6 +7,7 @@ import { useRef, useState } from 'react'
 import { Camera, MessageCircle, Trash2, UserPlus } from 'lucide-react'
 import type { Person } from '@/lib/owner/model'
 import { useOwner } from '@/lib/owner/store'
+import { LiveRepresentatives } from '@/components/owner/live-people-docs'
 import { initials } from '@/components/owner/format'
 import { ContractDetails } from '@/components/owner/contract-details'
 
@@ -29,7 +30,7 @@ function Avatar({ name, photo, size = 56 }: { name: string; photo?: string; size
   return photo ? <img className="ow-ava" src={photo} alt="" style={{ width: size, height: size }} /> : <span className="ow-ava" style={{ width: size, height: size, fontSize: size * .38 }}>{initials(name)}</span>
 }
 
-export default function Profile() {
+function DemoProfile() {
   const s = useOwner()
   const pr = s.profile
   const photo = useRef<HTMLInputElement>(null)
@@ -127,4 +128,9 @@ export default function Profile() {
       <ContractDetails />
     </>
   )
+}
+
+export default function Profile() {
+  const { demo } = useOwner()
+  return demo ? <DemoProfile /> : <LiveRepresentatives />
 }

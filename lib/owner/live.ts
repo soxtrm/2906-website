@@ -18,6 +18,8 @@ export interface LiveState {
   update: { version: number; state: 'pending' | 'approved' | 'rejected' | 'superseded' | string; fields: Record<string, unknown>; at: string; reviewedAt: string | null } | null
   sharing: { channel: string; audienceRef: string | null; scopes: string[]; grantedAt: string }[]
   windows: { id: number; start: string; end: string }[]
+  /** the owner's own latest availability answer; the listing follows once ARGUS applies it */
+  answer?: { outcome: string; availableFrom: string | null; at: string } | null
 }
 export interface LiveViewing {
   id: number; propertyId: number; ref: string; startsAt: string; durationMin: number
@@ -26,6 +28,8 @@ export interface LiveViewing {
   party: { size: number | null; type: string | null; job: string | null }; agent: string | null
 }
 export interface LiveLink {
+  /** set when this account looks after these homes for an owner (representative) */
+  role?: 'delegate'; permissions?: string[]
   linkId: string; agencyKey: string; state: 'verified' | 'claim_pending' | 'invited' | 'not_invited' | 'disputed' | 'revoked'
   properties?: LiveListing[]
   proposed?: { externalId: string; ref: string; town: string; propertyType: string; bedrooms: number | null; claimState: string }[]
