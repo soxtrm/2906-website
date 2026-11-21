@@ -16,6 +16,8 @@ const OPS: Record<string, { path: string; session?: boolean; issue?: boolean; en
   'owner/viewings': { path: '/owner/viewings', session: true },
   'owner/viewings/decide': { path: '/owner/viewings/decide', session: true },
   'owner/hours': { path: '/owner/hours', session: true },
+  'owner/window/add': { path: '/owner/window/add', session: true },
+  'owner/window/remove': { path: '/owner/window/remove', session: true },
   'owner/conditions': { path: '/owner/conditions', session: true },
   'owner/conditions/set': { path: '/owner/conditions/set', session: true },
   'owner/conditions/decide': { path: '/owner/conditions/decide', session: true },

@@ -9,6 +9,7 @@ import { useOwner } from '@/lib/owner/store'
 import { liveProperties, pendingClaims, type LiveListing, type LiveViewing } from '@/lib/owner/live'
 import { ActivityList, HouseRules } from './house-rules'
 import { FeaturesEditor } from './features-editor'
+import { CalendarTeaser } from './sync-calendar'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const eur = (n: number | null | undefined) => (n == null ? '' : `€${Math.round(n).toLocaleString('en-GB')}`)
@@ -119,6 +120,63 @@ function Waiting() {
 }
 
 // ── overview ────────────────────────────────────────────────────────────────
+// ── overview pieces (2026-11-21) ──────────────────────────────────────────────────────────────────────────────
+const mKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Malta' }).format(d)
+function WeekAgenda({ homes, sample }: { homes: LiveListing[]; sample: boolean }) {
+  const s = useOwner()
+  const days = Array.from({ length: 7 }, (_, i) => new Date(Date.now() + i * 86400e3))
+  // the sample week (no confirmed home yet) is fixed and labelled; the real week comes from ARGUS
+  const SAMPLE = [{ p: 1, c: 1, o: 1 }, { p: 0, c: 0, o: 1 }, { p: 1, c: 1, o: 0 }, { p: 0, c: 0, o: 0 }, { p: 1, c: 0, o: 1 }, { p: 0, c: 1, o: 1 }, { p: 0, c: 0, o: 0 }]
+  return (
+    <section className="ov-week" aria-label="Your next seven days">
+      <div className="ov-week-head"><h2>Your next 7 days</h2>{sample ? <span className="ov-sample">Sample week</span> : <Link href="/owner/calendar" className="lv-link">Open calendar</Link>}</div>
+      <div className="ov-days">
+        {days.map((d, i) => {
+          const k = mKey(d)
+          const vs = s.live.viewings.filter(v => mKey(new Date(v.startsAt)) === k)
+          const n = sample ? SAMPLE[i] : { p: vs.filter(v => v.status === 'pending').length, c: vs.filter(v => v.status === 'confirmed').length, o: homes.reduce((x, h) => x + (h.state?.windows || []).filter(w => mKey(new Date(w.start)) === k).length, 0) }
+          return (
+            <Link key={k} href={`/owner/calendar?day=${k}`} className="ov-day" data-today={i === 0 || undefined}>
+              <small>{d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/Malta' })}</small>
+              <b>{d.toLocaleDateString('en-GB', { day: 'numeric', timeZone: 'Europe/Malta' })}</b>
+              <span className="ov-dots">
+                {n.p > 0 && <i data-k="p" title={`${n.p} waiting`}>{n.p}</i>}
+                {n.c > 0 && <i data-k="c" title={`${n.c} confirmed`}><Check size={10} />{n.c}</i>}
+                {n.o > 0 && <i data-k="o" title="open hours">open</i>}
+                {!n.p && !n.c && !n.o && <i data-k="n">free</i>}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+function GettingStarted() {
+  const s = useOwner()
+  const a = s.live.account
+  const claims = pendingClaims(s.live.owner)
+  const steps = [
+    { done: true, title: 'Account created', text: 'You can sign in from any device.' },
+    { done: !!a?.phone?.verified, title: 'Mobile confirmed', text: a?.phone?.verified ? 'The agency can recognise you as the owner.' : 'Link your mobile so the agency can recognise you.', href: a?.phone?.verified ? undefined : '/owner/signup', cta: 'Link my mobile' },
+    { done: false, title: claims.length ? 'Waiting for the agency to confirm your homes' : 'Add your first home', text: claims.length ? 'A person checks every ownership request. Your homes, requests and calendar appear here as soon as it is confirmed.' : 'Upload a home or ask the agency to link one you already listed with them.', href: claims.length ? undefined : '/owner/add', cta: 'Add a home' },
+  ]
+  return (
+    <section className="ov-start">
+      <div>
+        <h2>Getting started</h2>
+        <ol>{steps.map(st => <li key={st.title} data-done={st.done || undefined}><span>{st.done ? <Check size={14} /> : null}</span><div><b>{st.title}</b><p>{st.text}</p>{st.href && <Link href={st.href} className="lv-link">{st.cta}</Link>}</div></li>)}</ol>
+      </div>
+      <Link href="/owner/calendar" className="ov-try">
+        <Sparkles size={20} aria-hidden="true" />
+        <b>Try the calendar now</b>
+        <span>With two sample homes and real interactions: drag a request onto a time, open viewing hours, accept. Nothing is saved.</span>
+        <em>Open the sample calendar <ChevronRight size={16} aria-hidden="true" /></em>
+      </Link>
+    </section>
+  )
+}
+
 export function LiveOverview() {
   const s = useOwner()
   const homes = useHomes()
@@ -134,18 +192,24 @@ export function LiveOverview() {
       <div className="lv-actions"><Link className="lv-btn ok big" href="/owner/login">Sign in</Link><Link className="lv-btn big" href="/owner/signup">Create account</Link></div>
     </section>
   )
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', hourCycle: 'h23' }).format(new Date()))
+  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
   return (
-    <div className="lv">
-      <header className="lv-hello">
-        <h1>{first ? `Hello, ${first}` : 'Hello'}</h1>
-        <p>{homes.length ? `${homes.length} home${homes.length === 1 ? '' : 's'} · ${pending.length ? `${pending.length} request${pending.length === 1 ? '' : 's'} waiting` : 'nothing waiting'}` : 'Add a home or confirm your mobile.'}</p>
+    <div className="lv ov">
+      <header className="ov-hello">
+        <span className="ov-kicker"><Sparkles size={14} aria-hidden="true" />NEXUS SYNC · Owner</span>
+        <h1>{greet}{first ? <>, <span className="ov-grad">{first}.</span></> : '.'}</h1>
+        <p>{homes.length ? `${homes.length} home${homes.length === 1 ? '' : 's'} · ${pending.length ? `${pending.length} request${pending.length === 1 ? '' : 's'} waiting for you` : 'nothing waiting for you'}` : 'Your homes appear here once the agency has confirmed them.'}</p>
       </header>
       <Waiting />
-      <div className="lv-quick">
-        <Link href="/owner/requests" className="lv-quick-tile" data-hot={pending.length > 0}><CalendarDays size={24} /><b>{pending.length}</b><span>Requests</span></Link>
-        <Link href="/owner/messages" className="lv-quick-tile" data-hot={unread > 0}><MessageCircle size={24} /><b>{unread}</b><span>Messages</span></Link>
-        <Link href="/owner/calendar" className="lv-quick-tile"><Clock size={24} /><b>{next.length}</b><span>Viewings</span></Link>
+      <div className="ov-tiles">
+        <Link href="/owner/calendar" className="ov-tile" data-hot={pending.length > 0 || undefined}><CalendarDays size={22} aria-hidden="true" /><b>{pending.length}</b><span>Requests waiting</span><small>Open the calendar</small></Link>
+        <Link href="/owner/calendar" className="ov-tile"><Clock size={22} aria-hidden="true" /><b>{next.length}</b><span>Viewings coming up</span><small>{next[0] ? `Next ${new Date(next[0].startsAt).toLocaleString('en-GB', { timeZone: 'Europe/Malta', weekday: 'short', hour: '2-digit', minute: '2-digit' })}` : 'None booked yet'}</small></Link>
+        <Link href="/owner/messages" className="ov-tile" data-hot={unread > 0 || undefined}><MessageCircle size={22} aria-hidden="true" /><b>{unread}</b><span>New messages</span><small>Chat with the agency</small></Link>
+        <Link href="/owner/properties" className="ov-tile"><Home size={22} aria-hidden="true" /><b>{homes.length}</b><span>{homes.length === 1 ? 'Home' : 'Homes'}</span><small>Passport, rules, photos</small></Link>
       </div>
+      <WeekAgenda homes={homes} sample={!homes.length} />
+      {!homes.length && <GettingStarted />}
       {pending.length > 0 && (
         <section className="lv-section">
           <h2>Waiting for your answer</h2>
@@ -220,6 +284,7 @@ export function LiveProperty({ id }: { id: number }) {
   return (
     <div className="lv lv-detail">
       <Link href="/owner/properties" className="lv-back"><ChevronLeft size={20} />My homes</Link>
+      <CalendarTeaser homeId={id} />
       <div className="lv-gallery">
         {photos.length ? <img src={photos[photo % photos.length]} alt="" /> : <span className="lv-nophoto"><Home size={80} /></span>}
         {photos.length > 1 && <>
