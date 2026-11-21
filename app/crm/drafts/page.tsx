@@ -16,7 +16,8 @@ import '../intake.css'
 import './drafts.css'
 
 type Fact = { value: any; quote?: string; method?: string; confidence?: string; ambiguity?: string; confirmed?: boolean; history?: { value: any; quote?: string; at?: string }[]; source_message_id?: string }
-type Media = { id: number; url: string | null; state: string; at: string }
+type Media = { id: number; url: string | null; state: string; kind?: string; note?: string | null; at: string }
+type Grant = { id: number; scope: 'owner' | 'property' | 'draft'; destinations: string[]; source: string; source_ref: string | null; note: string | null; granted_at: string; granted_by: string | null; valid_until: string | null }
 type Draft = {
   id: number; draft_no: number; status: string; status_reason: string | null; session: string; agent_id: number; agent_username: string | null
   phone_last4: string; unit_label: string | null; facts: Record<string, Fact>; missing: string[]; ambiguities: { text: string; resolved?: boolean; at?: string }[]
@@ -24,6 +25,36 @@ type Draft = {
   upload_attempts: number; last_error: string | null; publish_permission_at: string | null; publish_permission_note: string | null; permission_by: string | null
   published_at: string | null; publish_result: { destinations?: { website?: { ok: boolean; url: string; http: number | string } } } | null
   listing_published: boolean | null; listing_verification: string | null; owner_name: string | null; media: Media[]; public_description: string; updated_at: string; first_message_at: string
+  permissions?: { destinations: string[]; grants: Grant[] }; publish_destinations?: string[]
+}
+// Destinations (2026-11-21): each one on its own; a listing goes only where the owner's permission covers it.
+const CHANNELS: { key: string; label: string; connected: boolean }[] = [
+  { key: 'website', label: '2906 website', connected: true },
+  { key: 'marketplace', label: 'NEXUS Marketplace', connected: true },
+  { key: 'facebook', label: 'Facebook Pages', connected: false },
+  { key: 'agency', label: 'Agency distribution', connected: false },
+  { key: 'whatsapp_groups', label: 'WhatsApp groups', connected: false },
+]
+const SOURCES: [string, string][] = [['agent_confirmed', 'Confirmed by phone / in person'], ['owner_written', 'Owner wrote it (message, e-mail)'], ['agreement', 'Signed agreement']]
+const chan = (k: string) => CHANNELS.find(c => c.key === k)?.label || k
+const permitted = (d: Draft) => d.permissions?.destinations || []
+const wanted = (d: Draft) => (d.publish_destinations && d.publish_destinations.length ? d.publish_destinations : ['website'])
+const publishable = (d: Draft) => wanted(d).some(w => permitted(d).includes(w) && CHANNELS.find(c => c.key === w)?.connected)
+type PermForm = { destinations: string[]; scope: 'draft' | 'owner'; source: string; note: string }
+function PermissionFields({ value, onChange }: { value: PermForm; onChange: (v: PermForm) => void }) {
+  return (
+    <div className="dr-perm-form">
+      <fieldset><legend>Destinations the owner agreed to</legend>
+        {CHANNELS.map(c => <label key={c.key} className={value.destinations.includes(c.key) ? 'is-on' : ''}><input type="checkbox" checked={value.destinations.includes(c.key)} onChange={() => onChange({ ...value, destinations: value.destinations.includes(c.key) ? value.destinations.filter(x => x !== c.key) : [...value.destinations, c.key] })} />{c.label}</label>)}
+      </fieldset>
+      <fieldset><legend>Applies to</legend>
+        <label className={value.scope === 'draft' ? 'is-on' : ''}><input type="radio" checked={value.scope === 'draft'} onChange={() => onChange({ ...value, scope: 'draft' })} />This property</label>
+        <label className={value.scope === 'owner' ? 'is-on' : ''}><input type="radio" checked={value.scope === 'owner'} onChange={() => onChange({ ...value, scope: 'owner' })} />Every property of this owner</label>
+      </fieldset>
+      <label className="dr-perm-row">How the owner agreed<select value={value.source} onChange={e => onChange({ ...value, source: e.target.value })}>{SOURCES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
+      <label className="dr-perm-row">Note<input value={value.note} onChange={e => onChange({ ...value, note: e.target.value })} placeholder="e.g. agreed on the phone 21 Nov" /></label>
+    </div>
+  )
 }
 type Loose = { id: number; url: string; p9: string; at: string }
 
@@ -78,6 +109,7 @@ function Drafts() {
   const [busy, setBusy] = useState<string | null>(null)
   const [toast, setToast] = useState<{ text: string; tone: 'ok' | 'error' } | null>(null)
   const [runText, setRunText] = useState<string | null>(null)
+  const [bulkPerm, setBulkPerm] = useState<PermForm | null>(null)
   const loadRef = useRef(0)
 
   const load = useCallback(async () => {
@@ -118,12 +150,13 @@ function Drafts() {
     } catch (e: any) { setToast({ text: e?.message || 'Action failed', tone: 'error' }) }
     finally { setBusy(null) }
   }
-  async function simpleAction(action: 'permission' | 'revoke_permission' | 'withdraw', nos: number[]) {
+  async function simpleAction(action: 'permission' | 'revoke_permission' | 'withdraw', nos: number[], perm?: PermForm) {
     if (!nos.length) return
-    if (action === 'permission' && !window.confirm(`Confirm that the owner${nos.length > 1 ? 's' : ''} of ${nos.length} draft${nos.length > 1 ? 's' : ''} agreed that the propert${nos.length > 1 ? 'ies are' : 'y is'} advertised publicly. This is recorded with your name.`)) return
+    if (action === 'permission' && (!perm || !perm.destinations.length)) { setToast({ text: 'Choose at least one destination the owner agreed to', tone: 'error' }); return }
     setBusy(action)
     try {
-      const r = await crmJson('property-drafts/actions', 'POST', { action, drafts: nos })
+      const r = await crmJson('property-drafts/actions', 'POST', { action, drafts: nos, ...(perm ? { destinations: perm.destinations, scope: perm.scope, source: perm.source, note: perm.note || undefined } : {}) })
+      setBulkPerm(null)
       setToast({ text: `${r.done.length} updated${r.errors.length ? ` · ${r.errors.length} not changed` : ''}`, tone: r.errors.length ? 'error' : 'ok' })
       await load()
     } catch (e: any) { setToast({ text: e?.message || 'Action failed', tone: 'error' }) }
@@ -146,12 +179,17 @@ function Drafts() {
         {selected.length > 0 && (
           <div className="dr-bulk" role="region" aria-label="Selected drafts">
             <strong>{selected.length} selected</strong>
-            <button type="button" className="ib-btn" disabled={!!busy} onClick={() => simpleAction('permission', selected.map(d => d.draft_no))}><ShieldCheck size={15} />Owner agreed to advertise</button>
+            <button type="button" className="ib-btn" disabled={!!busy} aria-expanded={!!bulkPerm} onClick={() => setBulkPerm(bulkPerm ? null : { destinations: ['website'], scope: 'draft', source: 'agent_confirmed', note: '' })}><ShieldCheck size={15} />Owner agreed to advertise</button>
             <button type="button" className="ib-btn" disabled={!!busy} onClick={() => runAction('upload', selected.map(d => d.draft_no))}>{busy === 'upload' ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}Upload to ARGUS</button>
-            <button type="button" className="ib-btn primary" disabled={!!busy} onClick={() => runAction('publish', selected.map(d => d.draft_no))}>{busy === 'publish' ? <Loader2 size={15} className="spin" /> : <Globe size={15} />}Publish {selected.filter(d => d.publish_permission_at).length}/{selected.length}</button>
+            <button type="button" className="ib-btn primary" disabled={!!busy} onClick={() => runAction('publish', selected.map(d => d.draft_no))}>{busy === 'publish' ? <Loader2 size={15} className="spin" /> : <Globe size={15} />}Publish {selected.filter(publishable).length}/{selected.length}</button>
             <button type="button" className="ib-btn ghost danger" disabled={!!busy} onClick={() => simpleAction('withdraw', selected.map(d => d.draft_no))}>Withdraw</button>
-            <button type="button" className="ib-btn ghost" onClick={() => setPicked(new Set())} aria-label="Clear selection"><X size={15} /></button>
-            <small>Publish only takes drafts whose owner permission is recorded; incomplete ones are skipped with the reason.</small>
+            <button type="button" className="ib-btn ghost" onClick={() => { setPicked(new Set()); setBulkPerm(null) }} aria-label="Clear selection"><X size={15} /></button>
+            {bulkPerm && <div className="dr-bulk-perm">
+              <PermissionFields value={bulkPerm} onChange={setBulkPerm} />
+              <button type="button" className="ib-btn primary" disabled={!!busy || !bulkPerm.destinations.length} onClick={() => simpleAction('permission', selected.map(d => d.draft_no), bulkPerm)}><ShieldCheck size={15} />Record for {selected.length} draft{selected.length > 1 ? 's' : ''}</button>
+              <small>Recorded with your name. An owner sending details is never treated as permission.</small>
+            </div>}
+            <small>Publish takes only drafts with the owner’s permission for their destinations (reused when the owner already gave it); incomplete ones are skipped with the reason.</small>
           </div>
         )}
         {runText && <pre className="dr-run" role="status">{runText}<button type="button" onClick={() => setRunText(null)} aria-label="Close"><X size={14} /></button></pre>}
@@ -189,7 +227,7 @@ function Row({ d, picked, active, onPick, onOpen }: { d: Draft; picked: boolean;
       <button type="button" className="dr-row-main" onClick={onOpen} aria-current={active || undefined}>
         <span className="ib-row-thumb">{cover ? <img src={cover} alt="" loading="lazy" /> : <ImageOff size={18} aria-hidden />}<b>{d.media.filter(m => m.url).length}</b></span>
         <span className="dr-row-copy">
-          <span className="dr-row-top"><em>#{d.draft_no}</em><i className={`dr-pill ${st.tone}`}>{st.label}</i>{d.publish_permission_at && d.status !== 'published' && <i className="dr-pill ok" title="Owner permission recorded"><ShieldCheck size={11} />permission</i>}</span>
+          <span className="dr-row-top"><em>#{d.draft_no}</em><i className={`dr-pill ${st.tone}`}>{st.label}</i>{permitted(d).length > 0 && d.status !== 'published' && <i className="dr-pill ok" title={`Owner permission: ${permitted(d).map(chan).join(', ')}`}><ShieldCheck size={11} />{permitted(d).length === 1 ? chan(permitted(d)[0]) : `${permitted(d).length} channels`}</i>}</span>
           <strong>{headline(d)}{d.unit_label ? ` · ${/^\d/.test(d.unit_label) ? `Flat ${d.unit_label}` : d.unit_label}` : ''} · {d.facts.locality?.value || 'locality?'}</strong>
           <small>{d.facts.price ? `${euro(d.facts.price.value.amount)}${d.facts.price.value.period === 'sale' ? '' : ' / month'}` : 'no price'} · {availability(d.facts.availability) || 'availability?'}</small>
           <small className="dr-row-meta">{d.owner_name || 'Owner'} ·{d.phone_last4} · {d.session}{d.agent_username ? ` · ${d.agent_username}` : ''} · {ago(d.updated_at)}</small>
@@ -229,10 +267,13 @@ function changes(d: Draft, f: Form) {
 
 function Detail({ d, loose, busy, onClose, onSaved, onError, onRun, onSimple }: {
   d: Draft; loose: Loose[]; isAdmin: boolean; busy: boolean; onClose?: () => void
-  onSaved: (msg: string) => void; onError: (t: string) => void; onRun: (a: 'upload' | 'publish') => void; onSimple: (a: 'permission' | 'revoke_permission' | 'withdraw') => void
+  onSaved: (msg: string) => void; onError: (t: string) => void; onRun: (a: 'upload' | 'publish') => void; onSimple: (a: 'permission' | 'revoke_permission' | 'withdraw', perm?: PermForm) => void
 }) {
   const [form, setForm] = useState<Form>(() => formOf(d))
   const [saving, setSaving] = useState(false)
+  const [dest, setDest] = useState<string[]>(() => wanted(d))
+  const [perm, setPerm] = useState<PermForm | null>(null)
+  const destDirty = [...dest].sort().join() !== [...wanted(d)].sort().join()
   const diff = changes(d, form)
   const dirty = Object.keys(diff).length > 0
   const st = STATUS[d.status] || { label: d.status, tone: 'muted' }
@@ -267,7 +308,36 @@ function Detail({ d, loose, busy, onClose, onSaved, onError, onRun, onSimple }: 
       <div className="dr-state">
         <span>{d.listing_ref ? <>ARGUS listing <a href={`/incoming?id=${d.property_id}`}>#{d.listing_ref}</a>{d.listing_verification ? ` · ${d.listing_verification}` : ''}</> : 'Not uploaded yet'}</span>
         <span>{site?.ok ? <a href={site.url} target="_blank" rel="noreferrer"><Globe size={13} />Live on the website<ExternalLink size={12} /></a> : d.listing_published ? 'Live on the website' : 'Not public'}</span>
-        <span>{d.publish_permission_at ? <><ShieldCheck size={13} />Owner permission: {d.permission_by || 'agent'}, {new Date(d.publish_permission_at).toLocaleDateString('en-GB')}</> : 'Owner permission not recorded'}</span>
+        <span>{permitted(d).length ? <><ShieldCheck size={13} />Owner permission: {permitted(d).map(chan).join(', ')}</> : 'Owner permission not recorded'}</span>
+      </div>
+
+      <div className="dr-block">
+        <h3>Where this listing goes</h3>
+        <ul className="dr-dest">
+          <li className="is-on"><span><b>ARGUS internal inventory</b><small>Upload to ARGUS — internal only, needs no owner permission</small></span><i className="dr-pill ok">{d.listing_ref ? `#${d.listing_ref}` : 'on upload'}</i></li>
+          {CHANNELS.map(c => {
+            const ok = permitted(d).includes(c.key)
+            const g = d.permissions?.grants.find(x => x.destinations.includes(c.key))
+            const live = (d.publish_result as any)?.destinations?.[c.key]
+            return (
+              <li key={c.key} className={dest.includes(c.key) ? 'is-on' : ''}>
+                <label><input type="checkbox" checked={dest.includes(c.key)} disabled={!c.connected} onChange={() => setDest(v => v.includes(c.key) ? v.filter(x => x !== c.key) : [...v, c.key])} />
+                  <span><b>{c.label}</b><small>{!c.connected ? 'Not connected for drafts yet — nothing is sent there' : ok && g ? `Permitted · ${g.scope === 'owner' ? 'every property of this owner' : 'this property'} · ${SOURCES.find(s => s[0] === g.source)?.[1] || g.source}${g.granted_by ? ` · ${g.granted_by}` : ''}, ${new Date(g.granted_at).toLocaleDateString('en-GB')}` : 'No owner permission for this destination'}</small></span></label>
+                {live?.ok ? <a className="dr-pill live" href={live.url} target="_blank" rel="noreferrer">live<ExternalLink size={10} /></a> : <i className={`dr-pill ${ok ? 'ok' : 'muted'}`}>{ok ? 'permitted' : '—'}</i>}
+              </li>
+            )
+          })}
+        </ul>
+        <div className="dr-actions">
+          {destDirty && <button type="button" className="ib-btn primary" disabled={saving} onClick={() => patch({ destinations: dest }, 'Destinations saved')}><Check size={15} />Save destinations</button>}
+          <button type="button" className="ib-btn" aria-expanded={!!perm} onClick={() => setPerm(perm ? null : { destinations: dest.filter(x => CHANNELS.find(c => c.key === x)?.connected), scope: 'draft', source: 'agent_confirmed', note: '' })}><ShieldCheck size={15} />Record owner permission</button>
+        </div>
+        {perm && <div className="dr-bulk-perm">
+          <PermissionFields value={perm} onChange={setPerm} />
+          <button type="button" className="ib-btn primary" disabled={saving || !perm.destinations.length} onClick={async () => { await patch({ permission: true, permissionScope: perm.scope, permissionDestinations: perm.destinations, permissionSource: perm.source, permissionNote: perm.note || undefined }, 'Owner permission recorded'); setPerm(null) }}><ShieldCheck size={15} />Record permission</button>
+          <small>Recorded with your name, reused for this owner’s later drafts when you choose “every property”. Owner messages are never treated as permission.</small>
+        </div>}
+        {!!d.permissions?.grants.length && <ul className="dr-grants">{d.permissions.grants.map(g => <li key={g.id}><span>{g.destinations.map(chan).join(', ')} · {g.scope === 'owner' ? 'every property of this owner' : 'this property'} · {SOURCES.find(s => s[0] === g.source)?.[1] || g.source}{g.note ? ` · “${g.note}”` : ''}<small>{g.granted_by || 'agent'}, {new Date(g.granted_at).toLocaleDateString('en-GB')}</small></span><button type="button" className="ib-btn ghost danger" disabled={saving} onClick={() => patch({ permission: false, revokePermissionId: g.id }, 'Permission revoked')}>Revoke</button></li>)}</ul>}
       </div>
 
       {(q > 0 || (d.status === 'duplicate_candidate' && d.duplicate_ref)) && (
@@ -305,9 +375,9 @@ function Detail({ d, loose, busy, onClose, onSaved, onError, onRun, onSimple }: 
       </form>
 
       <div className="dr-block">
-        <h3>Photos · {d.media.filter(m => m.url).length}</h3>
+        <h3>Photos · {d.media.filter(m => m.url && m.kind !== 'video').length}{d.media.some(m => m.kind === 'video') ? ` · videos · ${d.media.filter(m => m.url && m.kind === 'video').length}` : ''}</h3>
         <div className="dr-photos">
-          {d.media.map(m => <figure key={m.id}>{m.url ? <img src={m.url} alt="" loading="lazy" /> : <span>download failed</span>}{editable && <button type="button" onClick={() => patch({ removeMedia: [m.id] }, 'Photo removed')} aria-label="Remove photo"><X size={12} /></button>}</figure>)}
+          {d.media.map(m => <figure key={m.id} className={m.kind === 'video' ? 'is-video' : ''}>{m.url ? (m.kind === 'video' ? <video src={m.url} controls preload="metadata" playsInline /> : <img src={m.url} alt="" loading="lazy" />) : <span>{m.note || 'download failed'}</span>}{editable && <button type="button" onClick={() => patch({ removeMedia: [m.id] }, 'Photo removed')} aria-label="Remove photo"><X size={12} /></button>}</figure>)}
           {!d.media.length && <p className="dr-muted">No photos yet — they are attached automatically when the owner sends them.</p>}
         </div>
         {mine.length > 0 && editable && <><h4>Unassigned photos from this owner</h4><div className="dr-photos">{mine.map(m => <figure key={m.id}><img src={m.url} alt="" loading="lazy" /><button type="button" className="add" onClick={() => patch({ assignMedia: [m.id] }, 'Photo attached')} aria-label="Attach to this draft"><Check size={12} /></button></figure>)}</div></>}
@@ -324,11 +394,8 @@ function Detail({ d, loose, busy, onClose, onSaved, onError, onRun, onSimple }: 
       </div>
 
       <footer className="dr-detail-foot">
-        {!d.publish_permission_at
-          ? <button type="button" className="ib-btn" disabled={busy} onClick={() => onSimple('permission')}><ShieldCheck size={15} />Owner agreed to advertise</button>
-          : d.status !== 'published' && <button type="button" className="ib-btn ghost" disabled={busy} onClick={() => onSimple('revoke_permission')}>Remove permission</button>}
         {['ready', 'failed', 'duplicate_candidate'].includes(d.status) && <button type="button" className="ib-btn" disabled={busy} onClick={() => onRun('upload')}><Upload size={15} />Upload to ARGUS</button>}
-        {d.publish_permission_at && !['published', 'withdrawn'].includes(d.status) && <button type="button" className="ib-btn primary" disabled={busy} onClick={() => onRun('publish')}><Globe size={15} />Publish</button>}
+        {publishable(d) && d.status !== 'withdrawn' && <button type="button" className="ib-btn primary" disabled={busy || destDirty} title={destDirty ? 'Save the destinations first' : undefined} onClick={() => onRun('publish')}><Globe size={15} />Publish to {wanted(d).filter(w => permitted(d).includes(w) && CHANNELS.find(c => c.key === w)?.connected).map(chan).join(' + ')}</button>}
         {!['withdrawn', 'published', 'uploaded'].includes(d.status) && <button type="button" className="ib-btn ghost danger" disabled={busy} onClick={() => onSimple('withdraw')}>Withdraw</button>}
         {['withdrawn', 'failed'].includes(d.status) && <button type="button" className="ib-btn ghost" disabled={saving} onClick={() => patch({ reopen: true }, 'Draft reopened')}>Reopen</button>}
         {d.last_error && <small className="dr-muted">Last error: {d.last_error}</small>}
