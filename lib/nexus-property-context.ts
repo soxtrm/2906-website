@@ -53,7 +53,6 @@ export type PropertyLifeOverview = {
 type NexusContext = { properties: NexusInventoryProperty[]; places: NexusPlace[] }
 let memoryContext: NexusContext | null = null
 let memoryContextExpires = 0
-let pendingContext: Promise<NexusContext> | null = null
 
 const NEXUS_ORIGIN = process.env.NEXUS_UPSTREAM_URL || ARGUS_ORIGIN
 const LARGE_GROCER = /\b(lidl|welbee|greens|pavi|pama|smart supermarket|tower supermarket|scotts|spar|arkadia|queen'?s?|quick)\b/i
@@ -169,24 +168,48 @@ export function buildLifeOverview(property: NexusInventoryProperty, places: Nexu
   }
 }
 
-export async function fetchNexusContext() {
-  if (memoryContext && Date.now() < memoryContextExpires) return memoryContext
-  if (pendingContext) return pendingContext
-  pendingContext = Promise.all([
-    fetch(`${NEXUS_ORIGIN}/api/nexus/inventory`, { cache: 'no-store', signal: AbortSignal.timeout(20000) }),
-    fetch(`${NEXUS_ORIGIN}/api/nexus/places`, { cache: 'no-store', signal: AbortSignal.timeout(20000) }),
-  ]).then(async ([inventoryResponse, placesResponse]) => {
-    if (!inventoryResponse.ok || !placesResponse.ok) throw new Error('Nexus context unavailable')
-    const inventory = await inventoryResponse.json()
-    const places = await placesResponse.json()
-    memoryContext = {
-      properties: (inventory.properties || []) as NexusInventoryProperty[],
-      places: (places.records || []) as NexusPlace[],
-    }
-    memoryContextExpires = Date.now() + 15 * 60 * 1000
-    return memoryContext
-  }).finally(() => { pendingContext = null })
-  return pendingContext
+// Freshness (Kev, 21 Nov 2026): operational listing data (status, price, availability) is kept at most 60 s by
+// default and can be asked for fresher (status checks: 15 s); places change rarely and are kept 30 min. A cached
+// "Available" must never outlive a newer Rented / Off-Market status for long.
+let inventoryCache: { at: number; properties: NexusInventoryProperty[] } | null = null
+let placesCache: { at: number; places: NexusPlace[] } | null = null
+let pendingInventory: Promise<NexusInventoryProperty[]> | null = null
+let pendingPlaces: Promise<NexusPlace[]> | null = null
+const INVENTORY_MAX_AGE = 60 * 1000, PLACES_MAX_AGE = 30 * 60 * 1000
+
+export async function fetchNexusInventory(maxAgeMs = INVENTORY_MAX_AGE): Promise<NexusInventoryProperty[]> {
+  if (inventoryCache && Date.now() - inventoryCache.at < maxAgeMs) return inventoryCache.properties
+  if (pendingInventory) return pendingInventory
+  pendingInventory = fetch(`${NEXUS_ORIGIN}/api/nexus/inventory`, { cache: 'no-store', signal: AbortSignal.timeout(20000) })
+    .then(async r => {
+      if (!r.ok) throw new Error('Nexus inventory unavailable')
+      const properties = ((await r.json()).properties || []) as NexusInventoryProperty[]
+      inventoryCache = { at: Date.now(), properties }
+      return properties
+    })
+    .catch(e => { if (inventoryCache) return inventoryCache.properties; throw e })   // ARGUS hiccup: last known list, never an empty one
+    .finally(() => { pendingInventory = null })
+  return pendingInventory
+}
+async function fetchNexusPlaces(): Promise<NexusPlace[]> {
+  if (placesCache && Date.now() - placesCache.at < PLACES_MAX_AGE) return placesCache.places
+  if (pendingPlaces) return pendingPlaces
+  pendingPlaces = fetch(`${NEXUS_ORIGIN}/api/nexus/places`, { cache: 'no-store', signal: AbortSignal.timeout(20000) })
+    .then(async r => {
+      if (!r.ok) throw new Error('Nexus places unavailable')
+      const places = ((await r.json()).records || []) as NexusPlace[]
+      placesCache = { at: Date.now(), places }
+      return places
+    })
+    .catch(e => { if (placesCache) return placesCache.places; throw e })
+    .finally(() => { pendingPlaces = null })
+  return pendingPlaces
+}
+
+export async function fetchNexusContext(options: { inventoryMaxAgeMs?: number } = {}) {
+  const [properties, places] = await Promise.all([fetchNexusInventory(options.inventoryMaxAgeMs), fetchNexusPlaces()])
+  memoryContext = { properties, places }; memoryContextExpires = Date.now()
+  return memoryContext
 }
 
 const normaliseArea = (value?: string | null) => String(value || '')

@@ -4,7 +4,7 @@
 //   touch and cards that stay on screen; never all listings at once
 // - images: Cloudinary variants per slot (card 400/720, hero 960/1600) and a warm-up for the next hero
 // - honest freshness: "Confirmed Today" only from ARGUS' explicit confirmation time, otherwise "Updated 2h Ago"
-import type { Availability, ListingDetail } from '@/lib/marketplace/model'
+import type { Availability, ListingCard, ListingDetail, LiveStatus } from '@/lib/marketplace/model'
 
 // ---- freshness ------------------------------------------------------------------------------------------
 const MALTA = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Malta' })
@@ -28,6 +28,20 @@ export function availabilityText(a: Availability, updatedAt: string | null, now 
   }
   const u = ago(updatedAt, now)
   return { text: u ? `Available · Updated ${u}` : 'Available', tone: 'now' as const, title: 'Listed as available. Not yet re-confirmed with the owner.' }
+}
+
+// ---- live status (uncached): a newer Rented / Off-Market status always beats a cached card -----------------
+export async function liveStatus(ids: string[]): Promise<Record<string, LiveStatus>> {
+  const out: Record<string, LiveStatus> = {}
+  for (let i = 0; i < ids.length; i += 40) {
+    try { const r = await fetch(`/api/marketplace/status?ids=${ids.slice(i, i + 40).map(encodeURIComponent).join(',')}`, { cache: 'no-store' }); if (r.ok) Object.assign(out, (await r.json()).status || {}) } catch { /* keep what we have */ }
+  }
+  return out
+}
+export function withLive<T extends ListingCard>(l: T, s: LiveStatus | undefined): T {
+  if (!s) return l
+  if (!s.listed) return { ...l, gone: true }
+  return { ...l, gone: false, price: s.price ?? l.price, availability: s.availability ?? l.availability }
 }
 
 // ---- images ---------------------------------------------------------------------------------------------

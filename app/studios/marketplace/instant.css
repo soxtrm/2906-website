@@ -188,3 +188,7 @@ button.sa-stat { cursor: pointer; } button.sa-stat:hover { border-color: var(--s
 .mc-foot-note svg, .mc-chat-org svg, .mc-loc svg, .sa-pl-name small svg { display: inline-block; vertical-align: -1px; }
 .mc-foot-note > span { flex: 1 1 100%; }
 @media (max-width: 640px) { .mp-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; } .mp-tabs::-webkit-scrollbar { display: none; } .mp-tab-soon { display: none; } }
+.mc[data-gone] .mc-photo, .mc[data-gone] .mc-main { opacity: .55; }
+.mc-avail.k-gone { background: #2b2d31; color: #fff; }
+.pd-gone { display: grid; gap: 4px; padding: 16px; border-radius: 18px; border: 1px solid var(--st-line); background: var(--st-raised); font-size: 13.5px; color: var(--st-muted); }
+.pd-gone b { font-size: 15px; color: var(--st-text); }

@@ -191,7 +191,7 @@ export function ListingBody({ l, pro, loading, headingId, morph, chatFocus = 0 }
   const desc = l.description || ''
   const long = desc.length > 620
   const chips = [...(l.typeLabel ? [l.typeLabel] : []), ...l.features]
-  const av = availabilityText(l.availability, l.updatedAt, now || undefined)
+  const av = l.gone ? { text: 'No Longer Available', tone: 'gone' as const, title: 'Let or taken off the market' } : availabilityText(l.availability, l.updatedAt, now || undefined)
   return (
     <motion.div className="pd" initial={reduce ? false : 'h'} animate="v" variants={{ v: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } } }}>
       <motion.header className="pd-head" variants={rise}>
@@ -233,7 +233,9 @@ export function ListingBody({ l, pro, loading, headingId, morph, chatFocus = 0 }
           {pro && l.provider.kind === 'agency' && <CooperationBox c={l.cooperation} agencyName={l.provider.agency.name} />}
         </div>
         <aside className="pd-side">
-          <ChatDock l={l} focus={chatFocus} />
+          {l.gone
+            ? <div className="pd-gone" role="status"><b>This home is no longer available</b><span>It was let or taken off the market. Nothing can be requested for it any more.</span></div>
+            : <ChatDock l={l} focus={chatFocus} />}
         </aside>
       </div>
       <motion.section className="pd-sec pd-si" id="mp-sec-area" variants={rise}>

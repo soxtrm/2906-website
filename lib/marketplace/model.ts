@@ -63,6 +63,7 @@ export type ListingCard = {
   provider: Provider
   otherAgencies: Agency[]            // further authorised agencies for the same property (none recorded yet)
   cooperation: Cooperation
+  gone?: boolean                     // client only: the live status check says it is no longer listed
 }
 export type ListingDetail = ListingCard & { description: string | null; allImages: string[]; overview: PropertyLifeOverview | null; locationNote: string; featureGroups: FeatureGroup[]; coordinates: [number, number] | null }
 
@@ -179,6 +180,13 @@ export function toCard(p: Raw, places: NexusPlace[], dict?: Dict): ListingCard {
     smart: smartOf(overview), smartFromCentre: String(p.locationDisclosure || '').toLowerCase() !== 'exact',
     provider, otherAgencies: [], cooperation: cooperationFor(provider.kind === 'agency' ? provider.agency.key : null),
   }
+}
+
+// Live status for the Marketplace status check (no photos, no places): what a cached card must never contradict.
+export type LiveStatus = { listed: boolean; price: number | null; availability: Availability | null }
+export function liveStatusOf(p: Raw | undefined, listed: boolean): LiveStatus {
+  if (!p || !listed) return { listed: false, price: null, availability: null }
+  return { listed: true, price: Number(p.rent ?? p.price) || null, availability: availabilityOf(p) }
 }
 
 export function toDetail(p: Raw, places: NexusPlace[], dict?: Dict): ListingDetail {

@@ -13,7 +13,8 @@ import type { Agency, ListingCard, ListingDetail, Market, SmartFact } from '@/li
 import { nrm, understand } from '@/lib/marketplace/query'
 import { AgencyMark, ListingBody, MetricBadge, eur, km } from './parts'
 import { initialsOf } from './chat'
-import { availabilityText, cached, cardSet, loadDetail, prefetch, width } from './instant'
+import { availabilityText, cached, cardSet, liveStatus, loadDetail, prefetch, width, withLive } from './instant'
+import type { LiveStatus } from '@/lib/marketplace/model'
 
 type Filters = { market: Market; type: string; area: string; min: string; max: string; beds: string; now: boolean; soon: boolean; q: string; sort: 'fresh' | 'price-asc' | 'price-desc'; feature: string; feat: string; agency: string; ids: string; view: string }
 type FeatureOpt = { key: string; label: string; group: string; aliases: string[]; count: number }
@@ -126,6 +127,21 @@ export function Marketplace() {
     return out.sort(f.sort === 'price-asc' ? (a, b) => (a.price ?? 9e9) - (b.price ?? 9e9) : f.sort === 'price-desc' ? (a, b) => (b.price ?? 0) - (a.price ?? 0) : byFresh)
   }, [all, ids, inMarket, f, u, featSet])
 
+  const [live, setLive] = useState<Record<string, LiveStatus & { t: number }>>({})
+  const onScreen = useMemo(() => list.slice(0, ids.length ? 30 : shown).map(l => l.id), [list, ids.length, shown])
+  useEffect(() => {
+    if (!all) return
+    let alive = true
+    const check = async (force = false) => {
+      const want = onScreen.filter(id => force || !live[id] || Date.now() - live[id].t > 60e3)
+      if (!want.length) return
+      const s = await liveStatus(want); if (!alive) return
+      const t = Date.now(); setLive(m => { const n = { ...m }; for (const [k, v] of Object.entries(s)) n[k] = { ...v, t }; return n })
+    }
+    const first = setTimeout(() => check(), 250)
+    const every = setInterval(() => { if (document.visibilityState === 'visible') check(true) }, 90e3)
+    return () => { alive = false; clearTimeout(first); clearInterval(every) }
+  }, [all, onScreen]) // eslint-disable-line react-hooks/exhaustive-deps
   const counts = useMemo(() => ({
     longlets: (all || []).filter(l => l.market === 'longlets').length, stays: (all || []).filter(l => l.market === 'stays').length, sales: (all || []).filter(l => l.market === 'sales').length,
     upcoming: inMarket.filter(l => l.availability.kind === 'from').length, sea: inMarket.filter(l => l.featureKeys.includes('sea_view')).length,
@@ -260,7 +276,7 @@ export function Marketplace() {
             {!ids.length && <p className="mp-count">{list.length} {list.length === 1 ? 'home' : 'homes'}{(f.area || u.area) ? ` in ${f.area || u.area}` : ''}</p>}
             <motion.div className="mp-grid">
               <AnimatePresence initial={false}>
-                {list.slice(0, ids.length ? 30 : shown).map((l, n) => <Card key={l.id} l={l} index={n} pro={pro} reduce={!!reduce} href={href(l.id)} hidePhoto={!!openId && morphId === l.id && openId === l.id} onOpen={s => openListing(l.id, s)} listed={shortlist.includes(l.id)} onList={() => toggleShort(l.id)} saved={saved.includes(l.id)} onSave={() => toggleSaved(l.id)} />)}
+                {list.slice(0, ids.length ? 30 : shown).map((l, n) => <Card key={l.id} l={withLive(l, live[l.id])} index={n} pro={pro} reduce={!!reduce} href={href(l.id)} hidePhoto={!!openId && morphId === l.id && openId === l.id} onOpen={s => openListing(l.id, s)} listed={shortlist.includes(l.id)} onList={() => toggleShort(l.id)} saved={saved.includes(l.id)} onSave={() => toggleSaved(l.id)} />)}
               </AnimatePresence>
             </motion.div>
             {!ids.length && shown < list.length && <button className="mp-more" onClick={() => setShown(n => n + PAGE)}>Show more ({list.length - shown})</button>}
@@ -278,27 +294,30 @@ export function Marketplace() {
       <footer className="mp-foot">Listings from ARGUS, updated live. Locations are shown at area level until a viewing. <a href="/marketplace/classic">Classic view</a></footer>
 
       <AnimatePresence>
-        {openCard && <ListingOverlay key="ov" card={openCard} section={openSection} morph={morphId === openCard.id ? `mp-photo-${openCard.id}` : null} pro={pro} reduce={!!reduce} onClose={closeListing} pageHref={href(openCard.id)}
+        {openCard && <ListingOverlay key="ov" card={withLive(openCard, live[openCard.id])} onFresh={(id, st) => setLive(m => ({ ...m, [id]: { ...st, t: Date.now() } }))} section={openSection} morph={morphId === openCard.id ? `mp-photo-${openCard.id}` : null} pro={pro} reduce={!!reduce} onClose={closeListing} pageHref={href(openCard.id)}
           prev={openIndex > 0 ? () => step(-1) : null} next={openIndex >= 0 && openIndex < list.length - 1 ? () => step(1) : null} position={openIndex >= 0 ? `${openIndex + 1} / ${list.length}` : null} />}
       </AnimatePresence>
     </div>
   )
 }
 
-function ListingOverlay({ card, section, morph, pro, reduce, onClose, pageHref, prev, next, position }: { card: ListingCard; section: string | null; morph: string | null; pro: boolean; reduce: boolean; onClose: () => void; pageHref: string; prev: (() => void) | null; next: (() => void) | null; position: string | null }) {
+function ListingOverlay({ card, onFresh, section, morph, pro, reduce, onClose, pageHref, prev, next, position }: { card: ListingCard; onFresh: (id: string, s: LiveStatus) => void; section: string | null; morph: string | null; pro: boolean; reduce: boolean; onClose: () => void; pageHref: string; prev: (() => void) | null; next: (() => void) | null; position: string | null }) {
   // details from the prefetch cache when the visitor hovered / saw the card; otherwise fetched now while the
   // prepared container already shows everything the card knows
   const [detail, setDetail] = useState<ListingDetail | null>(() => cached(card.id))
   const [chatFocus, setChatFocus] = useState(0)
+  const [fresh, setFresh] = useState<LiveStatus | null>(null)   // uncached status of exactly this home
   const box = useRef<HTMLDivElement>(null)     // the overlay itself is the one scroll container (wheel works anywhere)
   const sheet = useRef<HTMLDivElement>(null)
   useEffect(() => {
     let alive = true
-    const hit = cached(card.id); setDetail(hit)
+    const hit = cached(card.id); setDetail(hit); setFresh(null)
     if (!hit) loadDetail(card.id).then(d => { if (alive && d) setDetail(d) })
+    const check = () => liveStatus([card.id]).then(s => { if (alive && s[card.id]) { setFresh(s[card.id]); onFresh(card.id, s[card.id]) } })   // the list learns it too
+    check(); const every = setInterval(() => { if (document.visibilityState === 'visible') check() }, 20e3)   // while the home is open
     box.current?.scrollTo({ top: 0 })
-    return () => { alive = false }
-  }, [card.id])
+    return () => { alive = false; clearInterval(every) }
+  }, [card.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // "Message" on a card opens the conversation; "+N More" opens at the matching section once the details are there
   useEffect(() => { if (section === 'chat') setChatFocus(k => k + 1) }, [section, card.id])
   useEffect(() => {
@@ -322,7 +341,7 @@ function ListingOverlay({ card, section, morph, pro, reduce, onClose, pageHref, 
     window.addEventListener('keydown', onKey)
     return () => { html.style.overflow = prevOverflow; window.removeEventListener('keydown', onKey) }
   }, [onClose])
-  const l = detail && detail.id === card.id ? detail : card
+  const l = withLive(detail && detail.id === card.id ? { ...detail, gone: card.gone } : card, fresh || undefined)
   return (
     <motion.div ref={box} className="mp-overlay" layoutScroll initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduce ? undefined : { opacity: 0, transition: { duration: 0.18 } }}
       transition={{ duration: 0.16 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -406,11 +425,11 @@ function Card({ l, index, pro, reduce, href, hidePhoto, onOpen, listed, onList, 
   const agency = l.provider.kind === 'agency' ? l.provider.agency : null
   const agent = l.provider.kind === 'agency' ? l.provider.agent : null
   const badge = pro && l.cooperation.status === 'confirmed' ? l.cooperation.badge : undefined
-  const av = availabilityText(l.availability, l.updatedAt)
+  const av = l.gone ? { text: 'No Longer Available', tone: 'gone' as const, title: 'Let or taken off the market since this list was loaded' } : availabilityText(l.availability, l.updatedAt)
   const share = async () => { const url = `${window.location.origin}${href}`; try { if (navigator.share) await navigator.share({ title: l.title, url }); else { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1600) } } catch { /* cancelled */ } setMenu(false) }
   const eager = index < 5
   return (
-    <motion.article ref={root} className="mc" initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+    <motion.article ref={root} className="mc" data-gone={l.gone || undefined} initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 34, delay: reduce ? 0 : Math.min(index % 24, 10) * 0.03 }} whileHover={reduce ? undefined : { y: -3 }}
       onPointerEnter={intent} onFocus={intent} onTouchStart={intent}>
       <motion.div className="mc-photo" layoutId={reduce ? undefined : `mp-photo-${l.id}`} style={hidePhoto ? { visibility: 'hidden' } : undefined}>
@@ -469,7 +488,7 @@ function Card({ l, index, pro, reduce, href, hidePhoto, onOpen, listed, onList, 
           </> : <small>Provider being confirmed</small>}
         </span>
         <span className="mc-actions">
-          {agency ? <a href={href} onClick={click('chat')} title={`Private NEXUS chat with ${agent?.name || agency.name} about Ref ${l.id}`}><MessageCircle size={13} aria-hidden="true" />Message</a>
+          {agency && !l.gone ? <a href={href} onClick={click('chat')} title={`Private NEXUS chat with ${agent?.name || agency.name} about Ref ${l.id}`}><MessageCircle size={13} aria-hidden="true" />Message</a>
             : <a href={href} onClick={click()}>Details</a>}
           <motion.button className="mc-icon" aria-pressed={saved} aria-label={saved ? 'Remove from saved' : 'Save'} onClick={onSave} whileTap={reduce ? undefined : { scale: 0.8 }}>
             <Heart size={16} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" />
