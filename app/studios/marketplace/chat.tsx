@@ -5,12 +5,14 @@
 // the owner (a booked ARGUS viewing) -> confirmed by the owner. Nothing is shown as booked before that.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { CalendarDays, Check, CheckCheck, Clock, ExternalLink, Lock, RotateCw, Send, ShieldCheck, X } from 'lucide-react'
+import { CalendarDays, Check, CheckCheck, ChevronDown, Clock, Download, ExternalLink, FileText, Lock, Paperclip, RotateCw, Send, ShieldCheck, X } from 'lucide-react'
 import type { ListingCard } from '@/lib/marketplace/model'
 
 type Msg = { id: number; from: 'visitor' | 'staff' | 'system'; kind: string; text: string; at: string; meta?: Record<string, unknown> }
 type Req = { id: number; state: 'requested' | 'waiting_owner' | 'confirmed' | 'declined' | 'not_possible' | 'cancelled'; preferred: { date: string; part: string }[]; startsAt: string | null }
-type Deal = { id: string; stage: string; label: string; stages: { key: string; label: string; state: 'done' | 'now' | 'next' | 'off' }[] }
+type DealDoc = { id: number; kind: string; title: string; mime: string | null; size: number | null; version: number; from: string; scan: string; at: string }
+type DealPay = { id: number; kind: string; label: string; amount: number; currency: string; status: string; statusLabel: string }
+type Deal = { id: string; stage: string; label: string; stages: { key: string; label: string; state: 'done' | 'now' | 'next' | 'off' }[]; documents?: DealDoc[]; payments?: DealPay[] }
 type Conv = { id: string; ref: string; title: string; status: string; agent: { id: number; name: string; photo: string | null } | null; messages: Msg[]; requests: Req[]; unread: number; deal?: Deal | null }
 type Pending = { key: string; text: string; failed?: string }
 
@@ -96,7 +98,7 @@ export function ChatPanel({ l, onMeta, focusKey = 0, onClose }: { l: ListingCard
         {onClose && <button type="button" className="mc-chat-x" onClick={onClose} aria-label="Minimise chat"><X size={16} /></button>}
       </header>
 
-      {conv?.deal && <DealStrip deal={conv.deal} />}
+      {conv?.deal && auth && <DealStrip deal={conv.deal} auth={auth} onDeal={d => setConv(c => (c ? { ...c, deal: d } : c))} />}
       {!auth ? <StartForm l={l} onStarted={(a, c) => { save(l.id, a); setAuth(a); setConv(c) }} /> : <>
         <div className="mc-thread" ref={list} aria-live="polite">
           {!conv && !err && <div className="mp-lines" aria-busy="true"><i /><i /></div>}
@@ -136,7 +138,7 @@ export function ChatPanel({ l, onMeta, focusKey = 0, onClose }: { l: ListingCard
             <button className="mc-send" disabled={!text.trim()} aria-label="Send"><Send size={17} /></button>
           </form>
         )}
-        {conv?.status === 'open' && !picking && !conv.requests.some(r => r.state === 'requested') && l.availability.kind !== 'from' && (
+        {conv?.status === 'open' && !picking && !conv.requests.some(r => ['requested', 'waiting_owner', 'confirmed'].includes(r.state)) && l.availability.kind !== 'from' && (
           <button className="mc-book" onClick={() => setPicking(true)}><CalendarDays size={16} />Request a viewing</button>
         )}
       </>}
@@ -146,14 +148,64 @@ export function ChatPanel({ l, onMeta, focusKey = 0, onClose }: { l: ListingCard
   )
 }
 
-// NEXUS Deal Room, client view: where this enquiry stands (no internal notes, no payment claims)
-function DealStrip({ deal }: { deal: Deal }) {
+// NEXUS Deal Room, client view: where this enquiry stands, the documents meant for the client, payment requests
+// with their real state (a request is never a receipt), and a way to add photos or documents as evidence.
+const kb = (n: number | null) => (n == null ? '' : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`)
+function DealStrip({ deal, auth, onDeal }: { deal: Deal; auth: { id: string; token: string }; onDeal: (d: Deal) => void }) {
   const reduce = useReducedMotion()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false), [err, setErr] = useState('')
+  const [kind, setKind] = useState('condition_evidence')
+  const file = useRef<HTMLInputElement>(null)
   const steps = deal.stages.filter(s => s.key !== 'completed' || deal.stage === 'completed')
+  const docs = deal.documents || [], pays = deal.payments || []
+  const upload = async (f: File) => {
+    setErr('')
+    if (f.size > 3 * 1024 * 1024) { setErr('Files up to 3 MB here. Ask the agent for a link for larger videos.'); return }
+    setBusy(true)
+    try {
+      const dataBase64 = await new Promise<string>((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => no(new Error('read')); r.readAsDataURL(f) })
+      const res = await fetch(`/api/marketplace/deal/${auth.id}/documents`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-mp-token': auth.token },
+        body: JSON.stringify({ kind, title: f.name.replace(/\.[^.]+$/, '').slice(0, 120) || 'Document', filename: f.name, dataBase64, captureMeta: { capturedAt: new Date(f.lastModified).toISOString() } }) })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || !d.deal) throw new Error(d.message || 'Not uploaded.')
+      onDeal(d.deal)
+    } catch (e) { setErr((e as Error).message) }
+    setBusy(false); if (file.current) file.current.value = ''
+  }
+  const download = async (d: DealDoc) => {
+    setErr('')
+    const r = await fetch(`/api/marketplace/deal/${auth.id}/documents/${d.id}`, { headers: { 'x-mp-token': auth.token } })
+    if (!r.ok) { const j = await r.json().catch(() => ({})); setErr(j.message || 'Not available.'); return }
+    const url = URL.createObjectURL(await r.blob()); const a = document.createElement('a')
+    a.href = url; a.download = (r.headers.get('content-disposition') || '').match(/filename="([^"]+)"/)?.[1] || d.title; a.click(); setTimeout(() => URL.revokeObjectURL(url), 4000)
+  }
   return (
     <motion.div className="mc-deal" initial={reduce ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
-      <span className="mc-deal-head"><b>Deal Room</b><span>{deal.stage === 'cancelled' ? 'Closed' : deal.label}</span></span>
+      <button type="button" className="mc-deal-head" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+        <b>Deal Room</b><span>{deal.stage === 'cancelled' ? 'Closed' : deal.label}{(docs.length + pays.length) > 0 && ` · ${docs.length} doc${docs.length === 1 ? '' : 's'}${pays.length ? ` · ${pays.length} request${pays.length === 1 ? '' : 's'}` : ''}`}<ChevronDown size={14} aria-hidden="true" /></span>
+      </button>
       {deal.stage !== 'cancelled' && <ol aria-label="Progress">{steps.map(s => <li key={s.key} data-state={s.state} title={s.label}><i />{s.state === 'now' && <small>{s.label}</small>}</li>)}</ol>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div key="body" className="mc-deal-body" initial={reduce ? false : { opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={reduce ? undefined : { opacity: 0, height: 0 }}>
+            {pays.length > 0 && <div className="mc-deal-sec"><b>Payment requests</b>{pays.map(p => <p key={p.id} className="mc-deal-pay" data-status={p.status}><span>{p.label}</span><span>€{p.amount.toLocaleString('en-GB')}</span><small>{p.statusLabel}</small></p>)}
+              <small className="mc-deal-note">NEXUS does not hold money. Pay only through the details the agency gives you; a payment counts once it is verified.</small></div>}
+            <div className="mc-deal-sec"><b>Documents</b>
+              {!docs.length ? <small className="mc-deal-note">No documents yet.</small> : docs.map(d => (
+                <button key={d.id} type="button" className="mc-deal-doc" onClick={() => download(d)} disabled={d.scan === 'pending'} title={d.scan === 'pending' ? 'Being checked' : 'Download'}>
+                  <FileText size={14} aria-hidden="true" /><span>{d.title}{d.version > 1 ? ` (v${d.version})` : ''}<small>{d.from} · {new Date(d.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{d.size ? ` · ${kb(d.size)}` : ''}{d.scan === 'pending' ? ' · being checked' : ''}</small></span><Download size={14} aria-hidden="true" />
+                </button>))}
+            </div>
+            {!['completed', 'cancelled'].includes(deal.stage) && <div className="mc-deal-up">
+              <select value={kind} onChange={e => setKind(e.target.value)} aria-label="What is it?"><option value="condition_evidence">Condition photo</option><option value="photo">Photo</option><option value="document">Document (PDF)</option><option value="signed_document">Signed document</option></select>
+              <input ref={file} type="file" accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,video/mp4,video/quicktime" capture={kind === 'photo' || kind === 'condition_evidence' ? 'environment' : undefined} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f) }} hidden />
+              <button type="button" onClick={() => file.current?.click()} disabled={busy}><Paperclip size={14} aria-hidden="true" />{busy ? 'Uploading…' : 'Add a file'}</button>
+            </div>}
+            {err && <p className="mp-err">{err}</p>}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

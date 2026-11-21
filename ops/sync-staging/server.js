@@ -90,6 +90,7 @@ app.use('/api/crm/property-features', require(R('routes/crmPropertyFeatures.js')
 // NEXUS Rooms (2026-11-21), when the live code has them
 try { app.use('/api/crm/property-rooms', require(R('routes/crmPropertyRooms.js'))); app.use('/api/nexus/rooms', require(R('routes/nexusRooms.js'))) } catch (e) { console.log('rooms not in live code', e.message) }
 try { app.use('/api/crm/deal-rooms', require(R('routes/crmDealRooms.js'))) } catch (e) { console.log('deal rooms not in live code', e.message) }
+try { app.use('/api/nexus/mp-deal', require(R('routes/marketplaceDealRoom.js'))) } catch (e) { console.log('deal room client route not in live code', e.message) }
 try { app.use('/api/crm/marketplace-inbox', require(R('routes/crmMarketplaceInbox.js'))); app.use('/api/nexus/mp', require(R('routes/marketplaceConversations.js'))) } catch (e) { console.log('marketplace conversations not in live code', e.message) }
 app.use('/api/nexus', require(R('routes/nexusBridge.js')))
 app.use('/api/crm', require(R('routes/crm.js')))
