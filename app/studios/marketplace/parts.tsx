@@ -142,7 +142,8 @@ export function ListingBody({ l, pro, loading, headingId }: { l: Partial_; pro: 
 }
 
 export function ProviderBox({ l }: { l: ListingCard }) {
-  if (l.provider.kind !== 'agency') return <div className="mp-provider-box"><span className="mp-muted">Listed by</span><b>Direct from owner</b></div>
+  if (l.provider.kind === 'owner_direct') return <div className="mp-provider-box"><span className="mp-muted">Listed by</span><b>Direct from owner</b></div>
+  if (l.provider.kind !== 'agency') return <div className="mp-provider-box"><span className="mp-muted">Listed by</span><b>Provider being confirmed</b><p className="mp-muted small">The agency behind this listing has not been confirmed yet, so none is named. Enquiries still reach the listing team.</p></div>
   const { agency, agent } = l.provider
   return (
     <div className="mp-provider-box">

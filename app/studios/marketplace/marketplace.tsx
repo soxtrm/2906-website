@@ -63,6 +63,7 @@ export function Marketplace() {
   const ready = useRef(false)
   const base = useRef('/marketplace')
   const lastFocus = useRef<HTMLElement | null>(null)
+  const scrollY0 = useRef<number | null>(null)
 
   useEffect(() => {
     base.current = window.location.pathname.replace(/\/home\/[^/]+\/?$/, '').replace(/\/$/, '') || '/marketplace'
@@ -75,10 +76,13 @@ export function Marketplace() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
+  // filters change -> address + first page; closing the overlay only restores the address (keeps "show more" and scroll)
+  useEffect(() => { if (ready.current) setShown(PAGE) }, [f])
   useEffect(() => {
     if (!ready.current || openId) return
     window.history.replaceState(window.history.state, '', `${base.current}${filterQuery(f)}`)
-    setShown(PAGE)
+    const y = scrollY0.current
+    if (y !== null) { scrollY0.current = null; requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y))) }
   }, [f, openId])
   const set = (patch: Partial<Filters>) => setF(x => ({ ...x, ...patch }))
   const featSet = useMemo(() => new Set(f.feat.split(',').filter(Boolean)), [f.feat])
@@ -133,8 +137,8 @@ export function Marketplace() {
 
   // ---- overlay: own address, back button closes it ----
   const href = useCallback((id: string) => `${base.current}/home/${encodeURIComponent(id)}`, [])
-  const openListing = (id: string) => { lastFocus.current = document.activeElement as HTMLElement; window.history.pushState({ mp: id }, '', href(id)); setOpenId(id) }
-  const closeListing = () => { if (window.history.state && window.history.state.mp) window.history.back(); else { window.history.replaceState(null, '', `${base.current}${filterQuery(f)}`); setOpenId(null) }; setTimeout(() => lastFocus.current?.focus?.(), 30) }
+  const openListing = (id: string) => { lastFocus.current = document.activeElement as HTMLElement; scrollY0.current = window.scrollY; window.history.pushState({ mp: id }, '', href(id)); setOpenId(id) }
+  const closeListing = () => { if (window.history.state && window.history.state.mp) window.history.back(); else { window.history.replaceState(null, '', `${base.current}${filterQuery(f)}`); setOpenId(null) }; setTimeout(() => lastFocus.current?.focus?.({ preventScroll: true }), 30) }
   const step = (d: number) => { const k = list.findIndex(l => l.id === openId); const next = list[k + d]; if (!next) return; window.history.replaceState({ mp: next.id }, '', href(next.id)); setOpenId(next.id) }
   const openCard = (all || []).find(l => l.id === openId) || null
   const openIndex = list.findIndex(l => l.id === openId)
@@ -346,7 +350,7 @@ function Card({ l, pro, reduce, href, onOpen, listed, onList }: { l: ListingCard
           </p>
         )}
         <p className="mp-provider">
-          {l.provider.kind === 'agency' ? <><AgencyMark agency={l.provider.agency} />{l.provider.agent ? <span className="mp-agent-name">· {l.provider.agent.name}</span> : null}</> : 'Direct from owner'}
+          {l.provider.kind === 'agency' ? <><AgencyMark agency={l.provider.agency} />{l.provider.agent ? <span className="mp-agent-name">· {l.provider.agent.name}</span> : null}</> : l.provider.kind === 'owner_direct' ? 'Direct from owner' : <span className="mp-agent-name">Provider being confirmed</span>}
           <span className="mp-fresh">{ago(l.updatedAt)}</span>
         </p>
       </a>

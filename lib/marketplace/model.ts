@@ -11,6 +11,7 @@ export type Agent = { id: number; name: string }
 export type Provider =
   | { kind: 'agency'; agency: Agency; agent: Agent | null }
   | { kind: 'owner_direct' }                        // not used yet: direct-from-owner listings come with the upload assistant
+  | { kind: 'unconfirmed' }                         // reference not from a registered agency: no agency or owner is claimed
 // Co-agency terms appear only once the listing agency has agreed them in writing (lib/marketplace/cooperation.ts).
 export type Cooperation =
   | { status: 'not_published'; note: string }
@@ -96,7 +97,7 @@ function smartOf(overview: PropertyLifeOverview | null): SmartFact[] {
 export function providerOf(p: Raw): Provider {
   const agency = AGENCIES[String(p.id || '').split('-')[0]] || null
   const agent = p.listedBy && Number.isFinite(Number(p.listedBy.id)) ? { id: Number(p.listedBy.id), name: String(p.listedBy.displayName || 'Agent') } : null
-  return agency ? { kind: 'agency', agency, agent } : { kind: 'owner_direct' }
+  return agency ? { kind: 'agency', agency, agent } : { kind: 'unconfirmed' }
 }
 
 

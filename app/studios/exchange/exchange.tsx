@@ -73,7 +73,7 @@ export function Exchange() {
       </section>
 
       <section className="ex-block" aria-labelledby="ex-agencies">
-        <div className="ex-head"><h2 id="ex-agencies">Participating agencies</h2></div>
+        <div className="ex-head"><h2 id="ex-agencies">Agencies in the Marketplace</h2></div>
         {all && agencies.length > 0 && (
           <ul className="ex-agencies">{agencies.map(r => (
             <li key={r.agency.key}>
