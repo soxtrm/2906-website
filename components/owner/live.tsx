@@ -112,7 +112,7 @@ function Waiting() {
   return (
     <section className="lv-note">
       <Sparkles size={22} aria-hidden="true" />
-      <div><b>An agent is confirming your homes</b><p>ARGUS found {claims.flatMap(c => c.proposed || []).length} home(s) under your number. They appear here once an agent has confirmed you are the owner.</p></div>
+      <div><b>Waiting for the ownership check</b><p>ARGUS found {claims.flatMap(c => c.proposed || []).length} home(s) under your number. 2906 Estate checks that you are the owner and you get a message in Chat when it is done. Until then house rules, representatives and documents stay closed.</p></div>
     </section>
   )
 }

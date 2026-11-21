@@ -97,7 +97,7 @@ export function RealSignUp() {
     const r = await sync('claims/decide', { decisions })
     setBusy(false)
     if (!r.ok) { setError(r.message); return }
-    setClaimsSent(true); s.say('Thank you. An agent confirms your homes, usually within one working day.')
+    setClaimsSent(true); s.say('Thank you. Your request is with 2906 Estate: an agent checks that you are the owner and you get a message here when it is done.')
     s.refreshLive()
   }
 

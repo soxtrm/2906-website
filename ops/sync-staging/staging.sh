@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # NEXUS SYNC staging (2026-11-21): up | down | logs. Reachable only on the server's 127.0.0.1:3901.
-# Uses the staged package in /root/sync-delegates-docs (patched SYNC code + new services + migration).
+# Base: the live backend code and schema (migrations included); not-yet-live packages are layered on top.
 set -euo pipefail
 PKG="$(cd "$(dirname "$0")" && pwd)"; LIVE=/opt/2906-system/backend; PG=2906_postgres; DD=/root/sync-delegates-docs
 CODE=/tmp/argus-sync-e2e; NET=argus-sync-e2e-net; DB=argus-sync-e2e-db; APP=argus-sync-e2e-app
@@ -10,9 +10,8 @@ case "${1:-}" in
     "$0" down >/dev/null 2>&1 || true
     rm -rf "$CODE"; mkdir -p "$CODE"
     rsync -a --exclude node_modules --exclude uploads --exclude logs --exclude '.*' --exclude backups --exclude '*.log' --exclude exports --exclude private-docs "$LIVE/" "$CODE/"
-    python3 "$DD/patch.py" "$CODE" >/dev/null
-    for f in services/syncDelegates.js services/syncDocuments.js services/syncPropertyConditions.js; do cp "$DD/backend/$f" "$CODE/$f"; done
-    SEC=/root/sync-docs-security; [ -d "$SEC" ] && cp "$SEC/backend/services/syncDocuments.js" "$CODE/services/syncDocuments.js"
+    # the live code is the base; packages not yet live are layered on top (already-applied spots are skipped)
+    REV=/root/sync-claim-review; if [ -d "$REV" ]; then python3 "$REV/patch.py" "$CODE" >/dev/null; cp "$REV/backend/services/syncClaimReview.js" "$CODE/services/"; fi
     cp "$PKG/server.js" "$CODE/stage-server.js"
     [ -s "$SECRET_FILE" ] || (umask 077; head -c 96 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 48 > "$SECRET_FILE")
     docker network create "$NET" >/dev/null
@@ -21,14 +20,12 @@ case "${1:-}" in
     docker exec "$PG" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -s --no-owner --no-privileges' > "$CODE/schema.sql"
     docker exec "$DB" psql -U postgres -q -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'
     docker exec -i "$DB" psql -U postgres -q < "$CODE/schema.sql" > /dev/null 2>&1 || true
-    docker exec -i "$DB" psql -U postgres -v ON_ERROR_STOP=1 -q < "$DD/backend/migrations/20261121b_sync_delegates_documents.sql"
-    [ -d "$SEC" ] && docker exec -i "$DB" psql -U postgres -v ON_ERROR_STOP=1 -q < "$SEC/backend/migrations/20261121c_sync_document_scan.sql"
     docker run -d --rm --name argus-clamav-stage --network "$NET" -m 2g clamav/clamav:1.4 >/dev/null
     for i in $(seq 1 90); do docker logs argus-clamav-stage 2>&1 | grep -q "socket found, clamd started" && break; sleep 4; done
     docker run -d --rm --name "$APP" --network "$NET" -p 127.0.0.1:3901:3901 -v "$CODE:/app" -v "$LIVE/node_modules:/app/node_modules:ro" -w /app \
       -e NODE_ENV=staging -e PGHOST="$DB" -e ARGUS_AGENCY_KEY=2906 -e JWT_SECRET=staging-jwt-secret-not-production-000 \
       -e NEXUS_LINK_INBOUND_SECRET="$(cat "$SECRET_FILE")" -e SYNC_PRIVATE_DOCS_DIR=/app/private-docs -e SYNC_STAFF_FILE_ORIGIN=http://127.0.0.1:3901 \
-      -e SYNC_PUBLIC_ORIGIN=http://localhost:3080 -e SYNC_DOCUMENTS_ENABLED=1 -e CLAMD_HOST=argus-clamav-stage --entrypoint node 2906-system-backend stage-server.js >/dev/null
+      -e SYNC_PUBLIC_ORIGIN=http://localhost:3080 -e SYNC_DOCUMENTS_ENABLED=1 -e CLAMD_HOST=argus-clamav-stage -e SYNC_STAFF_NOTIFY_TO=35699999999 --entrypoint node 2906-system-backend stage-server.js >/dev/null
     for i in $(seq 1 40); do curl -s -m 2 -o /dev/null http://127.0.0.1:3901/stage/outbox && break; sleep 1; done
     docker logs "$APP" 2>&1 | grep -E "seeded|staging on|failed|Error" | head -5
     ;;

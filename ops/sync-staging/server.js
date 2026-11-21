@@ -49,6 +49,19 @@ async function seed() {
   const dan = await mk('Dan Stage', '35699100003', 'dan.stage@example.test', [])
   await pool.query("UPDATE sync_accounts SET phone_e164='35699100003', phone_verified_at=NOW(), phone_verified_via='staging' WHERE id=$1", [dan.a.id])
   await mk('Xena Stage', '35699100004', 'xena.stage@example.test', [])
+  // a CRM admin who can sign in to the staging CRM
+  const bcrypt = require(R('node_modules/bcryptjs'))
+  await pool.query("UPDATE agents SET email='stage-admin@example.test', password_hash=$1 WHERE id=1", [bcrypt.hashSync('stage-admin-2026', 10)])
+  // Pia: owner record with two homes, SYNC account with a confirmed mobile, claim proposed (as after 'SYNC verify')
+  const { rows: [po] } = await pool.query("INSERT INTO owner_contacts (phone_normalized, name) VALUES ('35699100005','Pia Stage') RETURNING id")
+  for (const [i, ref] of ['ST-301', 'ST-302'].entries()) {
+    const { rows: [p] } = await pool.query("INSERT INTO properties (ref, town, property_type, longlet_price, bedrooms, bathrooms, owner_id, published, available_status, listed_by_agent_id) VALUES ($1,'Mellieha','Apartment',$2,2,1,$3,true,'available',1) RETURNING id", [ref, 1400 + i * 200, po.id])
+    const { rows: [row] } = await pool.query(`SELECT ${L._internal.PROPERTY_COLUMNS} FROM properties p WHERE p.id=$1`, [p.id])
+    await L._internal.ensurePropertyLink(pool, row)
+  }
+  await S.signup({ email: 'pia.stage@example.test', password: 'stage-pass-2026', name: 'Pia Stage', userAgent: 'staging-seed' })
+  const { rows: [pia] } = await pool.query("UPDATE sync_accounts SET phone_e164='35699100005', phone_verified_at=NOW(), phone_verified_via='whatsapp' WHERE email='pia.stage@example.test' RETURNING *")
+  await S.claimByPhone(pool, pia)
   // three pending viewing requests on Olga's first home, two days ahead
   const base = new Date(Date.now() + 2 * 86400e3); base.setUTCHours(9, 0, 0, 0)
   for (const [h, who] of [[0, 'Client A'], [2, 'Client B'], [4, 'Client C']]) {
@@ -61,6 +74,7 @@ async function seed() {
 const app = express()
 app.use(express.json({ limit: '6mb' }))
 app.use('/api/sync-account/v1', require(R('routes/syncAccountService.js')))
+app.use('/api/crm/sync-inbox', require(R('routes/crmSyncInbox.js')))
 app.use('/api/crm', require(R('routes/crm.js')))
 app.get('/stage/outbox', (req, res) => res.json(outbox))
 seed().then(() => app.listen(3901, '0.0.0.0', () => console.log('SYNC staging on 3901'))).catch(e => { console.error('seed failed', e); process.exit(1) })

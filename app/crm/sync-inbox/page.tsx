@@ -12,6 +12,9 @@ import { crmFetch, crmJson } from '@/lib/crm/api'
 
 type Thread = { accountId: string; name: string | null; email: string | null; phone: string | null; phoneVerified: boolean
   links: { ownerId: number; state: string }[]; lastAt: string | null; lastText: string | null; unread: number; createdAt: string }
+type ClaimHome = { id: number; ref: string; town: string | null; type: string | null; bedrooms: number | null; rent: number | null; agent: string | null; claimState: string }
+type Claim = { accountId: string; waitingSince: string; account: { name: string | null; email: string | null; phone: { e164: string; verified: boolean } | null }
+  links: { ownerId: number; ownerName: string | null; state: string; properties: ClaimHome[] }[] }
 type Msg = { id: number; at: string; from: 'owner' | 'argus'; sender: { kind: string; name: string | null; org: string | null }; text: string }
 
 const STATE: Record<string, string> = { claim_pending: 'Claimed: verify ownership', verified: 'Owner verified', disputed: 'Disputed', invited: 'Invited', not_invited: 'Not linked', revoked: 'Revoked' }
@@ -28,6 +31,20 @@ function SyncInbox() {
   const [text, setText] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const end = useRef<HTMLDivElement>(null)
+  const [claims, setClaims] = useState<{ claims: Claim[]; canDecide: boolean } | null>(null)
+  const [deciding, setDeciding] = useState<string | null>(null)
+  const loadClaims = useCallback(async () => { try { setClaims(await crmFetch('sync-inbox/claims')) } catch { /* the inbox below still works */ } }, [])
+  useEffect(() => { loadClaims(); const iv = setInterval(loadClaims, 30000); return () => clearInterval(iv) }, [loadClaims])
+  async function decide(c: Claim, ownerId: number, decision: 'approve' | 'reject') {
+    const who = c.account.name || 'this owner'
+    if (!window.confirm(decision === 'approve'
+      ? `Confirm that ${who} owns these homes? Only after you checked it (title, contract or a call). The homes then appear in their SYNC account.`
+      : `Reject the claim of ${who}? Nothing is linked; they get a message that it could not be confirmed.`)) return
+    setDeciding(`${c.accountId}:${ownerId}`)
+    try { await crmJson(`sync-inbox/threads/${c.accountId}/claim`, 'POST', { ownerId, decision }); await loadClaims(); load() }
+    catch (e) { setErr(e instanceof Error ? e.message : 'The decision was not saved.') }
+    setDeciding(null)
+  }
 
   const load = useCallback(async () => {
     try { const d = await crmFetch('sync-inbox/threads'); setThreads(d.threads || []); setErr(null) }
@@ -53,6 +70,30 @@ function SyncInbox() {
   return (
     <CrmShell title="SYNC inbox" subtitle="Owners from nexussync.one: their messages and claims">
       {err && <p style={{ color: '#F87171', margin: '0 0 12px' }}>{err}</p>}
+      {claims && claims.claims.length > 0 && (
+        <section style={{ ...card, padding: 14, marginBottom: 16, borderColor: '#FBBF24' }} aria-label="Waiting for review">
+          <b style={{ fontSize: 16 }}>Waiting for review · {claims.claims.length}</b>
+          <p style={{ margin: '4px 0 10px', color: 'var(--crm-muted)', fontSize: 13 }}>Owners who confirmed homes in SYNC. Check ownership (title, contract or a call), then approve or reject. The owner gets a message either way.</p>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {claims.claims.map(c => c.links.map(l => (
+              <div key={`${c.accountId}:${l.ownerId}`} className="sync-claim" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between', padding: 12, borderRadius: 12, border: '1px solid var(--crm-border)' }}>
+                <div style={{ display: 'grid', gap: 3, minWidth: 0 }}>
+                  <b>{c.account.name || c.account.email || 'SYNC owner'} <span style={{ fontWeight: 400, color: 'var(--crm-muted)', fontSize: 13 }}>claims owner #{l.ownerId}{l.ownerName ? ` (${l.ownerName})` : ''}</span></b>
+                  <small style={{ color: 'var(--crm-muted)' }}>{c.account.phone ? `${c.account.phone.e164}${c.account.phone.verified ? ' ✓ confirmed by WhatsApp' : ''}` : 'Mobile not confirmed'} · waiting since {when(c.waitingSince)}</small>
+                  {l.properties.map(p => <small key={p.id}>#{p.ref} · {[p.type, p.bedrooms ? `${p.bedrooms} bed` : null, p.town].filter(Boolean).join(', ')}{p.agent ? ` · listing agent ${p.agent}` : ''}</small>)}
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <a href={`/crm/owner/${l.ownerId}`} style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--crm-border)', color: 'inherit', textDecoration: 'none' }}>Owner profile</a>
+                  {claims.canDecide ? <>
+                    <button disabled={!!deciding} onClick={() => decide(c, l.ownerId, 'reject')} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #F87171', background: 'transparent', color: '#F87171', fontWeight: 600, cursor: 'pointer' }}>Reject</button>
+                    <button disabled={!!deciding} onClick={() => decide(c, l.ownerId, 'approve')} style={{ padding: '8px 14px', borderRadius: 8, border: 0, background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>{deciding === `${c.accountId}:${l.ownerId}` ? 'Saving…' : 'Approve ownership'}</button>
+                  </> : <small style={{ color: 'var(--crm-muted)' }}>An admin decides</small>}
+                </div>
+              </div>
+            )))}
+          </div>
+        </section>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 340px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }} className="sync-inbox-grid">
         <div style={{ ...card, padding: 6, maxHeight: '75vh', overflow: 'auto' }}>
           {!threads ? <p style={{ padding: 12, color: 'var(--crm-muted)' }}>Loading…</p> : !threads.length ? <p style={{ padding: 12, color: 'var(--crm-muted)' }}>No SYNC accounts yet.</p> : threads.map(x => (
