@@ -1,13 +1,19 @@
 'use client'
 
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { ArrowUpRight, BusFront, CarFront, Check, CircleAlert, Footprints, HeartPulse, MapPinned, Route, ShoppingBasket, Sparkles, Star, Waves, CarTaxiFront, GraduationCap, BriefcaseBusiness, Utensils, Coffee, Ship, Ruler, Radio } from 'lucide-react'
+import { ArrowUpRight, CarFront, Dumbbell, Check, CircleAlert, Footprints, HeartPulse, MapPinned, Route, ShoppingBasket, Sparkles, Star, Waves, CarTaxiFront, GraduationCap, BriefcaseBusiness, Utensils, Coffee, Ship, Ruler, Radio } from 'lucide-react'
 import type { PropertyLifeOverview as Overview, PlaceDistance } from '@/lib/nexus-property-context'
-import { estimateBoltReference } from '@/public/Link/mobility-reality.mjs'
 import { motion } from 'framer-motion'
 import styles from './property-life-overview.module.css'
 
-const icons = { groceries: ShoppingBasket, coast: Waves, health: HeartPulse, movement: BusFront, school: GraduationCap, commute: BriefcaseBusiness, restaurant: Utensils, cafe: Coffee }
+type TravelMode = 'car' | 'taxi' | 'walk'
+const TRAVEL_MODE_KEY = 'nexus-travel-mode'
+export const TRAVEL_MODES = [
+  {key:'car',label:'Car',hint:'Road route',Icon:CarFront},
+  {key:'taxi',label:'Taxi / Cab',hint:'Road route · no fare',Icon:CarTaxiFront},
+  {key:'walk',label:'Walk',hint:'Footpaths',Icon:Footprints},
+] as const
+const icons = { groceries: ShoppingBasket, coast: Waves, health: HeartPulse, movement: Dumbbell, school: GraduationCap, commute: BriefcaseBusiness, restaurant: Utensils, cafe: Coffee }
 type FerryEvidence = { status?: 'OFFICIAL_CORRIDOR' | 'ROUTED_ONLY'; corridor?: string | null; authorityUrl?: string | null; operatorScheduleUrl?: string | null; verifiedOn?: string | null }
 type FerryLeg = { name: string; evidence?: FerryEvidence }
 type RouteEvidence = { id: string; routeVerified?: boolean; walkingDetailVerified?: boolean; walkingIncludesFerry?: boolean; walkingFerries?: FerryLeg[]; walkingSeconds?: number | null; drivingSeconds?: number | null; walkingDistanceMetres?: number | null; drivingDistanceMetres?: number | null }
@@ -76,18 +82,18 @@ export function PropertyLifeOverview({ overview, description = '', features = []
   const [routes, setRoutes] = useState<Record<string, RouteEvidence>>({})
   const category = overview.categories.find(item => item.key === active) || overview.categories[0]
   const Icon = icons[category.key]
-  const [mode, setMode] = useState<'walk' | 'bus' | 'taxi' | 'car'>('walk')
+  // Kev, 2026-11-21: Car first and the default; Taxi / Cab; Walk. Bus is not offered (its
+  // data was missing or unusable). A visitor's own choice is kept across listings.
+  const [mode, setModeState] = useState<TravelMode>('car')
+  useEffect(() => { try { const saved = localStorage.getItem(TRAVEL_MODE_KEY); if (saved === 'car' || saved === 'taxi' || saved === 'walk') setModeState(saved) } catch { /* default stays Car */ } }, [])
+  const setMode = (next: TravelMode) => { setModeState(next); try { localStorage.setItem(TRAVEL_MODE_KEY, next) } catch { /* not stored */ } }
   const [expanded, setExpanded] = useState(false)
   const [query, setQuery] = useState('')
-  const [observations,setObservations] = useState<any[]>([])
-  useEffect(()=>{fetch('/Link/mobility-observations.json').then(r=>r.json()).then(d=>setObservations(d.observations||[])).catch(()=>{})},[])
-  const taxiFare = (id:string,name:string) => {const r=routes[id]; const fare=estimateBoltReference({roadKm:Number(r?.drivingDistanceMetres)/1000,journeyMinutes:Number(r?.drivingSeconds)/60,origin:overview.area,destination:name,observations});return Number.isFinite(fare.expected)?`≈ €${Number(fare.expected).toFixed(1)}`:'€ —'}
   useEffect(() => setExpanded(false), [active])
   const [chosen, setChosen] = useState('')
   const selected = category.places.find(place => place.id === chosen) || category.places[0]
   const [geometry, setGeometry] = useState<unknown>(null)
   const [ferry, setFerry] = useState<{ legs: FerryLeg[]; evidenceStatus: 'OFFICIAL_CORRIDOR' | 'ROUTED_ONLY' } | null>(null)
-  const [bus, setBus] = useState<any>(null)
   const [journeyLoading, setJourneyLoading] = useState(false)
   const [traffic, setTraffic] = useState<any>(null)
   const [trafficLoading, setTrafficLoading] = useState(false)
@@ -117,18 +123,17 @@ export function PropertyLifeOverview({ overview, description = '', features = []
     return () => window.removeEventListener('message', receive)
   }, [allPlaces, overview])
   useEffect(() => {
-    frame.current?.contentWindow?.postMessage({channel:'estate-area-map', intelligence:{origin,precision:'AREA_ONLY',places:allPlaces},category:active,places:category.places,selected:selected?.id,geometry: selected && (mode === 'walk' ? routes[selected.id]?.walkingSeconds != null : mode !== 'bus' && routes[selected.id]?.drivingSeconds != null) ? geometry : null,mode:mode === 'taxi' ? 'car' : mode}, location.origin)
+    frame.current?.contentWindow?.postMessage({channel:'estate-area-map', intelligence:{origin,precision:'AREA_ONLY',places:allPlaces},category:active,places:category.places,selected:selected?.id,geometry: selected && (mode === 'walk' ? routes[selected.id]?.walkingSeconds != null : routes[selected.id]?.drivingSeconds != null) ? geometry : null,mode:mode === 'taxi' ? 'car' : mode}, location.origin)
   }, [mapReady, origin, allPlaces, active, category, selected, geometry, mode, routes])
   useEffect(() => {
-    setGeometry(null); setBus(null); setFerry(null)
+    setGeometry(null); setFerry(null)
     if (!selected) return
     const controller = new AbortController()
     setJourneyLoading(true)
-    fetch(`/api/nexus/property-routing?ref=${encodeURIComponent(overview.reference)}&place=${encodeURIComponent(selected.id)}&mode=${mode === 'taxi' ? 'car' : mode}`, {signal:controller.signal,cache:mode === 'bus' ? 'no-store' : 'default'})
+    fetch(`/api/nexus/property-routing?ref=${encodeURIComponent(overview.reference)}&place=${encodeURIComponent(selected.id)}&mode=${mode === 'taxi' ? 'car' : mode}`, {signal:controller.signal})
       .then(r => r.ok ? r.json() : null).then(data => {
         if (controller.signal.aborted) return
-        if (mode === 'bus') setBus(data)
-        else {
+        {
           const ferryLegs: FerryLeg[] = Array.isArray(data?.ferries) ? data.ferries.map((item: FerryLeg) => {const name=item.name || 'Ferry crossing';return {name,evidence:item.evidence || knownFerryEvidence(name)}}) : []
           const includesFerry = Boolean(data?.includesFerry && ferryLegs.length)
           const ferryEvidenceStatus = includesFerry && ferryLegs.every(item=>item.evidence?.status === 'OFFICIAL_CORRIDOR') ? 'OFFICIAL_CORRIDOR' : 'ROUTED_ONLY'
@@ -142,19 +147,13 @@ export function PropertyLifeOverview({ overview, description = '', features = []
       }).catch(() => {}).finally(() => {if (!controller.signal.aborted) setJourneyLoading(false)})
     return () => controller.abort()
   }, [overview.reference, selected?.id, mode])
-  const duration = (id: string) => mode === 'bus' ? (id === selected?.id && bus?.status === 'CONNECTED' ? bus.durationMinutes * 60 : null) : mode === 'walk' ? routes[id]?.walkingSeconds : routes[id]?.drivingSeconds
-  const modes = [
-    {key:'walk',label:'Walk',hint:'Footpaths',Icon:Footprints},
-    {key:'bus',label:'Bus',hint:'Timetable',Icon:BusFront},
-    {key:'taxi',label:'Taxi',hint:'Fare estimate',Icon:CarTaxiFront},
-    {key:'car',label:'Car',hint:'Road route',Icon:CarFront},
-  ] as const
+  // Taxi / Cab uses the same road route as Car (fare and pickup time need a live quote)
+  const duration = (id: string) => mode === 'walk' ? routes[id]?.walkingSeconds : routes[id]?.drivingSeconds
+  const modes = TRAVEL_MODES
   const selectedSeconds = selected ? duration(selected.id) : null
   const SelectedModeIcon = modes.find(item => item.key === mode)!.Icon
   const selectedDistanceMetres = selected
-    ? mode === 'bus' ? bus?.distanceMetres
-      : mode === 'walk' ? routes[selected.id]?.walkingDistanceMetres
-        : routes[selected.id]?.drivingDistanceMetres
+    ? mode === 'walk' ? routes[selected.id]?.walkingDistanceMetres : routes[selected.id]?.drivingDistanceMetres
     : null
 
   useEffect(() => {
@@ -182,7 +181,7 @@ export function PropertyLifeOverview({ overview, description = '', features = []
     {label:'Quality',value:keywordScore([/designer|high.?end|premium|luxur/,/appliance|dishwasher|air.?condition|fully equipped/,/newly|renovated|finished|modern/,/furnished|furniture/]),hint:'Finish & equipment'},
     {label:'Ambience',value:keywordScore([/terrace|balcony|outdoor|garden|yard/,/sea view|views|bright|natural light/,/pool|deck|promenade/,/quiet|peaceful|luxur|designer/]),hint:'Light, comfort & outdoor'},
     {label:'Amenities',value:Math.min(96,68+amenityPlaces*2),hint:`${amenityPlaces} useful places mapped`},
-    {label:'Mobility',value:Math.min(94,68+mobilityPlaces*7+(overview.mappedCount>8?5:0)),hint:mobilityPlaces?`${mobilityPlaces} nearby connections`:'Area routes available'},
+    {label:'Fitness',value:Math.min(94,68+mobilityPlaces*7+(overview.mappedCount>8?5:0)),hint:mobilityPlaces?`${mobilityPlaces} gyms nearby`:'No gym mapped nearby'},
   ]
   const coastScore = nearest.coast ? Math.max(62, Math.min(94, 96 - Math.round(nearest.coast.distanceKm * 8))) : 68
   const convenienceScore = Math.min(95, 66 + Math.min(overview.mappedCount, 14) * 2)
@@ -202,7 +201,7 @@ export function PropertyLifeOverview({ overview, description = '', features = []
       <div className={styles.headingCopy}>
         <span>2906 SMART AREA BRIEF · {overview.area.toUpperCase()}</span>
         <h2 id="life-overview-title">See how this home fits real life.</h2>
-        <p>Shopping, coast, health and movement in one clear view. Routes appear only where a mapped connection is available.</p>
+        <p>Shopping, coast, health and fitness in one clear view. Routes appear only where a mapped connection is available.</p>
       </div>
       <div className={styles.powered}><Sparkles aria-hidden="true" /><span>Intelligence by<br /><b>Nexus Link</b></span></div>
     </header>
@@ -224,7 +223,7 @@ export function PropertyLifeOverview({ overview, description = '', features = []
           <div className={styles.miniMapToolbar}><nav aria-label="Mini map category">{overview.categories.filter(item=>item.places.length>0&&['restaurant','cafe','groceries','coast','movement','health','school'].includes(item.key)).map(item=>{const ItemIcon=icons[item.key];return <button key={item.key} type="button" aria-label={`${item.label}: ${item.places.length} mapped places`} aria-pressed={active===item.key} onClick={()=>setActive(item.key)} title={`${item.label}: ${item.places.length} mapped places`}><ItemIcon aria-hidden="true" /><span className={styles.srOnly}>{item.label}</span><b>{item.places.length}</b></button>})}</nav><label>Radius <select value={radiusKm} onChange={event=>setRadiusKm(Number(event.target.value))}><option value={1}>1 km</option><option value={2}>2 km</option><option value={3}>3 km</option></select></label></div>
           <MiniAreaMap origin={origin} places={allPlaces.filter(place => place.distanceKm <= radiusKm)} active={active} radiusKm={radiusKm} onSelect={(connector,id)=>{setActive(connector);setChosen(id)}} />
       </div>
-      <div className={styles.quickFacts} aria-live="polite">{quickPlaces.map(p=><button type="button" key={`${category.key}:${p.id}`} onClick={()=>setChosen(p.id)} aria-pressed={selected?.id===p.id}><Check aria-hidden="true" /><b>{p.name}</b><small>{walkingSummary(routes[p.id]) || distance(p.distanceKm)}</small></button>)}</div>
+      <div className={styles.quickFacts} aria-live="polite">{quickPlaces.map(p=><button type="button" key={`${category.key}:${p.id}`} onClick={()=>setChosen(p.id)} aria-pressed={selected?.id===p.id}><Check aria-hidden="true" /><b>{p.name}</b><small>{walkingSummary(routes[p.id]) || `≈ ${distance(p.distanceKm)} direct`}</small></button>)}</div>
     </div>
 
     <details className={styles.fullExplorer} open><summary><span>Full area explorer</span><small>Large map, routes, traffic and every mapped place</small><ArrowUpRight aria-hidden="true" /></summary>
@@ -244,14 +243,13 @@ export function PropertyLifeOverview({ overview, description = '', features = []
       <div className={styles.modeBar} role="group" aria-label="Travel mode">{modes.map(m => <motion.button type="button" key={m.key} aria-pressed={mode === m.key} onClick={() => setMode(m.key)} whileHover={{y:-1}} whileTap={{scale:.94,y:1}} transition={{type:'spring',stiffness:520,damping:30}}>{mode === m.key && <motion.i className={styles.modeGlider} layoutId="travel-mode-glider" transition={{type:'spring',stiffness:430,damping:34,mass:.7}} />}<m.Icon aria-hidden="true" /><span><b>{m.label}</b><small>{m.hint}</small></span></motion.button>)}</div>
       <iframe ref={frame} className={styles.areaMap} src="/link-marketplace/estate-area-map.html" title="Map of useful places near this property" loading="lazy" onLoad={() => setMapReady(n => n + 1)} />
 
-      {selected && <div key={`${mode}:${selected.id}`} className={styles.journey} aria-live="polite"><div><small>YOUR JOURNEY TO</small><h4>{selected.name}</h4><strong>{journeyLoading ? 'Checking journey…' : (mode === 'taxi' ? taxiFare(selected.id,selected.name) : minutes(selectedSeconds)) || 'Time unavailable'}</strong><div className={styles.journeySignals} aria-label="Journey overview">
-        <span><SelectedModeIcon aria-hidden="true" />{mode === 'walk' ? 'Walk' : mode === 'bus' ? 'Bus' : mode === 'taxi' ? 'Taxi' : 'Car'}</span>
+      {selected && <div key={`${mode}:${selected.id}`} className={styles.journey} aria-live="polite"><div><small>YOUR JOURNEY TO</small><h4>{selected.name}</h4><strong>{journeyLoading ? 'Checking journey…' : minutes(selectedSeconds) || 'Route unavailable'}</strong><div className={styles.journeySignals} aria-label="Journey overview">
+        <span><SelectedModeIcon aria-hidden="true" />{mode === 'walk' ? 'Walk' : mode === 'taxi' ? 'Taxi / Cab' : 'Car'}</span>
         {mode === 'walk' && ferry && <span className={styles.ferrySignal}><Ship aria-hidden="true" />Walk + ferry</span>}
-        <span><Ruler aria-hidden="true" />{Number.isFinite(selectedDistanceMetres) ? distance(Number(selectedDistanceMetres) / 1000) : 'Distance pending'}</span>
-        <span><Radio aria-hidden="true" />{mode === 'bus' ? 'Scheduled' : trafficRoute ? 'Live traffic' : 'Modelled'}</span>
-      </div><span className={styles.liveStatus}><i />{mode === 'bus' ? (bus?.status === 'CONNECTED' ? 'Google Maps scheduled connection' : 'Select a destination for its timetable') : trafficLoading ? 'Checking live traffic…' : trafficRoute ? `Live traffic · ${minutes(trafficRoute.trafficSeconds)} · ${new Date(trafficRoute.observedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` : ferry ? 'Mapped walk + ferry · live departure required' : 'Mapped route · live traffic on request'}</span></div>{mode === 'walk' && ferry && <p className={styles.ferryNote} role="note"><Ship aria-hidden="true" /><span><b>{ferry.evidenceStatus === 'OFFICIAL_CORRIDOR' ? 'Official ferry corridor' : 'Routed ferry leg'}</b> · {ferry.legs.map(item=>item.evidence?.corridor || item.name).join(' / ')}<small>{ferry.evidenceStatus === 'OFFICIAL_CORRIDOR' ? <>Transport Malta confirms the corridor. <a href={ferry.legs.find(item=>item.evidence?.operatorScheduleUrl)?.evidence?.operatorScheduleUrl || 'https://www.vallettaferryservices.com/schedule/'} target="_blank" rel="noreferrer">Check the operator timetable</a>; waiting time and fare are not included.</> : 'Operator, timetable, waiting time and fare are not verified here.'}</small></span></p>}<details className={styles.journeyDetails}><summary>Journey details &amp; weekly routine</summary><p className={styles.evidence}>Approximate {overview.sourceBasis === 'locality' ? 'locality' : 'property area'} origin · select a pin or a place below. Route lines use the public area pin; front-door distances can differ.</p>
-        {mode === 'bus' ? <p>{bus?.status === 'CONNECTED' ? `${Number.isFinite(bus.accessWalkMinutes)?Math.round(bus.accessWalkMinutes)+' min to stop':'Walk to stop unknown'} · ${Number.isFinite(bus.scheduledWaitMinutes)?Math.round(bus.scheduledWaitMinutes)+' min scheduled wait':'Wait unknown'} · ${Number.isFinite(bus.rideMinutes)?Math.round(bus.rideMinutes)+' min ride':'Ride unknown'} · ${Number.isFinite(bus.egressWalkMinutes)?Math.round(bus.egressWalkMinutes)+' min final walk':'Final walk unknown'} · ${bus.transfers ?? 'Unknown'} transfers · ${bus.services?.map((s: any) => s.line).filter(Boolean).join(', ') || 'Line not provided'}` : 'Select a place to check its scheduled bus connection. No car-time approximation.'}</p> : <p>{selectedSeconds != null ? 'MODELLED · OpenStreetMap / OSRM · no live traffic.' : 'No verified travel time for this journey.'} {mode === 'taxi' && 'Uber / Bolt fare and pickup wait require a live quote; they are not included.'}</p>}
-        {mode === 'bus' && bus?.requestedAt && <small>Google Maps · {new Date(bus.requestedAt).toLocaleString()} · schedule estimate, not live reliability</small>}
+        <span><Ruler aria-hidden="true" />{Number.isFinite(selectedDistanceMetres) ? `${distance(Number(selectedDistanceMetres) / 1000)} ${mode === 'walk' ? 'on foot' : 'by road'}` : journeyLoading ? 'Distance pending' : 'Distance unavailable'}</span>
+        <span><Radio aria-hidden="true" />{trafficRoute && mode !== 'walk' ? 'Live traffic' : 'Estimated'}</span>
+      </div><span className={styles.liveStatus}><i />{trafficLoading ? 'Checking live traffic…' : trafficRoute ? `Live traffic · ${minutes(trafficRoute.trafficSeconds)} · ${new Date(trafficRoute.observedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` : ferry ? 'Mapped walk + ferry · live departure required' : 'Mapped route · live traffic on request'}</span></div>{mode === 'walk' && ferry && <p className={styles.ferryNote} role="note"><Ship aria-hidden="true" /><span><b>{ferry.evidenceStatus === 'OFFICIAL_CORRIDOR' ? 'Official ferry corridor' : 'Routed ferry leg'}</b> · {ferry.legs.map(item=>item.evidence?.corridor || item.name).join(' / ')}<small>{ferry.evidenceStatus === 'OFFICIAL_CORRIDOR' ? <>Transport Malta confirms the corridor. <a href={ferry.legs.find(item=>item.evidence?.operatorScheduleUrl)?.evidence?.operatorScheduleUrl || 'https://www.vallettaferryservices.com/schedule/'} target="_blank" rel="noreferrer">Check the operator timetable</a>; waiting time and fare are not included.</> : 'Operator, timetable, waiting time and fare are not verified here.'}</small></span></p>}<details className={styles.journeyDetails}><summary>Journey details &amp; weekly routine</summary><p className={styles.evidence}>Approximate {overview.sourceBasis === 'locality' ? 'locality' : 'property area'} origin · select a pin or a place below. Route lines use the public area pin; front-door distances can differ.</p>
+        <p>{selectedSeconds != null ? `ESTIMATED · ${mode === 'walk' ? 'walking route' : 'road route'} from OpenStreetMap / OSRM · no live traffic.` : 'No route is available for this journey, so no time is shown.'} {mode === 'taxi' && 'Taxi / cab time follows the road route. Fare and pickup wait need a live quote and are not included.'}</p>
         {(mode === 'car' || mode === 'taxi') && selected.id.startsWith('malta-overview-') && <div><button type="button" className={styles.trafficCheck} disabled={trafficLoading} onClick={checkTraffic}>{trafficLoading ? 'Checking traffic…' : 'Check current traffic'}</button>{trafficRoute ? <p>Google Maps · {minutes(trafficRoute.trafficSeconds) || 'ETA unavailable'} now · {minutes(trafficRoute.noTrafficSeconds) || 'Baseline unavailable'} without traffic · {trafficRoute.distanceMetres != null ? distance(trafficRoute.distanceMetres / 1000) : ''}<br />Updated {new Date(trafficRoute.observedAt).toLocaleString()} · predicted driving time, not a completed journey.</p> : traffic?.status === 'UNKNOWN' ? <p>Traffic is unavailable. The modelled route above is unchanged.</p> : null}</div>}
         <label>My one-way time budget <select value={budget} onChange={e => setBudget(Number(e.target.value))}>{[10,15,20,30,45,60].map(n => <option key={n} value={n}>{n} min</option>)}</select></label>
         <label>Round trips per week <select value={days} onChange={e => setDays(Number(e.target.value))}>{[1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
@@ -268,21 +266,19 @@ export function PropertyLifeOverview({ overview, description = '', features = []
               const ChoiceIcon = choice.Icon
               const activeChoice = mode === choice.key && selected?.id === place.id
               const value = choice.key === 'walk' ? route?.walkingDetailVerified ? minutes(route?.walkingSeconds) : null
-                : choice.key === 'car' ? minutes(route?.drivingSeconds)
-                  : choice.key === 'taxi' ? taxiFare(place.id, place.name)
-                    : place.id === selected?.id && bus?.status === 'CONNECTED' ? minutes(bus.durationMinutes * 60) : null
+                : minutes(route?.drivingSeconds)
               const loadingChoice = activeChoice && journeyLoading
               return <motion.button key={choice.key} type="button" aria-pressed={activeChoice} data-loading={loadingChoice || undefined}
                 onClick={() => { setMode(choice.key); setChosen(place.id) }}
                 whileTap={{scale:.91}} transition={{type:'spring',stiffness:560,damping:29}}
                 aria-label={`${choice.label} journey to ${place.name}${value ? `, ${value}` : ''}`}>
                 {activeChoice && <motion.i className={styles.choiceGlider} layoutId="journey-choice-glider" transition={{type:'spring',stiffness:480,damping:36,mass:.65}} />}
-                <ChoiceIcon aria-hidden="true" /><small>{choice.key === 'walk' && route?.walkingDetailVerified && route.walkingIncludesFerry ? 'Walk + ferry' : choice.label}</small><b>{loadingChoice ? '•••' : value || (choice.key === 'bus' || choice.key === 'walk' ? 'CHECK' : '—')}</b>
+                <ChoiceIcon aria-hidden="true" /><small>{choice.key === 'walk' && route?.walkingDetailVerified && route.walkingIncludesFerry ? 'Walk + ferry' : choice.label}</small><b>{loadingChoice ? '•••' : value || (choice.key === 'walk' ? 'CHECK' : '—')}</b>
               </motion.button>
             })}
           </div>
-          {mode === 'taxi' && <small className={styles.evidence}>Modelled Bolt reference · not a live Uber/Bolt quote. Pickup unknown.</small>}
-          <small className={styles.evidence}>{selected?.id === place.id && mode === 'bus' ? 'GOOGLE MAPS · scheduled journey when available' : route?.walkingDetailVerified ? route.walkingIncludesFerry ? 'ROUTED WALK + FERRY · LIVE TIMETABLE REQUIRED' : 'WALK ROUTE CHECKED · CAR ROUTE MODELLED' : route?.routeVerified ? 'ROUTE SUMMARY ONLY · SELECT WALK TO CHECK FERRY' : 'ROUTE DETAILS PENDING'}</small>
+          {mode === 'taxi' && <small className={styles.evidence}>Road route time · fare and pickup not included</small>}
+          <small className={styles.evidence}>{route?.walkingDetailVerified ? route.walkingIncludesFerry ? 'ROUTED WALK + FERRY · LIVE TIMETABLE REQUIRED' : 'WALK ROUTE CHECKED · CAR ROUTE MODELLED' : route?.routeVerified ? 'ROUTE SUMMARY ONLY · SELECT WALK TO CHECK FERRY' : 'ROUTE DETAILS PENDING'}</small>
         </article>
       })}</div> : <p className={styles.empty}>This category is not sufficiently mapped yet. It stays unknown instead of becoming a made-up score.</p>}
       {false && category.places.length>6 && <button className={styles.trafficCheck} type="button" onClick={()=>setExpanded(!expanded)}>{expanded?'Show fewer':`Show all ${category.places.length} mapped options`}</button>}

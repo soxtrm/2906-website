@@ -7,7 +7,7 @@
 // feature dictionary. "Professional" adds references, co-agency terms (only when agreed) and client shortlists.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, Bus, CalendarDays, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, GraduationCap, Heart, HeartPulse, ListChecks, MessageCircle, MoreVertical, Plus, Search, Share2, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
+import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, CalendarDays, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, GraduationCap, Heart, HeartPulse, ListChecks, MessageCircle, MoreVertical, Plus, Search, Share2, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
 import { MarketplaceLogo } from '@/components/brand/logo'
 import type { Agency, ListingCard, ListingDetail, Market, SmartFact } from '@/lib/marketplace/model'
 import { nrm, understand } from '@/lib/marketplace/query'
@@ -24,7 +24,7 @@ const ago = (iso: string | null) => {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400e3)
   return d <= 0 ? 'Updated today' : d === 1 ? 'Updated yesterday' : d < 31 ? `Updated ${d} days ago` : d < 365 ? `Updated ${Math.round(d / 30)} mo ago` : 'Updated over a year ago'
 }
-const SMART_ICON: Record<SmartFact['key'], typeof Waves> = { shop: ShoppingBasket, coast: Waves, health: HeartPulse, gym: Dumbbell, bus: Bus, school: GraduationCap }
+const SMART_ICON: Record<SmartFact['key'], typeof Waves> = { shop: ShoppingBasket, coast: Waves, health: HeartPulse, gym: Dumbbell, school: GraduationCap }
 const store = { get: (k: string) => { try { return localStorage.getItem(k) } catch { return null } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* private mode */ } } }
 
 function readFilters(): Filters {
@@ -429,7 +429,7 @@ function Card({ l, pro, reduce, href, onOpen, listed, onList, saved, onSave }: {
       )}
       {l.teaser && <p className="mc-desc">{l.teaser}</p>}
       {l.smart.length > 0 && (
-        <FitRow className="mc-smart" chip="mc-near" href={href} onClick={click('area')} title={l.smartFromCentre ? `Distances from the ${l.area} centre, not from the building` : 'Distances from the property'}
+        <FitRow className="mc-smart" chip="mc-near" href={href} onClick={click('area')} title={l.smartFromCentre ? `Straight-line distances from the ${l.area} centre, not from the building — not road or walking distance` : 'Straight-line distances from the property — not road or walking distance'}
           items={l.smart.map(s => { const I = SMART_ICON[s.key]; return { key: s.key, node: <><I size={11} aria-hidden="true" />{s.label} {km(s.km, l.smartFromCentre)}</> } })}
           more={n => <span className="mc-more">+{n} More</span>} />
       )}
