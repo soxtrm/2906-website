@@ -38,6 +38,8 @@ case "${1:-}" in
     cleanup_test; rm -rf "$STAGE"; mkdir -p "$STAGE"
     rsync -a --exclude node_modules --exclude uploads --exclude logs --exclude '.*' --exclude 'backups' --exclude '*.log' --exclude 'exports' --exclude private-docs "$LIVE/" "$STAGE/"
     mkdir -p "$STAGE/test" "$STAGE/node_modules"
+    # after the first apply, stage from the pre-patch files kept in the apply backup
+    if [ -e "$LIVE/services/outreachLibrary.js" ]; then BK0=$(cat "$BKROOT/outreach-autofix-latest"); for f in $PATCHED; do cp -p "$BK0/$f" "$STAGE/$f"; done; fi
     for f in $NEW; do cp "$PKG/backend/$f" "$STAGE/$f"; done
     python3 "$PKG/deploy/patch_autofix.py" "$STAGE"
     cp "$PKG/backend/test/outreach-autofix.test.js" "$STAGE/test/"

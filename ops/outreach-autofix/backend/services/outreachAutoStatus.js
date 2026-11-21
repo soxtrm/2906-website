@@ -38,8 +38,12 @@ async function forAccount(accountId, { now = new Date() } = {}) {
             (SELECT COUNT(*)::int FROM outreach_plan_entries e WHERE e.plan_id=p.id) AS selected,
             (SELECT COUNT(*)::int FROM outreach_plan_entries e WHERE e.plan_id=p.id AND e.eligibility_status='eligible') AS eligible,
             (SELECT COUNT(*)::int FROM outreach_reservations r WHERE r.plan_id=p.id AND r.released_at IS NULL) AS queued,
-            (SELECT COUNT(*)::int FROM outreach_plan_entries e WHERE e.plan_id=p.id AND e.send_status='sent') AS accepted,
-            (SELECT COUNT(*)::int FROM outreach_plan_entries e WHERE e.plan_id=p.id AND e.send_status='failed') AS failed_n,
+            -- while a run is sending, its recipients are the live record; entries are booked when it ends
+            GREATEST((SELECT COUNT(*)::int FROM outreach_plan_entries e WHERE e.plan_id=p.id AND e.send_status='sent'),
+                     (SELECT COUNT(*)::int FROM outreach_run_recipients rr JOIN outreach_runs r ON r.run_id=rr.run_id WHERE r.plan_id=p.id AND rr.state='sent')) AS accepted,
+            GREATEST((SELECT COUNT(*)::int FROM outreach_plan_entries e WHERE e.plan_id=p.id AND e.send_status='failed'),
+                     (SELECT COUNT(*)::int FROM outreach_run_recipients rr JOIN outreach_runs r ON r.run_id=rr.run_id WHERE r.plan_id=p.id AND rr.state='failed')) AS failed_n,
+            (SELECT COUNT(*)::int FROM outreach_run_recipients rr JOIN outreach_runs r ON r.run_id=rr.run_id WHERE r.plan_id=p.id AND rr.state IN ('sent','failed','ambiguous','sending')) AS dispatched,
             (SELECT COALESCE(jsonb_object_agg(reason, n), '{}'::jsonb) FROM (
                SELECT COALESCE(skip_reason, 'skipped') AS reason, COUNT(*)::int AS n FROM outreach_plan_entries e
                 WHERE e.plan_id=p.id AND (e.eligibility_status='skip' OR e.send_status='skipped') GROUP BY 1) s) AS skip_reasons
@@ -58,7 +62,7 @@ async function forAccount(accountId, { now = new Date() } = {}) {
       planId: p.id, date: typeof p.scheduled_date === 'string' ? p.scheduled_date.slice(0, 10) : outreachSchedule.maltaDateStr(new Date(new Date(p.scheduled_date).getTime() + 12 * 3600_000)),
       status: p.status, armed: p.armed, scheduledAt: p.scheduled_at, display, holdReason: p.hold_reason || null,
       batch: { min: p.batch_min, max: p.batch_max, target: p.target_count },
-      counts: { selected: p.selected, eligible: p.eligible, queued: p.queued, accepted: p.accepted, delivered, failed: p.failed_n, skipped: Object.values(p.skip_reasons || {}).reduce((s, n) => s + n, 0) },
+      counts: { selected: p.selected, eligible: p.eligible, queued: p.queued, dispatched: p.dispatched, accepted: p.accepted, delivered, failed: p.failed_n, skipped: Object.values(p.skip_reasons || {}).reduce((s, n) => s + n, 0) },
       skipReasons: p.skip_reasons || {}, outcome: p.outcome, outcomeReason: p.outcome_reason, messageMode: p.message_mode,
     })
   }
