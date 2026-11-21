@@ -25,7 +25,7 @@ export type Reveals = { used: number; limit: number }
 // 'board' is a whitelisted board-only agent: they authenticate against the
 // same agents table but their token is refused by every owner-data route, so
 // the shell must not offer them Inventory or Owners either.
-export type NavKey = 'websitereview' | 'syncinbox' | 'dashboard' | 'inventory' | 'board' | 'access' | 'owners' | 'clientgroups' | 'ownergroups' | 'earnings' | 'admin' | 'outreach' | 'agentchats' | 'profile' | 'baseinventory' | 'sources' | 'bookings' | 'learning' | 'incoming' | 'ownerquality' | 'features' | 'mpinbox'
+export type NavKey = 'websitereview' | 'syncinbox' | 'dashboard' | 'inventory' | 'board' | 'access' | 'owners' | 'clientgroups' | 'ownergroups' | 'earnings' | 'admin' | 'outreach' | 'agentchats' | 'profile' | 'baseinventory' | 'sources' | 'bookings' | 'learning' | 'incoming' | 'ownerquality' | 'features' | 'mpinbox' | 'drafts'
 export type Me = {
   id: number; username: string; email: string; name: string;
   role: 'admin' | 'agent' | 'viewer' | 'board'
