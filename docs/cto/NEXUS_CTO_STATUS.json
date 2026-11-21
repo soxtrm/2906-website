@@ -1,63 +1,63 @@
 {
-  "generatedAt": "2026-11-21T20:01:57.832Z",
+  "generatedAt": "2026-11-21T20:18:42.803Z",
   "generator": "ops/cto/cto-report.cjs",
   "repository": {
     "name": "soxtrm/2906-website",
     "branch": "claude/argus-crm-release-20261120",
-    "head": "1d57860"
+    "head": "7cde1e5"
   },
   "statusCounts": {
     "VERIFIED": 7,
-    "LIVE": 4,
+    "LIVE": 6,
     "NOT_STARTED": 2,
-    "IN_PROGRESS": 2,
+    "IN_PROGRESS": 1,
     "BLOCKED": 2
   },
   "health": [
     {
       "url": "https://nexusstudios.one/marketplace",
       "status": 200,
-      "ms": 206
+      "ms": 840
     },
     {
       "url": "https://nexusstudios.one/api/marketplace/listings",
       "status": 200,
-      "ms": 4012
+      "ms": 3872
     },
     {
       "url": "https://nexusstudios.one/marketplace/rooms",
       "status": 200,
-      "ms": 335
+      "ms": 1709
     },
     {
       "url": "https://nexussync.one/owner",
       "status": 200,
-      "ms": 770
+      "ms": 898
     },
     {
       "url": "https://crm.2906.estate/crm/deal-rooms",
       "status": 200,
-      "ms": 238
+      "ms": 1245
     },
     {
       "url": "https://www.2906.estate/",
       "status": 200,
-      "ms": 357
+      "ms": 1808
     },
     {
       "url": "https://nexuslink.fit/",
       "status": 200,
-      "ms": 173
+      "ms": 211
     },
     {
       "url": "https://api.2906.estate/api/properties",
       "status": 200,
-      "ms": 192
+      "ms": 224
     },
     {
       "url": "https://benestates.work/api/ben/work-health",
       "status": 200,
-      "ms": 173
+      "ms": 226
     }
   ],
   "products": {
@@ -67,10 +67,10 @@
       "host": "nexusstudios.one",
       "milestone": "Malta launch ~1 Dec 2026",
       "deployment": {
-        "deployment": "dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF",
-        "commit": "bcc5afd",
-        "branch": "release/reminder-auto-20261121",
-        "deployedAt": "2026-11-21T19:17:02.673Z"
+        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
+        "commit": "d1d37ac",
+        "branch": "claude/argus-crm-release-20261120",
+        "deployedAt": "2026-11-21T20:02:06.761Z"
       },
       "features": [
         {
@@ -207,10 +207,10 @@
       "host": "nexusstudios.one",
       "milestone": "Exchange / B2B pages",
       "deployment": {
-        "deployment": "dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF",
-        "commit": "bcc5afd",
-        "branch": "release/reminder-auto-20261121",
-        "deployedAt": "2026-11-21T19:17:02.673Z"
+        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
+        "commit": "d1d37ac",
+        "branch": "claude/argus-crm-release-20261120",
+        "deployedAt": "2026-11-21T20:02:06.761Z"
       },
       "features": []
     },
@@ -220,10 +220,10 @@
       "host": "nexussync.one",
       "milestone": "Calendar finish to founder references",
       "deployment": {
-        "deployment": "dpl_CzJHCpBGVZ4oLhkNo3pPjwomXAeL",
-        "commit": "9453e49",
+        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
+        "commit": "d1d37ac",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T18:38:19.069Z"
+        "deployedAt": "2026-11-21T20:02:06.761Z"
       },
       "features": [
         {
@@ -275,10 +275,10 @@
       "host": "nexusstudios.one",
       "milestone": "First real owner onboarding",
       "deployment": {
-        "deployment": "dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF",
-        "commit": "bcc5afd",
-        "branch": "release/reminder-auto-20261121",
-        "deployedAt": "2026-11-21T19:17:02.673Z"
+        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
+        "commit": "d1d37ac",
+        "branch": "claude/argus-crm-release-20261120",
+        "deployedAt": "2026-11-21T20:02:06.761Z"
       },
       "features": [
         {
@@ -308,10 +308,10 @@
       "host": "crm.2906.estate",
       "milestone": "M5 documents + drafts, 14-step journey",
       "deployment": {
-        "deployment": "dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF",
-        "commit": "bcc5afd",
-        "branch": "release/reminder-auto-20261121",
-        "deployedAt": "2026-11-21T19:17:02.673Z"
+        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
+        "commit": "d1d37ac",
+        "branch": "claude/argus-crm-release-20261120",
+        "deployedAt": "2026-11-21T20:02:06.761Z"
       },
       "features": [
         {
@@ -335,15 +335,20 @@
           "product": "dealroom",
           "feature": "Documents, evidence, contract/invoice drafts, payment states",
           "founder": "Private storage, hashes, versions, access log; drafts; states from verified events only",
-          "status": "IN_PROGRESS",
-          "userTest": "",
+          "status": "LIVE",
+          "userTest": "Staging acceptance journey 19/19 (Kev 14 steps: chat -> right agent -> viewing -> Deal Room -> booking in owner hours -> client sees it -> photo + internal doc -> contract + invoice drafts -> deposit request \"not received\" -> timeline -> unrelated agent 404 -> iPad + phone); backend stage 81/81 incl. regressions. Production: routes live (auth/404 verified); no synthetic deal in production by design",
           "blocker": "",
           "workstream": "lead",
-          "paths": [],
-          "tests": "",
-          "verifiedAt": "",
-          "limits": "No custody of money; regulated escrow needs a licensed partner",
-          "next": "Build + 14-step journey"
+          "paths": [
+            "ops/deal-rooms-m5/",
+            "app/crm/deal-rooms/page.tsx",
+            "app/studios/marketplace/chat.tsx",
+            "app/api/marketplace/deal/"
+          ],
+          "tests": "deal-room-docs.test.js 7/7 · deal-journey.cjs 19/19",
+          "verifiedAt": "2026-11-21",
+          "limits": "Uploads up to 3 MB through the website (Vercel body limit); payment provider not connected (verification = admin reconciliation with reference); no e-signature yet; Client<->Owner and Agent<->Owner relationships not wired",
+          "next": "Owner side in the Deal Room (Client<->Owner, Agent<->Owner) via NEXUS Sync; Anti-Fraud Bridge checks"
         },
         {
           "product": "dealroom",
@@ -367,10 +372,10 @@
       "host": "crm.2906.estate",
       "milestone": "Stability, Drafts, Reminder Due (outreach session)",
       "deployment": {
-        "deployment": "dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF",
-        "commit": "bcc5afd",
-        "branch": "release/reminder-auto-20261121",
-        "deployedAt": "2026-11-21T19:17:02.673Z"
+        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
+        "commit": "d1d37ac",
+        "branch": "claude/argus-crm-release-20261120",
+        "deployedAt": "2026-11-21T20:02:06.761Z"
       },
       "features": [
         {
@@ -404,9 +409,31 @@
           "verifiedAt": "",
           "limits": "",
           "next": ""
+        },
+        {
+          "product": "argus",
+          "feature": "CTO Cockpit + status reports",
+          "founder": "Central, admin-only status with live evidence, test links and machine-readable reports",
+          "status": "LIVE",
+          "userTest": "crm.2906.estate/crm/cto 200 (admin), /api/cto/health live checks; report generated from Vercel/SSH/HTTP evidence",
+          "blocker": "",
+          "workstream": "lead",
+          "paths": [
+            "app/crm/cto/page.tsx",
+            "ops/cto/cto-report.cjs",
+            "docs/cto/"
+          ],
+          "tests": "",
+          "verifiedAt": "2026-11-21",
+          "limits": "Report refreshes when the lead session runs the generator (after each release); staging test links need the staging tunnel",
+          "next": "Screenshots per release in the cockpit"
         }
       ],
       "backendPackages": [
+        {
+          "package": "deal-rooms-m5",
+          "appliedAt": "20261121T201238Z"
+        },
         {
           "package": "reminder-pd3c",
           "appliedAt": "20261121T191521Z"
@@ -482,10 +509,6 @@
         {
           "package": "reminder-u4",
           "appliedAt": "20261121T164740Z"
-        },
-        {
-          "package": "reminder-u3",
-          "appliedAt": "20261121T154258Z"
         }
       ]
     },

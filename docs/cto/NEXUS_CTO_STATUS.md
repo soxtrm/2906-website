@@ -1,6 +1,6 @@
 # NEXUS CTO status
 
-Generated 2026-11-21T20:01:57.832Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 1d57860). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
+Generated 2026-11-21T20:18:42.803Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 7cde1e5). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
 
 ## Launch-readiness board
 
@@ -15,7 +15,7 @@ Generated 2026-11-21T20:01:57.832Z from live evidence by `ops/cto/cto-report.cjs
 | NEXUS Marketplace | Places tab / map journey | Maps and Places consistent with the Marketplace | **IN_PROGRESS** | Places tab still links to the classic view | Not on the new React Marketplace yet | lead |
 | NEXUS Rooms | Rooms inventory, 2.5D view, real booking request | Open Marketplace, pick an apartment, choose Room 2, real request via NEXUS Booking | **LIVE** | Staging E2E 27/27; production page live but no apartment in room mode yet (honest empty state) | No owner has added rooms yet | lead |
 | NEXUS Deal Room | Deal Room M3 (records, stages, CRM 3 panels, client strip) | Created at the viewing request; stable id; no duplicates; stages; private notes; no fake payment | **VERIFIED** | Staging browser E2E 12/12; backend stage 100/100 | - | lead |
-| NEXUS Deal Room | Documents, evidence, contract/invoice drafts, payment states | Private storage, hashes, versions, access log; drafts; states from verified events only | **IN_PROGRESS** | - | - | lead |
+| NEXUS Deal Room | Documents, evidence, contract/invoice drafts, payment states | Private storage, hashes, versions, access log; drafts; states from verified events only | **LIVE** | Staging acceptance journey 19/19 (Kev 14 steps: chat -> right agent -> viewing -> Deal Room -> booking in owner hours -> client sees it -> photo + internal doc -> contract + invoice drafts -> deposit request "not received" -> timeline -> unrelated agent 404 -> iPad + phone); backend stage 81/81 incl. regressions. Production: routes live (auth/404 verified); no synthetic deal in production by design | - | lead |
 | NEXUS Deal Room | WhatsApp relay | Optional relay through the existing WAHA, no number exposure | **BLOCKED** | - | Needs 2 authorised test numbers + the sender number from Kevin | lead |
 | NEXUS Sync | Calendar 2.0 | Rolling 7 days, drag ranges, 30-min slots, drag requests from the side, premium touch | **LIVE** | Staging E2E 23/23 | Founder not satisfied with visual/interaction quality | lead |
 | NEXUS Booking | Rooms stays engine | One booking engine; atomic conflicts whole vs room | **VERIFIED** | 4 concurrent confirms -> exactly 1 winner; unsigned 401 | - | lead |
@@ -23,36 +23,38 @@ Generated 2026-11-21T20:01:57.832Z from live evidence by `ops/cto/cto-report.cjs
 | ARGUS / 2906 CRM | Drafts, Reminder Due, outreach | Preserve working outreach | **LIVE** | Owned by the outreach session | - | outreach session |
 | Benestates Work | St Julian's onboarding | 8 agents pending; invitations only after an authorised sender exists | **BLOCKED** | Health endpoint 200 | No Benestates mail sender credential (SendGrid of benestates.com or M365 mailbox); 2906 Gmail must not be used | BEN cloud session |
 | NEXUS Marketplace | Social launch kit | Premium editorial campaign, 9 feed concepts, 3 carousels, 3 video concepts, teaser, plan | **NOT_STARTED** | - | - | lead |
+| ARGUS / 2906 CRM | CTO Cockpit + status reports | Central, admin-only status with live evidence, test links and machine-readable reports | **LIVE** | crm.2906.estate/crm/cto 200 (admin), /api/cto/health live checks; report generated from Vercel/SSH/HTTP evidence | - | lead |
 
 ## Products
 
 | Product | URL | Live deployment | Commit | Deployed | Milestone |
 |---|---|---|---|---|---|
-| NEXUS Marketplace | https://nexusstudios.one/marketplace | dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF | bcc5afd | 2026-11-21 19:17 | Malta launch ~1 Dec 2026 |
-| NEXUS STUDIOS | https://nexusstudios.one | dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF | bcc5afd | 2026-11-21 19:17 | Exchange / B2B pages |
-| NEXUS Sync | https://nexussync.one/owner | dpl_CzJHCpBGVZ4oLhkNo3pPjwomXAeL | 9453e49 | 2026-11-21 18:38 | Calendar finish to founder references |
+| NEXUS Marketplace | https://nexusstudios.one/marketplace | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Malta launch ~1 Dec 2026 |
+| NEXUS STUDIOS | https://nexusstudios.one | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Exchange / B2B pages |
+| NEXUS Sync | https://nexussync.one/owner | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Calendar finish to founder references |
 | NEXUS Booking | https://nexuslink.fit | Booking release 20261121-rooms-v120 | - | - | Rooms stays engine v120 |
-| NEXUS Rooms | https://nexusstudios.one/marketplace/rooms | dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF | bcc5afd | 2026-11-21 19:17 | First real owner onboarding |
-| NEXUS Deal Room | https://crm.2906.estate/crm/deal-rooms | dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF | bcc5afd | 2026-11-21 19:17 | M5 documents + drafts, 14-step journey |
-| ARGUS / 2906 CRM | https://crm.2906.estate | dpl_4rCC5EagaW6xKh4TwoEaZU2NKAGF | bcc5afd | 2026-11-21 19:17 | Stability, Drafts, Reminder Due (outreach session) |
+| NEXUS Rooms | https://nexusstudios.one/marketplace/rooms | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | First real owner onboarding |
+| NEXUS Deal Room | https://crm.2906.estate/crm/deal-rooms | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | M5 documents + drafts, 14-step journey |
+| ARGUS / 2906 CRM | https://crm.2906.estate | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Stability, Drafts, Reminder Due (outreach session) |
 | Benestates Work | https://benestates.work | release e197653 | - | - | St Julian's onboarding (8 pending) |
 
 ## Health (probed at generation)
 
 | URL | HTTP | ms |
 |---|---|---|
-| https://nexusstudios.one/marketplace | 200 | 206 |
-| https://nexusstudios.one/api/marketplace/listings | 200 | 4012 |
-| https://nexusstudios.one/marketplace/rooms | 200 | 335 |
-| https://nexussync.one/owner | 200 | 770 |
-| https://crm.2906.estate/crm/deal-rooms | 200 | 238 |
-| https://www.2906.estate/ | 200 | 357 |
-| https://nexuslink.fit/ | 200 | 173 |
-| https://api.2906.estate/api/properties | 200 | 192 |
-| https://benestates.work/api/ben/work-health | 200 | 173 |
+| https://nexusstudios.one/marketplace | 200 | 840 |
+| https://nexusstudios.one/api/marketplace/listings | 200 | 3872 |
+| https://nexusstudios.one/marketplace/rooms | 200 | 1709 |
+| https://nexussync.one/owner | 200 | 898 |
+| https://crm.2906.estate/crm/deal-rooms | 200 | 1245 |
+| https://www.2906.estate/ | 200 | 1808 |
+| https://nexuslink.fit/ | 200 | 211 |
+| https://api.2906.estate/api/properties | 200 | 224 |
+| https://benestates.work/api/ben/work-health | 200 | 226 |
 
 ## ARGUS backend packages (latest first)
 
+- deal-rooms-m5 · 20261121T201238Z
 - reminder-pd3c · 20261121T191521Z
 - reminder-pd3b · 20261121T191154Z
 - reminder-pd3 · 20261121T191056Z
@@ -64,7 +66,6 @@ Generated 2026-11-21T20:01:57.832Z from live evidence by `ops/cto/cto-report.cjs
 - reminder-pd1 · 20261121T180431Z
 - reminder-u6f · 20261121T174408Z
 - reminder-u6e · 20261121T173008Z
-- reminder-u6d · 20261121T172831Z
 
 ## Next actions
 
@@ -74,8 +75,9 @@ Generated 2026-11-21T20:01:57.832Z from live evidence by `ops/cto/cto-report.cjs
 - **NEXUS Marketplace · Places tab / map journey:** Port Places into the React Marketplace
 - **NEXUS Rooms · Rooms inventory, 2.5D view, real booking request:** Onboard the first real owner apartment
 - **NEXUS Deal Room · Deal Room M3 (records, stages, CRM 3 panels, client strip):** M5 documents/evidence, contract + invoice drafts, payment request states
-- **NEXUS Deal Room · Documents, evidence, contract/invoice drafts, payment states:** Build + 14-step journey
+- **NEXUS Deal Room · Documents, evidence, contract/invoice drafts, payment states:** Owner side in the Deal Room (Client<->Owner, Agent<->Owner) via NEXUS Sync; Anti-Fraud Bridge checks
 - **NEXUS Deal Room · WhatsApp relay:** Waiting for test numbers
 - **NEXUS Sync · Calendar 2.0:** Rework UI against the founder's references (backend unchanged)
 - **Benestates Work · St Julian's onboarding:** Kevin pastes the sender secret in the admin form
 - **NEXUS Marketplace · Social launch kit:** After the Deal Room journey
+- **ARGUS / 2906 CRM · CTO Cockpit + status reports:** Screenshots per release in the cockpit
