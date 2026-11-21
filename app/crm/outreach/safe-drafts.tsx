@@ -108,6 +108,76 @@ export function SafeDrafts() {
   )
 }
 
+// ── Activate Reminder Due: the six groups the 09:00 run needs ──────────────
+// Kev, 2026-11-21: approve 30 texts in six groups, not 150 one by one. Each text is
+// shown exactly as an owner would get it at 09:00 (greeting of that moment, example
+// context), with its signature checked against the persona. Approving never sends.
+const SIGN: Record<string, RegExp> = { kev: /\bKevin\b/, gabriela: /\bGabriela\b/, cedric: /\bCedric\b/ }
+const FOREIGN: Record<string, RegExp> = { kev: /\b(?:Gabriela|Cedric)\b/, gabriela: /\b(?:Kevin|Kev|Cedric)\b/, cedric: /\b(?:Kevin|Kev|Gabriela)\b/ }
+const EXAMPLE: Record<string, string> = {
+  agreed_followup_time_phrase: 'at the end of November', followup_subject: 'the 2-Bedroom Apartment in Sliema', upcoming_property_label: 'the 3-Bedroom Apartment in Gżira',
+}
+function asSent(body: string) {
+  return body.replace(/\{\{greeting\}\}/g, 'Good morning').replace(/\{\{opening\}\}/g, 'Good morning, ').replace(/\{\{([a-z_]+)\}\}/g, (m, k) => EXAMPLE[k] || m)
+    .replace(/^(Good morning, )([A-Z])([a-z])/, (m, a, c, n) => `${a}${c.toLowerCase()}${n}`)
+}
+const GROUP_INTENTS: [string, string][] = [['owner_requested_callback', 'Owner asked for a callback'], ['upcoming_property_followup', 'Upcoming property']]
+
+export function ActivateReminderDue({ onChanged }: { onChanged?: () => void }) {
+  const [rows, setRows] = useState<Draft[] | null>(null)
+  const [open, setOpen] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const load = useCallback(async () => {
+    const all: Draft[] = []
+    for (const [intent] of GROUP_INTENTS) all.push(...(await crmGet(`outreach/library?intent=${intent}`)).templates)
+    setRows(all.filter(r => !String(r.code || '').startsWith('ARGUS-CANARY-')))
+  }, [])
+  useEffect(() => { load().catch(e => setMsg(e?.message || 'Could not load the texts')) }, [load])
+  if (!rows) return null
+  const groups = PERSONAS.flatMap(([p, pl]) => GROUP_INTENTS.map(([i, il]) => {
+    const list = rows.filter(r => r.persona === p && r.intent === i && r.review_status !== 'rejected')
+    const bad = list.filter(r => !SIGN[p].test(r.body) || FOREIGN[p].test(r.body))
+    return { key: `${p}:${i}`, persona: p, personaLabel: pl, intentLabel: il, list, bad,
+      approved: list.filter(r => r.review_status === 'approved' && r.active).length, pending: list.filter(r => r.review_status === 'pending_review') }
+  }))
+  const ready = groups.filter(g => g.approved > 0).length
+  async function approve(ids: number[]) {
+    if (!ids.length) return
+    setBusy(true); setMsg('')
+    try { const r = await crmJson('outreach/library/review', 'POST', { ids, status: 'approved' }); setMsg(`${r.updated.length} text${r.updated.length === 1 ? '' : 's'} approved. Nothing was sent.`); await load(); onChanged?.() }
+    catch (e: any) { setMsg(e?.message || 'Not approved') } finally { setBusy(false) }
+  }
+  const allPending = groups.filter(g => !g.bad.length).flatMap(g => g.pending.map(r => r.id))
+  return (
+    <section className="rd-activate" aria-label="Activate Reminder Due">
+      <header>
+        <div>
+          <h3>Activate Reminder Due · {ready} of 6 groups ready</h3>
+          <p>The 09:00 run sends only approved texts: “owner asked for a callback” and “upcoming property”, for Kevin, Gabriela and Cedric. Every text below is shown as the owner would get it at 09:00 — greeting of that moment, example details filled in. Your existing approved texts are not touched. Approving sends nothing.</p>
+        </div>
+        <button type="button" className="rd-approve-all" disabled={busy || !allPending.length} onClick={() => approve(allPending)}>{busy ? 'Approving…' : allPending.length ? `Approve all ${allPending.length} waiting texts` : 'All six groups approved'}</button>
+      </header>
+      {msg && <p className="rd-msg" role="status">{msg}</p>}
+      <div className="rd-groups">
+        {groups.map(g => (
+          <div key={g.key} className={`rd-group${g.approved ? ' is-ready' : ''}${g.bad.length ? ' is-bad' : ''}`}>
+            <div className="rd-group-head">
+              <b>{g.personaLabel} · {g.intentLabel}</b>
+              <small>{g.approved} approved · {g.pending.length} waiting · {g.bad.length ? `${g.bad.length} signature problem(s) — cannot approve` : `signs as ${g.personaLabel} ✓`}</small>
+              <span>
+                <button type="button" onClick={() => setOpen(open === g.key ? null : g.key)} aria-expanded={open === g.key}>{open === g.key ? 'Hide texts' : `Preview ${g.list.length}`}</button>
+                {g.pending.length > 0 && !g.bad.length && <button type="button" className="is-primary" disabled={busy} onClick={() => approve(g.pending.map(r => r.id))}>Approve {g.pending.length}</button>}
+              </span>
+            </div>
+            {open === g.key && <ol className="rd-previews">{g.list.map(r => <li key={r.id}><small>{r.code?.replace(/^ARGUS-[A-Z]+-/, '') || `#${r.number}`} · {STATUS[r.review_status]}</small><p>{asSent(r.body)}</p></li>)}</ol>}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 // ── Reminder Due: what the 09:00 run did ───────────────────────────────────
 type RRow = { id: number; reminder_id: number; state: string; reason: string | null; intent: string | null; session_name: string | null; planned_at: string | null; sent_at: string | null; rendered_text: string | null; owner_name: string | null; phone_last4: string; due: string; original_note: string; template_code: string | null }
 const RSTATE: Record<string, string> = { planned: 'Planned', sending: 'Sending', sent: 'Sent', skipped: 'Not sent', waiting: 'Waiting', failed: 'Failed', ambiguous: 'Check by hand' }
