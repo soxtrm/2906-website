@@ -26,14 +26,18 @@ case "${1:-}" in
     [ -f /root/property-features/backend/migrations/20261121e_property_features.sql ] && docker exec -i "$DB" psql -U postgres -q < /root/property-features/backend/migrations/20261121e_property_features.sql >/dev/null
     docker run -d --rm --name argus-clamav-stage --network "$NET" -m 2g clamav/clamav:1.4 >/dev/null
     for i in $(seq 1 90); do docker logs argus-clamav-stage 2>&1 | grep -q "socket found, clamd started" && break; sleep 4; done
+    # NEXUS Rooms: an isolated copy of the NEXUS Booking rooms module on a throwaway SQLite (never the production DB)
+    RSEC=/root/rooms-stage.secret; [ -s "$RSEC" ] || (umask 077; openssl rand -hex 32 > "$RSEC")
+    mkdir -p /tmp/rooms-stage-data && rm -f /tmp/rooms-stage-data/*.sqlite* && chmod 777 /tmp/rooms-stage-data
+    docker run -d --rm --name argus-rooms-booking --network "$NET" -p 127.0.0.1:4176:4176 -v /opt/nexusbooking/current:/rel:ro -v "$PKG/rooms_booking_stage.py:/stage.py:ro" -v /tmp/rooms-stage-data:/data       -e NEXUS_BOOKING_DB=/data/rooms.sqlite -e NEXUS_ROOMS_SECRET="$(cat "$RSEC")" python:3.12-slim python /stage.py >/dev/null
     docker run -d --rm --name "$APP" --network "$NET" -p 127.0.0.1:3901:3901 -v "$CODE:/app" -v "$LIVE/node_modules:/app/node_modules:ro" -w /app \
       -e NODE_ENV=staging -e PGHOST="$DB" -e ARGUS_AGENCY_KEY=2906 -e JWT_SECRET=staging-jwt-secret-not-production-000 \
       -e NEXUS_LINK_INBOUND_SECRET="$(cat "$SECRET_FILE")" -e SYNC_PRIVATE_DOCS_DIR=/app/private-docs -e SYNC_STAFF_FILE_ORIGIN=http://127.0.0.1:3901 \
-      -e SYNC_PUBLIC_ORIGIN=http://localhost:3080 -e SYNC_DOCUMENTS_ENABLED=1 -e CLAMD_HOST=argus-clamav-stage -e SYNC_STAFF_NOTIFY_TO=35699999999 --entrypoint node 2906-system-backend stage-server.js >/dev/null
+      -e SYNC_PUBLIC_ORIGIN=http://localhost:3080 -e SYNC_DOCUMENTS_ENABLED=1 -e CLAMD_HOST=argus-clamav-stage -e SYNC_STAFF_NOTIFY_TO=35699999999       -e NEXUS_ROOMS_SECRET="$(cat /root/rooms-stage.secret)" -e NEXUS_BOOKING_ROOMS_URL=http://argus-rooms-booking:4176 --entrypoint node 2906-system-backend stage-server.js >/dev/null
     for i in $(seq 1 40); do curl -s -m 2 -o /dev/null http://127.0.0.1:3901/stage/outbox && break; sleep 1; done
     docker logs "$APP" 2>&1 | grep -E "seeded|staging on|failed|Error" | head -5
     ;;
-  down) docker rm -f "$APP" "$DB" argus-clamav-stage >/dev/null 2>&1 || true; docker network rm "$NET" >/dev/null 2>&1 || true; rm -rf "$CODE"; echo "staging removed" ;;
+  down) docker rm -f "$APP" "$DB" argus-clamav-stage argus-rooms-booking >/dev/null 2>&1 || true; docker network rm "$NET" >/dev/null 2>&1 || true; rm -rf "$CODE"; echo "staging removed" ;;
   logs) docker logs --tail 60 "$APP" 2>&1 ;;
   *) echo "usage: staging.sh up|down|logs"; exit 2 ;;
 esac

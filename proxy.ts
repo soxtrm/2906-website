@@ -44,6 +44,10 @@ export default function proxy(req: NextRequest) {
     if (pathname === '/marketplace' || pathname === '/marketplace/') { url.pathname = '/studios/marketplace'; return NextResponse.rewrite(url) }
     const home = pathname.match(/^\/marketplace\/home\/([A-Za-z0-9-]{1,40})\/?$/)
     if (home) { url.pathname = `/studios/marketplace/home/${home[1]}`; return NextResponse.rewrite(url) }
+    // NEXUS Rooms (2026-11-21): homes let room by room, and one home with its interactive layout
+    if (pathname === '/marketplace/rooms' || pathname === '/marketplace/rooms/') { url.pathname = '/studios/marketplace/rooms'; return NextResponse.rewrite(url) }
+    const rooms = pathname.match(/^\/marketplace\/rooms\/([A-Za-z0-9-]{1,40})\/?$/)
+    if (rooms) { url.pathname = `/studios/marketplace/rooms/${rooms[1]}`; return NextResponse.rewrite(url) }
     if (pathname === '/marketplace/classic' || pathname === '/marketplace/classic/') { url.pathname = '/link-marketplace/index.html'; return NextResponse.rewrite(url) }
     // NEXUS STUDIOS Exchange (2026-11-21): co-agency inventory on agreed terms, participating agencies, partner requests
     if (pathname === '/exchange' || pathname === '/exchange/') { url.pathname = '/studios/exchange'; return NextResponse.rewrite(url) }

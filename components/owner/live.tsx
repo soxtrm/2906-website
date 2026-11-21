@@ -8,6 +8,7 @@ import { BedDouble, Bath, CalendarDays, Check, ChevronLeft, ChevronRight, Clock,
 import { useOwner } from '@/lib/owner/store'
 import { liveProperties, pendingClaims, type LiveListing, type LiveViewing } from '@/lib/owner/live'
 import { ActivityList, HouseRules } from './house-rules'
+import { RoomsManager } from './rooms-manager'
 import { FeaturesEditor } from './features-editor'
 import { CalendarTeaser } from './sync-calendar'
 
@@ -259,9 +260,9 @@ export function LiveProperty({ id }: { id: number }) {
   const link = (s.live.owner?.links || []).find(k => k.properties?.some(p => p.sourcePropertyId === id))
   const can = (perm: 'edit' | 'schedule' | 'share') => !link?.role || (perm !== 'share' && !!link.permissions?.includes(perm))
   const [photo, setPhoto] = useState(0)
-  const [tab, setTab] = useState<'status' | 'rules' | 'features' | 'edit' | 'share' | 'hours'>(() => {
+  const [tab, setTab] = useState<'status' | 'rooms' | 'rules' | 'features' | 'edit' | 'share' | 'hours'>(() => {
     const t = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('tab')
-    return t === 'share' || t === 'edit' || t === 'hours' || t === 'rules' || t === 'features' ? t : 'status'
+    return t === 'share' || t === 'edit' || t === 'hours' || t === 'rules' || t === 'features' || t === 'rooms' ? t : 'status'
   })
   const [nick, setNick] = useState<string | null>(null)
   const [rent, setRent] = useState<string | null>(null)
@@ -304,7 +305,7 @@ export function LiveProperty({ id }: { id: number }) {
       </header>
 
       <div className="lv-tabs" role="tablist">
-        {([['status', 'Availability'], ['rules', 'House rules'], ['features', 'Features'], ['edit', 'Details & price'], ['share', 'Sharing'], ['hours', 'Viewings']] as const).filter(([k]) => (k === 'share' ? can('share') : k === 'status' || k === 'edit' ? can('edit') : true)).map(([k, t]) => (
+        {([['status', 'Availability'], ['rooms', 'Rooms'], ['rules', 'House rules'], ['features', 'Features'], ['edit', 'Details & price'], ['share', 'Sharing'], ['hours', 'Viewings']] as const).filter(([k]) => (k === 'share' ? can('share') : k === 'status' || k === 'edit' ? can('edit') : true)).map(([k, t]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{t}</button>
         ))}
       </div>
@@ -326,6 +327,7 @@ export function LiveProperty({ id }: { id: number }) {
       )}
 
       {link?.role && <p className="rp-badge">You look after this home for its owner. {can('edit') ? 'You may change it.' : 'You can see it.'}{can('schedule') ? ' You handle viewings.' : ''}</p>}
+      {tab === 'rooms' && <RoomsManager propertyId={id} readOnly={!can('edit')} />}
       {tab === 'rules' && <HouseRules propertyId={id} readOnly={!can('edit')} />}
       {tab === 'features' && <FeaturesEditor propertyId={id} readOnly={!can('edit')} externalId={l.externalId} nextVersion={nextVersion} />}
 

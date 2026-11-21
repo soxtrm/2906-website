@@ -45,7 +45,7 @@ async function seed() {
     return { ids, a }
   }
   // refs carry the agency prefix like production ('2906-039'), so the marketplace names the agency
-  const olga = await mk('Olga Stage', '35699100001', 'olga.stage@example.test', ['2906-ST-101', '2906-ST-102', '2906-ST-103', '2906-9765'])
+  const olga = await mk('Olga Stage', '35699100001', 'olga.stage@example.test', ['2906-ST-101', '2906-ST-102', '2906-ST-103', '2906-9765', '2906-9901'])
   await mk('Bruno Stage', '35699100002', 'bruno.stage@example.test', ['2906-ST-201'])
   const dan = await mk('Dan Stage', '35699100003', 'dan.stage@example.test', [])
   await pool.query("UPDATE sync_accounts SET phone_e164='35699100003', phone_verified_at=NOW(), phone_verified_via='staging' WHERE id=$1", [dan.a.id])
@@ -57,6 +57,8 @@ async function seed() {
   await pool.query("INSERT INTO agents (id, username, name, role, active, board_access, email, password_hash) VALUES (2,'stage-agent','Tim Stage','agent',true,false,'tim.stage@example.test',$1), (3,'stage-other','Uma Other','agent',true,false,'uma.other@example.test',$2) ON CONFLICT DO NOTHING",
     [bcrypt.hashSync('stage-agent-2026', 10), bcrypt.hashSync('stage-other-2026', 10)])
   await pool.query("UPDATE properties SET listed_by_agent_id=2 WHERE ref='2906-9765'")
+  // NEXUS Rooms test home: one 3-bedroom apartment in St Julian's (rooms are added through the owner UI in the tests)
+  await pool.query("UPDATE properties SET bedrooms=3, bathrooms=2, town='Sliema', property_type='Apartment', longlet_price=2100, listed_by_agent_id=2 WHERE ref='2906-9901'")
   // Pia: owner record with two homes, SYNC account with a confirmed mobile, claim proposed (as after 'SYNC verify')
   const { rows: [po] } = await pool.query("INSERT INTO owner_contacts (phone_normalized, name) VALUES ('35699100005','Pia Stage') RETURNING id")
   for (const [i, ref] of ['2906-ST-301', '2906-ST-302'].entries()) {
@@ -85,6 +87,8 @@ app.use('/api/sync-account/v1', require(R('routes/syncAccountService.js')))
 app.use('/api/crm/sync-inbox', require(R('routes/crmSyncInbox.js')))
 app.use('/api/crm/property-features', require(R('routes/crmPropertyFeatures.js')))
 // Marketplace conversations (2026-11-21), when the live code has them
+// NEXUS Rooms (2026-11-21), when the live code has them
+try { app.use('/api/crm/property-rooms', require(R('routes/crmPropertyRooms.js'))); app.use('/api/nexus/rooms', require(R('routes/nexusRooms.js'))) } catch (e) { console.log('rooms not in live code', e.message) }
 try { app.use('/api/crm/marketplace-inbox', require(R('routes/crmMarketplaceInbox.js'))); app.use('/api/nexus/mp', require(R('routes/marketplaceConversations.js'))) } catch (e) { console.log('marketplace conversations not in live code', e.message) }
 app.use('/api/nexus', require(R('routes/nexusBridge.js')))
 app.use('/api/crm', require(R('routes/crm.js')))
