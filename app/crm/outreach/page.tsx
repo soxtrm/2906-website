@@ -7,7 +7,7 @@ import { normalizeOutreachCountDraft } from '@/lib/crm/outreach-count'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { AccountRail, ActivityView, AutomationSetup, DayDetail, DayTimeline, KpiBar, LazyDetails, TemplateReview, useOverview, type DayCell } from './control-center'
 import { AutoStatusPanel, useAutoStatus } from './auto-status'
-import { ActivateReminderDue, InboxDecisions, NextRunPreview, ReminderBacklog, ReminderDuePanel, ReplyGuardLog, SafeDrafts } from './safe-drafts'
+import { ActivateReminderDue, InboxDecisions, NextRunPreview, ReminderBacklog, ReminderDuePanel, ReminderOperations, ReplyGuardLog, SafeDrafts } from './safe-drafts'
 import { AccountCards, AutoPauseRow, HealthFilter, PaceCard, PersonaPreview, SevenDays, healthMatches, type P0Account } from './outreach-p0'
 
 // ── ARGUS / NEON design tokens ───────────────────────────────────────────────
@@ -373,7 +373,7 @@ function ArgusConsole() {
               {selectedAccount && <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={async () => { await load(); await reloadOverview() }} templates={templates} onTemplatesChanged={loadTemplates} />}
             </>}
             {activeTab === 'activity' && <>
-              <ActivateReminderDue />
+              <ReminderOperations />
               <NextRunPreview />
               <ReminderDuePanel />
               <InboxDecisions />
