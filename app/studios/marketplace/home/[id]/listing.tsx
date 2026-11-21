@@ -51,7 +51,10 @@ export function ListingView({ id }: { id: string }) {
                 {!!l.bathrooms && <span><Bath size={17} aria-hidden="true" />{l.bathrooms} bathrooms</span>}
                 {l.size && <span><Ruler size={17} aria-hidden="true" />{l.size} m²</span>}
               </p>
-              {l.features.length > 0 && <p className="mp-chips">{l.features.map(x => <span key={x}><Check size={13} aria-hidden="true" />{x}</span>)}</p>}
+              {l.evidenced.length > 0 && (
+                <div className="mp-evidence"><b>Confirmed features</b>{l.evidenced.map(e => <span key={e.key} data-e={e.evidence}><Check size={13} aria-hidden="true" />{e.text}<small>{e.evidenceLabel}</small></span>)}</div>
+              )}
+              {l.features.filter(x => !l.evidenced.some(e => e.text === x)).length > 0 && <p className="mp-chips" title="From the listing description">{l.features.filter(x => !l.evidenced.some(e => e.text === x)).map(x => <span key={x}>{x}</span>)}</p>}
               {l.description && <div className="mp-desc">{l.description.split(/\n+/).map((p, k) => <p key={k}>{p}</p>)}</div>}
               {l.overview && (
                 <section className="mp-smartbox">

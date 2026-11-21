@@ -16,6 +16,11 @@ export const AGENCIES: Record<string, Agency> = { '2906': { key: '2906', name: '
 
 export type Market = 'longlets' | 'stays' | 'sales'
 export type SmartFact = { key: 'shop' | 'coast' | 'health' | 'gym'; label: string; name: string; km: number }
+// Feature dictionary (ARGUS nexus_feature_dictionary, standard entries): labels, aliases, and the ARGUS tag each maps to.
+export type FeatureEntry = { key: string; label: string; group: string; kind: 'boolean' | 'count' | 'choice'; filterable: boolean; aliases: string[] }
+export type Dict = { entries: FeatureEntry[]; byTag: Record<string, string> }
+export const toDict = (entries: (FeatureEntry & { argusTag?: string | null })[]): Dict => ({ entries, byTag: Object.fromEntries(entries.filter(e => e.argusTag).map(e => [e.argusTag as string, e.key])) })
+export type Evidenced = { key: string; label: string; text: string; evidence: 'agent_confirmed' | 'document' | 'verified'; evidenceLabel: string }
 export type Availability = { kind: 'now' | 'confirmed' | 'from'; label: string; from: string | null }
 
 export type ListingCard = {
@@ -37,6 +42,8 @@ export type ListingCard = {
   availability: Availability
   updatedAt: string | null
   features: string[]
+  featureKeys: string[]
+  evidenced: Evidenced[]
   smart: SmartFact[]
   provider: Provider
   cooperation: Cooperation
@@ -87,12 +94,23 @@ export function providerOf(p: Raw): Provider {
 
 const COOPERATION: Cooperation = { status: 'not_published', note: 'Co-agency terms are agreed per agency. None are published for this listing yet: contact the listing agency.' }
 
-export function toCard(p: Raw, places: NexusPlace[]): ListingCard {
+function evidencedOf(p: Raw): Evidenced[] {
+  return (Array.isArray(p.features) ? p.features : []).map((f: Raw) => ({
+    key: String(f.key), label: String(f.label),
+    text: f.kind === 'count' ? `${f.value} ${String(f.label).toLowerCase()}` : f.kind === 'choice' ? String(f.value).replace(/_/g, ' ').replace(/^./, (c: string) => c.toUpperCase()) : String(f.label),
+    evidence: f.evidence, evidenceLabel: String(f.evidenceLabel || 'Confirmed by the agency'),
+  }))
+}
+
+export function toCard(p: Raw, places: NexusPlace[], dict?: Dict): ListingCard {
   const market: Market = p.market === 'stays' ? 'stays' : p.market === 'sales' ? 'sales' : 'longlets'
   const images: string[] = Array.isArray(p.images) ? p.images.filter((x: unknown) => typeof x === 'string') : []
   let overview: PropertyLifeOverview | null = null
   if (Array.isArray(p.coordinates) && p.coordinates.length === 2) { try { overview = buildLifeOverview(p as never, places) } catch { overview = null } }
   const facts = p.featureFacts && typeof p.featureFacts === 'object' ? p.featureFacts : {}
+  const evidenced = evidencedOf(p)
+  const knownTags = Object.entries(facts).filter(([, v]: [string, any]) => v?.status === 'KNOWN' && v?.value === true).map(([k]) => k)
+  const featureKeys = [...new Set([...evidenced.map(e => e.key), ...knownTags.map(t => dict?.byTag[t] || t)])]
   return {
     id: String(p.id), title: titleOf(p), market, marketLabel: MARKET_LABEL[market],
     propertyType: TYPE[String(p.propertyType || '').toLowerCase()] || null,
@@ -101,13 +119,14 @@ export function toCard(p: Raw, places: NexusPlace[]): ListingCard {
     bedrooms: Number.isFinite(Number(p.bedrooms)) ? Number(p.bedrooms) : null, bathrooms: Number.isFinite(Number(p.bathrooms)) ? Number(p.bathrooms) : null,
     size: Number(p.size) || null, images: images.slice(0, 6).map(u => sized(u, 720)), imageCount: images.length,
     availability: availabilityOf(p), updatedAt: p.updatedAt || null,
-    features: [...new Set(Object.entries(facts).filter(([, v]: [string, any]) => v?.status === 'KNOWN' && v?.value === true).map(([k]) => FEATURE_LABEL[k]).filter(Boolean))].slice(0, 6) as string[],
+    features: [...new Set([...evidenced.map(e => e.text), ...knownTags.map(k => FEATURE_LABEL[k]).filter(Boolean)])].slice(0, 6) as string[],
+    featureKeys, evidenced,
     smart: smartOf(overview), provider: providerOf(p), cooperation: COOPERATION,
   }
 }
 
-export function toDetail(p: Raw, places: NexusPlace[]): ListingDetail {
-  const card = toCard(p, places)
+export function toDetail(p: Raw, places: NexusPlace[], dict?: Dict): ListingDetail {
+  const card = toCard(p, places, dict)
   let overview: PropertyLifeOverview | null = null
   try { overview = Array.isArray(p.coordinates) ? buildLifeOverview(p as never, places) : null } catch { overview = null }
   const images: string[] = Array.isArray(p.images) ? p.images.filter((x: unknown) => typeof x === 'string') : []

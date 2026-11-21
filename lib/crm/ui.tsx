@@ -2,7 +2,7 @@
 import { NEXUS_STAR_PATH } from '@/lib/brand-paths'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox, BadgeCheck } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox, BadgeCheck, ListChecks } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -449,6 +449,8 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'websitereview', icon: '◌', label: 'Website Review', href: '/website-review', adminOnly: true },
   // Intelligence → Owner Conversation Quality (2026-11-10): weekly owner-AI review, admin only.
   { key: 'ownerquality', icon: '✓', label: 'Owner AI Quality', href: '/owner-quality', adminOnly: true },
+  // Property features owners added in SYNC: listing agents confirm, admins curate new terms (2026-11-21)
+  { key: 'features', icon: '✓', label: 'Property features', href: '/features' },
 ]
 
 // Kev, 2026-09-11 (Schedule Board redesign): "erstmal darkmode, sehr clean
@@ -498,7 +500,7 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight, ownerquality: BadgeCheck }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight, ownerquality: BadgeCheck, features: ListChecks }
 
 // Board desktop header (founder mockup 2026-10-19): these carry labels in the
 // header; every other workspace sits behind "More".
@@ -515,7 +517,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const normalizedPath = pathname.replace(/^\/crm(?=\/|$)/, '') || '/'
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   // 'syncinbox' is newer than the nav list the server sends: every non-board account gets it.
-  const items = NAV.filter(i => (nav.includes(i.key) || ((i.key === 'syncinbox' || i.key === 'websitereview') && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
+  const items = NAV.filter(i => (nav.includes(i.key) || ((i.key === 'syncinbox' || i.key === 'websitereview' || i.key === 'features') && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
   // Pending count on the Incoming entry: staff only, refreshed while ARGUS is open.
   const intake = useIntakeSummary(60_000, items.some(i => i.key === 'incoming') && (me?.role === 'admin' || me?.role === 'agent'))
   const pendingIntake = intake?.counts.needs_verification || 0

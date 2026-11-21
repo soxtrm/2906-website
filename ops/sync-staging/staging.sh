@@ -20,6 +20,10 @@ case "${1:-}" in
     docker exec "$PG" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -s --no-owner --no-privileges' > "$CODE/schema.sql"
     docker exec "$DB" psql -U postgres -q -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'
     docker exec -i "$DB" psql -U postgres -q < "$CODE/schema.sql" > /dev/null 2>&1 || true
+    # public reference data the listing projection needs (localities); no personal data
+    docker exec "$PG" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --data-only -t areas -t villages --no-owner --no-privileges' | docker exec -i "$DB" psql -U postgres -q >/dev/null
+    # seed data that live migrations brought (the schema dump has no rows): the feature dictionary
+    [ -f /root/property-features/backend/migrations/20261121e_property_features.sql ] && docker exec -i "$DB" psql -U postgres -q < /root/property-features/backend/migrations/20261121e_property_features.sql >/dev/null
     docker run -d --rm --name argus-clamav-stage --network "$NET" -m 2g clamav/clamav:1.4 >/dev/null
     for i in $(seq 1 90); do docker logs argus-clamav-stage 2>&1 | grep -q "socket found, clamd started" && break; sleep 4; done
     docker run -d --rm --name "$APP" --network "$NET" -p 127.0.0.1:3901:3901 -v "$CODE:/app" -v "$LIVE/node_modules:/app/node_modules:ro" -w /app \

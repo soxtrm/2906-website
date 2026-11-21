@@ -8,8 +8,11 @@ import { Bath, BedDouble, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, C
 import { NexusStar } from '@/components/brand/logo'
 import type { ListingCard, Market, SmartFact } from '@/lib/marketplace/model'
 
-type Filters = { market: Market; type: string; area: string; min: string; max: string; beds: string; now: boolean; soon: boolean; q: string; sort: 'fresh' | 'price-asc' | 'price-desc'; feature: string }
-const DEFAULT: Filters = { market: 'longlets', type: '', area: '', min: '', max: '', beds: '', now: false, soon: false, q: '', sort: 'fresh', feature: '' }
+type Filters = { market: Market; type: string; area: string; min: string; max: string; beds: string; now: boolean; soon: boolean; q: string; sort: 'fresh' | 'price-asc' | 'price-desc'; feature: string; feat: string }
+type FeatureOpt = { key: string; label: string; aliases: string[]; count: number }
+const nrm = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const matchFeatures = (opts: FeatureOpt[], q: string, limit = 6) => { const t = nrm(q.trim()); if (t.length < 2) return []; return opts.filter(o => nrm(o.label).includes(t) || o.aliases.some(a => nrm(a).includes(t))).sort((a, b) => b.count - a.count).slice(0, limit) }
+const DEFAULT: Filters = { market: 'longlets', type: '', area: '', min: '', max: '', beds: '', now: false, soon: false, q: '', sort: 'fresh', feature: '', feat: '' }
 const PAGE = 24
 const eur = (n: number) => `€${n.toLocaleString('en-GB')}`
 const ago = (iso: string | null) => {
@@ -41,6 +44,8 @@ function writeFilters(f: Filters) {
 export function Marketplace() {
   const reduce = useReducedMotion()
   const [all, setAll] = useState<ListingCard[] | null>(null)
+  const [featureOpts, setFeatureOpts] = useState<FeatureOpt[]>([])
+  const [fq, setFq] = useState('')
   const [failed, setFailed] = useState(false)
   const [f, setF] = useState<Filters>(DEFAULT)
   const [shown, setShown] = useState(PAGE)
@@ -52,7 +57,7 @@ export function Marketplace() {
     setF(readFilters())
     try { setPro(localStorage.getItem('nx-mp-pro') === '1') } catch { /* private mode */ }
     ready.current = true
-    fetch('/api/marketplace/listings').then(r => (r.ok ? r.json() : Promise.reject())).then(d => setAll(d.listings)).catch(() => setFailed(true))
+    fetch('/api/marketplace/listings').then(r => (r.ok ? r.json() : Promise.reject())).then(d => { setAll(d.listings); setFeatureOpts(d.features || []) }).catch(() => setFailed(true))
   }, [])
   useEffect(() => { if (ready.current) { writeFilters(f); setShown(PAGE) } }, [f])
   const set = (patch: Partial<Filters>) => setF(x => ({ ...x, ...patch }))
@@ -66,7 +71,7 @@ export function Marketplace() {
       (!f.type || l.propertyType === f.type) && (!f.area || l.area === f.area) &&
       (!f.min || (l.price ?? 0) >= Number(f.min)) && (!f.max || (l.price ?? Infinity) <= Number(f.max)) &&
       (!f.beds || (l.bedrooms ?? 0) >= Number(f.beds)) && (!f.now || l.availability.kind !== 'from') && (!f.soon || l.availability.kind === 'from') &&
-      (!f.feature || l.features.includes(f.feature)) &&
+      (!f.feature || l.features.includes(f.feature)) && (!f.feat || f.feat.split(',').every(k => l.featureKeys.includes(k))) &&
       (!q || `${l.title} ${l.area} ${l.id} ${l.features.join(' ')}`.toLowerCase().includes(q)))
     const byFresh = (a: ListingCard, b: ListingCard) => (b.updatedAt || '').localeCompare(a.updatedAt || '')
     return out.sort(f.sort === 'price-asc' ? (a, b) => (a.price ?? 9e9) - (b.price ?? 9e9) : f.sort === 'price-desc' ? (a, b) => (b.price ?? 0) - (a.price ?? 0) : byFresh)
@@ -77,7 +82,7 @@ export function Marketplace() {
     upcoming: inMarket.filter(l => l.availability.kind === 'from').length, sea: inMarket.filter(l => l.features.includes('Sea view')).length,
     confirmed: inMarket.filter(l => l.availability.kind === 'confirmed').length,
   }), [all, inMarket])
-  const active = [f.type, f.area, f.min, f.max, f.beds, f.now ? '1' : '', f.soon ? '1' : '', f.feature, f.q].filter(Boolean).length
+  const active = [f.type, f.area, f.min, f.max, f.beds, f.now ? '1' : '', f.soon ? '1' : '', f.feature, f.feat, f.q].filter(Boolean).length
 
   return (
     <div className="mp">
@@ -106,7 +111,13 @@ export function Marketplace() {
           <button disabled title="Not listed yet">Commercial <small>soon</small></button>
           <button disabled title="Not listed yet">Land <small>soon</small></button>
         </div>
-        <label className="mp-search"><Search size={16} aria-hidden="true" /><input value={f.q} onChange={e => set({ q: e.target.value })} placeholder="Area, feature or reference" aria-label="Search listings" /></label>
+        <div className="mp-search-wrap">
+          <label className="mp-search"><Search size={16} aria-hidden="true" /><input value={f.q} onChange={e => set({ q: e.target.value })} placeholder="Area, feature or reference" aria-label="Search listings" /></label>
+          {matchFeatures(featureOpts, f.q, 4).length > 0 && (
+            <div className="mp-suggest" role="listbox" aria-label="Features">{matchFeatures(featureOpts, f.q, 4).map(o => (
+              <button key={o.key} role="option" aria-selected="false" onClick={() => set({ q: '', feat: [...new Set([...f.feat.split(',').filter(Boolean), o.key])].join(',') })}><span>Filter: <b>{o.label}</b></span><small>{o.count}</small></button>))}</div>
+          )}
+        </div>
         <button className="mp-filter-btn" onClick={() => setOpen(o => !o)} aria-expanded={open}><SlidersHorizontal size={16} aria-hidden="true" />Filters{active ? <b>{active}</b> : null}</button>
       </div>
 
@@ -120,11 +131,17 @@ export function Marketplace() {
             <label>Bedrooms<select value={f.beds} onChange={e => set({ beds: e.target.value })}><option value="">Any</option>{[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}+</option>)}</select></label>
             <label>Sort<select value={f.sort} onChange={e => set({ sort: e.target.value as Filters['sort'] })}><option value="fresh">Recently updated</option><option value="price-asc">Price, low to high</option><option value="price-desc">Price, high to low</option></select></label>
             <label className="mp-check"><input type="checkbox" checked={f.now} onChange={e => set({ now: e.target.checked })} />Available now</label>
+            <div className="mp-more-features">
+              <label>More features<input value={fq} onChange={e => setFq(e.target.value)} placeholder="e.g. lift, Balkon, aircon" aria-label="Find a feature" /></label>
+              {matchFeatures(featureOpts, fq).length > 0 && <div className="mp-suggest" role="listbox">{matchFeatures(featureOpts, fq).map(o => (
+                <button key={o.key} role="option" aria-selected="false" onClick={() => { set({ feat: [...new Set([...f.feat.split(',').filter(Boolean), o.key])].join(',') }); setFq('') }}><span>{o.label}</span><small>{o.count}</small></button>))}</div>}
+            </div>
             {active > 0 && <button className="mp-clear" onClick={() => set({ ...DEFAULT, market: f.market, sort: f.sort })}><X size={14} />Clear</button>}
           </motion.div>
         )}
       </AnimatePresence>
 
+      {f.feat && <div className="mp-featchips">{f.feat.split(',').filter(Boolean).map(k => <button key={k} onClick={() => set({ feat: f.feat.split(',').filter(x => x && x !== k).join(',') })}>{featureOpts.find(o => o.key === k)?.label || k.replace(/_/g, ' ')}<X size={13} aria-label="remove" /></button>)}</div>}
       {all && (
         <div className="mp-banners" aria-label="Highlights">
           {counts.confirmed > 0 && <button className="mp-banner b1" onClick={() => set({ now: true, soon: false })}><Check size={16} aria-hidden="true" /><span><b>{counts.confirmed} confirmed available</b>checked with the owner</span></button>}

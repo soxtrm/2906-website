@@ -1,7 +1,7 @@
 import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_ROUTES = new Set(['inventory', 'taxonomy', 'places', 'workplaces/search'])
+const PUBLIC_ROUTES = new Set(['inventory', 'taxonomy', 'places', 'workplaces/search', 'features'])
 const QUARANTINED_PUBLIC_REFERENCES = new Set(['2906-9398'])
 
 function publicInventory(payload: any) {

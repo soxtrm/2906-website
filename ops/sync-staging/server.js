@@ -68,6 +68,9 @@ async function seed() {
     const at = new Date(base.getTime() + h * 3600e3)
     await pool.query("INSERT INTO property_viewings (property_id, viewing_date, status, starts_at, duration_min, requester_name, party_size, viewing_agent_name) VALUES ($1,($2::timestamptz)::date,'pending',$2,20,$3,2,'Stage Agent')", [olga.ids[0], at, who])
   }
+  // listable in the marketplace projection: a known locality and one (public demo) photo
+  await pool.query(`UPDATE properties p SET locality_id = v.id, images = '["https://res.cloudinary.com/du2jwqnbs/image/upload/v1785401218/2906-properties/szkbh5t1kbeayapysnct.jpg"]'::jsonb
+                      FROM villages v WHERE lower(v.display_name) = lower(p.town)`)
   console.log('seeded', JSON.stringify({ olga: olga.ids }))
 }
 
@@ -75,6 +78,8 @@ const app = express()
 app.use(express.json({ limit: '6mb' }))
 app.use('/api/sync-account/v1', require(R('routes/syncAccountService.js')))
 app.use('/api/crm/sync-inbox', require(R('routes/crmSyncInbox.js')))
+app.use('/api/crm/property-features', require(R('routes/crmPropertyFeatures.js')))
+app.use('/api/nexus', require(R('routes/nexusBridge.js')))
 app.use('/api/crm', require(R('routes/crm.js')))
 app.get('/stage/outbox', (req, res) => res.json(outbox))
 seed().then(() => app.listen(3901, '0.0.0.0', () => console.log('SYNC staging on 3901'))).catch(e => { console.error('seed failed', e); process.exit(1) })

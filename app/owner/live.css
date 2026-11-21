@@ -202,3 +202,29 @@ textarea.lv-input { padding: 12px 14px; min-height: 110px; width: 100%; resize: 
 .rp-badge { margin: 0; padding: 10px 14px; border-radius: var(--ow-r-md); background: var(--ow-warm-soft); color: var(--ow-warm-ink); font-weight: 700; font-size: 14px; }
 .rp-warn { padding: 10px 12px; border-radius: var(--ow-r-md); background: var(--ow-alert-soft); color: var(--ow-alert); font-weight: 600; }
 .rp-invite { max-width: 640px; margin: 0 auto; }
+
+/* property features (2026-11-21) */
+.ft-h { margin: 8px 0 0; font-size: 15px; }
+.ft-counters { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ft-counter { display: grid; gap: 6px; padding: 10px 12px; border-radius: var(--ow-r-md); border: 1px solid var(--ow-line); background: var(--ow-surface); }
+.ft-counter > span { font-size: 13px; font-weight: 700; color: var(--ow-ink-2); }
+.ft-counter > div { display: flex; align-items: center; justify-content: space-between; }
+.ft-counter button { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--ow-line); background: #fff; color: var(--ow-ink); cursor: pointer; }
+.ft-counter button:disabled { opacity: .4; cursor: default; }
+.ft-counter b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.ft-state { font-size: 12px; font-weight: 700; } .ft-state.ok { color: var(--ow-ok); } .ft-state.wait { color: var(--ow-warm-ink); }
+.ft-switches button { min-height: 40px; display: inline-flex; align-items: center; gap: 5px; }
+.ft-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ft-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: var(--ow-r-md); border: 1px solid var(--ow-line); background: var(--ow-surface); }
+.ft-list li span { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.ft-list .lv-btn { min-height: 36px; padding: 0 10px; }
+.ft-new { font-style: normal; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 99px; background: var(--ow-warm-soft); color: var(--ow-warm-ink); }
+.ft-add { position: relative; }
+.ft-search { display: flex; align-items: center; gap: 8px; padding: 0 14px; min-height: 48px; border-radius: 14px; border: 1.5px solid var(--ow-line); background: #fff; color: var(--ow-ink-3); }
+.ft-search input { flex: 1; min-width: 0; border: 0; outline: 0; font: 600 16px var(--ow-font); color: var(--ow-ink); background: transparent; }
+.ft-sug { display: grid; gap: 4px; margin-top: 6px; padding: 6px; border-radius: 14px; border: 1px solid var(--ow-line); background: #fff; box-shadow: var(--ow-shadow); }
+.ft-sug button { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; text-align: left; font: 600 15px var(--ow-font); color: var(--ow-ink); cursor: pointer; }
+.ft-sug button:hover:not(:disabled) { background: var(--ow-brand-soft); }
+.ft-sug button:disabled { opacity: .55; cursor: default; }
+.ft-sug small { color: var(--ow-ink-3); font-weight: 600; font-size: 12px; }
+.ft-sug .ft-newbtn { justify-content: flex-start; color: var(--ow-warm-ink); }

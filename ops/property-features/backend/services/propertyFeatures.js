@@ -227,7 +227,7 @@ async function attachPublic(props) {
   return props
 }
 async function publicDictionary() {
-  return { features: (await dictionary()).filter(d => d.status === 'standard').map(d => ({ ...entryView(d), aliases: d.aliases })) }
+  return { features: (await dictionary()).filter(d => d.status === 'standard').map(d => ({ ...entryView(d), aliases: d.aliases, argus_tag: d.argus_tag || null })) }
 }
 
 module.exports = { suggest, ownerList, ownerSet, ownerRemove, agentList, agentSet, agentDecide, reviewQueue, candidates, curate, attachPublic, publicDictionary, _test: { norm, tokens, slug } }
