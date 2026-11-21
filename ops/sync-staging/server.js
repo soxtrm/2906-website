@@ -79,6 +79,8 @@ app.use(express.json({ limit: '6mb' }))
 app.use('/api/sync-account/v1', require(R('routes/syncAccountService.js')))
 app.use('/api/crm/sync-inbox', require(R('routes/crmSyncInbox.js')))
 app.use('/api/crm/property-features', require(R('routes/crmPropertyFeatures.js')))
+// Marketplace conversations (2026-11-21), when the live code has them
+try { app.use('/api/crm/marketplace-inbox', require(R('routes/crmMarketplaceInbox.js'))); app.use('/api/nexus/mp', require(R('routes/marketplaceConversations.js'))) } catch (e) { console.log('marketplace conversations not in live code', e.message) }
 app.use('/api/nexus', require(R('routes/nexusBridge.js')))
 app.use('/api/crm', require(R('routes/crm.js')))
 app.get('/stage/outbox', (req, res) => res.json(outbox))
