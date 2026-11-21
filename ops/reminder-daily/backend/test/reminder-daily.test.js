@@ -401,3 +401,23 @@ test('Update 4 · the four real conversations, one reply per owner turn, recheck
   assert.ok(bl.total >= 1 && bl.categories.length >= 1, JSON.stringify(bl).slice(0, 200))
   assert.equal((await pool.query(`SELECT md5(string_agg(id||status||auto_send_status, ',' ORDER BY id)) h FROM reminders`)).rows[0].h, before)
 })
+
+
+test('Update 5 · real owner replies of 21 Nov read correctly', async () => {
+  const cases = [
+    ['Hi at this moment i dont have thanks gd', 'quiet_no'],
+    ["It's not anymore", 'quiet_no'],
+    ['Hi Gabriela. Nothing at the moment.', 'quiet_no'],
+    ["Hi Gabriela, Unfortunately I don't . all rented. Thanks and have a good weekend", 'quiet_no'],
+    ['Sorry, fully booked', 'quiet_no'],
+    ['Sorry I have no properties.', 'quiet_no'],
+    ['No, nothing available at the moment', 'quiet_no'],
+    ['Hi Gabriela, I have an apt. In Mercury tower availible for rent', 'other_property'],
+    ['Hello As from 1/1/27 I have one bedroom for 1 person available in a flat of 150m2 to rent', 'other_property'],
+    ['They all love it but none give me my price . I will wait for the right client with no pets', 'actionable'],
+    ["The price I repeat is not negotiable . It's been rented for 1800 for 2 years . If I don't", 'not_negative'],
+    ['Hi Which company do you work for please as you forgot to mention ?', 'actionable'],
+    ["No it's 1,550", 'not_negative'],
+  ]
+  for (const [text, want] of cases) assert.equal(inbox.decide(text).kind, want, text)
+})

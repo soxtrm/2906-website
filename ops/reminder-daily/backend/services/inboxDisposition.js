@@ -35,10 +35,10 @@ const CALLBACK_VERB_RE = /\b(?:contact|message|msg|text|write|call|ring|ask|remi
 // the owner promises to come back to us
 const WILL_UPDATE_RE = /\b(?:i'?ll|i\s+will|we'?ll|we\s+will|will)\b[^.?!]{0,40}\b(?:let\s+you\s+know|inform\s+you|contact\s+you|message\s+you|text\s+you|write\s+(?:to\s+)?you|get\s+back\s+to\s+you|keep\s+you\s+(?:posted|updated|informed)|send\s+(?:you|it|them|details|photos|pics)|be\s+in\s+touch)\b|\b(?:i|we)\s+will\s+when\b|\bwhen\s+(?:i|we)\s+(?:have|get)\s+(?:something|anything)\b|\bwill\s+do\b/i
 // "nothing available" in the many ways owners write it (also "all are taken", "atm")
-const NOTHING_RE = /\b(?:nothing|none|nada)\b|\bno\s+(?:propert(?:y|ies)|flats?|apartments?|units?|places?|houses?|vacanc(?:y|ies)|availability)\b|\b(?:all|everything|both)\b[^.?!]{0,30}\b(?:taken|rented|let|leased|gone|occupied|full|booked|sold)\b|\bfully\s+(?:rented|booked|let|occupied)\b|\b(?:don'?t|do\s+not|didn'?t)\s+have\s+(?:any|anything)\b|\bnot\s+(?:at\s+the\s+moment|now|right\s+now|currently|for\s+now|atm|available)\b|\bunfortunately\s+not\b/i
+const NOTHING_RE = /\b(?:nothing|none|nada)\b|\bno\s+(?:propert(?:y|ies)|flats?|apartments?|units?|places?|houses?|vacanc(?:y|ies)|availability)\b|\b(?:all|everything|both)\b[^.?!]{0,30}\b(?:taken|rented|let|leased|gone|occupied|full|booked|sold)\b|\bfully\s+(?:rented|booked|let|occupied)\b|\b(?:don'?t|do\s+not|didn'?t)\s+have\s+(?:any|anything)\b|\bnot\s+(?:at\s+the\s+moment|now|right\s+now|currently|for\s+now|atm|available|any\s?more)\b|\bunfortunately\s+not\b|\b(?:i\s+|we\s+)?(?:don'?t|dont|do\s+not)\s+have\b(?=\s*(?:any|anything|nothing|at\s+the\s+moment|now|right\s+now|thanks?|thank\s+you|[.,!]|$))|\bunfortunately\s+(?:i|we)\s+(?:don'?t|dont)\b/i
 const SHORT_NO_RE = /^(?:(?:hi|hello|good\s+\w+)[\s,.!]+)?(?:no|nope|sorry|sorry\s+no|no\s+sorry|unfortunately\s+not|not\s+really|nah)\b[\s,.!🙏👍🙂😊🙁😕]*(?:thanks?|thank\s+you|thx|kevin|kev|cedric|gabriela)?[\s,.!🙏👍🙂😊🙁😕]*$/i
 const CLOSING_RE = /^(?:(?:ok(?:ay)?|thanks?|thank\s+you(?:\s+(?:so\s+much|very\s+much|too))?|thx|ty|tx|(?:you'?re\s+)?welcome|cheers|great|perfect|noted|sure|no\s+problem|np|bye|good\s*(?:night|day|evening)|have\s+a\s+(?:nice|good|great)\s+(?:day|evening|week(?:end)?)|same\s+to\s+you|you\s+too|kevin|kev|cedric|gabriela)[\s,.!🙏👍👌🙂😊❤️]*)+$/i
-const OTHER_PROPERTY_RE = /\b(?:another|other|different|second|one\s+more)\b[^.?!]{0,40}\b(?:apartment|flat|property|place|house|penthouse|maisonette|studio|unit|villa|one)\b|\bbut\s+(?:i|we)\s+(?:do\s+)?(?:have|got)\b|\b(?:i|we)\s+(?:do\s+)?(?:have|got)\s+(?:a|an|one|two|three|\d)\s*(?:-|\s)?(?:bed|bedroom|bedroomed|apartment|flat|penthouse|maisonette|studio|house|property)\b|\bnew\s+(?:apartment|flat|property|listing|place)\b|\bavailable\s+(?:again|now)\b/i
+const OTHER_PROPERTY_RE = /\b(?:another|other|different|second|one\s+more)\b[^.?!]{0,40}\b(?:apartment|flat|property|place|house|penthouse|maisonette|studio|unit|villa|one)\b|\bbut\s+(?:i|we)\s+(?:do\s+)?(?:have|got)\b|\b(?:i|we)\s+(?:do\s+)?(?:have|got)\s+(?:a|an|one|two|three|\d)\s*(?:-|\s)?(?:bed|bedroom|bedroomed|apartment|apt|flat|penthouse|maisonette|studio|house|property|room|unit)\b|\bavail[ai]ble\s+for\s+(?:rent|sale)\b|\bnew\s+(?:apartment|flat|property|listing|place)\b|\bavailable\s+(?:again|now)\b/i
 const QUESTION_RE = /\?|\b(?:who\s+(?:is|are)\s+(?:this|you)|who'?s\s+this|how\s+much|which\s+(?:agency|company)|can\s+you|could\s+you|do\s+you|are\s+you)\b/i
 const PRICE_RE = /€\s*\d|\d+\s*(?:€|eur|euros?|k\b)|\bper\s+month\b/i
 const ELSE_RE = /\b(?:nothing|anything|none)\s+else\b|\bno\s+other\b|\bnothing\s+more\b/i
@@ -64,6 +64,10 @@ function decide(text) {
   if (POS_RE.test(raw) && !NOTHING_RE.test(raw)) return { kind: 'not_negative' }
   if (NOTHING_RE.test(raw) || SHORT_NO_RE.test(raw)) {
     if (PRICE_RE.test(raw) || /\bsince\b/i.test(raw)) return { kind: 'actionable', why: 'negative_with_details' }
+    // "they all love it but none give me my price … I will wait for the right client with no pets":
+    // wishes about price, tenants or conditions are for a person, not a processed "no"
+    if (/\b(?:price|client|tenants?|pets?|couple|family|students?|wait\s+for|looking\s+for|prefer|want|negotiable|condition|deposit|contract)\b/i.test(raw)) return { kind: 'actionable', why: 'negative_with_wishes' }
+    if (raw.length > 120 && !/\b(?:nothing|none)\s+(?:is\s+)?(?:available|free|left)\b|\ball\s+(?:are\s+|is\s+)?(?:taken|rented|let|gone)\b|\bfully\s+(?:rented|booked)\b/i.test(raw)) return { kind: 'actionable', why: 'long_message' }
     return { kind: 'quiet_no' }
   }
   return { kind: 'not_negative' }
