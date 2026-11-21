@@ -1,4 +1,5 @@
 'use client'
+import { OwnerInfoButton } from '@/components/crm/owner-info-button'
 // ============================================================================
 // /schedule-board — the internal availability + location board.
 //
@@ -4781,6 +4782,13 @@ function Card({ r, mobile: isMobile, focused, innerRef, onOpen, onAct, onBook, o
                   </button>
                 )
               })()}
+              {/* Kev, 2026-11-21: owner contact for a booking request, next to
+                  Create Group. Shown to the same trusted staff; the server
+                  (viewing-followups owner-info) enforces who really gets it and
+                  logs every opening. A request is not the owner's OK. */}
+              {canCreateGroupBtn && r.viewing?.id && (
+                <OwnerInfoButton viewingId={r.viewing.id} style={{ ...menuGridBtn(dark), color: '#E8CC82', borderColor: 'rgba(184,149,63,.5)' }} />
+              )}
               {/* Kev, 2026-09-10: a card on the 'rented' tab has no use for
                   check-in / mark-rented (it's already rented) — Reactivate is
                   the one action that applies. */}
