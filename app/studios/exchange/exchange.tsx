@@ -90,14 +90,18 @@ export function Exchange() {
         )}
       </section>
 
-      <section className="ex-block ex-join" aria-labelledby="ex-join"><PartnerRequest /></section>
+      {/* The partner request form (below) stays off until staff can see and answer requests in the CRM. */}
+      <section className="ex-block ex-join" aria-labelledby="ex-join">
+        <div className="ex-head"><h2 id="ex-join">Join as an agency</h2></div>
+        <p className="mp-muted">Agency access opens together with verified agency profiles. Every agency is checked before its listings appear, and nothing is shared until its terms are agreed in writing.</p>
+      </section>
 
       <footer className="mp-foot">The Exchange bills nothing automatically. A fee is due only under written terms that both sides have accepted.</footer>
     </div>
   )
 }
 
-function PartnerRequest() {
+export function PartnerRequest() {
   const [agencyName, setAgencyName] = useState('')
   const [email, setEmail] = useState('')
   const [website, setWebsite] = useState('')
