@@ -1,18 +1,18 @@
 # NEXUS CTO status
 
-Generated 2026-11-21T20:20:43.749Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 5cfba60). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
+Generated 2026-11-21T20:29:59.337Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 127c1f2). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
 
 ## Launch-readiness board
 
 | Product | Feature | Founder requirement | Status | User-facing test | Remaining blocker | Workstream |
 |---|---|---|---|---|---|---|
+| NEXUS Marketplace | Navigation: Residential · Commercial · Short Stays · Workers · Jobs · More Marketplaces | Clear categories; Short Stays separate (NEXUS Booking); Places removed as a destination; no disconnected legacy pages | **LIVE** | Local + candidate: every section shows the right active tab and sub-tabs on desktop and phone, no horizontal scroll, no Places link, old ?market=stays links move to Short Stays | - | lead |
 | NEXUS Marketplace | Listing grid and cards | Compact cards after the approved reference; 5 columns on wide desktop; honest availability; bathrooms '?' when unknown | **VERIFIED** | Production, 4 viewports (1920/1440/iPad 11/phone): 5/4/2/1 columns, CLS 0.001, LCP 0.66-0.95 s warm | - | lead |
 | NEXUS Marketplace | Instant detail (morph, prefetch, staggered sections) | Feels instantaneous; card grows into the detail; content flies in | **VERIFIED** | Click -> sheet ~50 ms; details ~90 ms when prefetched, 300-550 ms cold; one scroll container | - | lead |
 | NEXUS Marketplace | NEXUS chat on the listing (no WhatsApp numbers) | Real chat docked right, floating tab when reading on, bottom sheet on phones, draft kept | **VERIFIED** | Staging chat E2E 18/18 (right agent, unrelated agent 404, reload, second session); draft kept on iPad/phone in prod | - | lead |
 | NEXUS Marketplace | Availability freshness | A cached 'Available' never beats a newer Rented/Off-Market | **VERIFIED** | Staging status change 6/6 (opened home <= 17 s, card at once, list 25 s); production status = ARGUS for all listings | - | lead |
 | NEXUS Marketplace | Smart Intelligence (redesign) | Advanced, structured places, Car/Taxi/Walk, no bus, no invented times | **LIVE** | Visual check in prod (desktop, iPad, phone); real OSRM times | Founder visual acceptance pending | lead |
 | NEXUS Marketplace | Direct owner upload (no Sync account needed) | Owners list directly from the Marketplace | **NOT_STARTED** | - | Not built yet | lead |
-| NEXUS Marketplace | Places tab / map journey | Maps and Places consistent with the Marketplace | **IN_PROGRESS** | Places tab still links to the classic view | Not on the new React Marketplace yet | lead |
 | NEXUS Rooms | Rooms inventory, 2.5D view, real booking request | Open Marketplace, pick an apartment, choose Room 2, real request via NEXUS Booking | **LIVE** | Staging E2E 27/27; production page live but no apartment in room mode yet (honest empty state) | No owner has added rooms yet | lead |
 | NEXUS Deal Room | Deal Room M3 (records, stages, CRM 3 panels, client strip) | Created at the viewing request; stable id; no duplicates; stages; private notes; no fake payment | **VERIFIED** | Staging browser E2E 12/12; backend stage 100/100 | - | lead |
 | NEXUS Deal Room | Documents, evidence, contract/invoice drafts, payment states | Private storage, hashes, versions, access log; drafts; states from verified events only | **LIVE** | Staging acceptance journey 19/19 (Kev 14 steps: chat -> right agent -> viewing -> Deal Room -> booking in owner hours -> client sees it -> photo + internal doc -> contract + invoice drafts -> deposit request "not received" -> timeline -> unrelated agent 404 -> iPad + phone); backend stage 81/81 incl. regressions. Production: routes live (auth/404 verified); no synthetic deal in production by design | - | lead |
@@ -24,33 +24,37 @@ Generated 2026-11-21T20:20:43.749Z from live evidence by `ops/cto/cto-report.cjs
 | Benestates Work | St Julian's onboarding | 8 agents pending; invitations only after an authorised sender exists | **BLOCKED** | Health endpoint 200 | No Benestates mail sender credential (SendGrid of benestates.com or M365 mailbox); 2906 Gmail must not be used | BEN cloud session |
 | NEXUS Marketplace | Social launch kit | Premium editorial campaign, 9 feed concepts, 3 carousels, 3 video concepts, teaser, plan | **NOT_STARTED** | - | - | lead |
 | ARGUS / 2906 CRM | CTO Cockpit + status reports | Central, admin-only status with live evidence, test links and machine-readable reports | **LIVE** | crm.2906.estate/crm/cto 200 (admin), /api/cto/health live checks; report generated from Vercel/SSH/HTTP evidence | - | lead |
+| NEXUS Marketplace | Property Workspace (Owner/Agent/Client) | Marketplace Expansion directive 21 Nov | **NOT_STARTED** | - | - | lead |
+| NEXUS Marketplace | Workers service requests + Notary pilot | Marketplace Expansion directive 21 Nov | **NOT_STARTED** | - | - | lead |
+| NEXUS Marketplace | Jobs MVP | Marketplace Expansion directive 21 Nov | **NOT_STARTED** | Introduction page live with accurate availability | - | lead |
+| NEXUS Marketplace | More Marketplaces interactive journey | Marketplace Expansion directive 21 Nov | **IN_PROGRESS** | First version live (8 steps, live/next labels, links to working parts) | - | lead |
 
 ## Products
 
 | Product | URL | Live deployment | Commit | Deployed | Milestone |
 |---|---|---|---|---|---|
-| NEXUS Marketplace | https://nexusstudios.one/marketplace | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Malta launch ~1 Dec 2026 |
-| NEXUS STUDIOS | https://nexusstudios.one | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Exchange / B2B pages |
-| NEXUS Sync | https://nexussync.one/owner | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Calendar finish to founder references |
+| NEXUS Marketplace | https://nexusstudios.one/marketplace | dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7 | 127c1f2 | 2026-11-21 20:28 | Malta launch ~1 Dec 2026 |
+| NEXUS STUDIOS | https://nexusstudios.one | dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7 | 127c1f2 | 2026-11-21 20:28 | Exchange / B2B pages |
+| NEXUS Sync | https://nexussync.one/owner | dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7 | 127c1f2 | 2026-11-21 20:28 | Calendar finish to founder references |
 | NEXUS Booking | https://nexuslink.fit | Booking release 20261121-rooms-v120 | - | - | Rooms stays engine v120 |
-| NEXUS Rooms | https://nexusstudios.one/marketplace/rooms | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | First real owner onboarding |
-| NEXUS Deal Room | https://crm.2906.estate/crm/deal-rooms | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | M5 documents + drafts, 14-step journey |
-| ARGUS / 2906 CRM | https://crm.2906.estate | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Stability, Drafts, Reminder Due (outreach session) |
-| Benestates Work | https://benestates.work | release e197653 | - | - | St Julian's onboarding (8 pending) |
+| NEXUS Rooms | https://nexusstudios.one/marketplace/rooms | dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7 | 127c1f2 | 2026-11-21 20:28 | First real owner onboarding |
+| NEXUS Deal Room | https://crm.2906.estate/crm/deal-rooms | dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7 | 127c1f2 | 2026-11-21 20:28 | M5 documents + drafts, 14-step journey |
+| ARGUS / 2906 CRM | https://crm.2906.estate | dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7 | 127c1f2 | 2026-11-21 20:28 | Stability, Drafts, Reminder Due (outreach session) |
+| Benestates Work | https://benestates.work | release 718fc87 | - | - | St Julian's onboarding (8 pending) |
 
 ## Health (probed at generation)
 
 | URL | HTTP | ms |
 |---|---|---|
-| https://nexusstudios.one/marketplace | 200 | 316 |
-| https://nexusstudios.one/api/marketplace/listings | 200 | 2622 |
-| https://nexusstudios.one/marketplace/rooms | 200 | 312 |
-| https://nexussync.one/owner | 200 | 365 |
-| https://crm.2906.estate/crm/deal-rooms | 200 | 195 |
-| https://www.2906.estate/ | 200 | 474 |
-| https://nexuslink.fit/ | 200 | 185 |
-| https://api.2906.estate/api/properties | 200 | 206 |
-| https://benestates.work/api/ben/work-health | 200 | 172 |
+| https://nexusstudios.one/marketplace | 200 | 195 |
+| https://nexusstudios.one/api/marketplace/listings | 200 | 271 |
+| https://nexusstudios.one/marketplace/rooms | 200 | 298 |
+| https://nexussync.one/owner | 200 | 358 |
+| https://crm.2906.estate/crm/deal-rooms | 200 | 452 |
+| https://www.2906.estate/ | 200 | 456 |
+| https://nexuslink.fit/ | 200 | 222 |
+| https://api.2906.estate/api/properties | 200 | 229 |
+| https://benestates.work/api/ben/work-health | 200 | 343 |
 
 ## ARGUS backend packages (latest first)
 
@@ -69,10 +73,10 @@ Generated 2026-11-21T20:20:43.749Z from live evidence by `ops/cto/cto-report.cjs
 
 ## Next actions
 
+- **NEXUS Marketplace · Navigation: Residential · Commercial · Short Stays · Workers · Jobs · More Marketplaces:** P1 Property Workspace, P2 Workers backend
 - **NEXUS Marketplace · Listing grid and cards:** Founder review against the right-hand card reference
 - **NEXUS Marketplace · Smart Intelligence (redesign):** Founder review
 - **NEXUS Marketplace · Direct owner upload (no Sync account needed):** Scope after Deal Room M5
-- **NEXUS Marketplace · Places tab / map journey:** Port Places into the React Marketplace
 - **NEXUS Rooms · Rooms inventory, 2.5D view, real booking request:** Onboard the first real owner apartment
 - **NEXUS Deal Room · Deal Room M3 (records, stages, CRM 3 panels, client strip):** M5 documents/evidence, contract + invoice drafts, payment request states
 - **NEXUS Deal Room · Documents, evidence, contract/invoice drafts, payment states:** Owner side in the Deal Room (Client<->Owner, Agent<->Owner) via NEXUS Sync; Anti-Fraud Bridge checks
@@ -81,3 +85,7 @@ Generated 2026-11-21T20:20:43.749Z from live evidence by `ops/cto/cto-report.cjs
 - **Benestates Work · St Julian's onboarding:** Kevin pastes the sender secret in the admin form
 - **NEXUS Marketplace · Social launch kit:** After the Deal Room journey
 - **ARGUS / 2906 CRM · CTO Cockpit + status reports:** Screenshots per release in the cockpit
+- **NEXUS Marketplace · Property Workspace (Owner/Agent/Client):** P1 after navigation
+- **NEXUS Marketplace · Workers service requests + Notary pilot:** P2/P3: backend, synthetic professionals, 10-step journey
+- **NEXUS Marketplace · Jobs MVP:** P4
+- **NEXUS Marketplace · More Marketplaces interactive journey:** P5 scroll-driven demo

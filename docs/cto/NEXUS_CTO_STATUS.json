@@ -1,63 +1,63 @@
 {
-  "generatedAt": "2026-11-21T20:20:43.749Z",
+  "generatedAt": "2026-11-21T20:29:59.337Z",
   "generator": "ops/cto/cto-report.cjs",
   "repository": {
     "name": "soxtrm/2906-website",
     "branch": "claude/argus-crm-release-20261120",
-    "head": "5cfba60"
+    "head": "127c1f2"
   },
   "statusCounts": {
+    "LIVE": 7,
     "VERIFIED": 7,
-    "LIVE": 6,
-    "NOT_STARTED": 2,
-    "IN_PROGRESS": 1,
-    "BLOCKED": 2
+    "NOT_STARTED": 5,
+    "BLOCKED": 2,
+    "IN_PROGRESS": 1
   },
   "health": [
     {
       "url": "https://nexusstudios.one/marketplace",
       "status": 200,
-      "ms": 316
+      "ms": 195
     },
     {
       "url": "https://nexusstudios.one/api/marketplace/listings",
       "status": 200,
-      "ms": 2622
+      "ms": 271
     },
     {
       "url": "https://nexusstudios.one/marketplace/rooms",
       "status": 200,
-      "ms": 312
+      "ms": 298
     },
     {
       "url": "https://nexussync.one/owner",
       "status": 200,
-      "ms": 365
+      "ms": 358
     },
     {
       "url": "https://crm.2906.estate/crm/deal-rooms",
       "status": 200,
-      "ms": 195
+      "ms": 452
     },
     {
       "url": "https://www.2906.estate/",
       "status": 200,
-      "ms": 474
+      "ms": 456
     },
     {
       "url": "https://nexuslink.fit/",
       "status": 200,
-      "ms": 185
+      "ms": 222
     },
     {
       "url": "https://api.2906.estate/api/properties",
       "status": 200,
-      "ms": 206
+      "ms": 229
     },
     {
       "url": "https://benestates.work/api/ben/work-health",
       "status": 200,
-      "ms": 172
+      "ms": 343
     }
   ],
   "products": {
@@ -67,12 +67,31 @@
       "host": "nexusstudios.one",
       "milestone": "Malta launch ~1 Dec 2026",
       "deployment": {
-        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
-        "commit": "5cfba60",
+        "deployment": "dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7",
+        "commit": "127c1f2",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:19:05.054Z"
+        "deployedAt": "2026-11-21T20:28:15.313Z"
       },
       "features": [
+        {
+          "product": "marketplace",
+          "feature": "Navigation: Residential · Commercial · Short Stays · Workers · Jobs · More Marketplaces",
+          "founder": "Clear categories; Short Stays separate (NEXUS Booking); Places removed as a destination; no disconnected legacy pages",
+          "status": "LIVE",
+          "userTest": "Local + candidate: every section shows the right active tab and sub-tabs on desktop and phone, no horizontal scroll, no Places link, old ?market=stays links move to Short Stays",
+          "blocker": "",
+          "workstream": "lead",
+          "paths": [
+            "components/marketplace/nav.tsx",
+            "app/studios/marketplace/sections.tsx",
+            "app/studios/marketplace/{short-stays,commercial,workers,jobs,more}/",
+            "proxy.ts"
+          ],
+          "tests": "nav check script (8 routes x 2 viewports)",
+          "verifiedAt": "2026-11-21",
+          "limits": "Commercial and Sales have no inventory yet (honest empty states); Workers and Jobs pages describe the pilot state; More Marketplaces is the first version (P5 adds the interactive journey)",
+          "next": "P1 Property Workspace, P2 Workers backend"
+        },
         {
           "product": "marketplace",
           "feature": "Listing grid and cards",
@@ -173,20 +192,6 @@
         },
         {
           "product": "marketplace",
-          "feature": "Places tab / map journey",
-          "founder": "Maps and Places consistent with the Marketplace",
-          "status": "IN_PROGRESS",
-          "userTest": "Places tab still links to the classic view",
-          "blocker": "Not on the new React Marketplace yet",
-          "workstream": "lead",
-          "paths": [],
-          "tests": "",
-          "verifiedAt": "",
-          "limits": "",
-          "next": "Port Places into the React Marketplace"
-        },
-        {
-          "product": "marketplace",
           "feature": "Social launch kit",
           "founder": "Premium editorial campaign, 9 feed concepts, 3 carousels, 3 video concepts, teaser, plan",
           "status": "NOT_STARTED",
@@ -198,6 +203,62 @@
           "verifiedAt": "",
           "limits": "Only production-verified features may be shown",
           "next": "After the Deal Room journey"
+        },
+        {
+          "product": "marketplace",
+          "feature": "Property Workspace (Owner/Agent/Client)",
+          "founder": "Marketplace Expansion directive 21 Nov",
+          "status": "NOT_STARTED",
+          "userTest": "",
+          "blocker": "",
+          "workstream": "lead",
+          "paths": [],
+          "tests": "",
+          "verifiedAt": "",
+          "limits": "",
+          "next": "P1 after navigation"
+        },
+        {
+          "product": "marketplace",
+          "feature": "Workers service requests + Notary pilot",
+          "founder": "Marketplace Expansion directive 21 Nov",
+          "status": "NOT_STARTED",
+          "userTest": "",
+          "blocker": "",
+          "workstream": "lead",
+          "paths": [],
+          "tests": "",
+          "verifiedAt": "",
+          "limits": "",
+          "next": "P2/P3: backend, synthetic professionals, 10-step journey"
+        },
+        {
+          "product": "marketplace",
+          "feature": "Jobs MVP",
+          "founder": "Marketplace Expansion directive 21 Nov",
+          "status": "NOT_STARTED",
+          "userTest": "Introduction page live with accurate availability",
+          "blocker": "",
+          "workstream": "lead",
+          "paths": [],
+          "tests": "",
+          "verifiedAt": "",
+          "limits": "",
+          "next": "P4"
+        },
+        {
+          "product": "marketplace",
+          "feature": "More Marketplaces interactive journey",
+          "founder": "Marketplace Expansion directive 21 Nov",
+          "status": "IN_PROGRESS",
+          "userTest": "First version live (8 steps, live/next labels, links to working parts)",
+          "blocker": "",
+          "workstream": "lead",
+          "paths": [],
+          "tests": "",
+          "verifiedAt": "",
+          "limits": "",
+          "next": "P5 scroll-driven demo"
         }
       ]
     },
@@ -207,10 +268,10 @@
       "host": "nexusstudios.one",
       "milestone": "Exchange / B2B pages",
       "deployment": {
-        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
-        "commit": "5cfba60",
+        "deployment": "dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7",
+        "commit": "127c1f2",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:19:05.054Z"
+        "deployedAt": "2026-11-21T20:28:15.313Z"
       },
       "features": []
     },
@@ -220,10 +281,10 @@
       "host": "nexussync.one",
       "milestone": "Calendar finish to founder references",
       "deployment": {
-        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
-        "commit": "5cfba60",
+        "deployment": "dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7",
+        "commit": "127c1f2",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:19:05.054Z"
+        "deployedAt": "2026-11-21T20:28:15.313Z"
       },
       "features": [
         {
@@ -275,10 +336,10 @@
       "host": "nexusstudios.one",
       "milestone": "First real owner onboarding",
       "deployment": {
-        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
-        "commit": "5cfba60",
+        "deployment": "dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7",
+        "commit": "127c1f2",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:19:05.054Z"
+        "deployedAt": "2026-11-21T20:28:15.313Z"
       },
       "features": [
         {
@@ -308,10 +369,10 @@
       "host": "crm.2906.estate",
       "milestone": "M5 documents + drafts, 14-step journey",
       "deployment": {
-        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
-        "commit": "5cfba60",
+        "deployment": "dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7",
+        "commit": "127c1f2",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:19:05.054Z"
+        "deployedAt": "2026-11-21T20:28:15.313Z"
       },
       "features": [
         {
@@ -372,10 +433,10 @@
       "host": "crm.2906.estate",
       "milestone": "Stability, Drafts, Reminder Due (outreach session)",
       "deployment": {
-        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
-        "commit": "5cfba60",
+        "deployment": "dpl_H5SCFM9esW6oHRak1KAUD5VCg1X7",
+        "commit": "127c1f2",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:19:05.054Z"
+        "deployedAt": "2026-11-21T20:28:15.313Z"
       },
       "features": [
         {
@@ -533,7 +594,7 @@
           "next": "Kevin pastes the sender secret in the admin form"
         }
       ],
-      "release": "e197653"
+      "release": "718fc87"
     }
   }
 }
