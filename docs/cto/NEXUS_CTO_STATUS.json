@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-11-21T20:18:42.803Z",
+  "generatedAt": "2026-11-21T20:20:43.749Z",
   "generator": "ops/cto/cto-report.cjs",
   "repository": {
     "name": "soxtrm/2906-website",
     "branch": "claude/argus-crm-release-20261120",
-    "head": "7cde1e5"
+    "head": "5cfba60"
   },
   "statusCounts": {
     "VERIFIED": 7,
@@ -17,47 +17,47 @@
     {
       "url": "https://nexusstudios.one/marketplace",
       "status": 200,
-      "ms": 840
+      "ms": 316
     },
     {
       "url": "https://nexusstudios.one/api/marketplace/listings",
       "status": 200,
-      "ms": 3872
+      "ms": 2622
     },
     {
       "url": "https://nexusstudios.one/marketplace/rooms",
       "status": 200,
-      "ms": 1709
+      "ms": 312
     },
     {
       "url": "https://nexussync.one/owner",
       "status": 200,
-      "ms": 898
+      "ms": 365
     },
     {
       "url": "https://crm.2906.estate/crm/deal-rooms",
       "status": 200,
-      "ms": 1245
+      "ms": 195
     },
     {
       "url": "https://www.2906.estate/",
       "status": 200,
-      "ms": 1808
+      "ms": 474
     },
     {
       "url": "https://nexuslink.fit/",
       "status": 200,
-      "ms": 211
+      "ms": 185
     },
     {
       "url": "https://api.2906.estate/api/properties",
       "status": 200,
-      "ms": 224
+      "ms": 206
     },
     {
       "url": "https://benestates.work/api/ben/work-health",
       "status": 200,
-      "ms": 226
+      "ms": 172
     }
   ],
   "products": {
@@ -67,10 +67,10 @@
       "host": "nexusstudios.one",
       "milestone": "Malta launch ~1 Dec 2026",
       "deployment": {
-        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
-        "commit": "d1d37ac",
+        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
+        "commit": "5cfba60",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:02:06.761Z"
+        "deployedAt": "2026-11-21T20:19:05.054Z"
       },
       "features": [
         {
@@ -207,10 +207,10 @@
       "host": "nexusstudios.one",
       "milestone": "Exchange / B2B pages",
       "deployment": {
-        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
-        "commit": "d1d37ac",
+        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
+        "commit": "5cfba60",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:02:06.761Z"
+        "deployedAt": "2026-11-21T20:19:05.054Z"
       },
       "features": []
     },
@@ -220,10 +220,10 @@
       "host": "nexussync.one",
       "milestone": "Calendar finish to founder references",
       "deployment": {
-        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
-        "commit": "d1d37ac",
+        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
+        "commit": "5cfba60",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:02:06.761Z"
+        "deployedAt": "2026-11-21T20:19:05.054Z"
       },
       "features": [
         {
@@ -275,10 +275,10 @@
       "host": "nexusstudios.one",
       "milestone": "First real owner onboarding",
       "deployment": {
-        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
-        "commit": "d1d37ac",
+        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
+        "commit": "5cfba60",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:02:06.761Z"
+        "deployedAt": "2026-11-21T20:19:05.054Z"
       },
       "features": [
         {
@@ -308,10 +308,10 @@
       "host": "crm.2906.estate",
       "milestone": "M5 documents + drafts, 14-step journey",
       "deployment": {
-        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
-        "commit": "d1d37ac",
+        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
+        "commit": "5cfba60",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:02:06.761Z"
+        "deployedAt": "2026-11-21T20:19:05.054Z"
       },
       "features": [
         {
@@ -372,10 +372,10 @@
       "host": "crm.2906.estate",
       "milestone": "Stability, Drafts, Reminder Due (outreach session)",
       "deployment": {
-        "deployment": "dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX",
-        "commit": "d1d37ac",
+        "deployment": "dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J",
+        "commit": "5cfba60",
         "branch": "claude/argus-crm-release-20261120",
-        "deployedAt": "2026-11-21T20:02:06.761Z"
+        "deployedAt": "2026-11-21T20:19:05.054Z"
       },
       "features": [
         {

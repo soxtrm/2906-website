@@ -1,6 +1,6 @@
 # NEXUS CTO status
 
-Generated 2026-11-21T20:18:42.803Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 7cde1e5). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
+Generated 2026-11-21T20:20:43.749Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 5cfba60). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
 
 ## Launch-readiness board
 
@@ -29,28 +29,28 @@ Generated 2026-11-21T20:18:42.803Z from live evidence by `ops/cto/cto-report.cjs
 
 | Product | URL | Live deployment | Commit | Deployed | Milestone |
 |---|---|---|---|---|---|
-| NEXUS Marketplace | https://nexusstudios.one/marketplace | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Malta launch ~1 Dec 2026 |
-| NEXUS STUDIOS | https://nexusstudios.one | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Exchange / B2B pages |
-| NEXUS Sync | https://nexussync.one/owner | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Calendar finish to founder references |
+| NEXUS Marketplace | https://nexusstudios.one/marketplace | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Malta launch ~1 Dec 2026 |
+| NEXUS STUDIOS | https://nexusstudios.one | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Exchange / B2B pages |
+| NEXUS Sync | https://nexussync.one/owner | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Calendar finish to founder references |
 | NEXUS Booking | https://nexuslink.fit | Booking release 20261121-rooms-v120 | - | - | Rooms stays engine v120 |
-| NEXUS Rooms | https://nexusstudios.one/marketplace/rooms | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | First real owner onboarding |
-| NEXUS Deal Room | https://crm.2906.estate/crm/deal-rooms | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | M5 documents + drafts, 14-step journey |
-| ARGUS / 2906 CRM | https://crm.2906.estate | dpl_4HZAQB7Uhg8HtPabhhntaNFf85cX | d1d37ac | 2026-11-21 20:02 | Stability, Drafts, Reminder Due (outreach session) |
+| NEXUS Rooms | https://nexusstudios.one/marketplace/rooms | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | First real owner onboarding |
+| NEXUS Deal Room | https://crm.2906.estate/crm/deal-rooms | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | M5 documents + drafts, 14-step journey |
+| ARGUS / 2906 CRM | https://crm.2906.estate | dpl_5hW7qCKtdLxEGdKpNnLnB2uYae9J | 5cfba60 | 2026-11-21 20:19 | Stability, Drafts, Reminder Due (outreach session) |
 | Benestates Work | https://benestates.work | release e197653 | - | - | St Julian's onboarding (8 pending) |
 
 ## Health (probed at generation)
 
 | URL | HTTP | ms |
 |---|---|---|
-| https://nexusstudios.one/marketplace | 200 | 840 |
-| https://nexusstudios.one/api/marketplace/listings | 200 | 3872 |
-| https://nexusstudios.one/marketplace/rooms | 200 | 1709 |
-| https://nexussync.one/owner | 200 | 898 |
-| https://crm.2906.estate/crm/deal-rooms | 200 | 1245 |
-| https://www.2906.estate/ | 200 | 1808 |
-| https://nexuslink.fit/ | 200 | 211 |
-| https://api.2906.estate/api/properties | 200 | 224 |
-| https://benestates.work/api/ben/work-health | 200 | 226 |
+| https://nexusstudios.one/marketplace | 200 | 316 |
+| https://nexusstudios.one/api/marketplace/listings | 200 | 2622 |
+| https://nexusstudios.one/marketplace/rooms | 200 | 312 |
+| https://nexussync.one/owner | 200 | 365 |
+| https://crm.2906.estate/crm/deal-rooms | 200 | 195 |
+| https://www.2906.estate/ | 200 | 474 |
+| https://nexuslink.fit/ | 200 | 185 |
+| https://api.2906.estate/api/properties | 200 | 206 |
+| https://benestates.work/api/ben/work-health | 200 | 172 |
 
 ## ARGUS backend packages (latest first)
 
