@@ -29,6 +29,12 @@ const CRM = () => (process.env.PUBLIC_CRM_URL || 'https://crm.2906.estate').repl
 const OUTCOMES = ['completed', 'didnt_happen', 'rescheduled', 'awaiting']
 const NEXT_STEPS = ['interested', 'follow_up', 'offer', 'declined', 'none']
 
+// The booking's time: starts_at, or for requests from the older /book flow
+// (no starts_at) the viewing date and time read as Malta local time.
+const SLOT_SQL = `COALESCE(pv.starts_at, CASE WHEN pv.viewing_date IS NULL THEN NULL ELSE
+  ((pv.viewing_date + CASE WHEN pv.viewing_time ~ '^[0-2]?[0-9]:[0-5][0-9]' THEN substring(pv.viewing_time from '^[0-2]?[0-9]:[0-5][0-9]')::time ELSE time '12:00' END)
+   AT TIME ZONE 'Europe/Malta') END)`
+
 class FollowupError extends Error { constructor(code, message, status = 400) { super(message); this.code = code; this.status = status } }
 
 // The question is due the day after the slot (Malta calendar), from 09:30.
@@ -51,7 +57,7 @@ async function event(q, followupId, kind, detail = {}, agentId = null) {
 // ── keep one row per booking request in step with the booking ──────────────
 async function ensureOne(viewingId) {
   const { rows: [v] } = await db.query(
-    `SELECT id, property_id, starts_at, status, source, COALESCE(viewing_agent_id, user_id) AS agent_id FROM property_viewings WHERE id=$1`, [viewingId])
+    `SELECT pv.id, pv.property_id, ${SLOT_SQL} AS starts_at, pv.status, pv.source, COALESCE(pv.viewing_agent_id, pv.user_id) AS agent_id FROM property_viewings pv WHERE pv.id=$1`, [viewingId])
   if (!v || !v.starts_at) return null
   const s = schedule(v.starts_at)
   const st = stateOf(v.status)
@@ -69,13 +75,13 @@ async function syncAll({ now = new Date(), send = true } = {}) {
   // 1. new requests: agent-made, with a time, recent or upcoming
   const { rows: fresh } = await db.query(
     `SELECT pv.id FROM property_viewings pv LEFT JOIN viewing_followups f ON f.viewing_id=pv.id
-      WHERE f.id IS NULL AND pv.starts_at IS NOT NULL AND pv.starts_at > $1::timestamptz - make_interval(days => $2)
+      WHERE f.id IS NULL AND ${SLOT_SQL} > $1::timestamptz - make_interval(days => $2)
         AND COALESCE(pv.viewing_agent_id, pv.user_id) IS NOT NULL ORDER BY pv.id LIMIT 300`, [now, LOOKBACK_DAYS])
   for (const r of fresh) { if (await ensureOne(r.id)) out.created++ }
 
   // 2. follow the booking: confirmed, moved, cancelled, reinstated
   const { rows } = await db.query(
-    `SELECT f.*, pv.status AS pv_status, pv.starts_at AS pv_start, COALESCE(pv.duration_min, 20) AS pv_min
+    `SELECT f.*, pv.status AS pv_status, ${SLOT_SQL} AS pv_start, COALESCE(pv.duration_min, 20) AS pv_min
        FROM viewing_followups f JOIN property_viewings pv ON pv.id=f.viewing_id
       WHERE f.feedback_state <> 'answered' OR f.updated_at > $1::timestamptz - interval '2 days'`, [now])
   for (const f of rows) {
