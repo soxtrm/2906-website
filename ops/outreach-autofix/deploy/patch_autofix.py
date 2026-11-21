@@ -188,6 +188,10 @@ P(PLANNER,
 """            SET scheduled_at=$2, status='saved', source='auto_prepared', armed=FALSE, target_count=$3,
                 batch_min=$4, batch_max=$5, hold_reason=NULL, hold_at=NULL, updated_at=NOW()
           WHERE id=$1`, [plan.id, scheduledAt.toISOString(), Math.max(1, prepared), envelope.min, envelope.max]"""),
+# pre-existing crash: getPlanWithEntries has no stats, so every 5-minute refresh of a prepared day threw
+P(PLANNER,
+"""        const refreshed = await getPlanWithEntries(plan.id)""",
+"""        const refreshed = { ...(await getPlanWithEntries(plan.id)), stats: await computeStats(plan.id) }"""),
 # trimPlanToBatch
 P(PLANNER,
 """async function regenerate(planId, requestedCount) {""",
