@@ -42,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\dev-clean.ps1 -Apply     #
 | `deps` | `node_modules` of checkouts with a clean status, no stash and no commit for 14 days | opt-in (next use needs `npm ci`) |
 | worktree | `-RemoveWorktree <path>`: only linked worktrees that are clean, stash-free, have an upstream and nothing unpushed; `git worktree remove` + `prune`; the branch stays on GitHub | explicit only |
 
-Always: only inside the roots, never a root itself; inside a Git checkout only what
+Always: only inside the roots, never a root itself; never a project or session folder that a running process mentions (command line, executable or working directory; if processes cannot be read, nothing is deleted); inside a Git checkout only what
 `git check-ignore` reports as ignored (a tracked folder named `coverage` stays); never a protected
 name; never a folder that contains a protected-looking file; the hygiene reports themselves are kept.
 

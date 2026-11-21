@@ -92,6 +92,7 @@ function Contains-Protected([string]$dir) {
   return $false
 }
 
+$footprint = Get-ProcessFootprint   # read once; anything a running process mentions is skipped
 $scans = @(); foreach ($r in $Roots) { Write-Host "scanning $r ..."; $scans += Measure-Tree -Root $r -BigFile ([long]::MaxValue) }
 $repos = @($scans | ForEach-Object { $_.Repos } | Sort-Object -Unique)
 $gitBy = @{}; foreach ($p in $repos) { $gitBy[$p] = Get-GitState $p }
@@ -110,6 +111,8 @@ foreach ($d in $dirs) {
     }
     if ($Categories -notcontains $cat) { continue }
     $why = Allowed $d.Path $repos $true; if ($why) { Skip $d.Path $why; continue }
+    $proj = Split-Path -Parent $d.Path
+    if (Test-InUse $proj $footprint) { Skip $d.Path 'a running process uses this project (dev server, build or agent)'; continue }
     if ($cat -eq 'caches' -and -not (Older $d.NewestUtc ($MinAgeHours / 24.0))) { Skip $d.Path "changed within $MinAgeHours h (may be in use)"; continue }
     if ($cat -eq 'tests' -and -not (Older $d.NewestUtc $TestRetainDays)) { Skip $d.Path "newer than $TestRetainDays days"; continue }
     if ($cat -eq 'deps') {
@@ -127,6 +130,7 @@ foreach ($d in $dirs) {
   # Claude Code temp: one folder per session (...\Temp\claude\<project>\<session>)
   if ($Categories -contains 'temp' -and $d.Path -match '(?i)[\\/]Temp[\\/]claude[\\/][^\\/]+[\\/][^\\/]+$') {
     if (-not (Older $d.NewestUtc $TempRetainDays)) { Skip $d.Path "session temp newer than $TempRetainDays days"; continue }
+    if (Test-InUse $d.Path $footprint) { Skip $d.Path 'a running process uses this session folder'; continue }
     $why = Allowed $d.Path $repos $false; if ($why) { Skip $d.Path $why; continue }
     if (Contains-Protected $d.Path) { Skip $d.Path 'contains a protected-looking file'; continue }
     Add-Plan $d.Path $d.Total 'temp' "Claude Code session temp, unchanged for $([int]($now - $d.NewestUtc).TotalDays) days" $false

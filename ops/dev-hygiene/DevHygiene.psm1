@@ -164,6 +164,35 @@ function Test-GitIgnored([string]$Path, [string[]]$Repos) {
   return ($LASTEXITCODE -eq 0)
 }
 
+# Everything that identifies running processes: command lines, executables and (Linux) working
+# directories. Used to skip anything a running dev server, build or agent may be using.
+function Get-ProcessFootprint {
+  $out = New-Object System.Collections.Generic.List[string]
+  if ($script:IsWin) {
+    try {
+      foreach ($p in (Get-CimInstance Win32_Process -ErrorAction Stop)) {
+        if ($p.CommandLine) { $out.Add([string]$p.CommandLine) }
+        if ($p.ExecutablePath) { $out.Add([string]$p.ExecutablePath) }
+      }
+    } catch { $out.Add('*UNKNOWN*') }
+  } else {
+    foreach ($d in (Get-ChildItem -LiteralPath '/proc' -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\d+$' })) {
+      try { $c = [System.IO.File]::ReadAllText((Join-Path $d.FullName 'cmdline')).Replace([char]0, ' ').Trim(); if ($c) { $out.Add($c) } } catch { }
+      try { $w = (Get-Item -LiteralPath (Join-Path $d.FullName 'cwd') -Force -ErrorAction Stop).Target; if ($w) { $out.Add([string]$w) } } catch { }
+    }
+  }
+  return $out
+}
+
+# True when a running process mentions this folder (or the footprint could not be read: fail safe).
+function Test-InUse([string]$Folder, $Footprint) {
+  if (-not $Footprint) { return $false }
+  if ($Footprint -contains '*UNKNOWN*') { return $true }
+  $f = $Folder.TrimEnd('\', '/')
+  foreach ($line in $Footprint) { if ($line.IndexOf($f, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) { return $true } }
+  return $false
+}
+
 function Test-UnderRoots([string]$Path, [string[]]$Roots) {
   foreach ($r in $Roots) {
     $prefix = $r.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
