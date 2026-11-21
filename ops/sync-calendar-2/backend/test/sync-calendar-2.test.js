@@ -110,6 +110,16 @@ test('moving and resizing own hours: bookings outside are flagged, never moved; 
   assert.ok(other.status >= 400 && other.status < 500)
 })
 
+test('a proposed time inside own hours does not block extending them', async () => {
+  const add = await svc('/owner/cal/window/add', { session: A.session, propertyId: A.ids[1], start: at(25, 10).toISOString(), end: at(25, 13).toISOString() })
+  assert.equal(add.status, 200, JSON.stringify(add.body))
+  const req = await viewing(A.ids[1], at(25, 15))
+  const pr = await svc('/owner/viewings/decide', { session: A.session, viewingId: req, decision: 'propose', proposeStart: at(25, 11).toISOString() })
+  assert.equal(pr.status, 200, JSON.stringify(pr.body))
+  const up = await svc('/owner/cal/window/update', { session: A.session, propertyId: A.ids[1], windowId: add.body.created[0].id, start: at(25, 10).toISOString(), end: at(25, 14).toISOString() })
+  assert.equal(up.status, 200, JSON.stringify(up.body))
+})
+
 test('own appointment (neighbour) is confirmed at once and blocks the slot; overlaps are refused', async () => {
   const s = at(22, 9)
   const r = await svc('/owner/cal/appointment', { session: A.session, propertyId: A.ids[1], start: s.toISOString(), minutes: 20, label: 'Neighbour (Maria)' })

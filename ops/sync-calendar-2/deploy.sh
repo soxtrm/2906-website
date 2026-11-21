@@ -74,6 +74,22 @@ case "${1:-}" in
     BK=$(cat "$BKROOT/sync-calendar-2-latest"); for f in $PATCHED; do cp -p "$BK/$f" "$LIVE/$f"; done; for f in $NEWFILES; do rm -f "$LIVE/$f"; done
     docker restart "$CT" >/dev/null; wait_up && echo "rolled back to $BK"
     ;;
+  update)
+    # 21 Nov 2026 16:00: proposal / acceptance windows no longer block the owner's own hours. Replaces only
+    # services/syncCalendar2.js, and only if the live file is exactly the first release.
+    F=services/syncCalendar2.js; FROM=00bb82b6face8186f0df939a60242e74
+    [ "$(md5sum "$LIVE/$F" | cut -d' ' -f1)" = "$FROM" ] || { echo "REFUSE: live $F is not the first release"; exit 1; }
+    TS=$(date -u +%Y%m%dT%H%M%SZ); BK="$BKROOT/sync-calendar-2-update-$TS"; mkdir -p "$BK/services"; cp -p "$LIVE/$F" "$BK/$F"; echo "$BK" > "$BKROOT/sync-calendar-2-update-latest"
+    undo() { echo "ROLLING BACK UPDATE"; cp -p "$BK/$F" "$LIVE/$F"; docker restart "$CT" >/dev/null; wait_up && echo "rolled back, backend up"; }
+    cp "$PKG/backend/$F" "$LIVE/$F"
+    docker run --rm --network none -v "$LIVE:/app:ro" -w /app --entrypoint node 2906-system-backend --check "$F" || { undo; exit 1; }
+    docker restart "$CT" >/dev/null; wait_up || { undo; exit 1; }; sleep 5
+    verify || { undo; exit 1; }
+    echo "UPDATE APPLIED AND VERIFIED (backup $BK)"
+    ;;
+  update-rollback)
+    F=services/syncCalendar2.js; BK=$(cat "$BKROOT/sync-calendar-2-update-latest"); cp -p "$BK/$F" "$LIVE/$F"; docker restart "$CT" >/dev/null; wait_up && echo "update rolled back to $BK"
+    ;;
   verify) verify ;;
   *) echo "usage: deploy.sh stage|apply|rollback|verify|hotfix|hotfix-rollback"; exit 2 ;;
 esac

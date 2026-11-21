@@ -51,7 +51,10 @@ async function overlapping(q, propertyId, a, b, exceptId = null) {
   const { rows: [w] } = await q.query(
     `SELECT id, starts_at, ends_at, source_type FROM property_viewing_windows
       WHERE property_id=$1 AND status='active' AND kind='window' AND id <> COALESCE($4::int, 0)
-        AND starts_at < $3::timestamptz AND ends_at > $2::timestamptz ORDER BY starts_at LIMIT 1`, [propertyId, a.toISOString(), b.toISOString(), exceptId])
+        AND starts_at < $3::timestamptz AND ends_at > $2::timestamptz
+        -- a proposed time or the hour around an accepted viewing never blocks the owner's own hours
+        AND COALESCE(source_reference, '') NOT LIKE '%:propose:%' AND source_type <> 'booking_survey'
+      ORDER BY starts_at LIMIT 1`, [propertyId, a.toISOString(), b.toISOString(), exceptId])
   return w || null
 }
 async function provenance(q, propertyId, a, b, reference, evidence) {
