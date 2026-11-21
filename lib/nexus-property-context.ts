@@ -173,8 +173,8 @@ export async function fetchNexusContext() {
   if (memoryContext && Date.now() < memoryContextExpires) return memoryContext
   if (pendingContext) return pendingContext
   pendingContext = Promise.all([
-    fetch(`${NEXUS_ORIGIN}/api/nexus/inventory`, { cache: 'no-store' }),
-    fetch(`${NEXUS_ORIGIN}/api/nexus/places`, { cache: 'no-store' }),
+    fetch(`${NEXUS_ORIGIN}/api/nexus/inventory`, { cache: 'no-store', signal: AbortSignal.timeout(20000) }),
+    fetch(`${NEXUS_ORIGIN}/api/nexus/places`, { cache: 'no-store', signal: AbortSignal.timeout(20000) }),
   ]).then(async ([inventoryResponse, placesResponse]) => {
     if (!inventoryResponse.ok || !placesResponse.ok) throw new Error('Nexus context unavailable')
     const inventory = await inventoryResponse.json()

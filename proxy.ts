@@ -38,7 +38,11 @@ export default function proxy(req: NextRequest) {
     if (host.startsWith('www.')) return NextResponse.redirect(new URL(pathname + req.nextUrl.search, 'https://nexusstudios.one'), 308)
     const url = req.nextUrl.clone()
     if (pathname === '/') { url.pathname = '/studios'; return NextResponse.rewrite(url) }
-    if (pathname === '/marketplace' || pathname === '/marketplace/') { url.pathname = '/link-marketplace/index.html'; return NextResponse.rewrite(url) }
+    // React Marketplace (2026-11-21); the previous static app stays reachable as /marketplace/classic
+    if (pathname === '/marketplace' || pathname === '/marketplace/') { url.pathname = '/studios/marketplace'; return NextResponse.rewrite(url) }
+    const home = pathname.match(/^\/marketplace\/home\/([A-Za-z0-9-]{1,40})\/?$/)
+    if (home) { url.pathname = `/studios/marketplace/home/${home[1]}`; return NextResponse.rewrite(url) }
+    if (pathname === '/marketplace/classic' || pathname === '/marketplace/classic/') { url.pathname = '/link-marketplace/index.html'; return NextResponse.rewrite(url) }
     if (pathname.startsWith('/link-marketplace/') || pathname.startsWith('/Link/') || pathname === '/link-matrix') return NextResponse.next()
     return new NextResponse('Not found', { status: 404 })
   }
