@@ -10,7 +10,8 @@ import type { ListingCard } from '@/lib/marketplace/model'
 
 type Msg = { id: number; from: 'visitor' | 'staff' | 'system'; kind: string; text: string; at: string; meta?: Record<string, unknown> }
 type Req = { id: number; state: 'requested' | 'waiting_owner' | 'confirmed' | 'declined' | 'not_possible' | 'cancelled'; preferred: { date: string; part: string }[]; startsAt: string | null }
-type Conv = { id: string; ref: string; title: string; status: string; agent: { id: number; name: string; photo: string | null } | null; messages: Msg[]; requests: Req[]; unread: number }
+type Deal = { id: string; stage: string; label: string; stages: { key: string; label: string; state: 'done' | 'now' | 'next' | 'off' }[] }
+type Conv = { id: string; ref: string; title: string; status: string; agent: { id: number; name: string; photo: string | null } | null; messages: Msg[]; requests: Req[]; unread: number; deal?: Deal | null }
 type Pending = { key: string; text: string; failed?: string }
 
 const KEY = (ref: string) => `nx-mp-chat:${ref}`
@@ -95,6 +96,7 @@ export function ChatPanel({ l, onMeta, focusKey = 0, onClose }: { l: ListingCard
         {onClose && <button type="button" className="mc-chat-x" onClick={onClose} aria-label="Minimise chat"><X size={16} /></button>}
       </header>
 
+      {conv?.deal && <DealStrip deal={conv.deal} />}
       {!auth ? <StartForm l={l} onStarted={(a, c) => { save(l.id, a); setAuth(a); setConv(c) }} /> : <>
         <div className="mc-thread" ref={list} aria-live="polite">
           {!conv && !err && <div className="mp-lines" aria-busy="true"><i /><i /></div>}
@@ -141,6 +143,18 @@ export function ChatPanel({ l, onMeta, focusKey = 0, onClose }: { l: ListingCard
       <p className="mc-foot-note"><span><Lock size={11} aria-hidden="true" /> Private NEXUS conversation with {agency.name}. No phone numbers are shared.</span>
         <a href={`/marketplace?agency=${encodeURIComponent(agency.key)}&market=${l.market}`}>All homes from {agency.name}</a>{agency.website && <a href={agency.website} target="_blank" rel="noopener">Website<ExternalLink size={10} aria-hidden="true" /></a>}</p>
     </div>
+  )
+}
+
+// NEXUS Deal Room, client view: where this enquiry stands (no internal notes, no payment claims)
+function DealStrip({ deal }: { deal: Deal }) {
+  const reduce = useReducedMotion()
+  const steps = deal.stages.filter(s => s.key !== 'completed' || deal.stage === 'completed')
+  return (
+    <motion.div className="mc-deal" initial={reduce ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
+      <span className="mc-deal-head"><b>Deal Room</b><span>{deal.stage === 'cancelled' ? 'Closed' : deal.label}</span></span>
+      {deal.stage !== 'cancelled' && <ol aria-label="Progress">{steps.map(s => <li key={s.key} data-state={s.state} title={s.label}><i />{s.state === 'now' && <small>{s.label}</small>}</li>)}</ol>}
+    </motion.div>
   )
 }
 

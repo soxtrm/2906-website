@@ -192,3 +192,10 @@ button.sa-stat { cursor: pointer; } button.sa-stat:hover { border-color: var(--s
 .mc-avail.k-gone { background: #2b2d31; color: #fff; }
 .pd-gone { display: grid; gap: 4px; padding: 16px; border-radius: 18px; border: 1px solid var(--st-line); background: var(--st-raised); font-size: 13.5px; color: var(--st-muted); }
 .pd-gone b { font-size: 15px; color: var(--st-text); }
+.mc-deal { display: grid; gap: 8px; padding: 10px 12px; border-radius: 14px; background: var(--st-raised); }
+.mc-deal-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; } .mc-deal-head b { font-size: 12.5px; letter-spacing: .02em; } .mc-deal-head span { font-weight: 700; }
+.mc-deal ol { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.mc-deal li { position: relative; flex: 1; display: grid; gap: 4px; } .mc-deal li i { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--st-text) 14%, transparent); }
+.mc-deal li[data-state=done] i { background: var(--st-live); } .mc-deal li[data-state=now] i { background: var(--st-text); }
+.mc-deal li small { position: absolute; top: 8px; left: 0; white-space: nowrap; font-size: 10.5px; font-weight: 700; color: var(--st-muted); }
+.mc-deal ol { padding-bottom: 14px; }

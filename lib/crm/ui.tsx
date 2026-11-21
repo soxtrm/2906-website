@@ -2,7 +2,7 @@
 import { NEXUS_STAR_PATH } from '@/lib/brand-paths'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox, BadgeCheck, ListChecks } from 'lucide-react'
+import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox, BadgeCheck, ListChecks, Handshake } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -452,6 +452,7 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   // Property features owners added in SYNC: listing agents confirm, admins curate new terms (2026-11-21)
   // NEXUS Marketplace conversations: visitors write about a listing, the agency answers and books viewings (2026-11-21)
   { key: 'mpinbox', icon: '✉', label: 'Marketplace inbox', href: '/marketplace-inbox' },
+  { key: 'deals', icon: '◆', label: 'Deal Rooms', href: '/deal-rooms' },
   { key: 'features', icon: '✓', label: 'Property features', href: '/features' },
 ]
 
@@ -502,7 +503,7 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, mpinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight, ownerquality: BadgeCheck, features: ListChecks }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, mpinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight, ownerquality: BadgeCheck, features: ListChecks, deals: Handshake }
 
 // Board desktop header (founder mockup 2026-10-19): these carry labels in the
 // header; every other workspace sits behind "More".
@@ -519,7 +520,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const normalizedPath = pathname.replace(/^\/crm(?=\/|$)/, '') || '/'
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   // 'syncinbox' is newer than the nav list the server sends: every non-board account gets it.
-  const items = NAV.filter(i => (nav.includes(i.key) || ((i.key === 'syncinbox' || i.key === 'websitereview' || i.key === 'features' || i.key === 'mpinbox') && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
+  const items = NAV.filter(i => (nav.includes(i.key) || ((i.key === 'syncinbox' || i.key === 'websitereview' || i.key === 'features' || i.key === 'mpinbox' || i.key === 'deals') && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
   // Pending count on the Incoming entry: staff only, refreshed while ARGUS is open.
   const intake = useIntakeSummary(60_000, items.some(i => i.key === 'incoming') && (me?.role === 'admin' || me?.role === 'agent'))
   const pendingIntake = intake?.counts.needs_verification || 0
