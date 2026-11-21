@@ -9,20 +9,38 @@ import { PropertyGallery } from './gallery'
 import { PropertyLifeOverview } from '@/components/property-life-overview'
 import { getPropertyLifeOverview } from '@/lib/nexus-property-context'
 import { getPublicProperty } from '@/lib/public-property'
-import type { Property } from '@/lib/types'
+import type { Metadata } from 'next'
+import { publicPropertyTitle, publicPropertyHeadline, publicPriceLabel, publicPropertyDescription, publicShareImage } from '@/lib/public-property-title'
 
 const VPS = ARGUS_ORIGIN
 const COMMERCIAL_TYPES = ['Office', 'Retail', 'Warehouse']
 
-function cleanPropertyTitle(property: Property) {
-  const location = String(property.location || '').trim().toLowerCase()
-  const useful = String(property.title || '').split('|').map(part => part.trim()).filter(part => {
-    const normalized = part.toLowerCase()
-    return normalized && normalized !== location && !/€|\bbed(room)?s?\b|\bbath(room)?s?\b|^\d[\d,.]*$/.test(normalized)
-  })
-  if (useful.length) return useful.join(' · ')
-  const type = property.propertyType || 'Residence'
-  return property.location ? `${type} in ${property.location}` : `Selected ${type}`
+// Title Case, never a "Selected …" placeholder (Kev 21 Nov 2026): "2-Bedroom Penthouse in Swieqi"
+export async function generateMetadata({ params }: { params: Promise<{ slug: string; locale: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const property = await getPublicProperty(slug)
+  if (!property) return { title: 'Property not found | 2906 Real Estate Malta', robots: { index: false } }
+  const title = publicPropertyTitle(property)
+  const price = publicPriceLabel(property)
+  const description = publicPropertyDescription(property)
+  const image = publicShareImage(property)
+  const url = `/property/${property.slug}`
+  const full = `${title}${price ? ` – ${price}` : ''} | 2906 Real Estate Malta`
+  return {
+    title: full,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${title}${price ? ` – ${price}` : ''}`,
+      description,
+      url,
+      type: 'website',
+      siteName: '2906 Real Estate Malta',
+      locale: 'en_MT',
+      images: image ? [{ url: image, width: 1200, height: 630, alt: title }] : [{ url: '/hero-loading.webp', width: 1280, height: 720, alt: '2906 Real Estate Malta' }],
+    },
+    twitter: { card: 'summary_large_image', title: full, description, images: image ? [image] : undefined },
+  }
 }
 
 export default async function PropertyPage({
@@ -57,7 +75,8 @@ export default async function PropertyPage({
   }
 
   const description = property.fullDescription || property.description || ''
-  const displayTitle = cleanPropertyTitle(property)
+  const displayTitle = publicPropertyTitle(property)
+  const headline = publicPropertyHeadline(property)
 
   const hasPool   = property.features?.some(f => /pool|piscin/i.test(f))
   const hasGarage = property.features?.some(f => /garage|parking/i.test(f))
@@ -104,6 +123,9 @@ export default async function PropertyPage({
               <div className="bg-white rounded-lg p-5 md:p-8">
                 {/* Title block — stacks on mobile */}
                 <div className="mb-5">
+                  {headline && headline !== displayTitle && (
+                    <p className="text-xs uppercase tracking-[0.16em] text-gold mb-1.5 break-words">{headline}</p>
+                  )}
                   <h1 className="font-serif text-xl md:text-3xl text-navy mb-2 leading-snug break-words">
                     {displayTitle}
                   </h1>

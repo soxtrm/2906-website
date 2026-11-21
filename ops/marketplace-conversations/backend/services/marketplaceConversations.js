@@ -36,7 +36,8 @@ async function listingFor(ref) {
   if (!raw.startsWith(prefix)) fail('LISTING_NOT_AGENCY', 'This listing has no confirmed agency to message yet.', 404)
   const short = raw.slice(prefix.length)
   const { rows: [p] } = await db.query(
-    `SELECT id, ref, town, property_type, bedrooms, listed_by_agent_id FROM properties WHERE ref::text = $1 LIMIT 1`, [short])
+    // ARGUS stores refs with the agency prefix ("2906-039"); older rows may carry the short form ("039")
+    `SELECT id, ref, town, property_type, bedrooms, listed_by_agent_id FROM properties WHERE ref::text = ANY($1::text[]) ORDER BY (ref::text = $2) DESC LIMIT 1`, [[raw, short], raw])
   if (!p) fail('LISTING_NOT_FOUND', 'This listing is no longer available.', 404)
   return { ...p, publicRef: raw }
 }

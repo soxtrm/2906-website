@@ -70,6 +70,26 @@ case "${1:-}" in
     BK=$(cat "$BKROOT/marketplace-conversations-latest"); for f in $PATCHED; do cp -p "$BK/$f" "$LIVE/$f"; done; for f in $NEWFILES; do rm -f "$LIVE/$f"; done
     docker restart "$CT" >/dev/null; wait_up && echo "rolled back to $BK"
     ;;
+  hotfix)
+    # 21 Nov 2026: listings are looked up by the full ARGUS ref ("2906-039"); the first release only tried "039".
+    # Replaces only services/marketplaceConversations.js, and only if the live file is exactly the first release.
+    F=services/marketplaceConversations.js; FROM=5281399021baf8b8e9dd82d04376215c
+    [ "$(md5sum "$LIVE/$F" | cut -d' ' -f1)" = "$FROM" ] || { echo "REFUSE: live $F is not the first release (changed by someone else?)"; exit 1; }
+    TS=$(date -u +%Y%m%dT%H%M%SZ); BK="$BKROOT/marketplace-conversations-hotfix-$TS"; mkdir -p "$BK/services"; cp -p "$LIVE/$F" "$BK/$F"; echo "$BK" > "$BKROOT/marketplace-conversations-hotfix-latest"
+    undo() { echo "ROLLING BACK HOTFIX"; cp -p "$BK/$F" "$LIVE/$F"; docker restart "$CT" >/dev/null; wait_up && echo "rolled back, backend up"; }
+    cp "$PKG/backend/$F" "$LIVE/$F"
+    docker run --rm --network none -v "$LIVE:/app:ro" -w /app --entrypoint node 2906-system-backend --check "$F" || { undo; exit 1; }
+    docker restart "$CT" >/dev/null; wait_up || { undo; exit 1; }; sleep 5
+    verify || { undo; exit 1; }
+    # positive probe without creating anything: a real listing answers "add your contact" instead of "unknown listing"
+    REF=$(docker exec "$PG" sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT ref FROM properties WHERE published AND ref::text LIKE '"'"'2906-%'"'"' ORDER BY id DESC LIMIT 1"')
+    e=$(curl -s -m 10 -X POST -H 'content-type: application/json' -d "{\"ref\":\"$REF\",\"name\":\"Probe\"}" "$URL/api/nexus/mp/conversations" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("error"))')
+    [ "$e" = CONTACT_REQUIRED ] && echo "ok   real listing $REF resolves (no conversation created)" || { echo "FAIL real listing lookup ($e)"; undo; exit 1; }
+    echo "HOTFIX APPLIED AND VERIFIED (backup $BK)"
+    ;;
+  hotfix-rollback)
+    F=services/marketplaceConversations.js; BK=$(cat "$BKROOT/marketplace-conversations-hotfix-latest"); cp -p "$BK/$F" "$LIVE/$F"; docker restart "$CT" >/dev/null; wait_up && echo "hotfix rolled back to $BK"
+    ;;
   verify) verify ;;
-  *) echo "usage: deploy.sh stage|apply|rollback|verify"; exit 2 ;;
+  *) echo "usage: deploy.sh stage|apply|rollback|verify|hotfix|hotfix-rollback"; exit 2 ;;
 esac

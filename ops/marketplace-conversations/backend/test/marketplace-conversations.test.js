@@ -36,8 +36,10 @@ test.before(async () => {
   for (let i = 0; i < 60; i++) { try { await pool.query('SELECT 1'); break } catch { await new Promise(r => setTimeout(r, 500)) } }
   const mk = async (username, role) => (await pool.query(`INSERT INTO agents (username, name, role, active, password_hash) VALUES ($1,$1,$2,true,'x') RETURNING id, username`, [username, role])).rows[0]
   admin = await mk('mp-admin', 'admin'); a1 = await mk('mp-agent-1', 'agent'); a2 = await mk('mp-agent-2', 'agent')
-  const { rows: [p] } = await pool.query(`INSERT INTO properties (ref, town, property_type, longlet_price, bedrooms, bathrooms, listed_by_agent_id) VALUES ('9765','Msida','apartment',1750,2,2,$1) RETURNING id`, [a1.id])
+  const { rows: [p] } = await pool.query(`INSERT INTO properties (ref, town, property_type, longlet_price, bedrooms, bathrooms, listed_by_agent_id) VALUES ('2906-9765','Msida','apartment',1750,2,2,$1) RETURNING id`, [a1.id])
   propId = p.id
+  // a legacy row stored without the agency prefix is still found
+  await pool.query(`INSERT INTO properties (ref, town, property_type, longlet_price, bedrooms, bathrooms, listed_by_agent_id) VALUES ('4411','Gzira','maisonette',1500,3,1,$1)`, [a2.id])
   const app = express(); app.use(express.json())
   app.use('/api/crm/marketplace-inbox', require(R('routes/crmMarketplaceInbox.js')))
   app.use('/api/nexus/mp', require(R('routes/marketplaceConversations.js')))
@@ -51,6 +53,10 @@ test('a visitor starts a conversation about a listing; contact is required, owne
   assert.equal(bad.status, 400); assert.equal(bad.body.error, 'CONTACT_REQUIRED')
   const none = await visitor('POST', '/conversations', { ref: 'WSI-X-1', name: 'Mia', email: 'mia@example.test', message: 'Hi' })
   assert.equal(none.status, 404); assert.equal(none.body.error, 'LISTING_NOT_AGENCY')
+  const legacy = await visitor('POST', '/conversations', { ref: '2906-4411', name: 'Leo' })
+  assert.equal(legacy.status, 400, 'legacy short ref resolves to the listing (then asks for contact)'); assert.equal(legacy.body.error, 'CONTACT_REQUIRED')
+  const gone = await visitor('POST', '/conversations', { ref: '2906-0000', name: 'Leo', email: 'leo@example.test', message: 'Hi' })
+  assert.equal(gone.status, 404); assert.equal(gone.body.error, 'LISTING_NOT_FOUND')
   const r = await visitor('POST', '/conversations', { ref: '2906-9765', name: 'Mia Visitor', email: 'mia@example.test', role: 'home-seeker', message: 'Is it still available from January?' })
   assert.equal(r.status, 200, JSON.stringify(r.body))
   conv = r.body.conversation; token = r.body.token

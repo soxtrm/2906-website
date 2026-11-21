@@ -44,8 +44,9 @@ async function seed() {
     }
     return { ids, a }
   }
-  const olga = await mk('Olga Stage', '35699100001', 'olga.stage@example.test', ['ST-101', 'ST-102', 'ST-103'])
-  await mk('Bruno Stage', '35699100002', 'bruno.stage@example.test', ['ST-201'])
+  // refs carry the agency prefix like production ('2906-039'), so the marketplace names the agency
+  const olga = await mk('Olga Stage', '35699100001', 'olga.stage@example.test', ['2906-ST-101', '2906-ST-102', '2906-ST-103'])
+  await mk('Bruno Stage', '35699100002', 'bruno.stage@example.test', ['2906-ST-201'])
   const dan = await mk('Dan Stage', '35699100003', 'dan.stage@example.test', [])
   await pool.query("UPDATE sync_accounts SET phone_e164='35699100003', phone_verified_at=NOW(), phone_verified_via='staging' WHERE id=$1", [dan.a.id])
   await mk('Xena Stage', '35699100004', 'xena.stage@example.test', [])
@@ -54,7 +55,7 @@ async function seed() {
   await pool.query("UPDATE agents SET email='stage-admin@example.test', password_hash=$1 WHERE id=1", [bcrypt.hashSync('stage-admin-2026', 10)])
   // Pia: owner record with two homes, SYNC account with a confirmed mobile, claim proposed (as after 'SYNC verify')
   const { rows: [po] } = await pool.query("INSERT INTO owner_contacts (phone_normalized, name) VALUES ('35699100005','Pia Stage') RETURNING id")
-  for (const [i, ref] of ['ST-301', 'ST-302'].entries()) {
+  for (const [i, ref] of ['2906-ST-301', '2906-ST-302'].entries()) {
     const { rows: [p] } = await pool.query("INSERT INTO properties (ref, town, property_type, longlet_price, bedrooms, bathrooms, owner_id, published, available_status, listed_by_agent_id) VALUES ($1,'Mellieha','Apartment',$2,2,1,$3,true,'available',1) RETURNING id", [ref, 1400 + i * 200, po.id])
     const { rows: [row] } = await pool.query(`SELECT ${L._internal.PROPERTY_COLUMNS} FROM properties p WHERE p.id=$1`, [p.id])
     await L._internal.ensurePropertyLink(pool, row)

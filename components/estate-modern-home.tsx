@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { publicPropertyTitle, titleCase } from '@/lib/public-property-title'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -44,21 +45,8 @@ function humanize(value: string) {
     .replace(/\b\w/g, letter => letter.toUpperCase())
 }
 
-function displayTitle(property: Property) {
-  const location = property.location?.trim().toLowerCase()
-  const usefulParts = String(property.title || '')
-    .split('|')
-    .map(part => part.trim())
-    .filter(part => {
-      const normalized = part.toLowerCase()
-      return normalized &&
-        normalized !== location &&
-        !/€|\bbed(room)?s?\b|\bbath(room)?s?\b|^\d[\d,.]*$/.test(normalized)
-    })
-  if (usefulParts.length) return usefulParts.join(' · ')
-  const type = humanize(String(property.propertyType || 'Residence'))
-  return property.location ? `${type} in ${property.location}` : `Selected ${type}`
-}
+// Same title as the property page: "2-Bedroom Penthouse in Swieqi" (Title Case, no placeholder)
+const displayTitle = (property: Property) => publicPropertyTitle(property)
 
 function formatPrice(property: Property) {
   const price = `€${Number(property.price || 0).toLocaleString('en-GB')}`
@@ -95,7 +83,7 @@ function ModernPropertyCard({ property, index, smartContext }: { property: Prope
           <span className={styles.price}>{formatPrice(property)}</span>
         </div>
         <div className={styles.imageCopy}>
-          <span>{property.propertyType}</span>
+          <span>{titleCase(String(property.propertyType || ''))}</span>
           <h3>{title}</h3>
           <p><MapPin aria-hidden="true" /> {property.location}</p>
         </div>
