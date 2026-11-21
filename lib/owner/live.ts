@@ -17,7 +17,8 @@ export interface LiveState {
   published: boolean
   update: { version: number; state: 'pending' | 'approved' | 'rejected' | 'superseded' | string; fields: Record<string, unknown>; at: string; reviewedAt: string | null } | null
   sharing: { channel: string; audienceRef: string | null; scopes: string[]; grantedAt: string }[]
-  windows: { id: number; start: string; end: string }[]
+  /** own = set by the owner in SYNC (removable); proposedFor = viewing id this time was proposed for */
+  windows: { id: number; start: string; end: string; own?: boolean; proposedFor?: number | null }[]
   /** the owner's own latest availability answer; the listing follows once ARGUS applies it */
   answer?: { outcome: string; availableFrom: string | null; at: string } | null
 }

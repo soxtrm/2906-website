@@ -9,6 +9,7 @@ import { useOwner } from '@/lib/owner/store'
 import { liveProperties, pendingClaims, type LiveListing, type LiveViewing } from '@/lib/owner/live'
 import { ActivityList, HouseRules } from './house-rules'
 import { FeaturesEditor } from './features-editor'
+import { CalendarTeaser } from './sync-calendar'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const eur = (n: number | null | undefined) => (n == null ? '' : `€${Math.round(n).toLocaleString('en-GB')}`)
@@ -220,6 +221,7 @@ export function LiveProperty({ id }: { id: number }) {
   return (
     <div className="lv lv-detail">
       <Link href="/owner/properties" className="lv-back"><ChevronLeft size={20} />My homes</Link>
+      <CalendarTeaser homeId={id} />
       <div className="lv-gallery">
         {photos.length ? <img src={photos[photo % photos.length]} alt="" /> : <span className="lv-nophoto"><Home size={80} /></span>}
         {photos.length > 1 && <>
