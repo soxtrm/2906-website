@@ -51,6 +51,9 @@ export default function proxy(req: NextRequest) {
     if (pathname === '/marketplace/classic' || pathname === '/marketplace/classic/') { url.pathname = '/link-marketplace/index.html'; return NextResponse.rewrite(url) }
     // NEXUS STUDIOS Exchange (2026-11-21): co-agency inventory on agreed terms, participating agencies, partner requests
     if (pathname === '/exchange' || pathname === '/exchange/') { url.pathname = '/studios/exchange'; return NextResponse.rewrite(url) }
+    // Marketplace sections (Kev, 21 Nov 2026): Residential is /marketplace; the rest have their own pages
+    const section = pathname.match(/^\/marketplace\/(short-stays|commercial|workers|jobs|more)\/?$/)
+    if (section) { url.pathname = `/studios/marketplace/${section[1]}`; return NextResponse.rewrite(url) }
     // CTO Cockpit lives in the CRM (one staff login): nexusstudios.one/cto -> crm.2906.estate/crm/cto
     if (pathname === '/cto' || pathname === '/cto/') return NextResponse.redirect('https://crm.2906.estate/crm/cto', 307)
     if (pathname.startsWith('/link-marketplace/') || pathname.startsWith('/Link/') || pathname === '/link-matrix') return NextResponse.next()

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { BedDouble, Bath, MapPin, SlidersHorizontal, UsersRound } from 'lucide-react'
-import { MarketplaceLogo } from '@/components/brand/logo'
+import { MarketplaceNav, MarketplaceSubnav } from '@/components/marketplace/nav'
 import { useMpPath } from '@/components/rooms/path'
 
 type Room = { id: number; label: string; status: string; priceMonth: number | null; priceNight: number | null; maxOccupants: number | null; privateBathroom: boolean; photos: string[] }
@@ -22,6 +22,8 @@ export function RoomsMarket({ demo }: { demo: boolean }) {
   const [max, setMax] = useState(0)
   const [people, setPeople] = useState(1)
   const [privBath, setPrivBath] = useState(false)
+  // ?market=long_let (Residential) or ?market=short_let (Short Stays) picks the section
+  useEffect(() => { const m = new URLSearchParams(window.location.search).get('market'); if (m === 'long_let' || m === 'short_let') setMarket(m) }, [])
   useEffect(() => {
     fetch(`/api/marketplace/rooms${demo ? '?demo=1' : ''}`).then(r => r.json()).then(j => { if (j.homes) setHomes(j.homes); else setErr(j.message || 'Rooms are not available right now.') }).catch(() => setErr('Rooms are not available right now.'))
   }, [demo])
@@ -32,7 +34,10 @@ export function RoomsMarket({ demo }: { demo: boolean }) {
 
   return (
     <main className="mp rx">
-      <header className="mp-top"><Link href={mpPath('/marketplace')} aria-label="NEXUS Marketplace"><MarketplaceLogo /></Link><nav className="rx-tabs"><Link href={mpPath('/marketplace')}>Homes</Link><span aria-current="page">Rooms</span></nav></header>
+      <MarketplaceNav active={market === 'short_let' ? 'stays' : 'residential'} />
+      {market === 'short_let'
+        ? <MarketplaceSubnav label="Short Stays" items={[{ key: 'stays', label: 'Shortlets', href: '/marketplace/short-stays' }, { key: 'rooms', label: 'Short-stay Rooms', active: true, onClick: () => {} }, { key: 'book', label: 'Book with NEXUS Booking', href: 'https://nexusbooking.one', external: true }]} />
+        : <MarketplaceSubnav label="Residential" items={[{ key: 'long', label: 'Long Let', href: '/marketplace' }, { key: 'sales', label: 'Sales', href: '/marketplace?market=sales' }, { key: 'rooms', label: 'Rooms for Long Let', active: true, onClick: () => {} }]} />}
       <section className="rx-hero">
         <span className="rx-kicker">NEXUS Rooms{demo && ' · Demonstration'}</span>
         <h1>A room of your own, <span className="rx-grad">in a real home.</span></h1>

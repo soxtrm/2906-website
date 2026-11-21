@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, GraduationCap, Heart, HeartPulse, ListChecks, MapPin, MessageCircle, MoreVertical, Plus, Ruler, Search, Share2, ShieldCheck, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
-import { MarketplaceLogo } from '@/components/brand/logo'
+import { MarketplaceNav, MarketplaceSubnav } from '@/components/marketplace/nav'
 import type { Agency, ListingCard, ListingDetail, Market, SmartFact } from '@/lib/marketplace/model'
 import { nrm, understand } from '@/lib/marketplace/query'
 import { AgencyMark, ListingBody, MetricBadge, eur, km } from './parts'
@@ -49,7 +49,7 @@ function filterQuery(f: Filters) {
   return s ? `?${s}` : ''
 }
 
-export function Marketplace() {
+export function Marketplace({ section = 'residential' }: { section?: 'residential' | 'stays' }) {
   const reduce = useReducedMotion()
   const [all, setAll] = useState<ListingCard[] | null>(null)
   const [featureOpts, setFeatureOpts] = useState<FeatureOpt[]>([])
@@ -67,13 +67,18 @@ export function Marketplace() {
   const [copied, setCopied] = useState(false)
   const [typing, setTyping] = useState(false)
   const ready = useRef(false)
-  const base = useRef('/marketplace')
+  const base = useRef('/marketplace')      // this page (Residential or Short Stays)
+  const homeRoot = useRef('/marketplace')  // where /home/<ref> lives
   const lastFocus = useRef<HTMLElement | null>(null)
   const scrollY0 = useRef<number | null>(null)
 
   useEffect(() => {
     base.current = window.location.pathname.replace(/\/home\/[^/]+\/?$/, '').replace(/\/$/, '') || '/marketplace'
-    setF(readFilters())
+    homeRoot.current = base.current.replace(/\/short-stays$/, '')
+    const rf = readFilters()
+    // Short Stays is its own section; an old ?market=stays link on Residential moves there
+    if (section === 'residential' && rf.market === 'stays') { window.location.replace(`${homeRoot.current}/short-stays${window.location.search.replace(/([?&])market=stays&?/, '$1').replace(/[?&]$/, '')}`); return }
+    setF(section === 'stays' ? { ...rf, market: 'stays' } : rf)
     setPro(store.get('nx-mp-pro') === '1')
     try { setShortlist(JSON.parse(store.get('nx-mp-shortlist') || '[]').filter((x: unknown) => typeof x === 'string').slice(0, 30)) } catch { /* */ }
     try { setSaved(JSON.parse(store.get('nx-mp-saved') || '[]').filter((x: unknown) => typeof x === 'string').slice(0, 100)) } catch { /* */ }
@@ -163,7 +168,7 @@ export function Marketplace() {
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[]
 
   // ---- overlay: own address, back button closes it ----
-  const href = useCallback((id: string) => `${base.current}/home/${encodeURIComponent(id)}`, [])
+  const href = useCallback((id: string) => `${homeRoot.current}/home/${encodeURIComponent(id)}`, [])
   const openListing = (id: string, section?: string) => { prefetch(id, undefined, true); lastFocus.current = document.activeElement as HTMLElement; scrollY0.current = window.scrollY; setOpenSection(section || null); setMorphId(id); window.history.pushState({ mp: id }, '', href(id)); setOpenId(id) }
   const closeListing = () => { if (window.history.state && window.history.state.mp) window.history.back(); else { window.history.replaceState(null, '', `${base.current}${filterQuery(f)}`); setOpenId(null) }; setTimeout(() => lastFocus.current?.focus?.({ preventScroll: true }), 30) }
   const step = (d: number) => { const k = list.findIndex(l => l.id === openId); const next = list[k + d]; if (!next) return; prefetch(next.id, next.images[0], true); const after = list[k + 2 * d]; if (after) prefetch(after.id, after.images[0]); setMorphId(null); setOpenSection(null); window.history.replaceState({ mp: next.id }, '', href(next.id)); setOpenId(next.id) }
@@ -174,26 +179,18 @@ export function Marketplace() {
   const toggleSaved = (id: string) => setSaved(s => { const n = s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-100); store.set('nx-mp-saved', JSON.stringify(n)); return n })
   const toggleShort = (id: string) => setShortlist(s => { const n = s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-30); store.set('nx-mp-shortlist', JSON.stringify(n)); return n })
   const copyShortlist = async () => { try { await navigator.clipboard.writeText(`${window.location.origin}${base.current}?ids=${shortlist.map(encodeURIComponent).join(',')}`); setCopied(true); setTimeout(() => setCopied(false), 1800) } catch { /* */ } }
-  const exchangeHref = `${base.current.replace(/\/marketplace$/, '')}/exchange`
+  const exchangeHref = `${homeRoot.current.replace(/\/marketplace$/, '')}/exchange`
 
   return (
     <div className="mp">
-      <header className="mp-top">
-        <a className="mp-brand" href={base.current} aria-label="Marketplace home"><MarketplaceLogo height={13} /></a>
-        <nav className="mp-tabs" aria-label="Marketplace sections">
-          <a aria-current="page" href={base.current}>Homes</a>
-          <a href={`${base.current}/rooms`} className="mp-tab-quiet">Rooms</a>
-          <a href="/marketplace/classic#places" className="mp-tab-quiet">Places</a>
-          <a href={exchangeHref} className="mp-tab-quiet">Exchange</a>
-          <span className="mp-tab-soon" title="Coming to NEXUS STUDIOS">Workers <small>soon</small></span>
-        </nav>
+      <MarketplaceNav active={section} right={<>
         <a className="mp-saved" href={`${base.current}?view=saved&ids=${saved.join(',')}`} aria-label={`Saved homes: ${saved.length}`} onClick={e => { if (!saved.length) e.preventDefault() }} aria-disabled={!saved.length}>
           <Heart size={16} fill={saved.length ? 'currentColor' : 'none'} aria-hidden="true" /><span>Saved</span>{saved.length > 0 && <b>{saved.length}</b>}
         </a>
         <button className={`mp-pro${pro ? ' on' : ''}`} aria-pressed={pro} onClick={() => { const v = !pro; setPro(v); store.set('nx-mp-pro', v ? '1' : '0') }}>
           <BriefcaseBusiness size={16} aria-hidden="true" />Professional
         </button>
-      </header>
+      </>} />
 
       {ids.length > 0 ? (
         <div className="mp-selection"><ListChecks size={18} aria-hidden="true" />{f.view === 'saved'
@@ -201,18 +198,17 @@ export function Marketplace() {
           : <span><b>A selection of {list.length} {list.length === 1 ? 'home' : 'homes'}</b>shared with you</span>}<button className="mp-link" onClick={() => set({ ids: '', view: '' })}>See all homes</button></div>
       ) : <>
         <div className="mp-bar">
-          <div className="mp-seg" role="group" aria-label="Market">
-            {([['longlets', 'Long let'], ['stays', 'Short let'], ['sales', 'Sales']] as const).map(([m, label]) => (
-              <button key={m} aria-pressed={f.market === m} disabled={m === 'sales' && !counts.sales} onClick={() => set({ ...DEFAULT, market: m, sort: f.sort, agency: f.agency })}>
-                {label}{all && <small>{m === 'sales' && !counts.sales ? 'soon' : counts[m]}</small>}
-              </button>
-            ))}
-          </div>
-          <div className="mp-seg mp-seg-quiet" role="group" aria-label="Category">
-            <button aria-pressed>Residential</button>
-            <button disabled title="Not listed yet">Commercial <small>soon</small></button>
-            <button disabled title="Not listed yet">Land <small>soon</small></button>
-          </div>
+          {section === 'stays'
+            ? <MarketplaceSubnav label="Short Stays" items={[
+                { key: 'stays', label: 'Shortlets', active: true, onClick: () => set({ ...DEFAULT, market: 'stays', sort: f.sort, agency: f.agency }), count: all ? counts.stays : undefined },
+                { key: 'rooms', label: 'Short-stay Rooms', href: '/marketplace/rooms?market=short_let' },
+                { key: 'book', label: 'Book with NEXUS Booking', href: 'https://nexusbooking.one', external: true },
+              ]} />
+            : <MarketplaceSubnav label="Residential" items={[
+                { key: 'longlets', label: 'Long Let', active: f.market === 'longlets', onClick: () => set({ ...DEFAULT, market: 'longlets', sort: f.sort, agency: f.agency }), count: all ? counts.longlets : undefined },
+                { key: 'sales', label: 'Sales', active: f.market === 'sales', onClick: () => set({ ...DEFAULT, market: 'sales', sort: f.sort, agency: f.agency }), count: all ? counts.sales : undefined },
+                { key: 'rooms', label: 'Rooms for Long Let', href: '/marketplace/rooms?market=long_let' },
+              ]} />}
           <div className="mp-search-wrap">
             <label className="mp-search"><Search size={16} aria-hidden="true" />
               <input value={f.q} onChange={e => set({ q: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') { commitSearch(); setTyping(false) } if (e.key === 'Escape') setTyping(false) }}
@@ -271,6 +267,7 @@ export function Marketplace() {
       <main>
         {failed ? <p className="mp-empty">Listings are not available right now. Please try again in a moment.</p>
           : !all ? <><p className="mp-count" aria-hidden="true">&nbsp;</p><div className="mp-grid" aria-busy="true">{Array.from({ length: 10 }, (_, i) => <div key={i} className="mp-card mp-skel" />)}</div></>
+          : !list.length && f.market === 'sales' && !counts.sales ? <p className="mp-empty">No properties for sale are listed on NEXUS yet. Sales listings appear here as soon as an agency publishes them.</p>
           : !list.length ? <p className="mp-empty">No homes match these filters. <button className="mp-link" onClick={() => set({ ...DEFAULT, market: f.market })}>Clear filters</button></p>
           : <>
             {!ids.length && <p className="mp-count">{list.length} {list.length === 1 ? 'home' : 'homes'}{(f.area || u.area) ? ` in ${f.area || u.area}` : ''}</p>}
@@ -291,7 +288,7 @@ export function Marketplace() {
           <button className="mp-shortbar-clear" onClick={() => { setShortlist([]); store.set('nx-mp-shortlist', '[]') }} aria-label="Clear shortlist"><X size={14} /></button>
         </div>
       )}
-      <footer className="mp-foot">Listings from ARGUS, updated live. Locations are shown at area level until a viewing. <a href="/marketplace/classic">Classic view</a></footer>
+      <footer className="mp-foot">Listings from ARGUS, updated live. Locations are shown at area level until a viewing. For agencies: <a href={exchangeHref}>NEXUS Exchange</a></footer>
 
       <AnimatePresence>
         {openCard && <ListingOverlay key="ov" card={withLive(openCard, live[openCard.id])} onFresh={(id, st) => setLive(m => ({ ...m, [id]: { ...st, t: Date.now() } }))} section={openSection} morph={morphId === openCard.id ? `mp-photo-${openCard.id}` : null} pro={pro} reduce={!!reduce} onClose={closeListing} pageHref={href(openCard.id)}

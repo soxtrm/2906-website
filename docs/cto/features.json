@@ -60,6 +60,25 @@
   "features": [
     {
       "product": "marketplace",
+      "feature": "Navigation: Residential · Commercial · Short Stays · Workers · Jobs · More Marketplaces",
+      "founder": "Clear categories; Short Stays separate (NEXUS Booking); Places removed as a destination; no disconnected legacy pages",
+      "status": "LIVE",
+      "userTest": "Local + candidate: every section shows the right active tab and sub-tabs on desktop and phone, no horizontal scroll, no Places link, old ?market=stays links move to Short Stays",
+      "blocker": "",
+      "workstream": "lead",
+      "paths": [
+        "components/marketplace/nav.tsx",
+        "app/studios/marketplace/sections.tsx",
+        "app/studios/marketplace/{short-stays,commercial,workers,jobs,more}/",
+        "proxy.ts"
+      ],
+      "tests": "nav check script (8 routes x 2 viewports)",
+      "verifiedAt": "2026-11-21",
+      "limits": "Commercial and Sales have no inventory yet (honest empty states); Workers and Jobs pages describe the pilot state; More Marketplaces is the first version (P5 adds the interactive journey)",
+      "next": "P1 Property Workspace, P2 Workers backend"
+    },
+    {
+      "product": "marketplace",
       "feature": "Listing grid and cards",
       "founder": "Compact cards after the approved reference; 5 columns on wide desktop; honest availability; bathrooms '?' when unknown",
       "status": "VERIFIED",
@@ -155,20 +174,6 @@
       "verifiedAt": "",
       "limits": "",
       "next": "Scope after Deal Room M5"
-    },
-    {
-      "product": "marketplace",
-      "feature": "Places tab / map journey",
-      "founder": "Maps and Places consistent with the Marketplace",
-      "status": "IN_PROGRESS",
-      "userTest": "Places tab still links to the classic view",
-      "blocker": "Not on the new React Marketplace yet",
-      "workstream": "lead",
-      "paths": [],
-      "tests": "",
-      "verifiedAt": "",
-      "limits": "",
-      "next": "Port Places into the React Marketplace"
     },
     {
       "product": "rooms",
@@ -348,6 +353,62 @@
       "verifiedAt": "2026-11-21",
       "limits": "Report refreshes when the lead session runs the generator (after each release); staging test links need the staging tunnel",
       "next": "Screenshots per release in the cockpit"
+    },
+    {
+      "product": "marketplace",
+      "feature": "Property Workspace (Owner/Agent/Client)",
+      "founder": "Marketplace Expansion directive 21 Nov",
+      "status": "NOT_STARTED",
+      "userTest": "",
+      "blocker": "",
+      "workstream": "lead",
+      "paths": [],
+      "tests": "",
+      "verifiedAt": "",
+      "limits": "",
+      "next": "P1 after navigation"
+    },
+    {
+      "product": "marketplace",
+      "feature": "Workers service requests + Notary pilot",
+      "founder": "Marketplace Expansion directive 21 Nov",
+      "status": "NOT_STARTED",
+      "userTest": "",
+      "blocker": "",
+      "workstream": "lead",
+      "paths": [],
+      "tests": "",
+      "verifiedAt": "",
+      "limits": "",
+      "next": "P2/P3: backend, synthetic professionals, 10-step journey"
+    },
+    {
+      "product": "marketplace",
+      "feature": "Jobs MVP",
+      "founder": "Marketplace Expansion directive 21 Nov",
+      "status": "NOT_STARTED",
+      "userTest": "Introduction page live with accurate availability",
+      "blocker": "",
+      "workstream": "lead",
+      "paths": [],
+      "tests": "",
+      "verifiedAt": "",
+      "limits": "",
+      "next": "P4"
+    },
+    {
+      "product": "marketplace",
+      "feature": "More Marketplaces interactive journey",
+      "founder": "Marketplace Expansion directive 21 Nov",
+      "status": "IN_PROGRESS",
+      "userTest": "First version live (8 steps, live/next labels, links to working parts)",
+      "blocker": "",
+      "workstream": "lead",
+      "paths": [],
+      "tests": "",
+      "verifiedAt": "",
+      "limits": "",
+      "next": "P5 scroll-driven demo"
     }
   ]
 }

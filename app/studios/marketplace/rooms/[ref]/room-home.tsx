@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, Bath, BedDouble, CalendarClock, Check, ChevronLeft, ChevronRight, Lock, MapPin, Ruler, UsersRound } from 'lucide-react'
-import { MarketplaceLogo } from '@/components/brand/logo'
+import { MarketplaceNav } from '@/components/marketplace/nav'
 import { useMpPath } from '@/components/rooms/path'
 import { IsometricApartment, schematicLayout, type IsoLayout, type IsoUnit } from '@/components/rooms/isometric'
 
@@ -44,13 +44,13 @@ export function RoomHome({ refId, demo }: { refId: string; demo: boolean }) {
   const layout = useMemo(() => (home?.layout && home.layout.blocks.length ? home.layout : schematicLayout(units)), [home, units])
   const room = home?.rooms.find(r => r.id === sel) || null
 
-  if (err) return <main className="mp rx"><p className="rx-empty">{err}</p><Link className="rx-back" href={mpPath(`/marketplace/rooms${q}`)}><ArrowLeft size={16} />All rooms</Link></main>
-  if (!home) return <main className="mp rx"><p className="rx-empty">Loading the apartment…</p></main>
+  if (err) return <main className="mp rx"><MarketplaceNav active="residential" /><p className="rx-empty">{err}</p><Link className="rx-back" href={mpPath(`/marketplace/rooms${q}`)}><ArrowLeft size={16} />All rooms</Link></main>
+  if (!home) return <main className="mp rx"><MarketplaceNav active="residential" /><p className="rx-empty">Loading the apartment…</p></main>
   const title = `${home.bedrooms ? `${home.bedrooms}-Bedroom ` : ''}${tc(home.type || 'Apartment')} in ${tc(home.town || 'Malta')}`
 
   return (
     <main className="mp rx rx-home">
-      <header className="mp-top"><Link href={mpPath('/marketplace')} aria-label="NEXUS Marketplace"><MarketplaceLogo /></Link><nav className="rx-tabs"><Link href={mpPath('/marketplace')}>Homes</Link><Link href={mpPath(`/marketplace/rooms${q}`)} aria-current="page">Rooms</Link></nav></header>
+      <MarketplaceNav active={home && home.markets.length === 1 && home.markets[0] === 'short_let' ? 'stays' : 'residential'} />
       <Link className="rx-back" href={mpPath(`/marketplace/rooms${q}`)}><ArrowLeft size={16} />All rooms</Link>
       <div className="rx-head">
         <div><span className="rx-kicker">Rooms · Ref {home.ref}{home.demo && ' · Demonstration'}</span><h1>{title}</h1>
