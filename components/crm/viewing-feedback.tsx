@@ -18,6 +18,8 @@ const STATE: Record<string, { label: string; c: string }> = {
   cancelled: { label: 'Cancelled', c: '#687288' }, completed: { label: 'Completed', c: '#4ADE80' }, no_show: { label: "Didn't happen", c: '#F87171' }, unverified: { label: 'Unverified', c: '#FBBF24' },
 }
 const FEEDBACK: Record<string, string> = { scheduled: 'Upcoming', due: 'Feedback due', asked: 'Feedback due · asked', answered: 'Answered', cancelled: 'No feedback (cancelled)' }
+const KIND: Record<string, string> = { created: 'Request tracked', confirmed: 'Owner confirmed', rescheduled: 'Moved', cancelled: 'Cancelled', reinstated: 'Back on', due: 'Feedback due',
+  asked: 'Agent asked', ask_failed: 'Question not delivered, retrying', answered: 'Answered', owner_info_viewed: 'Owner contact opened' }
 const when = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 const dayOnly = (d: string) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(`${d}T12:00:00Z`))
 
@@ -29,6 +31,11 @@ export function ViewingFeedback() {
   const [busy, setBusy] = useState<number | null>(null)
   const [resched, setResched] = useState<{ id: number; at: string } | null>(null)
   const [focus, setFocus] = useState<number | null>(null)
+  const [history, setHistory] = useState<{ id: number; items: { kind: string; at: string; by: string | null; detail: Record<string, unknown> }[] } | null>(null)
+  async function showHistory(id: number) {
+    if (history?.id === id) { setHistory(null); return }
+    try { const d = await crmFetch(`viewing-followups/${id}`); setHistory({ id, items: d.timeline || [] }) } catch { setErr('The history could not be loaded.') }
+  }
 
   const load = useCallback(() => {
     crmFetch('viewing-followups').then(d => { setRows(d.followups || []); setScope(d.scope); setCanContact(!!d.canViewOwnerContact); setErr(null) })
@@ -96,7 +103,17 @@ export function ViewingFeedback() {
             ))}
           </div>
         )}
-        {canContact && f.state !== 'cancelled' && <div><OwnerInfoButton viewingId={f.viewingId} style={btn('transparent')} /></div>}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {canContact && f.state !== 'cancelled' && <OwnerInfoButton viewingId={f.viewingId} style={btn('transparent')} />}
+          <button type="button" onClick={() => showHistory(f.id)} aria-expanded={history?.id === f.id} style={btn('transparent')}>{history?.id === f.id ? 'Hide history' : 'History'}</button>
+        </div>
+        {history?.id === f.id && (
+          <ol style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4, fontSize: 12, color: '#9AA4B8' }}>
+            {history.items.map((e, i) => (
+              <li key={i}>{when(e.at)} · {KIND[e.kind] || e.kind}{e.by ? ` · ${e.by}` : ''}{typeof e.detail?.outcome === 'string' ? ` · ${String(e.detail.outcome).replace('_', ' ')}` : ''}{typeof e.detail?.note === 'string' && e.detail.note ? ` · “${e.detail.note}”` : ''}</li>
+            ))}
+          </ol>
+        )}
       </div>
     )
   }

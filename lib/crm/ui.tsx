@@ -531,6 +531,16 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
     pull(); const iv = setInterval(pull, 60_000)
     return () => { stop = true; clearInterval(iv) }
   }, [syncVisible])
+  // Viewing feedback badge on Bookings: my booking requests whose outcome is due (2026-11-21)
+  const [feedbackDue, setFeedbackDue] = useState(0)
+  const bookingsVisible = items.some(i => i.key === 'bookings')
+  useEffect(() => {
+    if (!bookingsVisible) return
+    let stop = false
+    const pull = () => crmFetch('viewing-followups/summary').then((d: { feedbackDue?: number }) => { if (!stop) setFeedbackDue(d.feedbackDue || 0) }).catch(() => {})
+    pull(); const iv = setInterval(pull, 120_000)
+    return () => { stop = true; clearInterval(iv) }
+  }, [bookingsVisible])
   const [moreOpen, setMoreOpen] = useState(false)
   const [navigationCompact, setNavigationCompact] = useState(false)
   const contentRef = useRef<HTMLElement>(null)
@@ -573,7 +583,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
     const Icon = NAV_ICONS[item.key]
     return item.disabled
       ? <span key={item.key} className="crm-nav-item" aria-disabled="true"><Icon size={18} aria-hidden />{item.label}<small>Soon</small></span>
-      : <Link key={item.key} className="crm-nav-item" title={item.label} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}{item.key === 'incoming' && pendingIntake > 0 && <span className="crm-nav-count" aria-label={`${pendingIntake} waiting for verification`}>{pendingIntake}</span>}{item.key === 'syncinbox' && syncCount > 0 && <span className="crm-nav-count" aria-label={`${syncCount} waiting in the SYNC inbox`}>{syncCount}</span>}</Link>
+      : <Link key={item.key} className="crm-nav-item" title={item.label} href={crmPath(item.href, pathname)} aria-current={active(item.href) ? 'page' : undefined} onClick={() => setMoreOpen(false)}><Icon size={18} aria-hidden />{item.label}{item.key === 'incoming' && pendingIntake > 0 && <span className="crm-nav-count" aria-label={`${pendingIntake} waiting for verification`}>{pendingIntake}</span>}{item.key === 'syncinbox' && syncCount > 0 && <span className="crm-nav-count" aria-label={`${syncCount} waiting in the SYNC inbox`}>{syncCount}</span>}{item.key === 'bookings' && feedbackDue > 0 && <span className="crm-nav-count" aria-label={`${feedbackDue} viewing feedback due`}>{feedbackDue}</span>}</Link>
   }
   return <div className={`crm-workspace${mobileImmersive ? ' crm-mobile-immersive' : ''}${sidebar ? ' crm-has-sidebar-slot' : ''}${navigationCompact ? ' crm-navigation-compact' : ''}${moreOpen ? ' crm-menu-cloud-open' : ''}`}>
     <a href="#crm-content" className="sr-only focus:not-sr-only">Skip to content</a>
