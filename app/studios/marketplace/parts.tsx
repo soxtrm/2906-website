@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Bath, BedDouble, CalendarDays, Check, ChevronLeft, ChevronRight, ExternalLink, Handshake, MapPin, Maximize2, MessageCircle, Ruler, ShieldCheck, X } from 'lucide-react'
 import type { Agency, Cooperation, ListingCard, ListingDetail } from '@/lib/marketplace/model'
+import { PropertyLifeOverview } from '@/components/property-life-overview'
+import { ChatPanel } from './chat'
 
 export const eur = (n: number) => `€${n.toLocaleString('en-GB')}`
 // distances: never more precise than the data (area centre -> '~', under 100 m -> '<0.1 km')
@@ -135,62 +137,95 @@ export function MetricBadge({ value, measures }: { value: string; measures: stri
 }
 
 // ---- listing body: shared by the overlay and the stand-alone page ---------------------------------------
+// Wide layout (Kev, 21 Nov 2026): location-first heading, photo mosaic, chips like the card, features, the 2906
+// Smart Intelligence (real places, routes and times), and the agency conversation on the right.
 type Partial_ = ListingCard & Partial<Pick<ListingDetail, 'description' | 'allImages' | 'overview' | 'locationNote' | 'featureGroups' | 'coordinates'>>
-export function ListingBody({ l, pro, loading, headingId }: { l: Partial_; pro: boolean; loading?: boolean; headingId?: string }) {
-  const images = l.allImages?.length ? l.allImages : l.images
-  const groups = l.featureGroups || []
-  const cats = (l.overview?.categories || []).filter(c => c.places.length)
+const uniqueImages = (list: string[]) => { const seen = new Set<string>(); return list.filter(u => { const k = u.replace(/\/image\/upload\/[^/]*\//, '/image/upload/'); if (seen.has(k)) return false; seen.add(k); return true }) }
+const resize = (u: string, w: number) => u.replace(/\/image\/upload\/w_\d+,/, `/image/upload/w_${w},`)
+
+function Mosaic({ images, title }: { images: string[]; title: string }) {
+  const [full, setFull] = useState<number | null>(null)
+  if (!images.length) return <div className="pd-mosaic empty">No photos yet</div>
+  const side = images.slice(1, 5)
   return (
-    <>
-      <Gallery images={images} title={l.title} />
-      <div className="mp-detail-grid">
-        <section>
-          <span className={`mp-avail k-${l.availability.kind} inline`}>{l.availability.label}</span>
-          <div className="mp-headrow">
-            <span className="mp-price big">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</span>
-            <h1 id={headingId}>{l.area}</h1>
-          </div>
-          <p className="mp-facts big">
-            {l.typeLabel && <span className="mp-type">{l.typeLabel}</span>}
+    <div className="pd-mosaic" data-n={Math.min(5, images.length)}>
+      <button className="pd-hero" onClick={() => setFull(0)} aria-label={`Open ${images.length} photos full screen`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={resize(images[0], 1600)} srcSet={`${resize(images[0], 960)} 960w, ${resize(images[0], 1600)} 1600w`} sizes="(max-width: 900px) 100vw, 60vw" alt={title} fetchPriority="high" decoding="async" />
+      </button>
+      {side.map((src, i) => (
+        <button key={src} className="pd-thumb" onClick={() => setFull(i + 1)} aria-label={`Photo ${i + 2}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={resize(src, 720)} alt="" loading="lazy" decoding="async" />
+          {i === side.length - 1 && images.length > 5 && <span>+{images.length - 5} photos</span>}
+        </button>
+      ))}
+      <button className="pd-all" onClick={() => setFull(0)}><Maximize2 size={14} aria-hidden="true" />All {images.length} photos</button>
+      {full !== null && <Viewer images={images.map(u => resize(u, 1600))} start={full} onClose={() => setFull(null)} />}
+    </div>
+  )
+}
+
+export function ListingBody({ l, pro, loading, headingId }: { l: Partial_; pro: boolean; loading?: boolean; headingId?: string }) {
+  const images = uniqueImages(l.allImages?.length ? l.allImages : l.images)
+  const groups = l.featureGroups || []
+  const [more, setMore] = useState(false)
+  const desc = l.description || ''
+  const long = desc.length > 520
+  const chips = [...(l.typeLabel ? [l.typeLabel] : []), ...l.features]
+  return (
+    <div className="pd">
+      <header className="pd-head">
+        <div className="pd-head-main">
+          <p className="pd-pills"><span className={`mc-pill mc-avail k-${l.availability.kind}`}>{l.availability.label}</span><span className="pd-ref">{l.marketLabel} · Ref {l.id}</span></p>
+          <h1 id={headingId}>{l.area}</h1>
+          <p className="pd-sub">{l.title}</p>
+        </div>
+        <div className="pd-head-price">
+          <span className="mc-price">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</span>
+          <span className="pd-facts">
             {!!l.bedrooms && <span><BedDouble size={17} aria-hidden="true" />{l.bedrooms} {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>}
             {!!l.bathrooms && <span><Bath size={17} aria-hidden="true" />{l.bathrooms} {l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>}
             {l.size && <span><Ruler size={17} aria-hidden="true" />{l.size} m²</span>}
-          </p>
-          <p className="mp-where"><MapPin size={15} aria-hidden="true" />{l.title} · {l.marketLabel} · Ref {l.id}</p>
+          </span>
+        </div>
+      </header>
+      <Mosaic images={images} title={l.title} />
+      <div className="pd-grid">
+        <div className="pd-main">
+          {chips.length > 0 && <p className="pd-chips">{chips.map(c => <span key={c}>{c}</span>)}</p>}
+          {l.smart.length > 0 && <p className="pd-near">{l.smart.map(s => <span key={s.key}>{s.label} {km(s.km, l.smartFromCentre)}</span>)}</p>}
           {loading && <div className="mp-lines" aria-busy="true"><i /><i /><i /></div>}
-          {l.description && <div className="mp-desc">{l.description.split(/\n+/).map((p, k) => <p key={k}>{p}</p>)}</div>}
-
+          {desc && (
+            <section className="pd-sec">
+              <h2>About this home</h2>
+              <div className="mp-desc" data-clamped={long && !more ? true : undefined}>{desc.split(/\n+/).map((p, k) => <p key={k}>{p}</p>)}</div>
+              {long && <button className="mp-link" onClick={() => setMore(m => !m)}>{more ? 'Show less' : 'Read more'}</button>}
+            </section>
+          )}
           {groups.length > 0 && (
-            <section className="mp-sec" id="mp-sec-features">
+            <section className="pd-sec" id="mp-sec-features">
               <h2>Features</h2>
               <div className="mp-fgroups">{groups.map(g => (
                 <div key={g.key}><b>{g.label}</b><ul>{g.items.map(i => <li key={i.key} title={i.source}><Check size={13} aria-hidden="true" />{i.text}<small>{i.source === 'From the listing description' ? 'listing text' : i.source}</small></li>)}</ul></div>
               ))}</div>
             </section>
           )}
-
-          {(l.overview || l.coordinates) && (
-            <section className="mp-sec mp-smartbox" id="mp-sec-area">
-              <h2>Around {l.area}</h2>
-              <p className="mp-muted">{l.locationNote} {l.smartFromCentre ? `Distances are measured from the ${l.area} centre, not from the building.` : ''}</p>
-              {l.coordinates && <AreaMap c={l.coordinates} exact={!l.smartFromCentre} area={l.area} />}
-              {l.overview && <ul className="mp-adv">{l.overview.advantages.map(a => <li key={a}>{a}</li>)}</ul>}
-              <div className="mp-cats">
-                {cats.map(c => (
-                  <div key={c.key}><b>{c.label}</b>{c.places.slice(0, 4).map(p => <span key={p.id}>{p.name} <em>{km(p.distanceKm, l.smartFromCentre)}</em></span>)}</div>
-                ))}
-              </div>
-              {l.overview && l.overview.considerations.length > 0 && <ul className="mp-cons">{l.overview.considerations.map(a => <li key={a}>{a}</li>)}</ul>}
-            </section>
-          )}
-        </section>
-        <aside>
+          <section className="pd-sec pd-si" id="mp-sec-area">
+            <div className="pd-si-head"><span className="pd-kicker">NEXUS Smart Intelligence</span><h2>Life around {l.area}</h2>
+              <p className="mp-muted">{l.locationNote} {l.smartFromCentre ? `Distances and routes start from the ${l.area} area point, not from the front door.` : ''}</p></div>
+            {l.overview
+              ? <PropertyLifeOverview overview={l.overview} description={desc} features={l.features} />
+              : l.coordinates ? <AreaMap c={l.coordinates} exact={!l.smartFromCentre} area={l.area} /> : <p className="mp-muted">Area data is loading…</p>}
+          </section>
+        </div>
+        <aside className="pd-side">
           <ProviderBox l={l} />
           {pro && l.provider.kind === 'agency' && <CooperationBox c={l.cooperation} agencyName={l.provider.agency.name} />}
-          <ContactBox l={l} />
+          <ChatPanel l={l} />
         </aside>
       </div>
-    </>
+    </div>
   )
 }
 
