@@ -1,9 +1,8 @@
 // Read-only Vercel audit: deployments of every project with source, git commit, branch, dirty flag and creator;
-// project git links, deploy hooks and aliases. The CLI token is read from its auth file and never printed.
-const fs = require('fs'); const path = require('path')
-const auth = [path.join(process.env.APPDATA || '', 'com.vercel.cli', 'Data', 'auth.json'), path.join(process.env.LOCALAPPDATA || '', 'com.vercel.cli', 'Data', 'auth.json')].find(p => fs.existsSync(p))
-const token = JSON.parse(fs.readFileSync(auth, 'utf8')).token
-const api = async p => { const r = await fetch(`https://api.vercel.com${p}`, { headers: { authorization: `Bearer ${token}` } }); return r.json() }
+// project git links and deploy hooks.  Run: powershell -File release-token.ps1 run node vercel_audit.cjs
+const token = require('./token.cjs')()
+const TEAM = 'team_0up4qnkl9UNhd83TueDmBOY0'
+const api = async p => { const r = await fetch(`https://api.vercel.com${p}${p.includes('?') ? '&' : '?'}teamId=${TEAM}`, { headers: { authorization: `Bearer ${token}` } }); return r.json() }
 ;(async () => {
   const projects = (await api('/v9/projects?limit=50')).projects || []
   for (const pr of projects) {

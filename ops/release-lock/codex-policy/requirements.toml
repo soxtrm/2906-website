@@ -1,0 +1,9 @@
+# Codex managed requirements (founder decision, 2026-11-21).
+# Installed at %ProgramData%\OpenAI\Codex\requirements.toml by install-codex-policy.ps1 (admin).
+# Codex reads this file as ENFORCED settings: chats, automations and config.toml cannot override it.
+#
+# Effect: Codex can no longer run with "Full access" (danger-full-access). Every command runs
+# inside the Windows sandbox as the CodexSandboxOffline/Online accounts, which cannot read the
+# Vercel release token, the shared CLI login, the SSH key or the GitHub credential.
+# Leaving the sandbox for a single command still needs Kev's explicit approval click.
+allowed_sandbox_modes = ["read-only", "workspace-write"]
