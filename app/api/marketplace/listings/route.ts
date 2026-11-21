@@ -25,6 +25,19 @@ async function dictionary(): Promise<Dict> {
   return dictCache.dict
 }
 
+// The card headline uses the authoritative area. A preview that places the home "in"/"at" another known town
+// (copied text, wrong template) is not shown on the card; the full text stays in the detail view.
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/['’]/g, "['’]?")
+function withConsistentTeasers(cards: ListingCard[]) {
+  const areas = [...new Set(cards.map(c => c.area).filter(a => a && a !== 'Malta'))]
+  return cards.map(c => {
+    if (!c.teaser) return c
+    const other = areas.find(a => a !== c.area && !c.area.includes(a) && !a.includes(c.area) &&
+      new RegExp(`\\b(?:in|at|located in)\\s+(?:the\\s+heart\\s+of\\s+|central\\s+|sought[- ]after\\s+)?${esc(a)}\\b`, 'i').test(c.teaser!))
+    return other ? { ...c, teaser: null } : c
+  })
+}
+
 export async function GET(req: NextRequest) {
   try {
     const ctx = await fetchNexusContext()
@@ -37,11 +50,12 @@ export async function GET(req: NextRequest) {
       if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 })
       return NextResponse.json({ listing: toDetail(p, places, dict) }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } })
     }
-    if (!cache || Date.now() - cache.at > 5 * 60e3) cache = { at: Date.now(), cards: raw.map(p => toCard(p, places, dict)) }
+    if (!cache || Date.now() - cache.at > 5 * 60e3) cache = { at: Date.now(), cards: withConsistentTeasers(raw.map(p => toCard(p, places, dict))) }
     // searchable features: standard + filterable ones that at least one listing has
     const used = new Set(cache.cards.flatMap(c => c.featureKeys))
     const features = dict.entries.filter(e => e.filterable && used.has(e.key)).map(e => ({ key: e.key, label: e.label, group: e.group, aliases: e.aliases, count: cache!.cards.filter(c => c.featureKeys.includes(e.key)).length }))
-    return NextResponse.json({ generatedAt: new Date(cache.at).toISOString(), count: cache.cards.length, listings: cache.cards, features },
+    const quality = { previewHiddenForTownMismatch: cache.cards.filter(c => !c.teaser && raw.find(p => String(p.id) === c.id)?.description).length }
+    return NextResponse.json({ generatedAt: new Date(cache.at).toISOString(), count: cache.cards.length, listings: cache.cards, features, quality },
       { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } })
   } catch {
     return NextResponse.json({ error: 'Listings are not available right now.' }, { status: 503 })

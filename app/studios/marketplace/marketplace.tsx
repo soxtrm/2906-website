@@ -5,18 +5,18 @@
 // button closes it, the list keeps its filters and scroll position); the stand-alone page stays for shared links.
 // Search understands plain language ("2 bed sliema sea view under 1500") using the live areas, types and the
 // feature dictionary. "Professional" adds references, co-agency terms (only when agreed) and client shortlists.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, HeartPulse, ListChecks, Plus, Ruler, Search, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
+import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, Bus, CalendarDays, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, GraduationCap, Heart, HeartPulse, ListChecks, MessageCircle, MoreVertical, Plus, Search, Share2, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
 import { MarketplaceLogo } from '@/components/brand/logo'
 import type { Agency, ListingCard, ListingDetail, Market, SmartFact } from '@/lib/marketplace/model'
 import { nrm, understand } from '@/lib/marketplace/query'
-import { AgencyMark, ListingBody, eur } from './parts'
+import { AgencyMark, ListingBody, MetricBadge, eur, km, waHref } from './parts'
 
-type Filters = { market: Market; type: string; area: string; min: string; max: string; beds: string; now: boolean; soon: boolean; q: string; sort: 'fresh' | 'price-asc' | 'price-desc'; feature: string; feat: string; agency: string; ids: string }
+type Filters = { market: Market; type: string; area: string; min: string; max: string; beds: string; now: boolean; soon: boolean; q: string; sort: 'fresh' | 'price-asc' | 'price-desc'; feature: string; feat: string; agency: string; ids: string; view: string }
 type FeatureOpt = { key: string; label: string; group: string; aliases: string[]; count: number }
 const matchFeatures = (opts: FeatureOpt[], q: string, limit = 6) => { const t = nrm(q.trim()); if (t.length < 2) return []; return opts.filter(o => nrm(o.label).includes(t) || o.aliases.some(a => nrm(a).includes(t))).sort((a, b) => b.count - a.count).slice(0, limit) }
-const DEFAULT: Filters = { market: 'longlets', type: '', area: '', min: '', max: '', beds: '', now: false, soon: false, q: '', sort: 'fresh', feature: '', feat: '', agency: '', ids: '' }
+const DEFAULT: Filters = { market: 'longlets', type: '', area: '', min: '', max: '', beds: '', now: false, soon: false, q: '', sort: 'fresh', feature: '', feat: '', agency: '', ids: '', view: '' }
 const PAGE = 24
 const GROUPS: [string, string][] = [['view', 'View & sea'], ['outdoor', 'Outdoor'], ['comfort', 'Comfort'], ['building', 'Building'], ['parking', 'Parking'], ['kitchen', 'Kitchen & laundry'], ['rooms', 'Rooms'], ['bathroom', 'Bathroom'], ['energy', 'Energy'], ['security', 'Security'], ['accessibility', 'Accessibility']]
 const ago = (iso: string | null) => {
@@ -24,7 +24,7 @@ const ago = (iso: string | null) => {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400e3)
   return d <= 0 ? 'Updated today' : d === 1 ? 'Updated yesterday' : d < 31 ? `Updated ${d} days ago` : d < 365 ? `Updated ${Math.round(d / 30)} mo ago` : 'Updated over a year ago'
 }
-const SMART_ICON: Record<SmartFact['key'], typeof Waves> = { shop: ShoppingBasket, coast: Waves, health: HeartPulse, gym: Dumbbell }
+const SMART_ICON: Record<SmartFact['key'], typeof Waves> = { shop: ShoppingBasket, coast: Waves, health: HeartPulse, gym: Dumbbell, bus: Bus, school: GraduationCap }
 const store = { get: (k: string) => { try { return localStorage.getItem(k) } catch { return null } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* private mode */ } } }
 
 function readFilters(): Filters {
@@ -58,6 +58,8 @@ export function Marketplace() {
   const [open, setOpen] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const [shortlist, setShortlist] = useState<string[]>([])
+  const [saved, setSaved] = useState<string[]>([])
+  const [openSection, setOpenSection] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [typing, setTyping] = useState(false)
   const ready = useRef(false)
@@ -70,6 +72,7 @@ export function Marketplace() {
     setF(readFilters())
     setPro(store.get('nx-mp-pro') === '1')
     try { setShortlist(JSON.parse(store.get('nx-mp-shortlist') || '[]').filter((x: unknown) => typeof x === 'string').slice(0, 30)) } catch { /* */ }
+    try { setSaved(JSON.parse(store.get('nx-mp-saved') || '[]').filter((x: unknown) => typeof x === 'string').slice(0, 100)) } catch { /* */ }
     ready.current = true
     fetch('/api/marketplace/listings').then(r => (r.ok ? r.json() : Promise.reject())).then(d => { setAll(d.listings); setFeatureOpts(d.features || []) }).catch(() => setFailed(true))
     const onPop = () => setOpenId((window.history.state && window.history.state.mp) || null)
@@ -142,12 +145,14 @@ export function Marketplace() {
 
   // ---- overlay: own address, back button closes it ----
   const href = useCallback((id: string) => `${base.current}/home/${encodeURIComponent(id)}`, [])
-  const openListing = (id: string) => { lastFocus.current = document.activeElement as HTMLElement; scrollY0.current = window.scrollY; window.history.pushState({ mp: id }, '', href(id)); setOpenId(id) }
+  const openListing = (id: string, section?: string) => { lastFocus.current = document.activeElement as HTMLElement; scrollY0.current = window.scrollY; setOpenSection(section || null); window.history.pushState({ mp: id }, '', href(id)); setOpenId(id) }
   const closeListing = () => { if (window.history.state && window.history.state.mp) window.history.back(); else { window.history.replaceState(null, '', `${base.current}${filterQuery(f)}`); setOpenId(null) }; setTimeout(() => lastFocus.current?.focus?.({ preventScroll: true }), 30) }
   const step = (d: number) => { const k = list.findIndex(l => l.id === openId); const next = list[k + d]; if (!next) return; window.history.replaceState({ mp: next.id }, '', href(next.id)); setOpenId(next.id) }
   const openCard = (all || []).find(l => l.id === openId) || null
   const openIndex = list.findIndex(l => l.id === openId)
 
+  // saved homes: kept in this browser only (no account needed)
+  const toggleSaved = (id: string) => setSaved(s => { const n = s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-100); store.set('nx-mp-saved', JSON.stringify(n)); return n })
   const toggleShort = (id: string) => setShortlist(s => { const n = s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-30); store.set('nx-mp-shortlist', JSON.stringify(n)); return n })
   const copyShortlist = async () => { try { await navigator.clipboard.writeText(`${window.location.origin}${base.current}?ids=${shortlist.map(encodeURIComponent).join(',')}`); setCopied(true); setTimeout(() => setCopied(false), 1800) } catch { /* */ } }
   const exchangeHref = `${base.current.replace(/\/marketplace$/, '')}/exchange`
@@ -162,13 +167,18 @@ export function Marketplace() {
           <a href={exchangeHref} className="mp-tab-quiet">Exchange</a>
           <span className="mp-tab-soon" title="Coming to NEXUS STUDIOS">Workers <small>soon</small></span>
         </nav>
+        <a className="mp-saved" href={`${base.current}?view=saved&ids=${saved.join(',')}`} aria-label={`Saved homes: ${saved.length}`} onClick={e => { if (!saved.length) e.preventDefault() }} aria-disabled={!saved.length}>
+          <Heart size={16} fill={saved.length ? 'currentColor' : 'none'} aria-hidden="true" /><span>Saved</span>{saved.length > 0 && <b>{saved.length}</b>}
+        </a>
         <button className={`mp-pro${pro ? ' on' : ''}`} aria-pressed={pro} onClick={() => { const v = !pro; setPro(v); store.set('nx-mp-pro', v ? '1' : '0') }}>
           <BriefcaseBusiness size={16} aria-hidden="true" />Professional
         </button>
       </header>
 
       {ids.length > 0 ? (
-        <div className="mp-selection"><ListChecks size={18} aria-hidden="true" /><span><b>A selection of {list.length} {list.length === 1 ? 'home' : 'homes'}</b>shared with you</span><button className="mp-link" onClick={() => set({ ids: '' })}>See all homes</button></div>
+        <div className="mp-selection"><ListChecks size={18} aria-hidden="true" />{f.view === 'saved'
+          ? <span><b>Your saved homes ({list.length})</b>kept in this browser</span>
+          : <span><b>A selection of {list.length} {list.length === 1 ? 'home' : 'homes'}</b>shared with you</span>}<button className="mp-link" onClick={() => set({ ids: '', view: '' })}>See all homes</button></div>
       ) : <>
         <div className="mp-bar">
           <div className="mp-seg" role="group" aria-label="Market">
@@ -245,7 +255,7 @@ export function Marketplace() {
             {!ids.length && <p className="mp-count">{list.length} {list.length === 1 ? 'home' : 'homes'}{(f.area || u.area) ? ` in ${f.area || u.area}` : ''}</p>}
             <motion.div className="mp-grid" layout={!reduce}>
               <AnimatePresence initial={false}>
-                {list.slice(0, ids.length ? 30 : shown).map(l => <Card key={l.id} l={l} pro={pro} reduce={!!reduce} href={href(l.id)} onOpen={() => openListing(l.id)} listed={shortlist.includes(l.id)} onList={() => toggleShort(l.id)} />)}
+                {list.slice(0, ids.length ? 30 : shown).map(l => <Card key={l.id} l={l} pro={pro} reduce={!!reduce} href={href(l.id)} onOpen={s => openListing(l.id, s)} listed={shortlist.includes(l.id)} onList={() => toggleShort(l.id)} saved={saved.includes(l.id)} onSave={() => toggleSaved(l.id)} />)}
               </AnimatePresence>
             </motion.div>
             {!ids.length && shown < list.length && <button className="mp-more" onClick={() => setShown(n => n + PAGE)}>Show more ({list.length - shown})</button>}
@@ -263,14 +273,14 @@ export function Marketplace() {
       <footer className="mp-foot">Listings from ARGUS, updated live. Locations are shown at area level until a viewing. <a href="/marketplace/classic">Classic view</a></footer>
 
       <AnimatePresence>
-        {openCard && <ListingOverlay key="ov" card={openCard} pro={pro} reduce={!!reduce} onClose={closeListing} pageHref={href(openCard.id)}
+        {openCard && <ListingOverlay key="ov" card={openCard} section={openSection} pro={pro} reduce={!!reduce} onClose={closeListing} pageHref={href(openCard.id)}
           prev={openIndex > 0 ? () => step(-1) : null} next={openIndex >= 0 && openIndex < list.length - 1 ? () => step(1) : null} position={openIndex >= 0 ? `${openIndex + 1} / ${list.length}` : null} />}
       </AnimatePresence>
     </div>
   )
 }
 
-function ListingOverlay({ card, pro, reduce, onClose, pageHref, prev, next, position }: { card: ListingCard; pro: boolean; reduce: boolean; onClose: () => void; pageHref: string; prev: (() => void) | null; next: (() => void) | null; position: string | null }) {
+function ListingOverlay({ card, section, pro, reduce, onClose, pageHref, prev, next, position }: { card: ListingCard; section: string | null; pro: boolean; reduce: boolean; onClose: () => void; pageHref: string; prev: (() => void) | null; next: (() => void) | null; position: string | null }) {
   const [detail, setDetail] = useState<ListingDetail | null>(null)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -280,6 +290,12 @@ function ListingOverlay({ card, pro, reduce, onClose, pageHref, prev, next, posi
     box.current?.scrollTo({ top: 0 })
     return () => { alive = false }
   }, [card.id])
+  // "+N More" on the card opens the overlay at the matching section once the details are there
+  useEffect(() => {
+    if (!section || !detail || detail.id !== card.id) return
+    const t = setTimeout(() => { const el = box.current?.querySelector<HTMLElement>(`#mp-sec-${section}`); if (el && box.current) box.current.scrollTo({ top: el.offsetTop - 64, behavior: reduce ? 'auto' : 'smooth' }) }, 120)
+    return () => clearTimeout(t)
+  }, [section, detail, card.id, reduce])
   useEffect(() => {
     const html = document.documentElement, prevOverflow = html.style.overflow
     html.style.overflow = 'hidden'
@@ -315,58 +331,143 @@ function ListingOverlay({ card, pro, reduce, onClose, pageHref, prev, next, posi
   )
 }
 
-function Card({ l, pro, reduce, href, onOpen, listed, onList }: { l: ListingCard; pro: boolean; reduce: boolean; href: string; onOpen: () => void; listed: boolean; onList: () => void }) {
+// ---- the listing card (Kev's reference, 21 Nov 2026) ---------------------------------------------------
+// Photo first with small status pills; one info row (price · location · beds · baths); a few feature tags with a
+// real "+N More"; two lines of the real description; green nearby chips with a real "+N More"; a footer with the
+// agency, the listing agent and working actions (WhatsApp message / viewing request, save, more).
+const freshShort = (iso: string | null) => {
+  if (!iso) return null
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400e3)
+  return d <= 0 ? 'Today' : d === 1 ? '1 day' : d < 14 ? `${d} days` : d < 60 ? `${Math.round(d / 7)} wk` : d < 365 ? `${Math.round(d / 30)} mo` : '1 yr+'
+}
+// One chip row that shows as many chips as really fit and a "+N More" with the exact number of hidden ones.
+// Widths are measured from an invisible copy, so the count is right at every card size.
+function FitRow({ items, className, chip, more, href, onClick, label, title }: { items: { key: string; node: React.ReactNode }[]; className: string; chip?: string; more: (n: number) => React.ReactNode; href: string; onClick: (e: React.MouseEvent) => void; label?: string; title?: string }) {
+  const row = useRef<HTMLAnchorElement>(null)
+  const probe = useRef<HTMLSpanElement>(null)
+  const [n, setN] = useState(items.length)
+  useLayoutEffect(() => {
+    const el = row.current, pr = probe.current
+    if (!el || !pr) return
+    const measure = () => {
+      const cs = getComputedStyle(el)
+      const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      const gap = parseFloat(cs.columnGap) || 0
+      const widths = Array.from(pr.children).map(c => (c as HTMLElement).offsetWidth)
+      const moreW = widths.pop() || 0
+      let used = 0, fit = 0
+      for (let i = 0; i < widths.length; i++) {
+        const next = used + (fit ? gap : 0) + widths[i]
+        const reserve = i < widths.length - 1 ? gap + moreW : 0
+        if (next + reserve <= avail) { used = next; fit++ } else break
+      }
+      setN(Math.max(1, fit))
+    }
+    measure()
+    const ro = new ResizeObserver(measure); ro.observe(el)
+    return () => ro.disconnect()
+  }, [items.length])
+  return (
+    <a ref={row} className={className} href={href} onClick={onClick} aria-label={label} title={title}>
+      {items.slice(0, n).map(i => <span key={i.key} className={chip}>{i.node}</span>)}
+      {n < items.length && more(items.length - n)}
+      <span ref={probe} className="mc-probe" aria-hidden="true">{items.map(i => <span key={i.key} className={chip}>{i.node}</span>)}{more(99)}</span>
+    </a>
+  )
+}
+
+function Card({ l, pro, reduce, href, onOpen, listed, onList, saved, onSave }: { l: ListingCard; pro: boolean; reduce: boolean; href: string; onOpen: (section?: string) => void; listed: boolean; onList: () => void; saved: boolean; onSave: () => void }) {
   const [i, setI] = useState(0)
+  const [menu, setMenu] = useState(false)
+  const [copied, setCopied] = useState(false)
   const strip = useRef<HTMLDivElement>(null)
   const go = (d: number) => { const el = strip.current; if (!el) return; const n = Math.max(0, Math.min(l.images.length - 1, i + d)); el.scrollTo({ left: n * el.clientWidth, behavior: reduce ? 'auto' : 'smooth' }) }
-  const [copied, setCopied] = useState(false)
   // plain click opens the overlay; ctrl/cmd/middle click keeps the normal link behaviour (new tab)
-  const click = (e: React.MouseEvent) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); onOpen() }
+  const click = (section?: string) => (e: React.MouseEvent) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); onOpen(section) }
+  const tagsAll = [...(l.typeLabel ? [l.typeLabel] : []), ...l.features]
+  const agency = l.provider.kind === 'agency' ? l.provider.agency : null
+  const agent = l.provider.kind === 'agency' ? l.provider.agent : null
+  const msg = waHref(l, 'message'), view = waHref(l, 'viewing')
+  const far = l.availability.kind === 'from' && l.availability.from && new Date(l.availability.from).getTime() > Date.now() + 92 * 86400e3
+  const badge = pro && l.cooperation.status === 'confirmed' ? l.cooperation.badge : undefined
+  const share = async () => { const url = `${window.location.origin}${href}`; try { if (navigator.share) await navigator.share({ title: l.title, url }); else { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1600) } } catch { /* cancelled */ } setMenu(false) }
   return (
-    <motion.article className="mp-card" layout={!reduce} initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0 }} transition={{ duration: 0.25 }}>
-      <div className="mp-photos">
+    <motion.article className="mc" layout={!reduce} initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0 }} transition={{ duration: 0.25 }} whileHover={reduce ? undefined : { y: -3 }}>
+      <div className="mc-photo">
         <div className="mp-strip" ref={strip} onScroll={e => setI(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}>
-          {l.images.map((src, k) => (
-            <a key={src} href={href} onClick={click} tabIndex={k === 0 ? 0 : -1} aria-label={k === 0 ? l.title : undefined}>
+          {l.images.length ? l.images.map((src, k) => (
+            <a key={src} href={href} onClick={click()} tabIndex={k === 0 ? 0 : -1} aria-label={k === 0 ? `${l.title}, ${l.price ? eur(l.price) : 'price on request'}` : undefined}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt="" loading="lazy" decoding="async" />
             </a>
-          ))}
+          )) : <a href={href} onClick={click()} className="mc-nophoto">No photos yet</a>}
         </div>
+        <span className={`mc-pill mc-avail k-${l.availability.kind}`}>{l.availability.label}</span>
+        <span className="mc-tr">
+          {freshShort(l.updatedAt) && <span className="mc-pill mc-fresh" title={`Listing updated ${new Date(l.updatedAt!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}>{freshShort(l.updatedAt)}</span>}
+          {badge && <MetricBadge value={badge.value} measures={badge.measures} />}
+        </span>
         {l.images.length > 1 && <>
           <button className="mp-nav l" onClick={() => go(-1)} disabled={i === 0} aria-label="Previous photo"><ChevronLeft size={18} /></button>
           <button className="mp-nav r" onClick={() => go(1)} disabled={i >= l.images.length - 1} aria-label="Next photo"><ChevronRight size={18} /></button>
-          <span className="mp-dots" aria-hidden="true">{l.images.map((_, k) => <i key={k} data-on={k === i || undefined} />)}</span>
+          <span className="mc-dots" aria-hidden="true">{l.images.map((_, k) => <i key={k} data-on={k === i || undefined} />)}</span>
         </>}
-        <span className={`mp-avail k-${l.availability.kind}`}>{l.availability.label}</span>
       </div>
-      <a className="mp-body" href={href} onClick={click}>
-        <div className="mp-price">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</div>
-        <h3>{l.title}</h3>
-        <p className="mp-facts">
-          {!!l.bedrooms && <span><BedDouble size={15} aria-hidden="true" />{l.bedrooms}</span>}
-          {!!l.bathrooms && <span><Bath size={15} aria-hidden="true" />{l.bathrooms}</span>}
-          {l.size && <span><Ruler size={15} aria-hidden="true" />{l.size} m²</span>}
-          {l.features.slice(0, 2).map(x => <span key={x} className="mp-feat">{x}</span>)}
-        </p>
-        {l.smart.length > 0 && (
-          <p className="mp-smart" aria-label="Nearby, from the area centre">
-            {l.smart.slice(0, 3).map(s => { const I = SMART_ICON[s.key]; return <span key={s.key} title={`${s.name}, about ${s.km} km from the area centre`}><I size={14} aria-hidden="true" />{s.label} {s.km} km</span> })}
-          </p>
-        )}
-        <p className="mp-provider">
-          {l.provider.kind === 'agency' ? <><AgencyMark agency={l.provider.agency} />{l.provider.agent ? <span className="mp-agent-name">· {l.provider.agent.name}</span> : null}</> : l.provider.kind === 'owner_direct' ? 'Direct from owner' : <span className="mp-agent-name">Provider being confirmed</span>}
-          <span className="mp-fresh">{ago(l.updatedAt)}</span>
-        </p>
+
+      <a className="mc-main" href={href} onClick={click()}>
+        <span className="mc-price">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</span>
+        <span className="mc-loc">{l.area}</span>
+        <span className="mc-rooms">
+          {!!l.bedrooms && <span title={`${l.bedrooms} ${l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}`}><BedDouble size={16} aria-hidden="true" />{l.bedrooms}<i className="sr"> {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</i></span>}
+          {!!l.bathrooms && <span title={`${l.bathrooms} ${l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}`}><Bath size={16} aria-hidden="true" />{l.bathrooms}<i className="sr"> {l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</i></span>}
+        </span>
       </a>
+
+      {tagsAll.length > 0 && (
+        <FitRow className="mc-tags" chip="mc-chip" href={href} onClick={click('features')} label={`Features: ${tagsAll.join(', ')}`}
+          items={tagsAll.map(t => ({ key: t, node: t }))} more={n => <span className="mc-more">+{n} More</span>} />
+      )}
+      {l.teaser && <p className="mc-desc">{l.teaser}</p>}
+      {l.smart.length > 0 && (
+        <FitRow className="mc-smart" chip="mc-near" href={href} onClick={click('area')} title={l.smartFromCentre ? `Distances from the ${l.area} centre, not from the building` : 'Distances from the property'}
+          items={l.smart.map(s => { const I = SMART_ICON[s.key]; return { key: s.key, node: <><I size={11} aria-hidden="true" />{s.label} {km(s.km, l.smartFromCentre)}</> } })}
+          more={n => <span className="mc-more">+{n} More</span>} />
+      )}
+
+      <div className="mc-foot">
+        <span className="mc-by">
+          {agency ? <>
+            <small>Listed with</small>
+            {agency.logo
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={agency.logo} alt={agency.name} title={agency.name} />
+              : <b>{agency.name}</b>}
+            {l.otherAgencies.length > 0 && <small className="mc-more-ag">+{l.otherAgencies.length} More</small>}
+            {agent && <><i className="mc-sep" aria-hidden="true" /><span className="mc-agent">{agent.name}</span></>}
+          </> : <small>Provider being confirmed</small>}
+        </span>
+        <span className="mc-actions">
+          {msg ? <a href={msg} target="_blank" rel="noopener" title={`WhatsApp ${agency?.name} about Ref ${l.id}`}><MessageCircle size={14} aria-hidden="true" />Message</a>
+            : <a href={href} onClick={click()}>Details</a>}
+          {view && !far && <a href={view} target="_blank" rel="noopener" title="Ask the agency for a viewing: nothing is booked until they confirm"><CalendarDays size={14} aria-hidden="true" />{l.market === 'stays' ? 'Request' : 'Viewing'}</a>}
+          <motion.button className="mc-icon" aria-pressed={saved} aria-label={saved ? 'Remove from saved' : 'Save'} onClick={onSave} whileTap={reduce ? undefined : { scale: 0.85 }}>
+            <Heart size={17} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" />
+          </motion.button>
+          <span className="mc-menu-wrap">
+            <button className="mc-icon" aria-label="More options" aria-expanded={menu} onClick={() => setMenu(m => !m)} onBlur={() => setTimeout(() => setMenu(false), 160)}><MoreVertical size={17} aria-hidden="true" /></button>
+            {menu && <span className="mc-menu" role="menu">
+              <button role="menuitem" onClick={share}><Share2 size={14} aria-hidden="true" />{copied ? 'Link copied' : 'Share'}</button>
+              <a role="menuitem" href={href} target="_blank" rel="noopener"><ExternalLink size={14} aria-hidden="true" />Open in new tab</a>
+              {pro && <button role="menuitem" onClick={() => { onList(); setMenu(false) }}>{listed ? <Check size={14} /> : <Plus size={14} />}{listed ? 'In shortlist' : 'Add to shortlist'}</button>}
+            </span>}
+          </span>
+        </span>
+      </div>
       {pro && (
         <div className="mp-probar">
           <span>Ref {l.id}</span>
           <span title={l.cooperation.status === 'not_published' ? l.cooperation.note : l.cooperation.basis}>{l.cooperation.status === 'confirmed' ? `Co-agency: ${l.cooperation.headline}` : 'Co-agency: not published'}</span>
           <button aria-pressed={listed} onClick={onList}>{listed ? <Check size={14} /> : <Plus size={14} />}{listed ? 'Shortlisted' : 'Shortlist'}</button>
-          <button onClick={async () => { try { await navigator.clipboard.writeText(`${window.location.origin}${href}`); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* */ } }}>
-            {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copied' : 'Link'}
-          </button>
         </div>
       )}
     </motion.article>

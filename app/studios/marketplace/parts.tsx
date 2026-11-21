@@ -3,10 +3,12 @@
 // (used by the overlay on the list and by the stand-alone page), co-agency terms and the enquiry form.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bath, BedDouble, Check, ChevronLeft, ChevronRight, ExternalLink, Handshake, MapPin, Maximize2, Ruler, Send, ShieldCheck, X } from 'lucide-react'
+import { Bath, BedDouble, CalendarDays, Check, ChevronLeft, ChevronRight, ExternalLink, Handshake, MapPin, Maximize2, MessageCircle, Ruler, ShieldCheck, X } from 'lucide-react'
 import type { Agency, Cooperation, ListingCard, ListingDetail } from '@/lib/marketplace/model'
 
 export const eur = (n: number) => `€${n.toLocaleString('en-GB')}`
+// distances: never more precise than the data (area centre -> '~', under 100 m -> '<0.1 km')
+export const km = (d: number, approx: boolean) => (d < 0.1 ? '<0.1 km' : `${approx ? '~' : ''}${d.toFixed(1)} km`)
 
 export function AgencyMark({ agency, size = 'sm' }: { agency: Agency; size?: 'sm' | 'md' }) {
   return (
@@ -92,107 +94,134 @@ export function CooperationBox({ c, agencyName }: { c: Cooperation; agencyName: 
   )
 }
 
+// ---- contact: real, working routes only ------------------------------------------------------------------
+// Message / Viewing open WhatsApp with the agency's own published business number and a prefilled text that
+// names the reference. Nothing is booked: a viewing exists only once the agency replies.
+export type Intent = 'message' | 'viewing'
+export const viewingLabel = (l: ListingCard) => (l.market === 'stays' ? 'Request' : 'Viewing')
+export function waHref(l: ListingCard, intent: Intent, role: 'home-seeker' | 'agent' = 'home-seeker') {
+  if (l.provider.kind !== 'agency' || !l.provider.agency.whatsapp) return null
+  const what = `${l.title} (Ref ${l.id}${l.price ? `, ${eur(l.price)}${l.pricePeriod ? `/${l.pricePeriod}` : ''}` : ''})`
+  const who = role === 'agent' ? 'I am an agent with a client for' : 'I am interested in'
+  const text = intent === 'viewing'
+    ? `Hello ${l.provider.agency.name}, ${who} ${what}. Could we arrange a viewing? ${l.availability.kind === 'from' && l.availability.from ? `I understand it is available ${l.availability.label.replace(/^./, c => c.toLowerCase())}.` : ''}`.trim()
+    : `Hello ${l.provider.agency.name}, ${who} ${what}. Is it still available?`
+  return `https://wa.me/${l.provider.agency.whatsapp}?text=${encodeURIComponent(text)}`
+}
+
+export function ContactBox({ l }: { l: ListingCard }) {
+  const [role, setRole] = useState<'home-seeker' | 'agent'>('home-seeker')
+  if (l.provider.kind !== 'agency' || !l.provider.agency.whatsapp) return (
+    <div className="mp-enquiry"><b>Contact</b><p className="mp-muted small">The provider of this listing is being confirmed, so no contact route is shown yet.</p></div>
+  )
+  const far = l.availability.kind === 'from' && l.availability.from && new Date(l.availability.from).getTime() > Date.now() + 92 * 86400e3
+  return (
+    <div className="mp-enquiry" id="mp-sec-contact">
+      <b>Contact {l.provider.agency.name}</b>
+      <div className="mp-seg small" role="group" aria-label="I am">
+        <button type="button" aria-pressed={role === 'home-seeker'} onClick={() => setRole('home-seeker')}>Looking for myself</button>
+        <button type="button" aria-pressed={role === 'agent'} onClick={() => setRole('agent')}>Agent for a client</button>
+      </div>
+      <a className="mp-send" href={waHref(l, 'message', role)!} target="_blank" rel="noopener"><MessageCircle size={16} aria-hidden="true" />Message on WhatsApp</a>
+      {!far && <a className="mp-send quiet" href={waHref(l, 'viewing', role)!} target="_blank" rel="noopener"><CalendarDays size={16} aria-hidden="true" />{l.market === 'stays' ? 'Request a Stay' : 'Request a Viewing'}</a>}
+      <p className="mp-muted small">{far ? `Available ${l.availability.label.replace(/^./, c => c.toLowerCase())}: viewings open three months before. ` : ''}Opens WhatsApp with {l.provider.agency.name} ({l.provider.agency.whatsappLabel}) and the reference {l.id}. Nothing is booked until the agency confirms.</p>
+    </div>
+  )
+}
+
+// a short figure on a card corner, only with a defined meaning (e.g. agreed co-agency share, for professionals)
+export function MetricBadge({ value, measures }: { value: string; measures: string }) {
+  return <span className="mc-metric" title={measures} aria-label={`${value}: ${measures}`}>{value}</span>
+}
+
 // ---- listing body: shared by the overlay and the stand-alone page ---------------------------------------
-type Partial_ = ListingCard & Partial<Pick<ListingDetail, 'description' | 'allImages' | 'overview' | 'locationNote'>>
+type Partial_ = ListingCard & Partial<Pick<ListingDetail, 'description' | 'allImages' | 'overview' | 'locationNote' | 'featureGroups' | 'coordinates'>>
 export function ListingBody({ l, pro, loading, headingId }: { l: Partial_; pro: boolean; loading?: boolean; headingId?: string }) {
   const images = l.allImages?.length ? l.allImages : l.images
-  const unconfirmed = l.features.filter(x => !l.evidenced.some(e => e.text === x))
+  const groups = l.featureGroups || []
+  const cats = (l.overview?.categories || []).filter(c => c.places.length)
   return (
     <>
       <Gallery images={images} title={l.title} />
       <div className="mp-detail-grid">
         <section>
           <span className={`mp-avail k-${l.availability.kind} inline`}>{l.availability.label}</span>
-          <h1 id={headingId}>{l.title}</h1>
-          <p className="mp-where"><MapPin size={16} aria-hidden="true" />{l.area} · {l.marketLabel} · Ref {l.id}</p>
-          <div className="mp-price big">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</div>
+          <div className="mp-headrow">
+            <span className="mp-price big">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</span>
+            <h1 id={headingId}>{l.area}</h1>
+          </div>
           <p className="mp-facts big">
+            {l.typeLabel && <span className="mp-type">{l.typeLabel}</span>}
             {!!l.bedrooms && <span><BedDouble size={17} aria-hidden="true" />{l.bedrooms} {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>}
             {!!l.bathrooms && <span><Bath size={17} aria-hidden="true" />{l.bathrooms} {l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>}
             {l.size && <span><Ruler size={17} aria-hidden="true" />{l.size} m²</span>}
           </p>
-          {l.evidenced.length > 0 && (
-            <div className="mp-evidence"><b>Confirmed features</b>{l.evidenced.map(e => <span key={e.key} data-e={e.evidence}><Check size={13} aria-hidden="true" />{e.text}<small>{e.evidenceLabel}</small></span>)}</div>
-          )}
-          {unconfirmed.length > 0 && <div className="mp-chips-wrap"><b className="mp-muted small">From the listing description</b><p className="mp-chips">{unconfirmed.map(x => <span key={x}>{x}</span>)}</p></div>}
+          <p className="mp-where"><MapPin size={15} aria-hidden="true" />{l.title} · {l.marketLabel} · Ref {l.id}</p>
           {loading && <div className="mp-lines" aria-busy="true"><i /><i /><i /></div>}
           {l.description && <div className="mp-desc">{l.description.split(/\n+/).map((p, k) => <p key={k}>{p}</p>)}</div>}
-          {l.overview && (
-            <section className="mp-smartbox">
+
+          {groups.length > 0 && (
+            <section className="mp-sec" id="mp-sec-features">
+              <h2>Features</h2>
+              <div className="mp-fgroups">{groups.map(g => (
+                <div key={g.key}><b>{g.label}</b><ul>{g.items.map(i => <li key={i.key} title={i.source}><Check size={13} aria-hidden="true" />{i.text}<small>{i.source === 'From the listing description' ? 'listing text' : i.source}</small></li>)}</ul></div>
+              ))}</div>
+            </section>
+          )}
+
+          {(l.overview || l.coordinates) && (
+            <section className="mp-sec mp-smartbox" id="mp-sec-area">
               <h2>Around {l.area}</h2>
-              <p className="mp-muted">{l.locationNote} Distances start from the area centre.</p>
-              <ul className="mp-adv">{l.overview.advantages.map(a => <li key={a}>{a}</li>)}</ul>
+              <p className="mp-muted">{l.locationNote} {l.smartFromCentre ? `Distances are measured from the ${l.area} centre, not from the building.` : ''}</p>
+              {l.coordinates && <AreaMap c={l.coordinates} exact={!l.smartFromCentre} area={l.area} />}
+              {l.overview && <ul className="mp-adv">{l.overview.advantages.map(a => <li key={a}>{a}</li>)}</ul>}
               <div className="mp-cats">
-                {l.overview.categories.filter(c => ['groceries', 'coast', 'health', 'movement', 'school'].includes(c.key) && c.places.length).map(c => (
-                  <div key={c.key}><b>{c.label}</b>{c.places.slice(0, 3).map(p => <span key={p.id}>{p.name} <em>{p.distanceKm.toFixed(1)} km</em></span>)}</div>
+                {cats.map(c => (
+                  <div key={c.key}><b>{c.label}</b>{c.places.slice(0, 4).map(p => <span key={p.id}>{p.name} <em>{km(p.distanceKm, l.smartFromCentre)}</em></span>)}</div>
                 ))}
               </div>
-              {l.overview.considerations.length > 0 && <ul className="mp-cons">{l.overview.considerations.map(a => <li key={a}>{a}</li>)}</ul>}
+              {l.overview && l.overview.considerations.length > 0 && <ul className="mp-cons">{l.overview.considerations.map(a => <li key={a}>{a}</li>)}</ul>}
             </section>
           )}
         </section>
         <aside>
           <ProviderBox l={l} />
           {pro && l.provider.kind === 'agency' && <CooperationBox c={l.cooperation} agencyName={l.provider.agency.name} />}
-          {!loading && <Enquiry l={l} />}
+          <ContactBox l={l} />
         </aside>
       </div>
     </>
   )
 }
 
+// OpenStreetMap view of the area. No pin unless the listing discloses its exact location.
+function AreaMap({ c, exact, area }: { c: [number, number]; exact: boolean; area: string }) {
+  const [lon, lat] = c
+  const bbox = [lon - 0.014, lat - 0.009, lon + 0.014, lat + 0.009].map(n => n.toFixed(5)).join(',')
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik${exact ? `&marker=${lat.toFixed(5)},${lon.toFixed(5)}` : ''}`
+  return (
+    <figure className="mp-map">
+      <iframe title={`Map of ${area}`} src={src} loading="lazy" referrerPolicy="no-referrer" />
+      <figcaption className="mp-muted small">{exact ? 'Exact location.' : `${area} area. No pin: the exact address follows with a viewing.`} Map © OpenStreetMap contributors.</figcaption>
+    </figure>
+  )
+}
+
 export function ProviderBox({ l }: { l: ListingCard }) {
   if (l.provider.kind === 'owner_direct') return <div className="mp-provider-box"><span className="mp-muted">Listed by</span><b>Direct from owner</b></div>
-  if (l.provider.kind !== 'agency') return <div className="mp-provider-box"><span className="mp-muted">Listed by</span><b>Provider being confirmed</b><p className="mp-muted small">The agency behind this listing has not been confirmed yet, so none is named. Enquiries still reach the listing team.</p></div>
+  if (l.provider.kind !== 'agency') return <div className="mp-provider-box"><span className="mp-muted">Listed by</span><b>Provider being confirmed</b><p className="mp-muted small">The agency behind this listing has not been confirmed yet, so none is named.</p></div>
   const { agency, agent } = l.provider
   return (
-    <div className="mp-provider-box">
+    <div className="mp-provider-box" id="mp-sec-provider">
       <span className="mp-muted">Listed by</span>
       <AgencyMark agency={agency} size="md" />
       {agent && <span className="mp-agent"><i aria-hidden="true">{initials(agent.name)}</i>{agent.name}<small>Listing agent</small></span>}
       <p className="mp-muted small">{agency.verifiedBasis}</p>
+      {l.otherAgencies.length > 0 && <p className="mp-muted small">Also offered by: {l.otherAgencies.map(a => a.name).join(', ')}</p>}
       <p className="mp-provider-links">
         <a href={`/marketplace?agency=${encodeURIComponent(agency.key)}&market=${l.market}`}>All homes from {agency.name}</a>
         {agency.website && <a href={agency.website} target="_blank" rel="noopener">Website<ExternalLink size={12} aria-hidden="true" /></a>}
       </p>
     </div>
-  )
-}
-
-// ---- enquiry: the existing SmartTunnel (/api/nexus/interest) into ARGUS --------------------------------
-export function Enquiry({ l }: { l: ListingCard }) {
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
-  const [role, setRole] = useState<'home-seeker' | 'agent'>('home-seeker')
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
-  const [err, setErr] = useState('')
-  const far = l.availability.kind === 'from' && l.availability.from && new Date(l.availability.from).getTime() > Date.now() + 92 * 86400e3
-  const send = async () => {
-    setState('sending'); setErr('')
-    try {
-      const r = await fetch('/api/nexus/interest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        email: email.trim(), developmentId: null, developmentName: null, market: l.market,
-        criteria: { kind: 'smart_tunnel', propertyRef: l.id, propertyTitle: l.title, requesterRole: role, contactRoute: 'email', message: message.slice(0, 700), scheduling: { window: 'none', preferredDate: null } },
-      }) })
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'The request could not be saved.')
-      setState('sent')
-    } catch (e) { setErr((e as Error).message); setState('error') }
-  }
-  if (state === 'sent') return <div className="mp-enquiry sent"><Check size={20} /><b>Request saved</b><p>The agency answers by e-mail. Nothing is booked yet.</p></div>
-  return (
-    <form className="mp-enquiry" onSubmit={e => { e.preventDefault(); send() }}>
-      <b>Ask about this home</b>
-      {far ? <p className="mp-muted">Enquiries open three months before it becomes available.</p> : <>
-        <div className="mp-seg small" role="group" aria-label="I am">
-          <button type="button" aria-pressed={role === 'home-seeker'} onClick={() => setRole('home-seeker')}>Looking for myself</button>
-          <button type="button" aria-pressed={role === 'agent'} onClick={() => setRole('agent')}>Agent for a client</button>
-        </div>
-        <label>E-mail<input type="email" required value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" /></label>
-        <label>Message<textarea rows={4} maxLength={700} value={message} onChange={e => setMessage(e.target.value)} placeholder="When would you like to move in? How many people?" /></label>
-        {err && <p className="mp-err">{err}</p>}
-        <button className="mp-send" disabled={state === 'sending' || !email.includes('@')}><Send size={16} />{state === 'sending' ? 'Sending…' : 'Send request'}</button>
-        <p className="mp-muted small">Your e-mail goes only to the listing agency.</p>
-      </>}
-    </form>
   )
 }
