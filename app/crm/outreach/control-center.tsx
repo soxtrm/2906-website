@@ -91,7 +91,7 @@ export function AccountRail({ accounts, selectedId, onSelect, footer }: { accoun
             <span className={`cc-dot is-${state}`} title={state === 'online' ? 'Connected' : state === 'restricted' ? 'Restricted' : `Disconnected (${a.sessionStatus})`} />
             <span className="cc-rail-main">
               <b>{a.label}</b>
-              <small>{a.automation?.enabled ? (a.automation.suspendedReason ? 'Auto · suspended' : 'Auto') : 'Manual'}{a.nextRun ? ` · next ${whenLabel(a.nextRun.at)}` : ''}</small>
+              <small>{a.automation?.enabled ? (a.automation.suspendedReason ? 'Auto · suspended' : 'Auto') : a.legacyAuto ? 'Auto on' : 'Auto off'}{a.nextRun ? ` · next ${whenLabel(a.nextRun.at)}` : ''}</small>
             </span>
             <span className="cc-rail-count" title="Accepted today / today's target">{a.sentToday}<small>/{a.targetToday ?? '—'}</small></span>
             <span className="cc-rail-days" aria-label="Next five days">{a.days.slice(0, 5).map(d => <DayIcon key={d.date} day={d} size={12} />)}</span>
