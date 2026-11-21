@@ -82,7 +82,12 @@ export function Marketplace() {
     if (!ready.current || openId) return
     window.history.replaceState(window.history.state, '', `${base.current}${filterQuery(f)}`)
     const y = scrollY0.current
-    if (y !== null) { scrollY0.current = null; requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y))) }
+    if (y !== null) {
+      // Next.js handles the history entry too and may scroll after us: put the list back where it was, a few times
+      scrollY0.current = null
+      const put = () => { if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y) }
+      requestAnimationFrame(put); for (const ms of [60, 160, 320]) setTimeout(put, ms)
+    }
   }, [f, openId])
   const set = (patch: Partial<Filters>) => setF(x => ({ ...x, ...patch }))
   const featSet = useMemo(() => new Set(f.feat.split(',').filter(Boolean)), [f.feat])
