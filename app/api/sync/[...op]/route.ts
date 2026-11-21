@@ -18,6 +18,13 @@ const OPS: Record<string, { path: string; session?: boolean; issue?: boolean; en
   'owner/hours': { path: '/owner/hours', session: true },
   'owner/window/add': { path: '/owner/window/add', session: true },
   'owner/window/remove': { path: '/owner/window/remove', session: true },
+  // calendar 2.0 (2026-11-21): ranges (move / resize / weekly), own appointments, slot length
+  'owner/cal': { path: '/owner/cal', session: true },
+  'owner/cal/window/add': { path: '/owner/cal/window/add', session: true },
+  'owner/cal/window/update': { path: '/owner/cal/window/update', session: true },
+  'owner/cal/appointment': { path: '/owner/cal/appointment', session: true },
+  'owner/cal/appointment/cancel': { path: '/owner/cal/appointment/cancel', session: true },
+  'owner/cal/slot': { path: '/owner/cal/slot', session: true },
   'owner/conditions': { path: '/owner/conditions', session: true },
   'owner/conditions/set': { path: '/owner/conditions/set', session: true },
   'owner/conditions/decide': { path: '/owner/conditions/decide', session: true },

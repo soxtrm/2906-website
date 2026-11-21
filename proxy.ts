@@ -31,7 +31,9 @@ export default function proxy(req: NextRequest) {
   // into that Marketplace (308, query kept): not a third product. Anything else on these hosts is not found.
   if (STUDIOS_HOSTS.has(host) || MP_HOSTS.has(host)) {
     if (MP_HOSTS.has(host)) {
-      const to = new URL('https://nexusstudios.one/marketplace')
+      // a shared home link keeps its home: nexusmp.one/home/2906-039 -> nexusstudios.one/marketplace/home/2906-039
+      const home = /^\/home\/([A-Za-z0-9-]{2,40})\/?$/.exec(req.nextUrl.pathname)
+      const to = new URL(home ? `https://nexusstudios.one/marketplace/home/${home[1]}` : 'https://nexusstudios.one/marketplace')
       to.search = req.nextUrl.search
       return NextResponse.redirect(to, 308)
     }

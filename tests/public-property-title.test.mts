@@ -36,4 +36,5 @@ assert.equal(titleCase('BBQ area with AC'), 'BBQ Area with AC')
 // no description: a clean sentence, not empty
 assert.equal(publicPropertyDescription({ propertyType: 'villa', bedrooms: 4, location: 'Madliena', price: 6500, priceType: 'month' }), '4-Bedroom Villa in Madliena, €6,500/month. A home listed by 2906 Real Estate Malta.')
 assert.equal(publicShareImage({ images: [] }), null)
+assert.equal(publicShareImage({ images: ['https://res.cloudinary.com/du2jwqnbs/image/upload/w_720,q_auto,f_auto,c_limit/v1793904425/2906-properties/js8xoeko3yld3xqtqflh.jpg'] }), 'https://res.cloudinary.com/du2jwqnbs/image/upload/c_fill,g_auto,w_1200,h_630,q_auto,f_jpg/v1793904425/2906-properties/js8xoeko3yld3xqtqflh.jpg', 'existing transformations are replaced, not chained')
 console.log('public-property-title: all assertions passed')
