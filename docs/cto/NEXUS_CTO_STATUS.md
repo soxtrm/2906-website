@@ -1,6 +1,6 @@
 # NEXUS CTO status
 
-Generated 2026-11-21T20:00:13.376Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 9453e49). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
+Generated 2026-11-21T20:01:57.832Z from live evidence by `ops/cto/cto-report.cjs` (repo claude/argus-crm-release-20261120 @ 1d57860). Status values: NOT_STARTED, IN_PROGRESS, STAGED, LIVE, VERIFIED, BLOCKED, FAILED. A build is not an end-to-end test; staging is not production verification.
 
 ## Launch-readiness board
 
@@ -41,15 +41,15 @@ Generated 2026-11-21T20:00:13.376Z from live evidence by `ops/cto/cto-report.cjs
 
 | URL | HTTP | ms |
 |---|---|---|
-| https://nexusstudios.one/marketplace | 200 | 311 |
-| https://nexusstudios.one/api/marketplace/listings | 200 | 4322 |
-| https://nexusstudios.one/marketplace/rooms | 200 | 429 |
-| https://nexussync.one/owner | 200 | 989 |
-| https://crm.2906.estate/crm/deal-rooms | 200 | 500 |
-| https://www.2906.estate/ | 200 | 719 |
-| https://nexuslink.fit/ | 200 | 290 |
-| https://api.2906.estate/api/properties | 200 | 300 |
-| https://benestates.work/api/ben/work-health | 200 | 303 |
+| https://nexusstudios.one/marketplace | 200 | 206 |
+| https://nexusstudios.one/api/marketplace/listings | 200 | 4012 |
+| https://nexusstudios.one/marketplace/rooms | 200 | 335 |
+| https://nexussync.one/owner | 200 | 770 |
+| https://crm.2906.estate/crm/deal-rooms | 200 | 238 |
+| https://www.2906.estate/ | 200 | 357 |
+| https://nexuslink.fit/ | 200 | 173 |
+| https://api.2906.estate/api/properties | 200 | 192 |
+| https://benestates.work/api/ben/work-health | 200 | 173 |
 
 ## ARGUS backend packages (latest first)
 

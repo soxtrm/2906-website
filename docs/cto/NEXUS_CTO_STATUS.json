@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-11-21T20:00:13.376Z",
+  "generatedAt": "2026-11-21T20:01:57.832Z",
   "generator": "ops/cto/cto-report.cjs",
   "repository": {
     "name": "soxtrm/2906-website",
     "branch": "claude/argus-crm-release-20261120",
-    "head": "9453e49"
+    "head": "1d57860"
   },
   "statusCounts": {
     "VERIFIED": 7,
@@ -17,47 +17,47 @@
     {
       "url": "https://nexusstudios.one/marketplace",
       "status": 200,
-      "ms": 311
+      "ms": 206
     },
     {
       "url": "https://nexusstudios.one/api/marketplace/listings",
       "status": 200,
-      "ms": 4322
+      "ms": 4012
     },
     {
       "url": "https://nexusstudios.one/marketplace/rooms",
       "status": 200,
-      "ms": 429
+      "ms": 335
     },
     {
       "url": "https://nexussync.one/owner",
       "status": 200,
-      "ms": 989
+      "ms": 770
     },
     {
       "url": "https://crm.2906.estate/crm/deal-rooms",
       "status": 200,
-      "ms": 500
+      "ms": 238
     },
     {
       "url": "https://www.2906.estate/",
       "status": 200,
-      "ms": 719
+      "ms": 357
     },
     {
       "url": "https://nexuslink.fit/",
       "status": 200,
-      "ms": 290
+      "ms": 173
     },
     {
       "url": "https://api.2906.estate/api/properties",
       "status": 200,
-      "ms": 300
+      "ms": 192
     },
     {
       "url": "https://benestates.work/api/ben/work-health",
       "status": 200,
-      "ms": 303
+      "ms": 173
     }
   ],
   "products": {
