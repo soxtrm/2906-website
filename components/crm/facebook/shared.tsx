@@ -41,9 +41,11 @@ export const fmtWhen = (d?: string | null) => {
 }
 
 export function listingTitle(p: { type?: string | null; bedrooms?: number | null; town?: string | null; ref?: string | null }) {
+  // Title Case for room and property words ("2-Bedroom Apartment"), Kev 21 Nov 2026
   const type = String(p.type || 'property').toLowerCase()
-  const beds = Number(p.bedrooms) > 0 && type !== 'studio' ? `${p.bedrooms}-bedroom ` : ''
-  return `${beds}${type}${p.town ? ` in ${p.town}` : ''}`.replace(/^./, c => c.toUpperCase())
+  const beds = Number(p.bedrooms) > 0 && type !== 'studio' ? `${p.bedrooms}-Bedroom ` : ''
+  const typeLabel = type.replace(/\b\w/g, c => c.toUpperCase())
+  return `${beds}${typeLabel}${p.town ? ` in ${p.town}` : ''}`
 }
 
 export async function copyText(text: string) {

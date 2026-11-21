@@ -107,8 +107,8 @@ export function ListingBody({ l, pro, loading, headingId }: { l: Partial_; pro: 
           <p className="mp-where"><MapPin size={16} aria-hidden="true" />{l.area} · {l.marketLabel} · Ref {l.id}</p>
           <div className="mp-price big">{l.price ? <>{eur(l.price)}<small>{l.pricePeriod ? ` / ${l.pricePeriod}` : ''}</small></> : 'Price on request'}</div>
           <p className="mp-facts big">
-            {!!l.bedrooms && <span><BedDouble size={17} aria-hidden="true" />{l.bedrooms} bedrooms</span>}
-            {!!l.bathrooms && <span><Bath size={17} aria-hidden="true" />{l.bathrooms} bathrooms</span>}
+            {!!l.bedrooms && <span><BedDouble size={17} aria-hidden="true" />{l.bedrooms} {l.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>}
+            {!!l.bathrooms && <span><Bath size={17} aria-hidden="true" />{l.bathrooms} {l.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>}
             {l.size && <span><Ruler size={17} aria-hidden="true" />{l.size} m²</span>}
           </p>
           {l.evidenced.length > 0 && (

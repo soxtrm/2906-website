@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, Bath, BedDouble, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Copy, Dumbbell, ExternalLink, HeartPulse, ListChecks, Plus, Ruler, Search, ShoppingBasket, SlidersHorizontal, Sparkles, Waves, X } from 'lucide-react'
-import { NexusStar } from '@/components/brand/logo'
+import { MarketplaceLogo } from '@/components/brand/logo'
 import type { Agency, ListingCard, ListingDetail, Market, SmartFact } from '@/lib/marketplace/model'
 import { nrm, understand } from '@/lib/marketplace/query'
 import { AgencyMark, ListingBody, eur } from './parts'
@@ -100,7 +100,7 @@ export function Marketplace() {
   const featCounts = useMemo(() => { const c: Record<string, number> = {}; for (const l of inMarket) for (const k of l.featureKeys) c[k] = (c[k] || 0) + 1; return c }, [inMarket])
   // what the search box understands right now (applied live; Enter turns it into removable filters)
   const u = useMemo(() => understand(f.q, { areas, types, features: featureOpts, agencyKeys: [...agencies.keys()] }), [f.q, areas, types, featureOpts, agencies])
-  const understoodParts = [u.beds && `${u.beds}+ bedrooms`, u.area, u.type && u.type[0].toUpperCase() + u.type.slice(1), ...u.feat.map(k => featureOpts.find(o => o.key === k)?.label || k), u.min && `from ${eur(Number(u.min))}`, u.max && `up to ${eur(Number(u.max))}`, u.now && 'available now'].filter(Boolean) as string[]
+  const understoodParts = [u.beds && `${u.beds}+ Bedrooms`, u.area, u.type && u.type[0].toUpperCase() + u.type.slice(1), ...u.feat.map(k => featureOpts.find(o => o.key === k)?.label || k), u.min && `from ${eur(Number(u.min))}`, u.max && `up to ${eur(Number(u.max))}`, u.now && 'available now'].filter(Boolean) as string[]
   const commitSearch = () => { if (!understoodParts.length) return; set({ q: u.rest, beds: u.beds || f.beds, area: u.area || f.area, type: u.type || f.type, min: u.min || f.min, max: u.max || f.max, now: u.now || f.now, feat: [...new Set([...featSet, ...u.feat])].join(',') }) }
 
   const ids = useMemo(() => f.ids.split(',').filter(Boolean), [f.ids])
@@ -130,7 +130,7 @@ export function Marketplace() {
   const chips: { key: string; label: string; clear: () => void }[] = [
     f.area && { key: 'area', label: f.area, clear: () => set({ area: '' }) },
     f.type && { key: 'type', label: f.type[0].toUpperCase() + f.type.slice(1), clear: () => set({ type: '' }) },
-    f.beds && { key: 'beds', label: `${f.beds}+ bedrooms`, clear: () => set({ beds: '' }) },
+    f.beds && { key: 'beds', label: `${f.beds}+ Bedrooms`, clear: () => set({ beds: '' }) },
     f.min && { key: 'min', label: `from ${eur(Number(f.min))}`, clear: () => set({ min: '' }) },
     f.max && { key: 'max', label: `up to ${eur(Number(f.max))}`, clear: () => set({ max: '' }) },
     f.now && { key: 'now', label: 'Available now', clear: () => set({ now: false }) },
@@ -155,7 +155,7 @@ export function Marketplace() {
   return (
     <div className="mp">
       <header className="mp-top">
-        <a className="st-brand" href="/" aria-label="NEXUS STUDIOS home"><NexusStar size={18} className="st-star" />NEXUS <b>STUDIOS</b></a>
+        <a className="mp-brand" href={base.current} aria-label="Marketplace home"><MarketplaceLogo height={13} /></a>
         <nav className="mp-tabs" aria-label="Marketplace sections">
           <a aria-current="page" href={base.current}>Homes</a>
           <a href="/marketplace/classic#places" className="mp-tab-quiet">Places</a>

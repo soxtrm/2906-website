@@ -51,7 +51,7 @@ function PropertyDetailInner() {
           <p className="ow-price">{priceLine(offer)}</p>
           <dl className="ow-kv">
             <dt>Availability</dt><dd>{availabilityLine(p, s.today)}</dd>
-            <dt>Bedrooms</dt><dd>{p.bedrooms} · {p.bathrooms} bathrooms{p.sizeSqm ? ` · ${p.sizeSqm} m²` : ''}</dd>
+            <dt>Bedrooms</dt><dd>{p.bedrooms} · {p.bathrooms} Bathrooms{p.sizeSqm ? ` · ${p.sizeSqm} m²` : ''}</dd>
             <dt>Confirmed</dt><dd>{ago(p.lastConfirmedAt, s.today)}</dd>
             <dt>Shown on</dt><dd>{reach.length ? reach.map(r => r.channel).join(', ') : 'Nowhere (private)'}</dd>
             <dt>Reference</dt><dd>{p.ref}</dd>

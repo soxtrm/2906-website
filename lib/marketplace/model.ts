@@ -71,9 +71,10 @@ const FEATURE_LABEL: Record<string, string> = {
 export const sized = (url: string, w: number) => (/res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(url) ? url.replace('/image/upload/', `/image/upload/w_${w},q_auto,f_auto,c_limit/`) : url)
 
 export function titleOf(p: Raw) {
+  // Title Case for room and property words ("2-Bedroom Apartment in Sliema"), Kev 21 Nov 2026
   const t = TYPE[String(p.propertyType || '').toLowerCase()] || 'home'
   const beds = Number(p.bedrooms)
-  return `${beds > 0 ? `${beds}-bedroom ` : ''}${t} in ${p.areaLabel || 'Malta'}`
+  return `${beds > 0 && t !== 'studio' ? `${beds}-Bedroom ` : ''}${t[0].toUpperCase()}${t.slice(1)} in ${p.areaLabel || 'Malta'}`
 }
 
 function availabilityOf(p: Raw): Availability {

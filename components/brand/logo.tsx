@@ -1,5 +1,9 @@
 import type { SVGProps } from 'react'
 import {
+  MARKETPLACE_WORDMARK_HEIGHT,
+  MARKETPLACE_WORDMARK_PATH,
+  MARKETPLACE_WORDMARK_VIEWBOX,
+  MARKETPLACE_WORDMARK_WIDTH,
   NEXUS_STAR_PATH,
   NEXUS_STAR_VIEWBOX,
   SYNC_WORDMARK_HEIGHT,
@@ -44,6 +48,33 @@ export function SyncWordmark({ height = 24, title, className, ...rest }: MarkPro
     >
       <path fillRule="evenodd" d={SYNC_WORDMARK_PATH} />
     </svg>
+  )
+}
+
+/** The MARKETPLACE wordmark. `height` in px; the width follows. */
+export function MarketplaceWordmark({ height = 14, title, className, ...rest }: MarkProps & { height?: number }) {
+  return (
+    <svg
+      viewBox={MARKETPLACE_WORDMARK_VIEWBOX}
+      height={height}
+      width={Math.round((height * MARKETPLACE_WORDMARK_WIDTH) / MARKETPLACE_WORDMARK_HEIGHT * 10) / 10}
+      fill="currentColor"
+      className={['nx-mp-word', className].filter(Boolean).join(' ')}
+      {...a11y(title)}
+      {...rest}
+    >
+      <path fillRule="evenodd" d={MARKETPLACE_WORDMARK_PATH} />
+    </svg>
+  )
+}
+
+/** Star + MARKETPLACE (no NEXUS word, Kev 21 Nov 2026). `height` is the wordmark's cap height in px. */
+export function MarketplaceLogo({ height = 14, title = 'Marketplace', className }: { height?: number; title?: string; className?: string }) {
+  return (
+    <span className={['nx-logo', className].filter(Boolean).join(' ')} role="img" aria-label={title} style={{ display: 'inline-flex', alignItems: 'center', gap: Math.round(height * 0.55), lineHeight: 0 }}>
+      <NexusStar size={Math.round(height * 1.25)} className="nx-logo-star" />
+      <MarketplaceWordmark height={height} className="nx-logo-word" />
+    </span>
   )
 }
 
