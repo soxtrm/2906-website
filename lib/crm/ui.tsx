@@ -2,7 +2,7 @@
 import { NEXUS_STAR_PATH } from '@/lib/brand-paths'
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Sun, Moon, Menu, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox, BadgeCheck, ListChecks, Handshake } from 'lucide-react'
+import { Sun, Moon, Menu, ClipboardList, LayoutDashboard, List, Map, CalendarDays, Shield, Users, MessagesSquare, House, Wallet, Settings, Send, MessageCircle, UserRound, Database, LogOut, Brain, MoreHorizontal, ArrowLeftRight, Inbox, BadgeCheck, ListChecks, Handshake } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { crmPath } from '@/components/crm/group-navigation'
 import { usePathname, useRouter } from 'next/navigation'
@@ -399,6 +399,8 @@ const NAV: { key: NavKey; icon: string; label: string; href: string; disabled?: 
   { key: 'dashboard', icon: '▦', label: 'Dashboard', href: '/' },
   // Incoming Properties (2026-11-13): WhatsApp uploads waiting for content verification.
   { key: 'incoming', icon: '⇣', label: 'Incoming', href: '/incoming' },
+  // Property Drafts (2026-11-21): owners' WhatsApp details, structured automatically — review, upload, publish.
+  { key: 'drafts', icon: '▤', label: 'Drafts', href: '/drafts' },
   { key: 'inventory', icon: '≡', label: 'Inventory', href: '/inventory' },
   { key: 'board',     icon: '◈', label: 'Board',     href: '/schedule-board' },
   // Booking engine (Kev, 2026-09-23): the team viewing diary — every agent, board-only included.
@@ -503,7 +505,7 @@ export function glowBackdrop(base: string, c1: string = 'rgba(224,56,159,0.06)',
   return `radial-gradient(ellipse 1200px 600px at 20% -10%, ${c1}, transparent), ` +
          `radial-gradient(ellipse 1000px 500px at 90% 0%, ${c2}, transparent), ${base}`
 }
-const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, mpinbox: MessagesSquare, incoming: Inbox, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight, ownerquality: BadgeCheck, features: ListChecks, deals: Handshake }
+const NAV_ICONS: Record<NavKey, typeof LayoutDashboard> = { websitereview: Shield, syncinbox: MessagesSquare, mpinbox: MessagesSquare, incoming: Inbox, drafts: ClipboardList, learning: Brain, dashboard: LayoutDashboard, inventory: List, board: Map, bookings: CalendarDays, access: Shield, owners: Users, clientgroups: MessagesSquare, ownergroups: House, earnings: Wallet, admin: Settings, outreach: Send, agentchats: MessageCircle, profile: UserRound, baseinventory: Database, sources: ArrowLeftRight, ownerquality: BadgeCheck, features: ListChecks , deals: Handshake }
 
 // Board desktop header (founder mockup 2026-10-19): these carry labels in the
 // header; every other workspace sits behind "More".
@@ -520,7 +522,7 @@ export function CrmShell({ title, subtitle, onAdd, filterBar, mobileActions, chi
   const normalizedPath = pathname.replace(/^\/crm(?=\/|$)/, '') || '/'
   const active = (href: string) => href === '/' ? normalizedPath === '/' : normalizedPath.startsWith(href)
   // 'syncinbox' is newer than the nav list the server sends: every non-board account gets it.
-  const items = NAV.filter(i => (nav.includes(i.key) || ((i.key === 'syncinbox' || i.key === 'websitereview' || i.key === 'features' || i.key === 'mpinbox' || i.key === 'deals') && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
+  const items = NAV.filter(i => (nav.includes(i.key) || (i.key === 'drafts' && (me?.role === 'admin' || me?.role === 'agent')) || ((i.key === 'syncinbox' || i.key === 'websitereview' || i.key === 'features' || i.key === 'mpinbox' || i.key === 'deals') && !!me && me.role !== 'board')) && (!i.adminOnly || me?.role === 'admin'))
   // Pending count on the Incoming entry: staff only, refreshed while ARGUS is open.
   const intake = useIntakeSummary(60_000, items.some(i => i.key === 'incoming') && (me?.role === 'admin' || me?.role === 'agent'))
   const pendingIntake = intake?.counts.needs_verification || 0
