@@ -7,6 +7,7 @@ import { ARGUS_ORIGIN } from '@/lib/argus-origin'
 import { toCard, toDetail, toDict, type Dict, type FeatureEntry, type ListingCard } from '@/lib/marketplace/model'
 
 export const dynamic = 'force-dynamic'
+// CDN: fresh for 2 min, then served instantly from cache while Vercel refreshes it in the background (no cold waits)
 
 // same public filter as /api/nexus/inventory: quarantined references and implausible rents never show
 const QUARANTINED = new Set(['2906-9398'])
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
     if (id) {
       const p = raw.find(x => String(x.id) === id)
       if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-      return NextResponse.json({ listing: toDetail(p, places, dict) }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } })
+      return NextResponse.json({ listing: toDetail(p, places, dict) }, { headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=86400' } })
     }
     if (!cache || Date.now() - cache.at > 5 * 60e3) cache = { at: Date.now(), cards: withConsistentTeasers(raw.map(p => toCard(p, places, dict))) }
     // searchable features: standard + filterable ones that at least one listing has
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
     const features = dict.entries.filter(e => e.filterable && used.has(e.key)).map(e => ({ key: e.key, label: e.label, group: e.group, aliases: e.aliases, count: cache!.cards.filter(c => c.featureKeys.includes(e.key)).length }))
     const quality = { previewHiddenForTownMismatch: cache.cards.filter(c => !c.teaser && raw.find(p => String(p.id) === c.id)?.description).length }
     return NextResponse.json({ generatedAt: new Date(cache.at).toISOString(), count: cache.cards.length, listings: cache.cards, features, quality },
-      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } })
+      { headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=86400' } })
   } catch {
     return NextResponse.json({ error: 'Listings are not available right now.' }, { status: 503 })
   }
