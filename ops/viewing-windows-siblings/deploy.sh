@@ -23,7 +23,7 @@ case "${1:-}" in
     docker rm -f "$TESTDB" >/dev/null 2>&1 || true; docker network rm "$TESTNET" >/dev/null 2>&1 || true; rm -rf "$STAGE"; mkdir -p "$STAGE"
     rsync -a --exclude node_modules --exclude uploads --exclude logs --exclude '.*' --exclude backups --exclude '*.log' --exclude exports --exclude private-docs "$LIVE/" "$STAGE/"
     mkdir -p "$STAGE/test" "$STAGE/node_modules" "$STAGE/uploads"
-    python3 "$PKG/patch.py" "$STAGE"; cp "$PKG"/backend/test/*.test.js "$STAGE/test/"
+    python3 "$PKG/patch.py" "$STAGE"; cp "$PKG"/backend/test/* "$STAGE/test/"
     for f in $PATCHED; do docker run --rm --network none -v "$STAGE:/app:ro" -w /app --entrypoint node 2906-system-backend --check "$f"; done
     docker network create --internal "$TESTNET" >/dev/null
     docker run -d --rm --name "$TESTDB" --network "$TESTNET" -e POSTGRES_PASSWORD=test pgvector/pgvector:pg16 >/dev/null
