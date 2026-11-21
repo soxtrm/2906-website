@@ -1,0 +1,200 @@
+'use client'
+// Safe Drafts review, Reminder Due results and inbox decisions (Kev, 2026-11-21, P0).
+// Safe Drafts: one pool per persona (Kevin, Gabriela, Cedric) and intent. Kev's
+// pack texts arrive as "pending review" and are never sent until approved here.
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { crmGet, crmJson } from '@/lib/crm/api'
+
+type Draft = {
+  id: number; persona: string; number: number; body: string; active: boolean; source: string; used: number
+  code: string | null; intent: string; required_context: string[]; review_status: 'approved' | 'pending_review' | 'rejected'
+}
+const PERSONAS: [string, string][] = [['kev', 'Kevin'], ['gabriela', 'Gabriela'], ['cedric', 'Cedric']]
+const INTENTS: [string, string][] = [
+  ['new_owner_general', 'New owner · general'], ['new_owner_rental', 'New owner · rental'], ['new_owner_sales', 'New owner · sales'],
+  ['existing_relationship_checkin', 'Existing relationship'], ['owner_requested_callback', 'Owner asked for a callback'],
+  ['upcoming_property_followup', 'Upcoming property'], ['specific_property_availability', 'Specific property availability'],
+  ['multiple_property_confirmation', 'Several properties'], ['missing_property_details', 'Missing details'], ['verified_client_matching', 'Client match'],
+]
+const STATUS: Record<string, string> = { approved: 'Approved', pending_review: 'Waiting for review', rejected: 'Rejected' }
+const USED_BY: Record<string, string> = {
+  new_owner_general: 'Auto outreach (first contact)', owner_requested_callback: 'Reminder Due, 09:00', upcoming_property_followup: 'Reminder Due, 09:00',
+}
+
+function preview(body: string) {
+  return body.replace(/\{\{greeting\}\}/g, 'Good afternoon').replace(/\{\{opening\}\}/g, 'Good afternoon, ')
+}
+
+export function SafeDrafts() {
+  const [persona, setPersona] = useState('kev')
+  const [intent, setIntent] = useState('owner_requested_callback')
+  const [rows, setRows] = useState<Draft[] | null>(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [edit, setEdit] = useState<{ id: number | null; body: string } | null>(null)
+  const load = useCallback(async () => {
+    try { setRows((await crmGet(`outreach/library?persona=${persona}`)).templates); setError('') } catch (e: any) { setError(e?.message || 'Safe Drafts unavailable') }
+  }, [persona])
+  useEffect(() => { load() }, [load])
+  const counts = useMemo(() => {
+    const c: Record<string, { approved: number; pending: number }> = {}
+    for (const r of rows || []) { const k = r.intent; c[k] = c[k] || { approved: 0, pending: 0 }; if (r.review_status === 'approved' && r.active) c[k].approved++; if (r.review_status === 'pending_review') c[k].pending++ }
+    return c
+  }, [rows])
+  const shown = (rows || []).filter(r => r.intent === intent)
+  async function review(ids: number[], status: string) {
+    if (!ids.length) return
+    setBusy(true)
+    try { await crmJson('outreach/library/review', 'POST', { ids, status }); await load() } catch (e: any) { setError(e?.message || 'Not saved') } finally { setBusy(false) }
+  }
+  async function save() {
+    if (!edit) return
+    try { await crmJson('outreach/library', 'POST', { id: edit.id, persona, body: edit.body }); setEdit(null); await load() }
+    catch (e: any) { setError(e?.message === 'greeting_not_allowed' ? 'Leave the greeting out — use {{greeting}} or {{opening}}; it is filled in when the message is sent.' : e?.message || 'Not saved') }
+  }
+  const pendingHere = shown.filter(r => r.review_status === 'pending_review').map(r => r.id)
+  return (
+    <section className="msg-library" aria-label="Safe Drafts">
+      <header>
+        <div>
+          <h3>Safe Drafts</h3>
+          <p>Every automatic message is one of these texts, unchanged — picked at random per owner, never the same text twice to one owner. {'{{greeting}}'} and {'{{opening}}'} become “Good morning / afternoon / evening” at the moment of sending; the other {'{{…}}'} fields come from the owner’s recorded request. A text is only used once it is approved.</p>
+        </div>
+        <div className="msg-library-tabs" role="group" aria-label="Persona">
+          {PERSONAS.map(([k, label]) => <button key={k} type="button" aria-pressed={persona === k} onClick={() => { setPersona(k); setEdit(null) }}>{label}</button>)}
+        </div>
+      </header>
+      <div className="sd-intents" role="tablist" aria-label="Intent">
+        {INTENTS.map(([k, label]) => {
+          const c = counts[k] || { approved: 0, pending: 0 }
+          return <button key={k} type="button" role="tab" aria-selected={intent === k} onClick={() => { setIntent(k); setEdit(null) }}>
+            <b>{label}</b><small>{c.approved} approved{c.pending ? ` · ${c.pending} to review` : ''}{USED_BY[k] ? ` · ${USED_BY[k]}` : ''}</small>
+          </button>
+        })}
+      </div>
+      {error && <p className="msg-library-error" role="alert">{error}</p>}
+      <div className="msg-library-bar">
+        <span>{shown.length} texts · {shown.filter(r => r.review_status === 'approved' && r.active).length} in use</span>
+        <span style={{ display: 'flex', gap: 6 }}>
+          {pendingHere.length > 0 && <button type="button" disabled={busy} onClick={() => review(pendingHere, 'approved')}>Approve all {pendingHere.length} waiting</button>}
+          <button type="button" onClick={() => setEdit({ id: null, body: '' })}>Add a text</button>
+        </span>
+      </div>
+      {edit && (
+        <div className="msg-library-edit">
+          <textarea value={edit.body} onChange={e => setEdit({ ...edit, body: e.target.value })} rows={9} aria-label="Safe Draft text" placeholder={'{{opening}}I hope you are well.\n\n…\n\nSignature'} />
+          <div><button type="button" onClick={save}>Save text</button><button type="button" onClick={() => setEdit(null)}>Cancel</button></div>
+        </div>
+      )}
+      <ol className="msg-library-list">
+        {shown.map(t => (
+          <li key={t.id} className={`${t.active && t.review_status !== 'rejected' ? '' : 'is-off'} is-${t.review_status}`}>
+            <div className="msg-library-meta">
+              <b>{t.code ? t.code.replace(/^ARGUS-[A-Z]+-/, '') : `#${t.number}`}</b>
+              <small>{STATUS[t.review_status]}{t.source === 'kev_pack_v1_1' ? ' · your pack' : t.source === 'kev_draft' ? ' · your Saved Draft' : ''} · sent {t.used}×</small>
+              <span>
+                {t.review_status !== 'approved' && <button type="button" disabled={busy} onClick={() => review([t.id], 'approved')}>Approve</button>}
+                {t.review_status !== 'rejected' && <button type="button" disabled={busy} onClick={() => review([t.id], 'rejected')}>Reject</button>}
+                <button type="button" onClick={() => setEdit({ id: t.id, body: t.body })}>Edit</button>
+              </span>
+            </div>
+            {t.required_context?.length > 0 && <small className="sd-context">Needs: {t.required_context.join(', ').replace(/_/g, ' ')}</small>}
+            <p>{preview(t.body)}</p>
+          </li>
+        ))}
+      </ol>
+      {!shown.length && rows && <p className="auto-empty">No texts for this intent yet.</p>}
+    </section>
+  )
+}
+
+// ── Reminder Due: what the 09:00 run did ───────────────────────────────────
+type RRow = { id: number; reminder_id: number; state: string; reason: string | null; intent: string | null; session_name: string | null; planned_at: string | null; sent_at: string | null; rendered_text: string | null; owner_name: string | null; phone_last4: string; due: string; original_note: string; template_code: string | null }
+const RSTATE: Record<string, string> = { planned: 'Planned', sending: 'Sending', sent: 'Sent', skipped: 'Not sent', waiting: 'Waiting', failed: 'Failed', ambiguous: 'Check by hand' }
+const REASON: Record<string, string> = {
+  automatic_reply_not_an_owner_request: 'the note is an automatic reply, not an owner request', not_a_follow_up_request: 'the note is not a request to follow up',
+  another_reminder_for_this_owner_today: 'this owner already gets one message today', friend_not_owner: 'not an owner', permanent_owner_stop: 'owner asked to stop',
+  worker_restarted_during_send: 'the server restarted while sending — check the chat before sending again',
+}
+const reasonText = (r: string | null) => {
+  if (!r) return ''
+  if (REASON[r]) return REASON[r]
+  if (r.startsWith('no_approved_template:')) { const [, intent, persona] = r.split(':'); return `no approved ${intent.replace(/_/g, ' ')} text for ${persona === 'kev' ? 'Kevin' : persona} — approve one under Templates` }
+  if (r.startsWith('owner_contacted_within_')) return 'owner was contacted in the last 4 days'
+  if (r.startsWith('owner_gate:')) return `blocked: ${r.slice(11).replace(/_/g, ' ')}`
+  if (r.startsWith('sender_offline')) return `${r.split(':')[1] || 'sending account'} offline${r.endsWith('retrying') ? ' — retrying' : ''}`
+  return r.replace(/[:_]/g, ' ')
+}
+const hm = (iso: string | null) => (iso ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)) : '')
+
+export function ReminderDuePanel() {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Malta' }).format(new Date())
+  const [date, setDate] = useState(today)
+  const [data, setData] = useState<{ date: string; since: string | null; enabled: boolean; summary: Record<string, number>; rows: RRow[]; upcoming: { due: string; n: number }[] } | null>(null)
+  const [error, setError] = useState('')
+  const [open, setOpen] = useState<number | null>(null)
+  const load = useCallback(async () => {
+    try { setData(await crmGet(`outreach/reminder-daily?date=${date}`)); setError('') } catch (e: any) { setError(e?.message || 'Reminder run unavailable') }
+  }, [date])
+  useEffect(() => { load(); const t = setInterval(load, 60_000); return () => clearInterval(t) }, [load])
+  return (
+    <section className="rd-panel" aria-label="Reminder Due">
+      <header>
+        <div>
+          <h3>Reminder Due · automatic</h3>
+          <p>Every morning at 09:00 (Mon–Sat) ARGUS follows up the owners whose agreed date has arrived — from the account they talked to, with an approved Safe Draft, one message per owner, opt-outs, pauses and a 4-day cooldown respected.{data?.since ? ` Reminders due before ${data.since} are not sent automatically.` : ''}</p>
+        </div>
+        <input type="date" value={date} onChange={e => setDate(e.target.value || today)} aria-label="Run date" />
+      </header>
+      {error && <p className="msg-library-error" role="alert">{error}</p>}
+      {data && <>
+        <div className="rd-summary">
+          {(['sent', 'planned', 'waiting', 'skipped', 'failed', 'ambiguous'] as const).map(k => <span key={k} className={`is-${k}`}><b>{data.summary[k] || 0}</b>{RSTATE[k]}</span>)}
+          {!data.enabled && <span className="is-failed"><b>off</b>kill switch REMINDER_DAILY=0</span>}
+        </div>
+        <ol className="rd-rows">
+          {data.rows.map(r => (
+            <li key={r.id} className={`is-${r.state}`}>
+              <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} aria-expanded={open === r.id}>
+                <span className="rd-state">{RSTATE[r.state] || r.state}</span>
+                <span className="rd-who"><b>{r.owner_name || 'Owner'} ·{r.phone_last4}</b><small>due {r.due}{r.session_name ? ` · via ${r.session_name}` : ''}{r.sent_at ? ` · sent ${hm(r.sent_at)}` : r.planned_at && r.state === 'planned' ? ` · at ${hm(r.planned_at)}` : ''}</small></span>
+                <span className="rd-reason">{r.state === 'sent' ? (r.template_code || '').replace(/^ARGUS-/, '') : reasonText(r.reason)}</span>
+              </button>
+              {open === r.id && <div className="rd-detail">
+                <p><small>Owner said</small>{r.original_note}</p>
+                {r.rendered_text && <p><small>{r.state === 'sent' ? 'Sent' : 'Text'}</small>{r.rendered_text}</p>}
+              </div>}
+            </li>
+          ))}
+        </ol>
+        {!data.rows.length && <p className="auto-empty">No reminder was due on {data.date}{data.date === today ? ' (the run is at 09:00, Mon–Sat)' : ''}.</p>}
+        {data.upcoming.length > 0 && <p className="rd-upcoming">Due next: {data.upcoming.slice(0, 7).map(u => `${u.due.slice(5)} · ${u.n}`).join('   ')}</p>}
+      </>}
+    </section>
+  )
+}
+
+// ── Inbox: which owner replies were marked read, and why ───────────────────
+type IRow = { id: number; session: string; phone_last4: string; text: string; disposition: string; action: string; detail: any; created_at: string }
+const ACTION: Record<string, string> = { marked_read: 'Marked read', kept_visible: 'Left unread', kept_no_preceding_question: 'Left unread · we had not asked', kept_newer_message: 'Left unread · newer message', kept_callback_not_recorded: 'Left unread · callback not saved', kept_opt_out_not_recorded: 'Left unread · stop not saved' }
+export function InboxDecisions() {
+  const [rows, setRows] = useState<IRow[] | null>(null)
+  useEffect(() => { crmGet('outreach/inbox-dispositions?limit=40').then(r => setRows(r.rows)).catch(() => setRows([])) }, [])
+  if (!rows) return null
+  return (
+    <section className="rd-panel" aria-label="Inbox decisions">
+      <header><div><h3>Inbox · owner replies</h3><p>A plain “no” to our question is processed and marked read; a callback date is saved first; “stop” is recorded first; anything with a new property, a question or details stays unread. Nothing is deleted.</p></div></header>
+      <ol className="rd-rows">
+        {rows.map(r => (
+          <li key={r.id} className={r.action === 'marked_read' ? 'is-sent' : 'is-waiting'}>
+            <div className="rd-line">
+              <span className="rd-state">{ACTION[r.action] || r.action}</span>
+              <span className="rd-who"><b>“{r.text}”</b><small>{r.session} ·{r.phone_last4} · {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Malta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at))}{r.detail?.reminderId ? ` · callback saved (due ${r.detail.due})` : ''}{r.detail?.cancelledReminders?.length ? ` · ${r.detail.cancelledReminders.length} reminder(s) cancelled` : ''}</small></span>
+            </div>
+          </li>
+        ))}
+      </ol>
+      {!rows.length && <p className="auto-empty">No owner reply has been handled yet.</p>}
+    </section>
+  )
+}

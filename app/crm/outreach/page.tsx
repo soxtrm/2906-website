@@ -6,7 +6,8 @@ import { crmGet, crmJson } from '@/lib/crm/api'
 import { normalizeOutreachCountDraft } from '@/lib/crm/outreach-count'
 import { CrmProvider, CrmShell, useCrm } from '@/lib/crm/ui'
 import { AccountRail, ActivityView, AutomationSetup, DayDetail, DayTimeline, KpiBar, LazyDetails, TemplateReview, useOverview, type DayCell } from './control-center'
-import { AutoStatusPanel, MessageLibrary, useAutoStatus } from './auto-status'
+import { AutoStatusPanel, useAutoStatus } from './auto-status'
+import { InboxDecisions, ReminderDuePanel, SafeDrafts } from './safe-drafts'
 import { AccountCards, AutoPauseRow, HealthFilter, PaceCard, PersonaPreview, SevenDays, healthMatches, type P0Account } from './outreach-p0'
 
 // ── ARGUS / NEON design tokens ───────────────────────────────────────────────
@@ -326,7 +327,7 @@ function ArgusConsole() {
       {!accounts && !error && <div style={{ padding: 24, color: MUTED, fontSize: 12 }}>Loading…</div>}
 
       {activeTab === 'templates' && <div className="cc-layout" style={{ gridTemplateColumns: '1fr' }}>
-        <MessageLibrary />
+        <SafeDrafts />
         <LazyDetails summary="Saved free-text drafts (manual planner)"><TemplateLibrary /></LazyDetails>
         <LazyDetails summary="Old period-based persona texts (not used by Auto while the library has texts)"><TemplateReview /></LazyDetails>
       </div>}
@@ -371,6 +372,8 @@ function ArgusConsole() {
               {selectedAccount && <ProfileConsole key={selectedAccount.id} account={selectedAccount} accent={accentFor(Math.max(0, orderedAccounts.findIndex(account => account.id === selectedAccount.id)))} onChanged={async () => { await load(); await reloadOverview() }} templates={templates} onTemplatesChanged={loadTemplates} />}
             </>}
             {activeTab === 'activity' && <>
+              <ReminderDuePanel />
+              <InboxDecisions />
               <LazyDetails summary={`Reminders · ${dueReminders.rows.length + rechecks.tasks.length}`} defaultOpen={dueReminders.rows.length + rechecks.tasks.length > 0}>
                 <OwnerRecheckLane data={rechecks} onChanged={load} />
                 <DueReminderLane data={dueReminders} />

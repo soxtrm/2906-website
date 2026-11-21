@@ -185,3 +185,25 @@
 .msg-library-list p{margin:0;white-space:pre-line;font-size:12px;line-height:1.5;color:#c9d2e3}.msg-library-list em{font-style:normal;color:#8b96ad}
 .day-badge.is-ready_to_start{color:#b7c0ff}.day-badge.is-ready_to_start>b{border-color:#6579ff;background:#18214a;color:#c9d0ff}
 .day-badge.is-missed,.day-badge.is-skipped,.day-badge.is-no_sends{color:#ffb86b}.day-badge.is-partial{color:#6fbf98}
+
+/* Safe Drafts intents + Reminder Due + inbox decisions (2026-11-21) */
+.sd-intents{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.sd-intents button{flex:0 0 auto;display:grid;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid #2a3550;background:transparent;color:#d9e0ee;cursor:pointer}
+.sd-intents button b{font-size:12px}.sd-intents button small{font-size:10.5px;color:#8b96ad}
+.sd-intents button[aria-selected=true]{border-color:#6579ff;background:#18214a}
+.msg-library-list li.is-pending_review{border-color:#6a5a26}.msg-library-list li.is-pending_review .msg-library-meta small{color:#e8d491}
+.sd-context{display:block;font-size:10.5px;color:#8b96ad;margin:-2px 0 6px}
+.rd-panel{border:1px solid #2a3550;border-radius:16px;padding:14px 16px;background:#0f1626;display:grid;gap:10px;color:#e6ebf5;margin-bottom:12px}
+.rd-panel header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}.rd-panel h3{margin:0 0 4px;font-size:15px}.rd-panel header p{margin:0;max-width:72ch;font-size:12px;color:#9aa6bd;line-height:1.5}
+.rd-panel input[type=date]{background:#0a101d;border:1px solid #3a4766;border-radius:8px;color:#e6ebf5;padding:6px 8px}
+.rd-summary{display:flex;gap:8px;flex-wrap:wrap}.rd-summary span{display:grid;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.03);font-size:11px;color:#8b96ad;min-width:70px}.rd-summary b{font-size:16px;color:#e6ebf5}
+.rd-summary .is-sent b{color:#8ef0bf}.rd-summary .is-waiting b,.rd-summary .is-ambiguous b{color:#ffb86b}.rd-summary .is-failed b{color:#ff8fa3}
+.rd-rows{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.rd-rows li>button,.rd-line{width:100%;display:grid;grid-template-columns:110px minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid #1f2940;background:rgba(255,255,255,.02);color:inherit;cursor:pointer;font:inherit}
+.rd-line{grid-template-columns:150px minmax(0,1fr);cursor:default}
+.rd-state{font-size:11px;font-weight:800;color:#c9d2e3}.rd-who{display:grid;min-width:0}.rd-who b{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rd-who small,.rd-reason{font-size:11px;color:#8b96ad}
+.rd-rows li.is-sent .rd-state{color:#8ef0bf}.rd-rows li.is-waiting .rd-state,.rd-rows li.is-ambiguous .rd-state{color:#ffb86b}.rd-rows li.is-failed .rd-state{color:#ff8fa3}.rd-rows li.is-skipped .rd-state{color:#9aa6bd}
+.rd-detail{display:grid;gap:6px;padding:8px 12px 4px}.rd-detail p{margin:0;white-space:pre-line;font-size:12px;line-height:1.5;color:#c9d2e3}.rd-detail small{display:block;font-size:10px;color:#77839a}
+.rd-upcoming{margin:0;font-size:11px;color:#8b96ad}
+@media (max-width:640px){.rd-rows li>button,.rd-line{grid-template-columns:1fr}}
+.msg-library-meta{flex-wrap:wrap}.msg-library-meta b{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}.msg-library-meta small{order:3;flex:1 1 100%}
