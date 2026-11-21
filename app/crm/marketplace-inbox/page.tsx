@@ -50,8 +50,8 @@ function Inbox() {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12, justifyContent: 'space-between' }}>
-        <div><h1 style={{ margin: 0, fontSize: 26 }}>Marketplace inbox</h1>
-          <p style={{ margin: '4px 0 0', opacity: .7 }}>Messages from the NEXUS Marketplace about your listings. {totals.unread} unread · {totals.openRequests} viewing request{totals.openRequests === 1 ? '' : 's'} waiting.</p></div>
+        <div>
+          <p style={{ margin: 0, opacity: .75 }}>Messages from the NEXUS Marketplace about your listings. {totals.unread} unread · {totals.openRequests} viewing request{totals.openRequests === 1 ? '' : 's'} waiting.</p></div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(['all', 'unread', 'requests', 'closed'] as const).map(f => <button key={f} style={pill(filter === f)} onClick={() => setFilter(f)}>{f === 'all' ? 'Open' : f === 'requests' ? 'Viewing requests' : f[0].toUpperCase() + f.slice(1)}</button>)}
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search name, ref, town" style={{ padding: '7px 11px', borderRadius: 999, border: '1px solid var(--crm-border)', background: 'transparent', color: 'inherit' }} />
